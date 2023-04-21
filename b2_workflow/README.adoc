@@ -1,0 +1,50 @@
+== B2 Workflow [[b2_workflow]]
+
+This action runs a complete B2 workflow from boost source files.
+
+It takes the boost source directory and does whatever it needs to test the specified modules. This includes 
+compiling `b2` if needed and generating a proper `user-config.jam` file.
+
+This action is particularly useful for boost library proposals.
+
+
+=== Example
+
+[source,yml]
+----
+      - name: Test Boost.Variant2
+        if: ${{ matrix.cxx == 'g++-11' }}
+        uses: alandefreitas/cpp-actions/b2_workflow
+        with:
+          source-dir: boost-root
+          modules: variant2
+          toolset: ${{ matrix.toolset }}
+          cxx: ${{ (startsWith(matrix.cxx, 'clang') && matrix.cxx) || '' }}
+          cxxstd: ${{ matrix.cxxstd }}
+          cxxflags: ${{ matrix.cxxflags }}
+          linkflags: ${{ matrix.linkflags }}
+          address-model: ${{ matrix.address-model }}
+          ubsan: ${{ matrix.ubsan }}
+          gcc_toolchain: ${{ matrix.gcc_toolchain }}
+
+----
+
+=== Input Parameters
+
+|===
+|Parameter |Description |Default
+|`source-dir` |The boost source directory. |`.`
+|`build-variant` |Custom build variants. |(empty)
+|`modules` |The list of modules we should test. |(empty)
+|`gcc_toolchain` |Create a special GCC toolchain for this version of GCC and update user-config.jam. |(empty)
+|`toolset` |Toolset name. |(empty)
+|`address-model` |Valid b2 list of address models. |(empty)
+|`cxx` |Path to C++ compiler. |(empty)
+|`cxxflags` |Extra compiler flags. |(empty)
+|`linkflags` |Extra linker flags. |(empty)
+|`cxxstd` |List of standards with which cmake will build and test the program. |(empty)
+|`ubsan` |List of standards with which cmake will build and test the program. |`false`
+|`threading` |b2 threading option. |(empty)
+|`trace-commands` |Trace commands executed by the workflow. |`false`
+|===
+

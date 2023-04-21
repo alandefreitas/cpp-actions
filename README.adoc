@@ -1,0 +1,247 @@
+= C++ Actions
+
+This repository includes a number of useful GitHub actions to test C++ libraries.
+Part of the difficulty to test C++ libraries comes from the diversity of the C++ ecosystem.
+Our intention is to create a common and resilient set of actions that can work on as many environments as possible.
+
+== Actions
+
+- <<package_install>>
+- <<cmake_workflow>>
+- <<boost_clone>>
+- <<b2_workflow>>
+
+=== Install dependencies [[package_install]]
+
+This actions installs dependencies from multiple package managers for a workflow.
+
+If vcpkg dependencies are required and vcpkg is not available, it will be installed.
+Both vcpkg and its dependencies can be cached.
+
+
+==== Example
+
+[source,yml]
+----
+      - name: Install packages
+        uses: alandefreitas/cpp-actions/package_install
+        id: package-install
+        with:
+          vcpkg: fmt
+          apt-get: ${{ join(matrix.install, ' ') }} ${{ matrix.container && 'sudo software-properties-common tzdata wget curl apt-transport-https make apt-file unzip libssl-dev build-essential autotools-dev autoconf automake g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3 ccache libpython-dev python3-distutils python3-pip git cmake' }}
+          apt-get-ignore-missing: ${{ matrix.container && 'true' }}
+          cxx: ${{ matrix.cxx }} ${{ matrix.cxxflags }}
+          cc: ${{ matrix.cc }}
+
+----
+
+==== Input Parameters
+
+|===
+|Parameter |Description |Default
+|`vcpkg` |List of packages we should install with vcpkg. (Whitespace-separated). |(empty)
+|`apt-get` |List of packages we should install with apt-get. (Whitespace-separated). |(empty)
+|`cxx` |C++ compiler used by vcpkg.
+
+Setting the compiler is particularly important in Linux workflows that use `clang`, since `clang` might link 
+`libc++` or `libstdc++`, while the default compiler used by vcpkg will usually be GCC linking `libstdc++`.
+
+This would cause conflict in workflows that later attempt to use vcpkg dependencies.
+. |(empty)
+|`cc` |C compiler used by vcpkg. |(empty)
+|`vcpkg_triplet` |The triplet used by vcpkg to install packages. |(empty)
+|`vcpkg_dir` |The directory where vcpkg should be cloned and installed. |`vcpkg`
+|`vcpkg_branch` |vcpkg branch we should use. |`master`
+|`apt-get-retries` |Number of time we should retry when apt-get fails. |`1`
+|`apt-get-sources` |List of sources for apt-get. |(empty)
+|`apt-get-source-keys` |List of source keys for apt-get. |(empty)
+|`apt-get-ignore-missing` |Whether apt-get should ignore missing packages. |`false`
+|===
+
+==== Outputs
+
+|===
+|Output |Description
+|`vcpkg_toolchain` |vcpkg toolchain file
+|`vcpkg_executable` |vcpkg toolchain file
+|===
+=== CMake Workflow [[cmake_workflow]]
+
+This action runs a complete CMake workflow from source files.
+
+- It validates the cmake version installed in the system, 
+- updates cmake if the library has a different minimum version, 
+- identifies what features that cmake version supports, and 
+- runs a complete cmake workflow
+
+The workflow includes the configure, build, test, and install steps. 
+
+The action will adjusting the parameters as needed according to the features that cmake version supports. 
+For instance, 
+
+- if cmake version does not support the `-S ... -B ...` syntax, the action will create the build directory and
+run the configuration step from there
+- if the specified or default generator is multi-config, `CMAKE_CONFIGURATION_TYPES` will be used instead of 
+`CMAKE_BUILD_TYPE`
+- if cmake version does not support the `cmake --install` syntax, the `cmake --build --target install`
+will be use instead.
+- if cmake version does not support multiple targets in the `cmake --build` syntax, the action will run the build
+step once for each target
+
+The action also creates github annotations when warnings or errors are emitted at any of these steps. This includes
+annotations for CMake errors and build error emitted from the compiler.
+
+
+==== Input Parameters
+
+|===
+|Parameter |Description |Default
+|`source-dir` |Directory for the source files. |`.`
+|`build-dir` |Directory for the binaries relative to the source directory. |`build`
+|`cmake-min-version` |The minimum cmake version for this workflow. If the existing version is below that, the action attempts to update CMake. |`3.5`
+|`cmake_exec` |The cmake executable. |`cmake`
+|`cc` |Path to C compiler. |(empty)
+|`cxx` |Path to C++ compiler. |(empty)
+|`cxxstd` |List of standards with which cmake will build and test the program. |(empty)
+|`toolchain` |Path to toolchain. |(empty)
+|`generator` |Generator name. |(empty)
+|`build-type` |Build type. |`Release`
+|`build-target` |Targets to build instead of the default target. |(empty)
+|`install-prefix` |Path where the library should be installed. |`.local/usr`
+|`run-tests` |Whether we should run tests. |`true`
+|`install` |Whether we should install the library. 
+
+The library is only installed once in the `install-prefix`.
+
+The latest std version described in `cxxstd` is used for the installed version.
+. |`true`
+|`extra-args` |Extra arguments to cmake configure command. |(empty)
+|`create-annotations` |Create github annotations on errors. |`true`
+|`ref-source-dir` |A reference source directory for annotations. Any annotation filename will be relative to this directory. |`.`
+|`trace-commands` |Trace commands executed by the workflow. |`false`
+|===
+
+=== Boost Clone [[boost_clone]]
+
+This action clones the boost source directory, attempting to get it from the cache first. Only the specified
+modules are cloned and cached. 
+
+Besides specified an explicit list of modules, the action includes a script to scan dependencies before cloning 
+boost and caching based only on these dependencies.
+
+For a project with about 5 boost dependencies, caching saves about 4 minutes in the workflow. When there's no
+cache, the scanning scripting saves us about 3 minutes.
+
+
+==== Example
+
+[source,yml]
+----
+      - name: Clone Boost.Variant2
+        uses: alandefreitas/cpp-actions/boost_clone
+        with:
+          boost_dir: boost-root
+          branch: master
+          modules: variant2
+
+----
+
+==== Input Parameters
+
+|===
+|Parameter |Description |Default
+|`boost_dir` |The boost directory. The default value assumes boost is in-source. |`boost`
+|`branch` |Branch of the super-project. |`master`
+|`patches` |Libraries used to patch the boost installation. |(empty)
+|`modules` |The boost submodules we need to clone. |(empty)
+|`scan-modules-dir` |An independent directory we should scan for boost dependencies to clone. |(empty)
+|`scan-modules-ignore` |List of modules that should be ignored in scan-modules. |(empty)
+|`trace-commands` |Trace commands executed by the workflow. |`false`
+|===
+
+=== B2 Workflow [[b2_workflow]]
+
+This action runs a complete B2 workflow from boost source files.
+
+It takes the boost source directory and does whatever it needs to test the specified modules. This includes 
+compiling `b2` if needed and generating a proper `user-config.jam` file.
+
+This action is particularly useful for boost library proposals.
+
+
+==== Example
+
+[source,yml]
+----
+      - name: Test Boost.Variant2
+        if: ${{ matrix.cxx == 'g++-11' }}
+        uses: alandefreitas/cpp-actions/b2_workflow
+        with:
+          source-dir: boost-root
+          modules: variant2
+          toolset: ${{ matrix.toolset }}
+          cxx: ${{ (startsWith(matrix.cxx, 'clang') && matrix.cxx) || '' }}
+          cxxstd: ${{ matrix.cxxstd }}
+          cxxflags: ${{ matrix.cxxflags }}
+          linkflags: ${{ matrix.linkflags }}
+          address-model: ${{ matrix.address-model }}
+          ubsan: ${{ matrix.ubsan }}
+          gcc_toolchain: ${{ matrix.gcc_toolchain }}
+
+----
+
+==== Input Parameters
+
+|===
+|Parameter |Description |Default
+|`source-dir` |The boost source directory. |`.`
+|`build-variant` |Custom build variants. |(empty)
+|`modules` |The list of modules we should test. |(empty)
+|`gcc_toolchain` |Create a special GCC toolchain for this version of GCC and update user-config.jam. |(empty)
+|`toolset` |Toolset name. |(empty)
+|`address-model` |Valid b2 list of address models. |(empty)
+|`cxx` |Path to C++ compiler. |(empty)
+|`cxxflags` |Extra compiler flags. |(empty)
+|`linkflags` |Extra linker flags. |(empty)
+|`cxxstd` |List of standards with which cmake will build and test the program. |(empty)
+|`ubsan` |List of standards with which cmake will build and test the program. |`false`
+|`threading` |b2 threading option. |(empty)
+|`trace-commands` |Trace commands executed by the workflow. |`false`
+|===
+
+
+
+== Contributions
+
+If there's a platform where one of the actions does not work, feel free to submit a PR with adaptations and tests.
+
+== License
+
+[]
+====
+Boost Software License - Version 1.0 - August 17th, 2003
+
+Permission is hereby granted, free of charge, to any person or organization
+obtaining a copy of the software and accompanying documentation covered by
+this license (the "Software") to use, reproduce, display, distribute,
+execute, and transmit the Software, and to prepare derivative works of the
+Software, and to permit third-parties to whom the Software is furnished to
+do so, all subject to the following:
+
+The copyright notices in the Software and this entire statement, including
+the above license grant, this restriction and the following disclaimer,
+must be included in all copies of the Software, in whole or in part, and
+all derivative works of the Software, unless such copies or derivative
+works are solely in the form of machine-executable object code generated by
+a source language processor.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, TITLE AND NON-INFRINGEMENT. IN NO EVENT
+SHALL THE COPYRIGHT HOLDERS OR ANYONE DISTRIBUTING THE SOFTWARE BE LIABLE
+FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+====
+
+
