@@ -14,13 +14,13 @@ cache, the scanning scripting saves us about 3 minutes.
 
 [source,yml]
 ----
-      - name: Clone Boost.Variant2
-        uses: alandefreitas/cpp-actions/boost_clone
-        with:
-          boost_dir: boost-root
-          branch: master
-          modules: variant2
-
+steps:
+- name: Clone Boost.Variant2
+  uses: alandefreitas/cpp-actions/boost_clone
+  with:
+    boost_dir: boost-root
+    branch: master
+    modules: variant2
 ----
 
 === Input Parameters

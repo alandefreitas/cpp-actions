@@ -6,20 +6,40 @@ If vcpkg dependencies are required and vcpkg is not available, it will be instal
 Both vcpkg and its dependencies can be cached.
 
 
-=== Example
+=== Examples
+
+Example 1:
 
 [source,yml]
 ----
-      - name: Install packages
-        uses: alandefreitas/cpp-actions/package_install
-        id: package-install
-        with:
-          vcpkg: fmt
-          apt-get: ${{ join(matrix.install, ' ') }} ${{ matrix.container && 'sudo software-properties-common tzdata wget curl apt-transport-https make apt-file unzip libssl-dev build-essential autotools-dev autoconf automake g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3 ccache libpython-dev python3-distutils python3-pip git cmake' }}
-          apt-get-ignore-missing: ${{ matrix.container && 'true' }}
-          cxx: ${{ matrix.cxx }} ${{ matrix.cxxflags }}
-          cc: ${{ matrix.cc }}
+steps:
+- name: Install packages
+  uses: alandefreitas/cpp-actions/package_install
+  id: package-install
+  with:
+    vcpkg: fmt
+    apt-get: g++-11
+    cxx: g++-11
+    cc: gcc-11
+----
 
+Example 2 (`apt-get-ignore-missing`):
+
+[source,yml]
+----
+steps:
+- name: Install packages
+  uses: alandefreitas/cpp-actions/package_install
+  id: package-install
+  with:
+    vcpkg: fmt
+    apt-get: g++-4.8 sudo software-properties-common tzdata wget curl apt-transport-https
+      make apt-file unzip libssl-dev build-essential autotools-dev autoconf automake
+      g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3
+      ccache libpython-dev python3-distutils python3-pip git cmake
+    apt-get-ignore-missing: 'true'
+    cxx: g++-4.8
+    cc: gcc-4.8
 ----
 
 === Input Parameters

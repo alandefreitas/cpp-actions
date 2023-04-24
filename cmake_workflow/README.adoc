@@ -25,6 +25,68 @@ The action also creates github annotations when warnings or errors are emitted a
 annotations for CMake errors and build error emitted from the compiler.
 
 
+=== Examples
+
+Example 1:
+
+[source,yml]
+----
+steps:
+- name: CMake Workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow
+  with:
+    source-dir: tests
+    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    run-tests: 'true'
+    install-prefix: $GITHUB_WORKSPACE/.local
+    cxxstd: 17,20
+    cxx: g++-11
+    cc: gcc-11
+    cmake-min-version: 3.15
+    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
+    ref-source-dir: .
+----
+
+Example 2 (`build-type`, `generator`):
+
+[source,yml]
+----
+steps:
+- name: CMake Workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow
+  with:
+    source-dir: tests
+    generator: Unix Makefiles
+    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    build-type: Debug
+    run-tests: 'true'
+    install-prefix: $GITHUB_WORKSPACE/.local
+    cmake-min-version: 3.15
+    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
+    ref-source-dir: .
+----
+
+Example 3 (`cxxflags`):
+
+[source,yml]
+----
+steps:
+- name: CMake Workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow
+  with:
+    source-dir: tests
+    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    run-tests: 'true'
+    install-prefix: $GITHUB_WORKSPACE/.local
+    cxxstd: 17,20
+    cxx: clang++-12
+    cxxflags: -stdlib=libc++
+    cc: clang-12
+    cmake-min-version: 3.15
+    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
+    ref-source-dir: .
+----
+
 === Input Parameters
 
 |===
@@ -36,6 +98,7 @@ annotations for CMake errors and build error emitted from the compiler.
 |`cc` |Path to C compiler. |(empty)
 |`cxx` |Path to C++ compiler. |(empty)
 |`cxxstd` |List of standards with which cmake will build and test the program. |(empty)
+|`cxxflags` |Force flags to be used with the C++ compiler. |(empty)
 |`toolchain` |Path to toolchain. |(empty)
 |`generator` |Generator name. |(empty)
 |`build-type` |Build type. |`Release`

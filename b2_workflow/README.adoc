@@ -8,25 +8,98 @@ compiling `b2` if needed and generating a proper `user-config.jam` file.
 This action is particularly useful for boost library proposals.
 
 
-=== Example
+=== Examples
+
+Example 1:
 
 [source,yml]
 ----
-      - name: Test Boost.Variant2
-        if: ${{ matrix.cxx == 'g++-11' }}
-        uses: alandefreitas/cpp-actions/b2_workflow
-        with:
-          source-dir: boost-root
-          modules: variant2
-          toolset: ${{ matrix.toolset }}
-          cxx: ${{ (startsWith(matrix.cxx, 'clang') && matrix.cxx) || '' }}
-          cxxstd: ${{ matrix.cxxstd }}
-          cxxflags: ${{ matrix.cxxflags }}
-          linkflags: ${{ matrix.linkflags }}
-          address-model: ${{ matrix.address-model }}
-          ubsan: ${{ matrix.ubsan }}
-          gcc_toolchain: ${{ matrix.gcc_toolchain }}
+steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2_workflow
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: gcc-11
+    cxxstd: 17,20
+----
 
+Example 2 (`cxx`):
+
+[source,yml]
+----
+steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2_workflow
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: clang
+    cxx: clang++-12
+    cxxstd: 17,20
+----
+
+Example 3 (`address-model`):
+
+[source,yml]
+----
+steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2_workflow
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: msvc-14.3
+    cxxstd: 17,20
+    address-model: 32,64
+----
+
+Example 4 (`ubsan`):
+
+[source,yml]
+----
+steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2_workflow
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: gcc-11
+    cxxstd: 17,20
+    ubsan: 'true'
+----
+
+Example 5 (`linkflags`, `cxxflags`):
+
+[source,yml]
+----
+steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2_workflow
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: clang
+    cxx: clang++-12
+    cxxstd: 17,20
+    cxxflags: -stdlib=libc++
+    linkflags: -stdlib=libc++
+----
+
+Example 6 (`gcc_toolchain`):
+
+[source,yml]
+----
+steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2_workflow
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: clang
+    cxx: clang++-8
+    cxxstd: '17'
+    gcc_toolchain: '7'
 ----
 
 === Input Parameters

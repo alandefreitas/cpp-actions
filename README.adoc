@@ -19,20 +19,40 @@ If vcpkg dependencies are required and vcpkg is not available, it will be instal
 Both vcpkg and its dependencies can be cached.
 
 
-==== Example
+==== Examples
+
+Example 1:
 
 [source,yml]
 ----
-      - name: Install packages
-        uses: alandefreitas/cpp-actions/package_install
-        id: package-install
-        with:
-          vcpkg: fmt
-          apt-get: ${{ join(matrix.install, ' ') }} ${{ matrix.container && 'sudo software-properties-common tzdata wget curl apt-transport-https make apt-file unzip libssl-dev build-essential autotools-dev autoconf automake g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3 ccache libpython-dev python3-distutils python3-pip git cmake' }}
-          apt-get-ignore-missing: ${{ matrix.container && 'true' }}
-          cxx: ${{ matrix.cxx }} ${{ matrix.cxxflags }}
-          cc: ${{ matrix.cc }}
+steps:
+- name: Install packages
+  uses: alandefreitas/cpp-actions/package_install
+  id: package-install
+  with:
+    vcpkg: fmt
+    apt-get: g++-11
+    cxx: g++-11
+    cc: gcc-11
+----
 
+Example 2 (`apt-get-ignore-missing`):
+
+[source,yml]
+----
+steps:
+- name: Install packages
+  uses: alandefreitas/cpp-actions/package_install
+  id: package-install
+  with:
+    vcpkg: fmt
+    apt-get: g++-4.8 sudo software-properties-common tzdata wget curl apt-transport-https
+      make apt-file unzip libssl-dev build-essential autotools-dev autoconf automake
+      g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3
+      ccache libpython-dev python3-distutils python3-pip git cmake
+    apt-get-ignore-missing: 'true'
+    cxx: g++-4.8
+    cc: gcc-4.8
 ----
 
 ==== Input Parameters
@@ -92,6 +112,68 @@ The action also creates github annotations when warnings or errors are emitted a
 annotations for CMake errors and build error emitted from the compiler.
 
 
+==== Examples
+
+Example 1:
+
+[source,yml]
+----
+steps:
+- name: CMake Workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow
+  with:
+    source-dir: tests
+    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    run-tests: 'true'
+    install-prefix: $GITHUB_WORKSPACE/.local
+    cxxstd: 17,20
+    cxx: g++-11
+    cc: gcc-11
+    cmake-min-version: 3.15
+    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
+    ref-source-dir: .
+----
+
+Example 2 (`build-type`, `generator`):
+
+[source,yml]
+----
+steps:
+- name: CMake Workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow
+  with:
+    source-dir: tests
+    generator: Unix Makefiles
+    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    build-type: Debug
+    run-tests: 'true'
+    install-prefix: $GITHUB_WORKSPACE/.local
+    cmake-min-version: 3.15
+    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
+    ref-source-dir: .
+----
+
+Example 3 (`cxxflags`):
+
+[source,yml]
+----
+steps:
+- name: CMake Workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow
+  with:
+    source-dir: tests
+    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    run-tests: 'true'
+    install-prefix: $GITHUB_WORKSPACE/.local
+    cxxstd: 17,20
+    cxx: clang++-12
+    cxxflags: -stdlib=libc++
+    cc: clang-12
+    cmake-min-version: 3.15
+    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
+    ref-source-dir: .
+----
+
 ==== Input Parameters
 
 |===
@@ -103,6 +185,7 @@ annotations for CMake errors and build error emitted from the compiler.
 |`cc` |Path to C compiler. |(empty)
 |`cxx` |Path to C++ compiler. |(empty)
 |`cxxstd` |List of standards with which cmake will build and test the program. |(empty)
+|`cxxflags` |Force flags to be used with the C++ compiler. |(empty)
 |`toolchain` |Path to toolchain. |(empty)
 |`generator` |Generator name. |(empty)
 |`build-type` |Build type. |`Release`
@@ -137,13 +220,13 @@ cache, the scanning scripting saves us about 3 minutes.
 
 [source,yml]
 ----
-      - name: Clone Boost.Variant2
-        uses: alandefreitas/cpp-actions/boost_clone
-        with:
-          boost_dir: boost-root
-          branch: master
-          modules: variant2
-
+steps:
+- name: Clone Boost.Variant2
+  uses: alandefreitas/cpp-actions/boost_clone
+  with:
+    boost_dir: boost-root
+    branch: master
+    modules: variant2
 ----
 
 ==== Input Parameters
@@ -169,25 +252,98 @@ compiling `b2` if needed and generating a proper `user-config.jam` file.
 This action is particularly useful for boost library proposals.
 
 
-==== Example
+==== Examples
+
+Example 1:
 
 [source,yml]
 ----
-      - name: Test Boost.Variant2
-        if: ${{ matrix.cxx == 'g++-11' }}
-        uses: alandefreitas/cpp-actions/b2_workflow
-        with:
-          source-dir: boost-root
-          modules: variant2
-          toolset: ${{ matrix.toolset }}
-          cxx: ${{ (startsWith(matrix.cxx, 'clang') && matrix.cxx) || '' }}
-          cxxstd: ${{ matrix.cxxstd }}
-          cxxflags: ${{ matrix.cxxflags }}
-          linkflags: ${{ matrix.linkflags }}
-          address-model: ${{ matrix.address-model }}
-          ubsan: ${{ matrix.ubsan }}
-          gcc_toolchain: ${{ matrix.gcc_toolchain }}
+steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2_workflow
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: gcc-11
+    cxxstd: 17,20
+----
 
+Example 2 (`cxx`):
+
+[source,yml]
+----
+steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2_workflow
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: clang
+    cxx: clang++-12
+    cxxstd: 17,20
+----
+
+Example 3 (`address-model`):
+
+[source,yml]
+----
+steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2_workflow
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: msvc-14.3
+    cxxstd: 17,20
+    address-model: 32,64
+----
+
+Example 4 (`ubsan`):
+
+[source,yml]
+----
+steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2_workflow
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: gcc-11
+    cxxstd: 17,20
+    ubsan: 'true'
+----
+
+Example 5 (`linkflags`, `cxxflags`):
+
+[source,yml]
+----
+steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2_workflow
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: clang
+    cxx: clang++-12
+    cxxstd: 17,20
+    cxxflags: -stdlib=libc++
+    linkflags: -stdlib=libc++
+----
+
+Example 6 (`gcc_toolchain`):
+
+[source,yml]
+----
+steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2_workflow
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: clang
+    cxx: clang++-8
+    cxxstd: '17'
+    gcc_toolchain: '7'
 ----
 
 ==== Input Parameters
