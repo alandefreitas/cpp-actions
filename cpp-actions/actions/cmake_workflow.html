@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>CMake Workflow :: C++ Actions</title>
+    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/cmake_workflow.html">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../_/css/site.css">
+    <script>var uiRootPath = '../../_'</script>
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://alandefreitas.github.io/cpp-actions">C++ Actions</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="cpp-actions" data-version="master">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../index.html">C++ Actions</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">C++ Actions</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Actions</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="package_install.html">Action: Install dependencies</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="cmake_workflow.html">Action: CMake Workflow</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="boost_clone.html">Action: Boost Clone</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="b2_workflow.html">Action: B2 Workflow</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../contribute.html">Contribute</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../license.html">License</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="https://github.com/alandefreitas/cpp-actions">GitHub</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">C++ Actions</span>
+    <span class="version">master</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../index.html">C++ Actions</a>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">master</a>
+        </li>
+        <li class="version">
+          <a href="../develop/index.html">develop</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">C++ Actions</a></li>
+    <li>Actions</li>
+    <li><a href="cmake_workflow.html">Action: CMake Workflow</a></li>
+  </ul>
+</nav>
+<div class="page-versions">
+  <button class="version-menu-toggle" title="Show other versions of page">master</button>
+  <div class="version-menu">
+    <a class="version is-current" href="cmake_workflow.html">master</a>
+    <a class="version" href="../develop/actions/cmake_workflow.html">develop</a>
+  </div>
+</div>
+  <div class="edit-this-page"><a href="https://github.com/alandefreitas/cpp-actions/edit/master/docs/modules/ROOT/pages/actions/cmake_workflow.adoc">Edit this Page</a></div>
+  </div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">CMake Workflow</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>This action runs a complete CMake workflow from source files.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>It validates the cmake version installed in the system,</p>
+</li>
+<li>
+<p>updates cmake if the library has a different minimum version,</p>
+</li>
+<li>
+<p>identifies what features that cmake version supports, and</p>
+</li>
+<li>
+<p>runs a complete cmake workflow</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The workflow includes the configure, build, test, and install steps.</p>
+</div>
+<div class="paragraph">
+<p>The action will adjusting the parameters as needed according to the features that cmake version supports.
+For instance,</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>if cmake version does not support the <code>-S &#8230;&#8203; -B &#8230;&#8203;</code> syntax, the action will create the build directory and
+run the configuration step from there</p>
+</li>
+<li>
+<p>if the specified or default generator is multi-config, <code>CMAKE_CONFIGURATION_TYPES</code> will be used instead of
+<code>CMAKE_BUILD_TYPE</code></p>
+</li>
+<li>
+<p>if cmake version does not support the <code>cmake --install</code> syntax, the <code>cmake --build --target install</code>
+will be use instead.</p>
+</li>
+<li>
+<p>if cmake version does not support multiple targets in the <code>cmake --build</code> syntax, the action will run the build
+step once for each target</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The action also creates github annotations when warnings or errors are emitted at any of these steps. This includes
+annotations for CMake errors and build error emitted from the compiler.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_examples"><a class="anchor" href="#_examples"></a>Examples</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Example 1:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: CMake Workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow
+  with:
+    source-dir: tests
+    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    run-tests: 'true'
+    install-prefix: $GITHUB_WORKSPACE/.local
+    cxxstd: 17,20
+    cxx: g++-11
+    cc: gcc-11
+    cmake-min-version: 3.15
+    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
+    ref-source-dir: .</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 2 (<code>generator</code>, <code>build-type</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: CMake Workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow
+  with:
+    source-dir: tests
+    generator: Unix Makefiles
+    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    build-type: Debug
+    run-tests: 'true'
+    install-prefix: $GITHUB_WORKSPACE/.local
+    cmake-min-version: 3.15
+    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
+    ref-source-dir: .</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 3 (<code>cxxflags</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: CMake Workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow
+  with:
+    source-dir: tests
+    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    run-tests: 'true'
+    install-prefix: $GITHUB_WORKSPACE/.local
+    cxxstd: 17,20
+    cxx: clang++-12
+    cxxflags: -stdlib=libc++
+    cc: clang-12
+    cmake-min-version: 3.15
+    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
+    ref-source-dir: .</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_input_parameters"><a class="anchor" href="#_input_parameters"></a>Input Parameters</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Parameter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>source-dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Directory for the source files.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Directory for the binaries relative to the source directory.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-min-version</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The minimum cmake version for this workflow. If the existing version is below that, the action attempts to update CMake.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>3.5</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake_exec</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The cmake executable.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Path to C compiler.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Path to C++ compiler.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxstd</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">List of standards with which cmake will build and test the program.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Force flags to be used with the C++ compiler.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>toolchain</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Path to toolchain.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>generator</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Generator name.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-type</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Build type.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>Release</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-target</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Targets to build instead of the default target.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>install-prefix</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Path where the library should be installed.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>.local/usr</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>run-tests</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether we should run tests.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>install</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether we should install the library.</p>
+<p class="tableblock">The library is only installed once in the <code>install-prefix</code>.</p>
+<p class="tableblock">The latest std version described in <code>cxxstd</code> is used for the installed version.
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>extra-args</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extra arguments to cmake configure command.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>create-annotations</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Create github annotations on errors.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ref-source-dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A reference source directory for annotations. Any annotation filename will be relative to this directory.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>This page was built using the Antora default UI.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+</footer>
+<script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
+<script async src="../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>
