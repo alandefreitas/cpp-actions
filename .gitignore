@@ -16,6 +16,8 @@ venv
 
 # Local dependencies build
 cpp_modules
+docs/node_modules
+docs/build
 
 # IDE settings
 .idea

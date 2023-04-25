@@ -1,0 +1,6 @@
+= Contribute
+
+If there's a platform where one of the actions does not work, feel free to submit a PR with adaptations and tests.
+
+
+

@@ -1,0 +1,20 @@
+# npm install
+# npx antora --fetch antora-playbook.yml
+site:
+  title: C++ Actions
+  url: https://alandefreitas.github.io/cpp-actions/
+  start_page: cpp-actions::index.adoc
+  robots: allow
+content:
+  branches: [master, develop]
+  tags: [v*]
+  edit_url: 'https://github.com/alandefreitas/cpp-actions/edit/{refname}/{path}'
+  sources:
+  - url: https://github.com/alandefreitas/cpp-actions.git
+    start_path: docs
+    edit_url: 'https://github.com/alandefreitas/cpp-actions/edit/{refname}/{path}'
+ui:
+  bundle:
+    url: https://gitlab.com/antora/antora-ui-default/-/jobs/artifacts/HEAD/raw/build/ui-bundle.zip?job=bundle-stable
+    snapshot: true
+  supplemental_files: ./supplemental-ui

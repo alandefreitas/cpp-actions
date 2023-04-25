@@ -4,7 +4,9 @@ This repository includes a number of useful GitHub actions to test C++ libraries
 Part of the difficulty to test C++ libraries comes from the diversity of the C++ ecosystem.
 Our intention is to create a common and resilient set of actions that can work on as many environments as possible.
 
-include::docs/reference/INDEX.adoc[leveloffset=+1]
+NOTE: READ THE DOCS: https://alandefreitas.github.io/cpp-actions/
+
+include::docs/modules/ROOT/pages/actions/index.adoc[leveloffset=+1]
 
 == Contributions
 
@@ -16,5 +18,4 @@ If there's a platform where one of the actions does not work, feel free to submi
 ====
 include::LICENSE[]
 ====
-
 

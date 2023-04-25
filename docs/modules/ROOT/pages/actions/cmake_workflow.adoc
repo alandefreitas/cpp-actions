@@ -1,0 +1,121 @@
+= CMake Workflow [[cmake_workflow]]
+:reftext: CMake Workflow
+:navtitle: Action: CMake Workflow
+
+This action runs a complete CMake workflow from source files.
+
+- It validates the cmake version installed in the system, 
+- updates cmake if the library has a different minimum version, 
+- identifies what features that cmake version supports, and 
+- runs a complete cmake workflow
+
+The workflow includes the configure, build, test, and install steps. 
+
+The action will adjusting the parameters as needed according to the features that cmake version supports. 
+For instance, 
+
+- if cmake version does not support the `-S ... -B ...` syntax, the action will create the build directory and
+run the configuration step from there
+- if the specified or default generator is multi-config, `CMAKE_CONFIGURATION_TYPES` will be used instead of 
+`CMAKE_BUILD_TYPE`
+- if cmake version does not support the `cmake --install` syntax, the `cmake --build --target install`
+will be use instead.
+- if cmake version does not support multiple targets in the `cmake --build` syntax, the action will run the build
+step once for each target
+
+The action also creates github annotations when warnings or errors are emitted at any of these steps. This includes
+annotations for CMake errors and build error emitted from the compiler.
+
+
+== Examples
+
+Example 1:
+
+[source,yml]
+----
+steps:
+- name: CMake Workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow
+  with:
+    source-dir: tests
+    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    run-tests: 'true'
+    install-prefix: $GITHUB_WORKSPACE/.local
+    cxxstd: 17,20
+    cxx: g++-11
+    cc: gcc-11
+    cmake-min-version: 3.15
+    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
+    ref-source-dir: .
+----
+
+Example 2 (`generator`, `build-type`):
+
+[source,yml]
+----
+steps:
+- name: CMake Workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow
+  with:
+    source-dir: tests
+    generator: Unix Makefiles
+    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    build-type: Debug
+    run-tests: 'true'
+    install-prefix: $GITHUB_WORKSPACE/.local
+    cmake-min-version: 3.15
+    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
+    ref-source-dir: .
+----
+
+Example 3 (`cxxflags`):
+
+[source,yml]
+----
+steps:
+- name: CMake Workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow
+  with:
+    source-dir: tests
+    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    run-tests: 'true'
+    install-prefix: $GITHUB_WORKSPACE/.local
+    cxxstd: 17,20
+    cxx: clang++-12
+    cxxflags: -stdlib=libc++
+    cc: clang-12
+    cmake-min-version: 3.15
+    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
+    ref-source-dir: .
+----
+
+== Input Parameters
+
+|===
+|Parameter |Description |Default
+|`source-dir` |Directory for the source files. |`.`
+|`build-dir` |Directory for the binaries relative to the source directory. |`build`
+|`cmake-min-version` |The minimum cmake version for this workflow. If the existing version is below that, the action attempts to update CMake. |`3.5`
+|`cmake_exec` |The cmake executable. |`cmake`
+|`cc` |Path to C compiler. |(empty)
+|`cxx` |Path to C++ compiler. |(empty)
+|`cxxstd` |List of standards with which cmake will build and test the program. |(empty)
+|`cxxflags` |Force flags to be used with the C++ compiler. |(empty)
+|`toolchain` |Path to toolchain. |(empty)
+|`generator` |Generator name. |(empty)
+|`build-type` |Build type. |`Release`
+|`build-target` |Targets to build instead of the default target. |(empty)
+|`install-prefix` |Path where the library should be installed. |`.local/usr`
+|`run-tests` |Whether we should run tests. |`true`
+|`install` |Whether we should install the library. 
+
+The library is only installed once in the `install-prefix`.
+
+The latest std version described in `cxxstd` is used for the installed version.
+. |`true`
+|`extra-args` |Extra arguments to cmake configure command. |(empty)
+|`create-annotations` |Create github annotations on errors. |`true`
+|`ref-source-dir` |A reference source directory for annotations. Any annotation filename will be relative to this directory. |`.`
+|`trace-commands` |Trace commands executed by the workflow. |`false`
+|===
+

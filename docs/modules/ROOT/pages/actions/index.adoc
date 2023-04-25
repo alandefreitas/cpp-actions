@@ -1,0 +1,13 @@
+= Actions
+:reftext: Actions
+:navtitle: All Actions
+
+- <<package_install>>
+- <<cmake_workflow>>
+- <<boost_clone>>
+- <<b2_workflow>>
+
+include::package_install.adoc[leveloffset=+1]
+include::cmake_workflow.adoc[leveloffset=+1]
+include::boost_clone.adoc[leveloffset=+1]
+include::b2_workflow.adoc[leveloffset=+1]

@@ -1,0 +1,10 @@
+* xref:index.adoc[]
+* Actions
+** xref:actions/package_install.adoc[]
+** xref:actions/cmake_workflow.adoc[]
+** xref:actions/boost_clone.adoc[Action: Boost Clone]
+** xref:actions/b2_workflow.adoc[]
+* xref:contribute.adoc[]
+* xref:license.adoc[]
+* https://github.com/alandefreitas/cpp-actions[GitHub]
+

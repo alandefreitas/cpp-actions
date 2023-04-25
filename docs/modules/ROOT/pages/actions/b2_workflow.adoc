@@ -1,4 +1,6 @@
-== B2 Workflow [[b2_workflow]]
+= B2 Workflow [[b2_workflow]]
+:reftext: B2 Workflow
+:navtitle: Action: B2 Workflow
 
 This action runs a complete B2 workflow from boost source files.
 
@@ -8,7 +10,7 @@ compiling `b2` if needed and generating a proper `user-config.jam` file.
 This action is particularly useful for boost library proposals.
 
 
-=== Examples
+== Examples
 
 Example 1:
 
@@ -102,7 +104,7 @@ steps:
     gcc_toolchain: '7'
 ----
 
-=== Input Parameters
+== Input Parameters
 
 |===
 |Parameter |Description |Default

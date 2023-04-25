@@ -51,7 +51,7 @@ def sort_step(d):
 
 
 readme_base = os.path.join('README.base.adoc')
-reference_dir = os.path.join('docs', 'reference')
+reference_dir = os.path.join('docs', 'modules', 'ROOT', 'pages', 'actions')
 example_path = os.path.join('.github', 'workflows', 'ci.yml')
 actions = ['package_install', 'cmake_workflow', 'boost_clone', 'b2_workflow']
 
@@ -298,7 +298,7 @@ for action in actions:
     inputs = data['inputs']
     outputs = data['outputs'] if 'outputs' in data else []
 
-    output = f'== {action_name} [[{action}]]\n\n{action_description}\n\n'
+    output = f'= {action_name} [[{action}]]\n:reftext: {action_name}\n:navtitle: Action: {action_name}\n\n{action_description}\n\n'
     toc_output += f'- <<{action}>>\n'
 
     # Look for example templates
@@ -341,9 +341,9 @@ for action in actions:
     if examples:
         covered_keys = set()
         if len(examples) > 1:
-            output += f'=== Examples\n\n'
+            output += f'== Examples\n\n'
         else:
-            output += f'=== Example\n\n'
+            output += f'== Example\n\n'
         for i in range(len(examples)):
             example = examples[i]
             if len(examples) > 1:
@@ -360,7 +360,7 @@ for action in actions:
             mapping['steps'] = [example]
             output += f'[source,yml]\n----\n{yaml.dump(mapping, Dumper=OrderedDumper)}----\n\n'
 
-    output += f'=== Input Parameters\n\n'
+    output += f'== Input Parameters\n\n'
     output += f'|===\n|Parameter |Description |Default\n'
     for parameter, details in inputs.items():
         description = details['description']
@@ -375,7 +375,7 @@ for action in actions:
     output += '|===\n\n'
 
     if outputs:
-        output += f'=== Outputs\n\n'
+        output += f'== Outputs\n\n'
         output += f'|===\n|Output |Description\n'
         for parameter, details in outputs.items():
             description = details['description']
@@ -383,17 +383,17 @@ for action in actions:
         output += '|===\n'
 
     # Write the output to a file
-    action_readme_path = os.path.join(action, 'README.adoc')
+    action_readme_path = os.path.join('docs', 'modules', 'ROOT', 'pages', 'actions', f'{action}.adoc')
     with open(action_readme_path, 'w') as f:
         f.write(output)
 
     # Update index content
-    index_output += f'include::{os.path.relpath(action_readme_path, reference_dir)}[]\n'
+    index_output += f'include::{os.path.relpath(action_readme_path, reference_dir)}[leveloffset=+1]\n'
 
 if not os.path.exists(reference_dir):
     os.makedirs(reference_dir)
-with open(os.path.join(reference_dir, 'INDEX.adoc'), 'w') as f:
-    f.write('= Actions\n\n')
+with open(os.path.join(reference_dir, 'index.adoc'), 'w') as f:
+    f.write('= Actions\n:reftext: Actions\n:navtitle: All Actions\n\n')
     f.write(toc_output)
     f.write('\n')
     f.write(index_output)

@@ -1,0 +1,8 @@
+= License
+
+[]
+====
+include::partial$LICENSE[]
+====
+
+

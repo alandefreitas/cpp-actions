@@ -4,7 +4,11 @@ This repository includes a number of useful GitHub actions to test C++ libraries
 Part of the difficulty to test C++ libraries comes from the diversity of the C++ ecosystem.
 Our intention is to create a common and resilient set of actions that can work on as many environments as possible.
 
+NOTE: READ THE DOCS: https://alandefreitas.github.io/cpp-actions/
+
 == Actions
+:reftext: Actions
+:navtitle: All Actions
 
 - <<package_install>>
 - <<cmake_workflow>>
@@ -12,6 +16,8 @@ Our intention is to create a common and resilient set of actions that can work o
 - <<b2_workflow>>
 
 === Install dependencies [[package_install]]
+:reftext: Install dependencies
+:navtitle: Action: Install dependencies
 
 This actions installs dependencies from multiple package managers for a workflow.
 
@@ -86,6 +92,8 @@ This would cause conflict in workflows that later attempt to use vcpkg dependenc
 |`vcpkg_executable` |vcpkg toolchain file
 |===
 === CMake Workflow [[cmake_workflow]]
+:reftext: CMake Workflow
+:navtitle: Action: CMake Workflow
 
 This action runs a complete CMake workflow from source files.
 
@@ -134,7 +142,7 @@ steps:
     ref-source-dir: .
 ----
 
-Example 2 (`build-type`, `generator`):
+Example 2 (`generator`, `build-type`):
 
 [source,yml]
 ----
@@ -205,6 +213,8 @@ The latest std version described in `cxxstd` is used for the installed version.
 |===
 
 === Boost Clone [[boost_clone]]
+:reftext: Boost Clone
+:navtitle: Action: Boost Clone
 
 This action clones the boost source directory, attempting to get it from the cache first. Only the specified
 modules are cloned and cached. 
@@ -243,6 +253,8 @@ steps:
 |===
 
 === B2 Workflow [[b2_workflow]]
+:reftext: B2 Workflow
+:navtitle: Action: B2 Workflow
 
 This action runs a complete B2 workflow from boost source files.
 
@@ -313,7 +325,7 @@ steps:
     ubsan: 'true'
 ----
 
-Example 5 (`linkflags`, `cxxflags`):
+Example 5 (`cxxflags`, `linkflags`):
 
 [source,yml]
 ----
@@ -399,5 +411,4 @@ FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
 ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ====
-
 

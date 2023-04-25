@@ -123,3 +123,46 @@ jobs:
           extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
           ref-source-dir: .
 
+  docs:
+    needs: build
+    if: ${{ (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') && github.event_name == 'push' }}
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: 'Docs', os: ubuntu-22.04 }
+
+    name: ${{ matrix.name }}
+    timeout-minutes: 120
+    runs-on: ${{matrix.os}}
+    permissions:
+      contents: write
+
+    steps:
+      - name: Clone Boost.URL
+        uses: actions/checkout@v3
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Antora
+        working-directory: docs
+        run: | 
+          npm i antora
+
+      - name: Generate Site
+        working-directory: docs
+        run: | 
+          npx antora antora-playbook.yml
+
+      - name: Publish to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/build/site
