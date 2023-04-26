@@ -154,7 +154,15 @@ jobs:
       - name: Install Antora
         working-directory: docs
         run: | 
-          npm i antora
+          npm install
+
+      - name: Recreate symlinks
+        working-directory: docs
+        run: |
+          rm supplemental-ui/js/vendor/tabs.js
+          rm supplemental-ui/css/vendor/tabs.css
+          cp node_modules/@asciidoctor/tabs/dist/css/tabs.css supplemental-ui/css/vendor/
+          cp node_modules/@asciidoctor/tabs/dist/js/tabs.js supplemental-ui/js/vendor/
 
       - name: Generate Site
         working-directory: docs

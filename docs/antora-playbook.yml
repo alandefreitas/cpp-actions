@@ -8,15 +8,19 @@ site:
   keys:
     repo_url: 'https://github.com/alandefreitas/cpp-actions'
 content:
-  branches: [master, develop]
-  tags: [v*]
+  branches: [ master, develop ]
+  tags: [ v* ]
   edit_url: 'https://github.com/alandefreitas/cpp-actions/edit/{refname}/{path}'
   sources:
-  - url: https://github.com/alandefreitas/cpp-actions.git
-    start_path: docs
-    edit_url: 'https://github.com/alandefreitas/cpp-actions/edit/{refname}/{path}'
+    - url: https://github.com/alandefreitas/cpp-actions.git
+      start_path: docs
+      edit_url: 'https://github.com/alandefreitas/cpp-actions/edit/{refname}/{path}'
 ui:
   bundle:
     url: https://github.com/bonitasoft/bonita-documentation-theme/releases/download/v1.11.0/bonita-documentation-theme-v1.11.0.zip
     snapshot: true
   supplemental_files: ./supplemental-ui
+asciidoc:
+  extensions:
+    - '@asciidoctor/tabs'
+
