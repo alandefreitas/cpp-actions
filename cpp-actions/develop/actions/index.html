@@ -3,28 +3,62 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Actions :: C++ Actions</title>
-    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/index.html">
+<title>Actions | C++ Actions</title>    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/index.html">
     <meta name="generator" content="Antora 3.1.3">
-    <link rel="stylesheet" href="../../../_/css/site.css">
-    <script>var uiRootPath = '../../../_'</script>
-  </head>
+<link rel="stylesheet" href="../../../_/stylesheets/vendor/libs.css">
+<link rel="stylesheet" href="../../../_/stylesheets/site.css">
+<link id="highlight-style-lnk" rel="stylesheet" href="../../../_/stylesheets/vendor/highlight-light.css">
+<link rel="icon" href="../../../_/img/favicon.svg" type="image/x-icon">  </head>
   <body class="article">
+<script src="../../../_/js/header-site.js"></script>
 <header class="header">
-  <nav class="navbar">
-    <div class="navbar-brand">
-      <a class="navbar-item" href="https://alandefreitas.github.io/cpp-actions">C++ Actions</a>
-      <button class="navbar-burger" data-target="topbar-nav">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-    </div>
-    <div id="topbar-nav" class="navbar-menu">
-    </div>
-  </nav>
-</header>
-<div class="body">
+    <nav class="navbar  navbar-nonProduction  ">
+        <div class="navbar-brand">
+            <a class="navbar-item" href="https://alandefreitas.github.io/cpp-actions">C++ Actions</a>
+            <div class="navbar-item-nonProduction">
+                <p>develop</p>
+            </div>
+        </div>
+
+        <div id="topbar-nav" class="navbar-menu">
+            <div class="navbar-item is-hoverable">
+                <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions: Actions</a>
+            </div>
+            <div class="navbar-item is-hoverable">
+                <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions" target="_blank">GitHub</a>
+            </div>
+            <div class="navbar-item is-hoverable">
+                <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions/releases" target="_blank">Releases</a>
+            </div>
+        </div>
+
+        <div class="navbar-end" id="search-container">
+
+            <div class="theme-switch-wrapper">
+                <input type="checkbox" class="checkbox" onclick="toggleDarkThemeMode(this)" id="check">
+                <div class="toggle-content">
+                    <label class="label" for="check">
+                        <span>🌚</span>
+                        <span>😎</span>
+                        <div class="ball"></div>
+                    </label>
+                </div>
+            </div>
+
+            <button class="navbar-burger" data-target="topbar-nav-mobile">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <nav id="topbar-nav-mobile" class="navbar-menu-mobile">
+        <div class="navbar-item is-hoverable">
+            <a class="navbar-link" href="/cpp-actions/index.html">C++ Actions</a>
+        </div>
+    </nav>
+</header><div class="body">
 <div class="nav-container" data-component="cpp-actions" data-version="develop">
   <aside class="nav">
     <div class="panels">
@@ -35,34 +69,25 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="../index.html">C++ Actions</a>
+    <a class="nav-link" href="../index.html">Home</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <button class="nav-item-toggle"></button>
-    <span class="nav-text">Actions</span>
-<ul class="nav-list">
-  <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="package_install.html">Action: Install dependencies</a>
+    <a class="nav-link" href="package_install.html">Install dependencies Action</a>
   </li>
-  <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="cmake_workflow.html">Action: CMake Workflow</a>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="cmake_workflow.html">CMake Workflow Action</a>
   </li>
-  <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="boost_clone.html">Action: Boost Clone</a>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="boost_clone.html">Boost Clone Action</a>
   </li>
-  <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="b2_workflow.html">Action: B2 Workflow</a>
-  </li>
-</ul>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="b2_workflow.html">B2 Workflow Action</a>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contribute</a>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../license.html">License</a>
-  </li>
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="https://github.com/alandefreitas/cpp-actions">GitHub</a>
   </li>
 </ul>
   </li>
@@ -76,7 +101,7 @@
   </div>
   <ul class="components">
     <li class="component is-current">
-      <a class="title" href="../../index.html">C++ Actions</a>
+      <span class="title">C++ Actions</span>
       <ul class="versions">
         <li class="version is-latest">
           <a href="../../index.html">master</a>
@@ -87,33 +112,34 @@
       </ul>
     </li>
   </ul>
-</div>
-    </div>
+</div>    </div>
   </aside>
 </div>
 <main class="article">
-<div class="toolbar" role="navigation">
-<button class="nav-toggle"></button>
-  <a href="../../index.html" class="home-link"></a>
-<nav class="breadcrumbs" aria-label="breadcrumbs">
+<div class="toolbar toolbar-wrap">
+  <div class="toolbar" role="navigation">
+  <button class="nav-toggle"></button>  <a href="../../index.html" class="home-link"></a>
+  <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">C++ Actions</a></li>
     <li><a href="index.html">Actions</a></li>
   </ul>
 </nav>
-<div class="page-versions">
-  <button class="version-menu-toggle" title="Show other versions of page">develop</button>
+  <div class="page-versions">
+  <button class="version-menu-toggle"
+    title="Show other versions of page">develop</button>
   <div class="version-menu">
     <a class="version" href="../../actions/index.html">master</a>
     <a class="version is-current" href="index.html">develop</a>
   </div>
 </div>
-  <div class="edit-this-page"><a href="https://github.com/alandefreitas/cpp-actions/edit/develop/docs/modules/ROOT/pages/actions/index.adoc">Edit this Page</a></div>
   </div>
+
+
+
+
+</div>
   <div class="content">
-<aside class="toc sidebar" data-title="Contents" data-levels="2">
-  <div class="toc-menu"></div>
-</aside>
 <article class="doc">
 <h1 class="page">Actions</h1>
 <div id="preamble">
@@ -140,11 +166,11 @@
 <h2 id="package_install"><a class="anchor" href="#package_install"></a>Install dependencies</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>This actions installs dependencies from multiple package managers for a workflow.</p>
+<p>This action installs dependencies from multiple package managers for a workflow.</p>
 </div>
 <div class="paragraph">
 <p>If vcpkg dependencies are required and vcpkg is not available, it will be installed.
-Both vcpkg and its dependencies can be cached.</p>
+Both vcpkg and its dependencies are cached.</p>
 </div>
 <div class="sect2">
 <h3 id="_examples"><a class="anchor" href="#_examples"></a>Examples</h3>
@@ -202,12 +228,12 @@ Both vcpkg and its dependencies can be cached.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">List of packages we should install with vcpkg. (Whitespace-separated).</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">List of packages we should install with apt-get. (Whitespace-separated).</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
@@ -216,17 +242,17 @@ Both vcpkg and its dependencies can be cached.</p>
 `libc` or <code>libstdc`, while the default compiler used by vcpkg will usually be GCC linking `libstdc</code>.</p>
 <p class="tableblock">This would cause conflict in workflows that later attempt to use vcpkg dependencies.
 .</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">C compiler used by vcpkg.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg_triplet</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The triplet used by vcpkg to install packages.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg_dir</code></p></td>
@@ -246,12 +272,12 @@ Both vcpkg and its dependencies can be cached.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-sources</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">List of sources for apt-get.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-source-keys</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">List of source keys for apt-get.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-ignore-missing</code></p></td>
@@ -290,54 +316,70 @@ Both vcpkg and its dependencies can be cached.</p>
 <h2 id="cmake_workflow"><a class="anchor" href="#cmake_workflow"></a>CMake Workflow</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>This action runs a complete CMake workflow from source files.</p>
+<p>This action runs a complete CMake workflow from source files. A workflow is composed of the following steps:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>It validates the cmake version installed in the system,</p>
+<p>Configure</p>
 </li>
 <li>
-<p>updates cmake if the library has a different minimum version,</p>
+<p>Build</p>
 </li>
 <li>
-<p>identifies what features that cmake version supports, and</p>
+<p>Test</p>
 </li>
 <li>
-<p>runs a complete cmake workflow</p>
+<p>Install</p>
 </li>
 </ul>
 </div>
 <div class="paragraph">
-<p>The workflow includes the configure, build, test, and install steps.</p>
+<p>The action also sets up the environment for the workflow:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>It validates the CMake version installed in the system,</p>
+</li>
+<li>
+<p>Updates CMake if the library has a different minimum version,</p>
+</li>
+<li>
+<p>Identifies what features the current CMake version supports, and</p>
+</li>
+<li>
+<p>Runs a complete cmake workflow</p>
+</li>
+</ul>
 </div>
 <div class="paragraph">
-<p>The action will adjusting the parameters as needed according to the features that cmake version supports.
+<p>The action will adjusts the parameters as needed according to the features that CMake version supports.
 For instance,</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>if cmake version does not support the <code>-S &#8230;&#8203; -B &#8230;&#8203;</code> syntax, the action will create the build directory and
-run the configuration step from there</p>
+<p>If the CMake version does not support the <code>-S &#8230;&#8203; -B &#8230;&#8203;</code> syntax, the action will create the build directory and
+run the configuration step from there.</p>
 </li>
 <li>
-<p>if the specified or default generator is multi-config, <code>CMAKE_CONFIGURATION_TYPES</code> will be used instead of
-<code>CMAKE_BUILD_TYPE</code></p>
+<p>If the specified or default generator is multi-config, <code>CMAKE_CONFIGURATION_TYPES</code> will be used instead of
+<code>CMAKE_BUILD_TYPE</code>, since the later is ignored by these generators.</p>
 </li>
 <li>
-<p>if cmake version does not support the <code>cmake --install</code> syntax, the <code>cmake --build --target install</code>
+<p>If the CMake version does not support the <code>cmake --install</code> syntax, the <code>cmake --build --target install</code>
 will be use instead.</p>
 </li>
 <li>
-<p>if cmake version does not support multiple targets in the <code>cmake --build</code> syntax, the action will run the build
-step once for each target</p>
+<p>If the CMake version does not support multiple targets in the <code>cmake --build</code> syntax, the action will run the build
+step once for each target.</p>
 </li>
 </ul>
 </div>
 <div class="paragraph">
-<p>The action also creates github annotations when warnings or errors are emitted at any of these steps. This includes
-annotations for CMake errors and build error emitted from the compiler.</p>
+<p>The action also creates GitHub annotations when warnings or errors are emitted at any of these steps. This includes
+annotations for CMake errors at the configure step and build errors emitted from the compiler at the build step.</p>
 </div>
 <div class="sect2">
 <h3 id="_examples_2"><a class="anchor" href="#_examples_2"></a>Examples</h3>
@@ -442,32 +484,32 @@ annotations for CMake errors and build error emitted from the compiler.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Path to C compiler.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Path to C++ compiler.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxstd</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">List of standards with which cmake will build and test the program.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Force flags to be used with the C++ compiler.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>toolchain</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Path to toolchain.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>generator</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Generator name.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-type</code></p></td>
@@ -477,7 +519,7 @@ annotations for CMake errors and build error emitted from the compiler.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-target</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Targets to build instead of the default target.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>install-prefix</code></p></td>
@@ -500,7 +542,7 @@ annotations for CMake errors and build error emitted from the compiler.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>extra-args</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Extra arguments to cmake configure command.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>create-annotations</code></p></td>
@@ -526,12 +568,15 @@ annotations for CMake errors and build error emitted from the compiler.</p>
 <h2 id="boost_clone"><a class="anchor" href="#boost_clone"></a>Boost Clone</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>This action clones the boost source directory, attempting to get it from the cache first. Only the specified
+<p>This action clones the Boost source directory, attempting to get it from the cache first. Only the specified
 modules are cloned and cached.</p>
 </div>
 <div class="paragraph">
-<p>Besides specified an explicit list of modules, the action includes a script to scan dependencies before cloning
-boost and caching based only on these dependencies.</p>
+<p>Besides the explicitly specified list of modules, the action can also scan directories for boost dependencies
+to implicitly determine what modules should be cloned.</p>
+</div>
+<div class="paragraph">
+<p>The union of the implicitly and explicitly specified modules is cloned. Caching is based only on these dependencies.</p>
 </div>
 <div class="paragraph">
 <p>For a project with about 5 boost dependencies, caching saves about 4 minutes in the workflow. When there&#8217;s no
@@ -578,22 +623,22 @@ cache, the scanning scripting saves us about 3 minutes.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>patches</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Libraries used to patch the boost installation.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>modules</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The boost submodules we need to clone.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>scan-modules-dir</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">An independent directory we should scan for boost dependencies to clone.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>scan-modules-ignore</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">List of modules that should be ignored in scan-modules.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
@@ -609,14 +654,14 @@ cache, the scanning scripting saves us about 3 minutes.</p>
 <h2 id="b2_workflow"><a class="anchor" href="#b2_workflow"></a>B2 Workflow</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>This action runs a complete B2 workflow from boost source files.</p>
+<p>This action runs a complete B2 workflow from Boost source files.</p>
 </div>
 <div class="paragraph">
-<p>It takes the boost source directory and does whatever it needs to test the specified modules. This includes
+<p>It takes the Boost source directory and does whatever it needs to test the specified modules. This includes
 compiling <code>b2</code> if needed and generating a proper <code>user-config.jam</code> file.</p>
 </div>
 <div class="paragraph">
-<p>This action is particularly useful for boost library proposals.</p>
+<p>This action is particularly useful for Boost library proposals.</p>
 </div>
 <div class="sect2">
 <h3 id="_examples_3"><a class="anchor" href="#_examples_3"></a>Examples</h3>
@@ -684,7 +729,7 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 </div>
 </div>
 <div class="paragraph">
-<p>Example 5 (<code>cxxflags</code>, <code>linkflags</code>):</p>
+<p>Example 5 (<code>linkflags</code>, <code>cxxflags</code>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -741,47 +786,47 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-variant</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Custom build variants.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>modules</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The list of modules we should test.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc_toolchain</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Create a special GCC toolchain for this version of GCC and update user-config.jam.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>toolset</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Toolset name.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>address-model</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Valid b2 list of address models.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Path to C++ compiler.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Extra compiler flags.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>linkflags</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Extra linker flags.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxstd</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">List of standards with which cmake will build and test the program.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>ubsan</code></p></td>
@@ -791,7 +836,7 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>threading</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">b2 threading option.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
@@ -804,14 +849,102 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 </div>
 </div>
 </article>
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
   </div>
 </main>
 </div>
-<footer class="footer">
-  <p>This page was built using the Antora default UI.</p>
-  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
-</footer>
-<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
-<script async src="../../../_/js/vendor/highlight.js"></script>
+<footer>
+    <div class="footer-body">
+        <div class="footer-footer">
+            <p>
+                C++ Actions:
+                <a href="https://alandefreitas.github.io/cpp-actions">https://alandefreitas.github.io/cpp-actions</a>
+                - <a href="https://github.com/alandefreitas/cpp-actions" target="_blank">https://github.com/alandefreitas/cpp-actions</a>
+                - 2023
+            </p>
+            <p>
+                Bonita Theme:
+                <a href="https://github.com/bonitasoft/bonita-documentation-theme" target="_blank">
+                    https://github.com/bonitasoft/bonita-documentation-theme
+                </a>
+            </p>
+        </div>
+    </div>
+</footer><script>window.uiRootPath = '../../../_'</script>
+<script src="../../../_/js/vendor/highlight.min.js"></script>
+<script src="../../../_/js/vendor/libs.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<script src="../../../_/js/site.js"></script>
+
+<script>
+  // var ALGOLIA_INSIGHTS_SRC = "https://cdn.jsdelivr.net/npm/search-insights@1.7.1";
+  //
+  // !function (e, a, t, n, s, i, c) {
+  //   e.AlgoliaAnalyticsObject = s, e[s] = e[s] || function () {
+  //     (e[s].queue = e[s].queue || []).push(arguments)
+  //   }, i = a.createElement(t), c = a.getElementsByTagName(t)[0],
+  //     i.async = 1, i.src = n, c.parentNode.insertBefore(i, c)
+  // }(window, document, "script", ALGOLIA_INSIGHTS_SRC, "aa");
+</script>
+
+<script type="text/javascript">
+  docsearch({
+    container: '#docsearch',
+    appId: 'LWD25NX3CD',
+    apiKey: '6408f799f329e3a010e6a5ac397210d8',
+    indexName: 'bonitasoft',
+    hitsPerPage: 20,
+    searchParameters: {
+      facetFilters: ["version:develop", "tags:cpp-actions"],
+    }
+  });
+  /*
+          docsearch({
+          algoliaOptions: {
+              clickAnalytics: true,
+          },
+          handleSelected: function (input, event, suggestion, datasetNumber, context) {
+              sendClickEvent(lastQueryID, lastQueryHits, suggestion);
+              input.setVal('');
+              window.location.assign(suggestion.url);
+          },
+          queryDataCallback: function (data) {
+              lastQueryID = data.results[0].queryID;
+              lastQueryHits = data.results[0].hits;
+          }
+          });
+
+          aa('init', {
+          appId: 'BH4D9OD16A',
+          apiKey: '16267f96d135c47df8454efd5b448c9a',
+          });
+      */
+</script>
+
+
+<script>
+  let asciinemaPlayers = document.querySelectorAll('asciinema-player');
+  asciinemaPlayers.forEach(htmlPlayer => {
+  let options = {fit: false};
+  htmlPlayer.getAttributeNames().forEach(key => options[key] = htmlPlayer.getAttribute(key));
+  AsciinemaPlayer.create(htmlPlayer.getAttribute('src'), htmlPlayer, options);
+});
+
+</script>
+<script>
+  // init toggle state
+  const isDarkThemeEnable = localStorage.getItem('theme') === 'dark';
+  initializeThemeToggleIfAvailable('check', isDarkThemeEnable);
+  initializeThemeToggleIfAvailable('check-mobile', isDarkThemeEnable);
+
+  function initializeThemeToggleIfAvailable(elementId, checked) {
+    const checkElement = document.getElementById(elementId);
+    if(checkElement) {
+      checkElement.checked = checked;
+    }
+  }
+</script>
   </body>
 </html>
