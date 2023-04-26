@@ -1,9 +1,9 @@
 name: 'Install dependencies'
 description: | 
-  This actions installs dependencies from multiple package managers for a workflow.
+  This action installs dependencies from multiple package managers for a workflow.
   
   If vcpkg dependencies are required and vcpkg is not available, it will be installed.
-  Both vcpkg and its dependencies can be cached.
+  Both vcpkg and its dependencies are cached.
 
 inputs:
   vcpkg:

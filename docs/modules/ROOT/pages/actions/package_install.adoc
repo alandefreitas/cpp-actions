@@ -1,11 +1,11 @@
 = Install dependencies [[package_install]]
 :reftext: Install dependencies
-:navtitle: Action: Install dependencies
+:navtitle: Install dependencies Action
 
-This actions installs dependencies from multiple package managers for a workflow.
+This action installs dependencies from multiple package managers for a workflow.
 
 If vcpkg dependencies are required and vcpkg is not available, it will be installed.
-Both vcpkg and its dependencies can be cached.
+Both vcpkg and its dependencies are cached.
 
 
 == Examples
@@ -48,22 +48,22 @@ steps:
 
 |===
 |Parameter |Description |Default
-|`vcpkg` |List of packages we should install with vcpkg. (Whitespace-separated). |(empty)
-|`apt-get` |List of packages we should install with apt-get. (Whitespace-separated). |(empty)
+|`vcpkg` |List of packages we should install with vcpkg. (Whitespace-separated). |
+|`apt-get` |List of packages we should install with apt-get. (Whitespace-separated). |
 |`cxx` |C++ compiler used by vcpkg.
 
 Setting the compiler is particularly important in Linux workflows that use `clang`, since `clang` might link 
 `libc++` or `libstdc++`, while the default compiler used by vcpkg will usually be GCC linking `libstdc++`.
 
 This would cause conflict in workflows that later attempt to use vcpkg dependencies.
-. |(empty)
-|`cc` |C compiler used by vcpkg. |(empty)
-|`vcpkg_triplet` |The triplet used by vcpkg to install packages. |(empty)
+. |
+|`cc` |C compiler used by vcpkg. |
+|`vcpkg_triplet` |The triplet used by vcpkg to install packages. |
 |`vcpkg_dir` |The directory where vcpkg should be cloned and installed. |`vcpkg`
 |`vcpkg_branch` |vcpkg branch we should use. |`master`
 |`apt-get-retries` |Number of time we should retry when apt-get fails. |`1`
-|`apt-get-sources` |List of sources for apt-get. |(empty)
-|`apt-get-source-keys` |List of source keys for apt-get. |(empty)
+|`apt-get-sources` |List of sources for apt-get. |
+|`apt-get-source-keys` |List of source keys for apt-get. |
 |`apt-get-ignore-missing` |Whether apt-get should ignore missing packages. |`false`
 |===
 

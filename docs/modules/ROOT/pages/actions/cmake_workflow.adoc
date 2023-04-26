@@ -1,30 +1,35 @@
 = CMake Workflow [[cmake_workflow]]
 :reftext: CMake Workflow
-:navtitle: Action: CMake Workflow
+:navtitle: CMake Workflow Action
 
-This action runs a complete CMake workflow from source files.
+This action runs a complete CMake workflow from source files. A workflow is composed of the following steps:
 
-- It validates the cmake version installed in the system, 
-- updates cmake if the library has a different minimum version, 
-- identifies what features that cmake version supports, and 
-- runs a complete cmake workflow
+- Configure
+- Build
+- Test
+- Install
 
-The workflow includes the configure, build, test, and install steps. 
+The action also sets up the environment for the workflow: 
 
-The action will adjusting the parameters as needed according to the features that cmake version supports. 
+- It validates the CMake version installed in the system, 
+- Updates CMake if the library has a different minimum version, 
+- Identifies what features the current CMake version supports, and 
+- Runs a complete cmake workflow
+
+The action will adjusts the parameters as needed according to the features that CMake version supports. 
 For instance, 
 
-- if cmake version does not support the `-S ... -B ...` syntax, the action will create the build directory and
-run the configuration step from there
-- if the specified or default generator is multi-config, `CMAKE_CONFIGURATION_TYPES` will be used instead of 
-`CMAKE_BUILD_TYPE`
-- if cmake version does not support the `cmake --install` syntax, the `cmake --build --target install`
+- If the CMake version does not support the `-S ... -B ...` syntax, the action will create the build directory and
+run the configuration step from there.
+- If the specified or default generator is multi-config, `CMAKE_CONFIGURATION_TYPES` will be used instead of 
+`CMAKE_BUILD_TYPE`, since the later is ignored by these generators.
+- If the CMake version does not support the `cmake --install` syntax, the `cmake --build --target install`
 will be use instead.
-- if cmake version does not support multiple targets in the `cmake --build` syntax, the action will run the build
-step once for each target
+- If the CMake version does not support multiple targets in the `cmake --build` syntax, the action will run the build
+step once for each target.
 
-The action also creates github annotations when warnings or errors are emitted at any of these steps. This includes
-annotations for CMake errors and build error emitted from the compiler.
+The action also creates GitHub annotations when warnings or errors are emitted at any of these steps. This includes
+annotations for CMake errors at the configure step and build errors emitted from the compiler at the build step.
 
 
 == Examples
@@ -49,7 +54,7 @@ steps:
     ref-source-dir: .
 ----
 
-Example 2 (`generator`, `build-type`):
+Example 2 (`build-type`, `generator`):
 
 [source,yml]
 ----
@@ -97,14 +102,14 @@ steps:
 |`build-dir` |Directory for the binaries relative to the source directory. |`build`
 |`cmake-min-version` |The minimum cmake version for this workflow. If the existing version is below that, the action attempts to update CMake. |`3.5`
 |`cmake_exec` |The cmake executable. |`cmake`
-|`cc` |Path to C compiler. |(empty)
-|`cxx` |Path to C++ compiler. |(empty)
-|`cxxstd` |List of standards with which cmake will build and test the program. |(empty)
-|`cxxflags` |Force flags to be used with the C++ compiler. |(empty)
-|`toolchain` |Path to toolchain. |(empty)
-|`generator` |Generator name. |(empty)
+|`cc` |Path to C compiler. |
+|`cxx` |Path to C++ compiler. |
+|`cxxstd` |List of standards with which cmake will build and test the program. |
+|`cxxflags` |Force flags to be used with the C++ compiler. |
+|`toolchain` |Path to toolchain. |
+|`generator` |Generator name. |
 |`build-type` |Build type. |`Release`
-|`build-target` |Targets to build instead of the default target. |(empty)
+|`build-target` |Targets to build instead of the default target. |
 |`install-prefix` |Path where the library should be installed. |`.local/usr`
 |`run-tests` |Whether we should run tests. |`true`
 |`install` |Whether we should install the library. 
@@ -113,7 +118,7 @@ The library is only installed once in the `install-prefix`.
 
 The latest std version described in `cxxstd` is used for the installed version.
 . |`true`
-|`extra-args` |Extra arguments to cmake configure command. |(empty)
+|`extra-args` |Extra arguments to cmake configure command. |
 |`create-annotations` |Create github annotations on errors. |`true`
 |`ref-source-dir` |A reference source directory for annotations. Any annotation filename will be relative to this directory. |`.`
 |`trace-commands` |Trace commands executed by the workflow. |`false`

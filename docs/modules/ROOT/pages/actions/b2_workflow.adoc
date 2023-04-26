@@ -1,13 +1,13 @@
 = B2 Workflow [[b2_workflow]]
 :reftext: B2 Workflow
-:navtitle: Action: B2 Workflow
+:navtitle: B2 Workflow Action
 
-This action runs a complete B2 workflow from boost source files.
+This action runs a complete B2 workflow from Boost source files.
 
-It takes the boost source directory and does whatever it needs to test the specified modules. This includes 
+It takes the Boost source directory and does whatever it needs to test the specified modules. This includes 
 compiling `b2` if needed and generating a proper `user-config.jam` file.
 
-This action is particularly useful for boost library proposals.
+This action is particularly useful for Boost library proposals.
 
 
 == Examples
@@ -109,17 +109,17 @@ steps:
 |===
 |Parameter |Description |Default
 |`source-dir` |The boost source directory. |`.`
-|`build-variant` |Custom build variants. |(empty)
-|`modules` |The list of modules we should test. |(empty)
-|`gcc_toolchain` |Create a special GCC toolchain for this version of GCC and update user-config.jam. |(empty)
-|`toolset` |Toolset name. |(empty)
-|`address-model` |Valid b2 list of address models. |(empty)
-|`cxx` |Path to C++ compiler. |(empty)
-|`cxxflags` |Extra compiler flags. |(empty)
-|`linkflags` |Extra linker flags. |(empty)
-|`cxxstd` |List of standards with which cmake will build and test the program. |(empty)
+|`build-variant` |Custom build variants. |
+|`modules` |The list of modules we should test. |
+|`gcc_toolchain` |Create a special GCC toolchain for this version of GCC and update user-config.jam. |
+|`toolset` |Toolset name. |
+|`address-model` |Valid b2 list of address models. |
+|`cxx` |Path to C++ compiler. |
+|`cxxflags` |Extra compiler flags. |
+|`linkflags` |Extra linker flags. |
+|`cxxstd` |List of standards with which cmake will build and test the program. |
 |`ubsan` |List of standards with which cmake will build and test the program. |`false`
-|`threading` |b2 threading option. |(empty)
+|`threading` |b2 threading option. |
 |`trace-commands` |Trace commands executed by the workflow. |`false`
 |===
 

@@ -5,15 +5,16 @@ site:
   url: https://alandefreitas.github.io/cpp-actions/
   start_page: cpp-actions::index.adoc
   robots: allow
+  keys:
+    repo_url: 'https://github.com/alandefreitas/cpp-actions'
 content:
-  edit_url: 'https://github.com/alandefreitas/cpp-actions/edit/{refname}/{path}'
   sources:
   - url: ..
     start_path: docs
     edit_url: 'https://github.com/alandefreitas/cpp-actions/edit/{refname}/{path}'
 ui:
   bundle:
-    url: https://gitlab.com/antora/antora-ui-default/-/jobs/artifacts/HEAD/raw/build/ui-bundle.zip?job=bundle-stable
+    url: https://github.com/bonitasoft/bonita-documentation-theme/releases/download/v1.11.0/bonita-documentation-theme-v1.11.0.zip
     snapshot: true
   supplemental_files: ./supplemental-ui
 

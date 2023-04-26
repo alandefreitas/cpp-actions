@@ -298,7 +298,7 @@ for action in actions:
     inputs = data['inputs']
     outputs = data['outputs'] if 'outputs' in data else []
 
-    output = f'= {action_name} [[{action}]]\n:reftext: {action_name}\n:navtitle: Action: {action_name}\n\n{action_description}\n\n'
+    output = f'= {action_name} [[{action}]]\n:reftext: {action_name}\n:navtitle: {action_name} Action\n\n{action_description}\n\n'
     toc_output += f'- <<{action}>>\n'
 
     # Look for example templates
@@ -352,6 +352,7 @@ for action in actions:
             if i != 0:
                 diff = non_empty_key_set.difference(covered_keys)
                 diff_keys = [f"`{k.split('.')[-1]}`" for k in diff]
+                diff_keys.sort()
                 output += f' ({", ".join(diff_keys)})'
             covered_keys.update(non_empty_key_set)
             if len(examples) > 1:
@@ -370,7 +371,7 @@ for action in actions:
         if required == 'True':
             description += ' ⚠️ This parameter is required.'
         default = details['default']
-        default = '(empty)' if not default else f'`{default}`'
+        default = '' if not default else f'`{default}`'
         output += f'|`{parameter}` |{description} |{default}\n'
     output += '|===\n\n'
 

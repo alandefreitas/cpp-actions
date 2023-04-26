@@ -1,0 +1,35 @@
+<footer>
+    <div class="footer-body">
+        {{#if false}}
+        <div class="footer-content">
+            <p></p>
+        </div>
+        <div class="footer-content">
+            <p>
+            </p>
+        </div>
+        <div class="social-links">
+        </div>
+        <div class="social-links">
+            <ul class="border-right">
+            </ul>
+        </div>
+        {{/if}}
+        <div class="footer-footer">
+            <p>
+                {{site.title}}:
+                <a href="{{ site.url }}">{{ site.url }}</a>
+                {{#if site.keys.repoUrl }}
+                - <a href="{{ site.keys.repoUrl }}" target="_blank">{{ site.keys.repoUrl }}</a>
+                {{/if }}
+                - {{ year }}
+            </p>
+            <p>
+                Bonita Theme:
+                <a href="https://github.com/bonitasoft/bonita-documentation-theme" target="_blank">
+                    https://github.com/bonitasoft/bonita-documentation-theme
+                </a>
+            </p>
+        </div>
+    </div>
+</footer>

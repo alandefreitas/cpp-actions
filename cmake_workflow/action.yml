@@ -1,28 +1,33 @@
 name: 'CMake Workflow'
 description: |
-  This action runs a complete CMake workflow from source files.
+  This action runs a complete CMake workflow from source files. A workflow is composed of the following steps:
   
-  - It validates the cmake version installed in the system, 
-  - updates cmake if the library has a different minimum version, 
-  - identifies what features that cmake version supports, and 
-  - runs a complete cmake workflow
+  - Configure
+  - Build
+  - Test
+  - Install
   
-  The workflow includes the configure, build, test, and install steps. 
+  The action also sets up the environment for the workflow: 
   
-  The action will adjusting the parameters as needed according to the features that cmake version supports. 
+  - It validates the CMake version installed in the system, 
+  - Updates CMake if the library has a different minimum version, 
+  - Identifies what features the current CMake version supports, and 
+  - Runs a complete cmake workflow
+  
+  The action will adjusts the parameters as needed according to the features that CMake version supports. 
   For instance, 
   
-  - if cmake version does not support the `-S ... -B ...` syntax, the action will create the build directory and
-  run the configuration step from there
-  - if the specified or default generator is multi-config, `CMAKE_CONFIGURATION_TYPES` will be used instead of 
-  `CMAKE_BUILD_TYPE`
-  - if cmake version does not support the `cmake --install` syntax, the `cmake --build --target install`
+  - If the CMake version does not support the `-S ... -B ...` syntax, the action will create the build directory and
+  run the configuration step from there.
+  - If the specified or default generator is multi-config, `CMAKE_CONFIGURATION_TYPES` will be used instead of 
+  `CMAKE_BUILD_TYPE`, since the later is ignored by these generators.
+  - If the CMake version does not support the `cmake --install` syntax, the `cmake --build --target install`
   will be use instead.
-  - if cmake version does not support multiple targets in the `cmake --build` syntax, the action will run the build
-  step once for each target
+  - If the CMake version does not support multiple targets in the `cmake --build` syntax, the action will run the build
+  step once for each target.
   
-  The action also creates github annotations when warnings or errors are emitted at any of these steps. This includes
-  annotations for CMake errors and build error emitted from the compiler.
+  The action also creates GitHub annotations when warnings or errors are emitted at any of these steps. This includes
+  annotations for CMake errors at the configure step and build errors emitted from the compiler at the build step.
 
 inputs:
   source-dir:
@@ -82,7 +87,7 @@ inputs:
     required: false
     default: 'true'
   install:
-    description: | 
+    description: |
       Whether we should install the library. 
       
       The library is only installed once in the `install-prefix`.

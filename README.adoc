@@ -17,12 +17,12 @@ NOTE: READ THE DOCS: https://alandefreitas.github.io/cpp-actions/
 
 === Install dependencies [[package_install]]
 :reftext: Install dependencies
-:navtitle: Action: Install dependencies
+:navtitle: Install dependencies Action
 
-This actions installs dependencies from multiple package managers for a workflow.
+This action installs dependencies from multiple package managers for a workflow.
 
 If vcpkg dependencies are required and vcpkg is not available, it will be installed.
-Both vcpkg and its dependencies can be cached.
+Both vcpkg and its dependencies are cached.
 
 
 ==== Examples
@@ -65,22 +65,22 @@ steps:
 
 |===
 |Parameter |Description |Default
-|`vcpkg` |List of packages we should install with vcpkg. (Whitespace-separated). |(empty)
-|`apt-get` |List of packages we should install with apt-get. (Whitespace-separated). |(empty)
+|`vcpkg` |List of packages we should install with vcpkg. (Whitespace-separated). |
+|`apt-get` |List of packages we should install with apt-get. (Whitespace-separated). |
 |`cxx` |C++ compiler used by vcpkg.
 
 Setting the compiler is particularly important in Linux workflows that use `clang`, since `clang` might link 
 `libc++` or `libstdc++`, while the default compiler used by vcpkg will usually be GCC linking `libstdc++`.
 
 This would cause conflict in workflows that later attempt to use vcpkg dependencies.
-. |(empty)
-|`cc` |C compiler used by vcpkg. |(empty)
-|`vcpkg_triplet` |The triplet used by vcpkg to install packages. |(empty)
+. |
+|`cc` |C compiler used by vcpkg. |
+|`vcpkg_triplet` |The triplet used by vcpkg to install packages. |
 |`vcpkg_dir` |The directory where vcpkg should be cloned and installed. |`vcpkg`
 |`vcpkg_branch` |vcpkg branch we should use. |`master`
 |`apt-get-retries` |Number of time we should retry when apt-get fails. |`1`
-|`apt-get-sources` |List of sources for apt-get. |(empty)
-|`apt-get-source-keys` |List of source keys for apt-get. |(empty)
+|`apt-get-sources` |List of sources for apt-get. |
+|`apt-get-source-keys` |List of source keys for apt-get. |
 |`apt-get-ignore-missing` |Whether apt-get should ignore missing packages. |`false`
 |===
 
@@ -93,31 +93,36 @@ This would cause conflict in workflows that later attempt to use vcpkg dependenc
 |===
 === CMake Workflow [[cmake_workflow]]
 :reftext: CMake Workflow
-:navtitle: Action: CMake Workflow
+:navtitle: CMake Workflow Action
 
-This action runs a complete CMake workflow from source files.
+This action runs a complete CMake workflow from source files. A workflow is composed of the following steps:
 
-- It validates the cmake version installed in the system, 
-- updates cmake if the library has a different minimum version, 
-- identifies what features that cmake version supports, and 
-- runs a complete cmake workflow
+- Configure
+- Build
+- Test
+- Install
 
-The workflow includes the configure, build, test, and install steps. 
+The action also sets up the environment for the workflow: 
 
-The action will adjusting the parameters as needed according to the features that cmake version supports. 
+- It validates the CMake version installed in the system, 
+- Updates CMake if the library has a different minimum version, 
+- Identifies what features the current CMake version supports, and 
+- Runs a complete cmake workflow
+
+The action will adjusts the parameters as needed according to the features that CMake version supports. 
 For instance, 
 
-- if cmake version does not support the `-S ... -B ...` syntax, the action will create the build directory and
-run the configuration step from there
-- if the specified or default generator is multi-config, `CMAKE_CONFIGURATION_TYPES` will be used instead of 
-`CMAKE_BUILD_TYPE`
-- if cmake version does not support the `cmake --install` syntax, the `cmake --build --target install`
+- If the CMake version does not support the `-S ... -B ...` syntax, the action will create the build directory and
+run the configuration step from there.
+- If the specified or default generator is multi-config, `CMAKE_CONFIGURATION_TYPES` will be used instead of 
+`CMAKE_BUILD_TYPE`, since the later is ignored by these generators.
+- If the CMake version does not support the `cmake --install` syntax, the `cmake --build --target install`
 will be use instead.
-- if cmake version does not support multiple targets in the `cmake --build` syntax, the action will run the build
-step once for each target
+- If the CMake version does not support multiple targets in the `cmake --build` syntax, the action will run the build
+step once for each target.
 
-The action also creates github annotations when warnings or errors are emitted at any of these steps. This includes
-annotations for CMake errors and build error emitted from the compiler.
+The action also creates GitHub annotations when warnings or errors are emitted at any of these steps. This includes
+annotations for CMake errors at the configure step and build errors emitted from the compiler at the build step.
 
 
 ==== Examples
@@ -142,7 +147,7 @@ steps:
     ref-source-dir: .
 ----
 
-Example 2 (`generator`, `build-type`):
+Example 2 (`build-type`, `generator`):
 
 [source,yml]
 ----
@@ -190,14 +195,14 @@ steps:
 |`build-dir` |Directory for the binaries relative to the source directory. |`build`
 |`cmake-min-version` |The minimum cmake version for this workflow. If the existing version is below that, the action attempts to update CMake. |`3.5`
 |`cmake_exec` |The cmake executable. |`cmake`
-|`cc` |Path to C compiler. |(empty)
-|`cxx` |Path to C++ compiler. |(empty)
-|`cxxstd` |List of standards with which cmake will build and test the program. |(empty)
-|`cxxflags` |Force flags to be used with the C++ compiler. |(empty)
-|`toolchain` |Path to toolchain. |(empty)
-|`generator` |Generator name. |(empty)
+|`cc` |Path to C compiler. |
+|`cxx` |Path to C++ compiler. |
+|`cxxstd` |List of standards with which cmake will build and test the program. |
+|`cxxflags` |Force flags to be used with the C++ compiler. |
+|`toolchain` |Path to toolchain. |
+|`generator` |Generator name. |
 |`build-type` |Build type. |`Release`
-|`build-target` |Targets to build instead of the default target. |(empty)
+|`build-target` |Targets to build instead of the default target. |
 |`install-prefix` |Path where the library should be installed. |`.local/usr`
 |`run-tests` |Whether we should run tests. |`true`
 |`install` |Whether we should install the library. 
@@ -206,7 +211,7 @@ The library is only installed once in the `install-prefix`.
 
 The latest std version described in `cxxstd` is used for the installed version.
 . |`true`
-|`extra-args` |Extra arguments to cmake configure command. |(empty)
+|`extra-args` |Extra arguments to cmake configure command. |
 |`create-annotations` |Create github annotations on errors. |`true`
 |`ref-source-dir` |A reference source directory for annotations. Any annotation filename will be relative to this directory. |`.`
 |`trace-commands` |Trace commands executed by the workflow. |`false`
@@ -214,13 +219,15 @@ The latest std version described in `cxxstd` is used for the installed version.
 
 === Boost Clone [[boost_clone]]
 :reftext: Boost Clone
-:navtitle: Action: Boost Clone
+:navtitle: Boost Clone Action
 
-This action clones the boost source directory, attempting to get it from the cache first. Only the specified
+This action clones the Boost source directory, attempting to get it from the cache first. Only the specified
 modules are cloned and cached. 
 
-Besides specified an explicit list of modules, the action includes a script to scan dependencies before cloning 
-boost and caching based only on these dependencies.
+Besides the explicitly specified list of modules, the action can also scan directories for boost dependencies
+to implicitly determine what modules should be cloned. 
+
+The union of the implicitly and explicitly specified modules is cloned. Caching is based only on these dependencies.
 
 For a project with about 5 boost dependencies, caching saves about 4 minutes in the workflow. When there's no
 cache, the scanning scripting saves us about 3 minutes.
@@ -245,23 +252,23 @@ steps:
 |Parameter |Description |Default
 |`boost_dir` |The boost directory. The default value assumes boost is in-source. |`boost`
 |`branch` |Branch of the super-project. |`master`
-|`patches` |Libraries used to patch the boost installation. |(empty)
-|`modules` |The boost submodules we need to clone. |(empty)
-|`scan-modules-dir` |An independent directory we should scan for boost dependencies to clone. |(empty)
-|`scan-modules-ignore` |List of modules that should be ignored in scan-modules. |(empty)
+|`patches` |Libraries used to patch the boost installation. |
+|`modules` |The boost submodules we need to clone. |
+|`scan-modules-dir` |An independent directory we should scan for boost dependencies to clone. |
+|`scan-modules-ignore` |List of modules that should be ignored in scan-modules. |
 |`trace-commands` |Trace commands executed by the workflow. |`false`
 |===
 
 === B2 Workflow [[b2_workflow]]
 :reftext: B2 Workflow
-:navtitle: Action: B2 Workflow
+:navtitle: B2 Workflow Action
 
-This action runs a complete B2 workflow from boost source files.
+This action runs a complete B2 workflow from Boost source files.
 
-It takes the boost source directory and does whatever it needs to test the specified modules. This includes 
+It takes the Boost source directory and does whatever it needs to test the specified modules. This includes 
 compiling `b2` if needed and generating a proper `user-config.jam` file.
 
-This action is particularly useful for boost library proposals.
+This action is particularly useful for Boost library proposals.
 
 
 ==== Examples
@@ -363,17 +370,17 @@ steps:
 |===
 |Parameter |Description |Default
 |`source-dir` |The boost source directory. |`.`
-|`build-variant` |Custom build variants. |(empty)
-|`modules` |The list of modules we should test. |(empty)
-|`gcc_toolchain` |Create a special GCC toolchain for this version of GCC and update user-config.jam. |(empty)
-|`toolset` |Toolset name. |(empty)
-|`address-model` |Valid b2 list of address models. |(empty)
-|`cxx` |Path to C++ compiler. |(empty)
-|`cxxflags` |Extra compiler flags. |(empty)
-|`linkflags` |Extra linker flags. |(empty)
-|`cxxstd` |List of standards with which cmake will build and test the program. |(empty)
+|`build-variant` |Custom build variants. |
+|`modules` |The list of modules we should test. |
+|`gcc_toolchain` |Create a special GCC toolchain for this version of GCC and update user-config.jam. |
+|`toolset` |Toolset name. |
+|`address-model` |Valid b2 list of address models. |
+|`cxx` |Path to C++ compiler. |
+|`cxxflags` |Extra compiler flags. |
+|`linkflags` |Extra linker flags. |
+|`cxxstd` |List of standards with which cmake will build and test the program. |
 |`ubsan` |List of standards with which cmake will build and test the program. |`false`
-|`threading` |b2 threading option. |(empty)
+|`threading` |b2 threading option. |
 |`trace-commands` |Trace commands executed by the workflow. |`false`
 |===
 

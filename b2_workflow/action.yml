@@ -1,11 +1,11 @@
 name: 'B2 Workflow'
-description: | 
-  This action runs a complete B2 workflow from boost source files.
+description: |
+  This action runs a complete B2 workflow from Boost source files.
   
-  It takes the boost source directory and does whatever it needs to test the specified modules. This includes 
+  It takes the Boost source directory and does whatever it needs to test the specified modules. This includes 
   compiling `b2` if needed and generating a proper `user-config.jam` file.
   
-  This action is particularly useful for boost library proposals.
+  This action is particularly useful for Boost library proposals.
 
 inputs:
   source-dir:

@@ -1,21 +1,67 @@
 <header class="header">
-  <nav class="navbar">
-    <div class="navbar-brand">
-      <a class="navbar-item" href="{{{or site.url siteRootPath}}}">{{site.title}}</a>
-      {{#if env.SITE_SEARCH_PROVIDER}}
-      <div class="navbar-item search hide-for-print">
-        <div id="search-field" class="field">
-          <input id="search-input" type="text" placeholder="Search the docs"{{#if page.home}} autofocus{{/if}}>
+    <nav class="navbar {{#if (eq page.version 'develop') }} navbar-nonProduction {{/if}} ">
+        <div class="navbar-brand">
+            <a class="navbar-item" href="{{{or site.url siteRootPath}}}">{{site.title}}</a>
+            {{#unless (eq page.version 'master') }}
+            <div class="navbar-item-nonProduction">
+                <p>{{{page.version}}}</p>
+            </div>
+            {{/unless}}
         </div>
-      </div>
-      {{/if}}
-      <button class="navbar-burger" data-target="topbar-nav">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-    </div>
-    <div id="topbar-nav" class="navbar-menu">
-    </div>
-  </nav>
+
+        <div id="topbar-nav" class="navbar-menu">
+            {{#unless site.keys.hideNavbarComponentsList}}
+            <div class="navbar-item is-hoverable">
+                {{#if (or page.home (eq site.title page.title)) }}
+                <a class="navbar-link" href="{{{or site.url siteRootPath}}}">{{{ site.title}}}</a>
+                {{ else }}
+                <a class="navbar-link" href="{{{or site.url siteRootPath}}}">{{{ site.title}}}: {{ page.title }}</a>
+                {{/if}}
+            </div>
+            {{#if site.keys.repoUrl }}
+            <div class="navbar-item is-hoverable">
+                <a class="navbar-link" href="{{{ site.keys.repoUrl }}}" target="_blank">GitHub</a>
+            </div>
+            <div class="navbar-item is-hoverable">
+                <a class="navbar-link" href="{{{ site.keys.repoUrl }}}/releases" target="_blank">Releases</a>
+            </div>
+            {{/if}}
+            {{/unless}}
+        </div>
+
+        <div class="navbar-end" id="search-container">
+            {{#if false}}
+            <div class="navbar-item search-item hide-for-print">
+                <div id="docsearch"></div>
+            </div>
+            {{/if}}
+
+            <div class="theme-switch-wrapper">
+                <input type="checkbox" class="checkbox" onclick="toggleDarkThemeMode(this)" id="check">
+                <div class="toggle-content">
+                    <label class="label" for="check">
+                        <span>🌚</span>
+                        <span>😎</span>
+                        <div class="ball"></div>
+                    </label>
+                </div>
+            </div>
+
+            <button class="navbar-burger" data-target="topbar-nav-mobile">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <nav id="topbar-nav-mobile" class="navbar-menu-mobile">
+        {{#unless site.keys.hideNavbarComponentsList}}
+        {{#each site.components}}
+        <div class="navbar-item is-hoverable">
+            <a class="navbar-link" href="{{{./latest.url}}}">{{{./title}}}</a>
+        </div>
+        {{/each}}
+        {{/unless}}
+    </nav>
 </header>

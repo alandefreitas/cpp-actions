@@ -9,11 +9,13 @@
 
 name: 'Boost Clone'
 description: |
-  This action clones the boost source directory, attempting to get it from the cache first. Only the specified
+  This action clones the Boost source directory, attempting to get it from the cache first. Only the specified
   modules are cloned and cached. 
   
-  Besides specified an explicit list of modules, the action includes a script to scan dependencies before cloning 
-  boost and caching based only on these dependencies.
+  Besides the explicitly specified list of modules, the action can also scan directories for boost dependencies
+  to implicitly determine what modules should be cloned. 
+  
+  The union of the implicitly and explicitly specified modules is cloned. Caching is based only on these dependencies.
   
   For a project with about 5 boost dependencies, caching saves about 4 minutes in the workflow. When there's no
   cache, the scanning scripting saves us about 3 minutes.
