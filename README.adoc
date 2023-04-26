@@ -18,6 +18,8 @@ NOTE: READ THE DOCS: https://alandefreitas.github.io/cpp-actions/
 === Install dependencies [[package_install]]
 :reftext: Install dependencies
 :navtitle: Install dependencies Action
+// This package_install.adoc file is automatically generated.
+// Edit parse_actions.py instead.
 
 This action installs dependencies from multiple package managers for a workflow.
 
@@ -94,6 +96,8 @@ This would cause conflict in workflows that later attempt to use vcpkg dependenc
 === CMake Workflow [[cmake_workflow]]
 :reftext: CMake Workflow
 :navtitle: CMake Workflow Action
+// This cmake_workflow.adoc file is automatically generated.
+// Edit parse_actions.py instead.
 
 This action runs a complete CMake workflow from source files. A workflow is composed of the following steps:
 
@@ -220,6 +224,8 @@ The latest std version described in `cxxstd` is used for the installed version.
 === Boost Clone [[boost_clone]]
 :reftext: Boost Clone
 :navtitle: Boost Clone Action
+// This boost_clone.adoc file is automatically generated.
+// Edit parse_actions.py instead.
 
 This action clones the Boost source directory, attempting to get it from the cache first. Only the specified
 modules are cloned and cached. 
@@ -262,6 +268,8 @@ steps:
 === B2 Workflow [[b2_workflow]]
 :reftext: B2 Workflow
 :navtitle: B2 Workflow Action
+// This b2_workflow.adoc file is automatically generated.
+// Edit parse_actions.py instead.
 
 This action runs a complete B2 workflow from Boost source files.
 

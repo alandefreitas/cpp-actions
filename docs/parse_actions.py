@@ -298,7 +298,11 @@ for action in actions:
     inputs = data['inputs']
     outputs = data['outputs'] if 'outputs' in data else []
 
-    output = f'= {action_name} [[{action}]]\n:reftext: {action_name}\n:navtitle: {action_name} Action\n\n{action_description}\n\n'
+    output = f'= {action_name} [[{action}]]\n'
+    output += f':reftext: {action_name}\n'
+    output += f':navtitle: {action_name} Action\n'
+    output += f'// This {action}.adoc file is automatically generated.\n// Edit parse_actions.py instead.\n\n'
+    output += f'{action_description}\n\n'
     toc_output += f'- <<{action}>>\n'
 
     # Look for example templates

@@ -1,6 +1,8 @@
 = Install dependencies [[package_install]]
 :reftext: Install dependencies
 :navtitle: Install dependencies Action
+// This package_install.adoc file is automatically generated.
+// Edit parse_actions.py instead.
 
 This action installs dependencies from multiple package managers for a workflow.
 

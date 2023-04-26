@@ -1,6 +1,8 @@
 = B2 Workflow [[b2_workflow]]
 :reftext: B2 Workflow
 :navtitle: B2 Workflow Action
+// This b2_workflow.adoc file is automatically generated.
+// Edit parse_actions.py instead.
 
 This action runs a complete B2 workflow from Boost source files.
 

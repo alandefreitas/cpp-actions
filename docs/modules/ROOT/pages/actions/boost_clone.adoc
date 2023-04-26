@@ -1,6 +1,8 @@
 = Boost Clone [[boost_clone]]
 :reftext: Boost Clone
 :navtitle: Boost Clone Action
+// This boost_clone.adoc file is automatically generated.
+// Edit parse_actions.py instead.
 
 This action clones the Boost source directory, attempting to get it from the cache first. Only the specified
 modules are cloned and cached. 

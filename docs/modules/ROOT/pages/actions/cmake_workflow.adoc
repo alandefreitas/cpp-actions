@@ -1,6 +1,8 @@
 = CMake Workflow [[cmake_workflow]]
 :reftext: CMake Workflow
 :navtitle: CMake Workflow Action
+// This cmake_workflow.adoc file is automatically generated.
+// Edit parse_actions.py instead.
 
 This action runs a complete CMake workflow from source files. A workflow is composed of the following steps:
 
