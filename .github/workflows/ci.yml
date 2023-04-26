@@ -124,7 +124,7 @@ jobs:
           ref-source-dir: .
 
   docs:
-    needs: build
+    # needs: build
     if: ${{ (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') && github.event_name == 'push' }}
     defaults:
       run:
