@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="/cpp-actions/_/stylesheets/vendor/libs.css">
 <link rel="stylesheet" href="/cpp-actions/_/stylesheets/site.css">
 <link id="highlight-style-lnk" rel="stylesheet" href="/cpp-actions/_/stylesheets/vendor/highlight-light.css">
-<link rel="icon" href="/cpp-actions/_/img/favicon.svg" type="image/x-icon">  </head>
+<link rel="stylesheet" href="/cpp-actions/_/css/vendor/tabs.css"><link rel="icon" href="/cpp-actions/_/img/favicon.svg" type="image/x-icon">  </head>
   <body class="status-404">
 <script src="/cpp-actions/_/js/header-site.js"></script>
 <header class="header">
@@ -123,6 +123,7 @@
     </div>
 </footer><script>window.uiRootPath = '/cpp-actions/_'</script>
 <script src="/cpp-actions/_/js/vendor/highlight.min.js"></script>
+<script async src="/cpp-actions/_/js/vendor/tabs.js"></script>
 <script src="/cpp-actions/_/js/vendor/libs.js"></script>
 <script>hljs.initHighlightingOnLoad();</script>
 <script src="/cpp-actions/_/js/site.js"></script>
@@ -130,26 +131,26 @@
 
 
 <script>
-  let asciinemaPlayers = document.querySelectorAll('asciinema-player');
-  asciinemaPlayers.forEach(htmlPlayer => {
-  let options = {fit: false};
-  htmlPlayer.getAttributeNames().forEach(key => options[key] = htmlPlayer.getAttribute(key));
-  AsciinemaPlayer.create(htmlPlayer.getAttribute('src'), htmlPlayer, options);
-});
+    let asciinemaPlayers = document.querySelectorAll('asciinema-player');
+    asciinemaPlayers.forEach(htmlPlayer => {
+        let options = {fit: false};
+        htmlPlayer.getAttributeNames().forEach(key => options[key] = htmlPlayer.getAttribute(key));
+        AsciinemaPlayer.create(htmlPlayer.getAttribute('src'), htmlPlayer, options);
+    });
 
 </script>
 <script>
-  // init toggle state
-  const isDarkThemeEnable = localStorage.getItem('theme') === 'dark';
-  initializeThemeToggleIfAvailable('check', isDarkThemeEnable);
-  initializeThemeToggleIfAvailable('check-mobile', isDarkThemeEnable);
+    // init toggle state
+    const isDarkThemeEnable = localStorage.getItem('theme') === 'dark';
+    initializeThemeToggleIfAvailable('check', isDarkThemeEnable);
+    initializeThemeToggleIfAvailable('check-mobile', isDarkThemeEnable);
 
-  function initializeThemeToggleIfAvailable(elementId, checked) {
-    const checkElement = document.getElementById(elementId);
-    if(checkElement) {
-      checkElement.checked = checked;
+    function initializeThemeToggleIfAvailable(elementId, checked) {
+        const checkElement = document.getElementById(elementId);
+        if(checkElement) {
+            checkElement.checked = checked;
+        }
     }
-  }
 </script>
   </body>
 </html>

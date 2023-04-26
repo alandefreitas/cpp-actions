@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="../../_/stylesheets/vendor/libs.css">
 <link rel="stylesheet" href="../../_/stylesheets/site.css">
 <link id="highlight-style-lnk" rel="stylesheet" href="../../_/stylesheets/vendor/highlight-light.css">
-<link rel="icon" href="../../_/img/favicon.svg" type="image/x-icon">  </head>
+<link rel="stylesheet" href="../../_/css/vendor/tabs.css"><link rel="icon" href="../../_/img/favicon.svg" type="image/x-icon">  </head>
   <body class="article">
 <script src="../../_/js/header-site.js"></script>
 <header class="header">
@@ -23,7 +23,7 @@
 
         <div id="topbar-nav" class="navbar-menu">
             <div class="navbar-item is-hoverable">
-                <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions: C++ Actions</a>
+                <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions</a>
             </div>
             <div class="navbar-item is-hoverable">
                 <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions" target="_blank">GitHub</a>
@@ -172,77 +172,78 @@ Our intention is to create a common and resilient set of actions that can work o
     </div>
 </footer><script>window.uiRootPath = '../../_'</script>
 <script src="../../_/js/vendor/highlight.min.js"></script>
+<script async src="../../_/js/vendor/tabs.js"></script>
 <script src="../../_/js/vendor/libs.js"></script>
 <script>hljs.initHighlightingOnLoad();</script>
 <script src="../../_/js/site.js"></script>
 
 <script>
-  // var ALGOLIA_INSIGHTS_SRC = "https://cdn.jsdelivr.net/npm/search-insights@1.7.1";
-  //
-  // !function (e, a, t, n, s, i, c) {
-  //   e.AlgoliaAnalyticsObject = s, e[s] = e[s] || function () {
-  //     (e[s].queue = e[s].queue || []).push(arguments)
-  //   }, i = a.createElement(t), c = a.getElementsByTagName(t)[0],
-  //     i.async = 1, i.src = n, c.parentNode.insertBefore(i, c)
-  // }(window, document, "script", ALGOLIA_INSIGHTS_SRC, "aa");
+    // var ALGOLIA_INSIGHTS_SRC = "https://cdn.jsdelivr.net/npm/search-insights@1.7.1";
+    //
+    // !function (e, a, t, n, s, i, c) {
+    //   e.AlgoliaAnalyticsObject = s, e[s] = e[s] || function () {
+    //     (e[s].queue = e[s].queue || []).push(arguments)
+    //   }, i = a.createElement(t), c = a.getElementsByTagName(t)[0],
+    //     i.async = 1, i.src = n, c.parentNode.insertBefore(i, c)
+    // }(window, document, "script", ALGOLIA_INSIGHTS_SRC, "aa");
 </script>
 
 <script type="text/javascript">
-  docsearch({
-    container: '#docsearch',
-    appId: 'LWD25NX3CD',
-    apiKey: '6408f799f329e3a010e6a5ac397210d8',
-    indexName: 'bonitasoft',
-    hitsPerPage: 20,
-    searchParameters: {
-      facetFilters: ["version:develop", "tags:cpp-actions"],
-    }
-  });
-  /*
-          docsearch({
-          algoliaOptions: {
-              clickAnalytics: true,
-          },
-          handleSelected: function (input, event, suggestion, datasetNumber, context) {
-              sendClickEvent(lastQueryID, lastQueryHits, suggestion);
-              input.setVal('');
-              window.location.assign(suggestion.url);
-          },
-          queryDataCallback: function (data) {
-              lastQueryID = data.results[0].queryID;
-              lastQueryHits = data.results[0].hits;
-          }
-          });
+    docsearch({
+        container: '#docsearch',
+        appId: 'LWD25NX3CD',
+        apiKey: '6408f799f329e3a010e6a5ac397210d8',
+        indexName: 'bonitasoft',
+        hitsPerPage: 20,
+        searchParameters: {
+            facetFilters: ["version:develop", "tags:cpp-actions"],
+        }
+    });
+    /*
+            docsearch({
+            algoliaOptions: {
+                clickAnalytics: true,
+            },
+            handleSelected: function (input, event, suggestion, datasetNumber, context) {
+                sendClickEvent(lastQueryID, lastQueryHits, suggestion);
+                input.setVal('');
+                window.location.assign(suggestion.url);
+            },
+            queryDataCallback: function (data) {
+                lastQueryID = data.results[0].queryID;
+                lastQueryHits = data.results[0].hits;
+            }
+            });
 
-          aa('init', {
-          appId: 'BH4D9OD16A',
-          apiKey: '16267f96d135c47df8454efd5b448c9a',
-          });
-      */
+            aa('init', {
+            appId: 'BH4D9OD16A',
+            apiKey: '16267f96d135c47df8454efd5b448c9a',
+            });
+        */
 </script>
 
 
 <script>
-  let asciinemaPlayers = document.querySelectorAll('asciinema-player');
-  asciinemaPlayers.forEach(htmlPlayer => {
-  let options = {fit: false};
-  htmlPlayer.getAttributeNames().forEach(key => options[key] = htmlPlayer.getAttribute(key));
-  AsciinemaPlayer.create(htmlPlayer.getAttribute('src'), htmlPlayer, options);
-});
+    let asciinemaPlayers = document.querySelectorAll('asciinema-player');
+    asciinemaPlayers.forEach(htmlPlayer => {
+        let options = {fit: false};
+        htmlPlayer.getAttributeNames().forEach(key => options[key] = htmlPlayer.getAttribute(key));
+        AsciinemaPlayer.create(htmlPlayer.getAttribute('src'), htmlPlayer, options);
+    });
 
 </script>
 <script>
-  // init toggle state
-  const isDarkThemeEnable = localStorage.getItem('theme') === 'dark';
-  initializeThemeToggleIfAvailable('check', isDarkThemeEnable);
-  initializeThemeToggleIfAvailable('check-mobile', isDarkThemeEnable);
+    // init toggle state
+    const isDarkThemeEnable = localStorage.getItem('theme') === 'dark';
+    initializeThemeToggleIfAvailable('check', isDarkThemeEnable);
+    initializeThemeToggleIfAvailable('check-mobile', isDarkThemeEnable);
 
-  function initializeThemeToggleIfAvailable(elementId, checked) {
-    const checkElement = document.getElementById(elementId);
-    if(checkElement) {
-      checkElement.checked = checked;
+    function initializeThemeToggleIfAvailable(elementId, checked) {
+        const checkElement = document.getElementById(elementId);
+        if(checkElement) {
+            checkElement.checked = checked;
+        }
     }
-  }
 </script>
   </body>
 </html>
