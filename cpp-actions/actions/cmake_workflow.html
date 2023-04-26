@@ -66,34 +66,25 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="../index.html">C++ Actions</a>
+    <a class="nav-link" href="../index.html">Home</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <button class="nav-item-toggle"></button>
-    <span class="nav-text">Actions</span>
-<ul class="nav-list">
-  <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="package_install.html">Action: Install dependencies</a>
+    <a class="nav-link" href="package_install.html">Install dependencies Action</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="2">
-    <a class="nav-link" href="cmake_workflow.html">Action: CMake Workflow</a>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="cmake_workflow.html">CMake Workflow Action</a>
   </li>
-  <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="boost_clone.html">Action: Boost Clone</a>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="boost_clone.html">Boost Clone Action</a>
   </li>
-  <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="b2_workflow.html">Action: B2 Workflow</a>
-  </li>
-</ul>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="b2_workflow.html">B2 Workflow Action</a>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contribute</a>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../license.html">License</a>
-  </li>
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="https://github.com/alandefreitas/cpp-actions">GitHub</a>
   </li>
 </ul>
   </li>
@@ -128,8 +119,7 @@
   <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">C++ Actions</a></li>
-    <li>Actions</li>
-    <li><a href="cmake_workflow.html">Action: CMake Workflow</a></li>
+    <li><a href="cmake_workflow.html">CMake Workflow Action</a></li>
   </ul>
 </nav>
   <div class="page-versions">
@@ -152,54 +142,70 @@
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>This action runs a complete CMake workflow from source files.</p>
+<p>This action runs a complete CMake workflow from source files. A workflow is composed of the following steps:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>It validates the cmake version installed in the system,</p>
+<p>Configure</p>
 </li>
 <li>
-<p>updates cmake if the library has a different minimum version,</p>
+<p>Build</p>
 </li>
 <li>
-<p>identifies what features that cmake version supports, and</p>
+<p>Test</p>
 </li>
 <li>
-<p>runs a complete cmake workflow</p>
+<p>Install</p>
 </li>
 </ul>
 </div>
 <div class="paragraph">
-<p>The workflow includes the configure, build, test, and install steps.</p>
+<p>The action also sets up the environment for the workflow:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>It validates the CMake version installed in the system,</p>
+</li>
+<li>
+<p>Updates CMake if the library has a different minimum version,</p>
+</li>
+<li>
+<p>Identifies what features the current CMake version supports, and</p>
+</li>
+<li>
+<p>Runs a complete cmake workflow</p>
+</li>
+</ul>
 </div>
 <div class="paragraph">
-<p>The action will adjusting the parameters as needed according to the features that cmake version supports.
+<p>The action will adjusts the parameters as needed according to the features that CMake version supports.
 For instance,</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>if cmake version does not support the <code>-S &#8230;&#8203; -B &#8230;&#8203;</code> syntax, the action will create the build directory and
-run the configuration step from there</p>
+<p>If the CMake version does not support the <code>-S &#8230;&#8203; -B &#8230;&#8203;</code> syntax, the action will create the build directory and
+run the configuration step from there.</p>
 </li>
 <li>
-<p>if the specified or default generator is multi-config, <code>CMAKE_CONFIGURATION_TYPES</code> will be used instead of
-<code>CMAKE_BUILD_TYPE</code></p>
+<p>If the specified or default generator is multi-config, <code>CMAKE_CONFIGURATION_TYPES</code> will be used instead of
+<code>CMAKE_BUILD_TYPE</code>, since the later is ignored by these generators.</p>
 </li>
 <li>
-<p>if cmake version does not support the <code>cmake --install</code> syntax, the <code>cmake --build --target install</code>
+<p>If the CMake version does not support the <code>cmake --install</code> syntax, the <code>cmake --build --target install</code>
 will be use instead.</p>
 </li>
 <li>
-<p>if cmake version does not support multiple targets in the <code>cmake --build</code> syntax, the action will run the build
-step once for each target</p>
+<p>If the CMake version does not support multiple targets in the <code>cmake --build</code> syntax, the action will run the build
+step once for each target.</p>
 </li>
 </ul>
 </div>
 <div class="paragraph">
-<p>The action also creates github annotations when warnings or errors are emitted at any of these steps. This includes
-annotations for CMake errors and build error emitted from the compiler.</p>
+<p>The action also creates GitHub annotations when warnings or errors are emitted at any of these steps. This includes
+annotations for CMake errors at the configure step and build errors emitted from the compiler at the build step.</p>
 </div>
 </div>
 </div>
@@ -228,7 +234,7 @@ annotations for CMake errors and build error emitted from the compiler.</p>
 </div>
 </div>
 <div class="paragraph">
-<p>Example 2 (<code>generator</code>, <code>build-type</code>):</p>
+<p>Example 2 (<code>build-type</code>, <code>generator</code>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -309,32 +315,32 @@ annotations for CMake errors and build error emitted from the compiler.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Path to C compiler.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Path to C++ compiler.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxstd</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">List of standards with which cmake will build and test the program.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Force flags to be used with the C++ compiler.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>toolchain</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Path to toolchain.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>generator</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Generator name.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-type</code></p></td>
@@ -344,7 +350,7 @@ annotations for CMake errors and build error emitted from the compiler.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-target</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Targets to build instead of the default target.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>install-prefix</code></p></td>
@@ -367,7 +373,7 @@ annotations for CMake errors and build error emitted from the compiler.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>extra-args</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Extra arguments to cmake configure command.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>create-annotations</code></p></td>

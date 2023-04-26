@@ -66,34 +66,25 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="../index.html">C++ Actions</a>
+    <a class="nav-link" href="../index.html">Home</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <button class="nav-item-toggle"></button>
-    <span class="nav-text">Actions</span>
-<ul class="nav-list">
-  <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="package_install.html">Action: Install dependencies</a>
+    <a class="nav-link" href="package_install.html">Install dependencies Action</a>
   </li>
-  <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="cmake_workflow.html">Action: CMake Workflow</a>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="cmake_workflow.html">CMake Workflow Action</a>
   </li>
-  <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="boost_clone.html">Action: Boost Clone</a>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="boost_clone.html">Boost Clone Action</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="2">
-    <a class="nav-link" href="b2_workflow.html">Action: B2 Workflow</a>
-  </li>
-</ul>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="b2_workflow.html">B2 Workflow Action</a>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contribute</a>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../license.html">License</a>
-  </li>
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="https://github.com/alandefreitas/cpp-actions">GitHub</a>
   </li>
 </ul>
   </li>
@@ -128,8 +119,7 @@
   <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">C++ Actions</a></li>
-    <li>Actions</li>
-    <li><a href="b2_workflow.html">Action: B2 Workflow</a></li>
+    <li><a href="b2_workflow.html">B2 Workflow Action</a></li>
   </ul>
 </nav>
   <div class="page-versions">
@@ -152,14 +142,14 @@
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>This action runs a complete B2 workflow from boost source files.</p>
+<p>This action runs a complete B2 workflow from Boost source files.</p>
 </div>
 <div class="paragraph">
-<p>It takes the boost source directory and does whatever it needs to test the specified modules. This includes
+<p>It takes the Boost source directory and does whatever it needs to test the specified modules. This includes
 compiling <code>b2</code> if needed and generating a proper <code>user-config.jam</code> file.</p>
 </div>
 <div class="paragraph">
-<p>This action is particularly useful for boost library proposals.</p>
+<p>This action is particularly useful for Boost library proposals.</p>
 </div>
 </div>
 </div>
@@ -289,47 +279,47 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-variant</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Custom build variants.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>modules</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The list of modules we should test.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc_toolchain</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Create a special GCC toolchain for this version of GCC and update user-config.jam.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>toolset</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Toolset name.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>address-model</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Valid b2 list of address models.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Path to C++ compiler.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Extra compiler flags.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>linkflags</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Extra linker flags.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxstd</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">List of standards with which cmake will build and test the program.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>ubsan</code></p></td>
@@ -339,7 +329,7 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>threading</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">b2 threading option.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>

@@ -66,34 +66,25 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="../index.html">C++ Actions</a>
+    <a class="nav-link" href="../index.html">Home</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="package_install.html">Install dependencies Action</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <button class="nav-item-toggle"></button>
-    <span class="nav-text">Actions</span>
-<ul class="nav-list">
-  <li class="nav-item is-current-page" data-depth="2">
-    <a class="nav-link" href="package_install.html">Action: Install dependencies</a>
+    <a class="nav-link" href="cmake_workflow.html">CMake Workflow Action</a>
   </li>
-  <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="cmake_workflow.html">Action: CMake Workflow</a>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="boost_clone.html">Boost Clone Action</a>
   </li>
-  <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="boost_clone.html">Action: Boost Clone</a>
-  </li>
-  <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="b2_workflow.html">Action: B2 Workflow</a>
-  </li>
-</ul>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="b2_workflow.html">B2 Workflow Action</a>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contribute</a>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../license.html">License</a>
-  </li>
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="https://github.com/alandefreitas/cpp-actions">GitHub</a>
   </li>
 </ul>
   </li>
@@ -128,8 +119,7 @@
   <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">C++ Actions</a></li>
-    <li>Actions</li>
-    <li><a href="package_install.html">Action: Install dependencies</a></li>
+    <li><a href="package_install.html">Install dependencies Action</a></li>
   </ul>
 </nav>
   <div class="page-versions">
@@ -152,11 +142,11 @@
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>This actions installs dependencies from multiple package managers for a workflow.</p>
+<p>This action installs dependencies from multiple package managers for a workflow.</p>
 </div>
 <div class="paragraph">
 <p>If vcpkg dependencies are required and vcpkg is not available, it will be installed.
-Both vcpkg and its dependencies can be cached.</p>
+Both vcpkg and its dependencies are cached.</p>
 </div>
 </div>
 </div>
@@ -219,12 +209,12 @@ Both vcpkg and its dependencies can be cached.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">List of packages we should install with vcpkg. (Whitespace-separated).</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">List of packages we should install with apt-get. (Whitespace-separated).</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
@@ -233,17 +223,17 @@ Both vcpkg and its dependencies can be cached.</p>
 `libc` or <code>libstdc`, while the default compiler used by vcpkg will usually be GCC linking `libstdc</code>.</p>
 <p class="tableblock">This would cause conflict in workflows that later attempt to use vcpkg dependencies.
 .</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">C compiler used by vcpkg.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg_triplet</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The triplet used by vcpkg to install packages.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg_dir</code></p></td>
@@ -263,12 +253,12 @@ Both vcpkg and its dependencies can be cached.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-sources</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">List of sources for apt-get.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-source-keys</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">List of source keys for apt-get.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">(empty)</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-ignore-missing</code></p></td>
