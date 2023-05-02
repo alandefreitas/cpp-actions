@@ -32,4 +32,7 @@
             </p>
         </div>
     </div>
+    {{#if env.SITE_SEARCH_PROVIDER}}
+    {{> search-scripts}}
+    {{/if}}
 </footer>
