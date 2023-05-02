@@ -32,6 +32,12 @@
         </div>
 
         <div class="navbar-end" id="search-container">
+            <div class="navbar-item search hide-for-print">
+                <div id="search-field" class="field has-filter">
+                    <input id="search-input" type="text" placeholder="Search the docs">
+                </div>
+            </div>
+
 
             <div class="theme-switch-wrapper">
                 <input type="checkbox" class="checkbox" onclick="toggleDarkThemeMode(this)" id="check">
@@ -121,14 +127,15 @@
             </p>
         </div>
     </div>
+    <script src="/cpp-actions/_/js/vendor/lunr.js"></script>
+<script src="/cpp-actions/_/js/search-ui.js" id="search-ui-script" data-site-root-path="/cpp-actions" data-snippet-length="100" data-stylesheet="/cpp-actions/_/css/search.css"></script>
+<script async src="/cpp-actions/search-index.js"></script>
 </footer><script>window.uiRootPath = '/cpp-actions/_'</script>
 <script src="/cpp-actions/_/js/vendor/highlight.min.js"></script>
 <script async src="/cpp-actions/_/js/vendor/tabs.js"></script>
 <script src="/cpp-actions/_/js/vendor/libs.js"></script>
 <script>hljs.initHighlightingOnLoad();</script>
 <script src="/cpp-actions/_/js/site.js"></script>
-
-
 
 <script>
     let asciinemaPlayers = document.querySelectorAll('asciinema-player');
@@ -137,8 +144,8 @@
         htmlPlayer.getAttributeNames().forEach(key => options[key] = htmlPlayer.getAttribute(key));
         AsciinemaPlayer.create(htmlPlayer.getAttribute('src'), htmlPlayer, options);
     });
-
 </script>
+
 <script>
     // init toggle state
     const isDarkThemeEnable = localStorage.getItem('theme') === 'dark';

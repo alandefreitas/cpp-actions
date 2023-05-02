@@ -33,6 +33,12 @@
         </div>
 
         <div class="navbar-end" id="search-container">
+            <div class="navbar-item search hide-for-print">
+                <div id="search-field" class="field has-filter">
+                    <input id="search-input" type="text" placeholder="Search the docs">
+                </div>
+            </div>
+
 
             <div class="theme-switch-wrapper">
                 <input type="checkbox" class="checkbox" onclick="toggleDarkThemeMode(this)" id="check">
@@ -367,6 +373,9 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
             </p>
         </div>
     </div>
+    <script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
 </footer><script>window.uiRootPath = '../../../_'</script>
 <script src="../../../_/js/vendor/highlight.min.js"></script>
 <script async src="../../../_/js/vendor/tabs.js"></script>
@@ -375,60 +384,14 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 <script src="../../../_/js/site.js"></script>
 
 <script>
-    // var ALGOLIA_INSIGHTS_SRC = "https://cdn.jsdelivr.net/npm/search-insights@1.7.1";
-    //
-    // !function (e, a, t, n, s, i, c) {
-    //   e.AlgoliaAnalyticsObject = s, e[s] = e[s] || function () {
-    //     (e[s].queue = e[s].queue || []).push(arguments)
-    //   }, i = a.createElement(t), c = a.getElementsByTagName(t)[0],
-    //     i.async = 1, i.src = n, c.parentNode.insertBefore(i, c)
-    // }(window, document, "script", ALGOLIA_INSIGHTS_SRC, "aa");
-</script>
-
-<script type="text/javascript">
-    docsearch({
-        container: '#docsearch',
-        appId: 'LWD25NX3CD',
-        apiKey: '6408f799f329e3a010e6a5ac397210d8',
-        indexName: 'bonitasoft',
-        hitsPerPage: 20,
-        searchParameters: {
-            facetFilters: ["version:develop", "tags:cpp-actions"],
-        }
-    });
-    /*
-            docsearch({
-            algoliaOptions: {
-                clickAnalytics: true,
-            },
-            handleSelected: function (input, event, suggestion, datasetNumber, context) {
-                sendClickEvent(lastQueryID, lastQueryHits, suggestion);
-                input.setVal('');
-                window.location.assign(suggestion.url);
-            },
-            queryDataCallback: function (data) {
-                lastQueryID = data.results[0].queryID;
-                lastQueryHits = data.results[0].hits;
-            }
-            });
-
-            aa('init', {
-            appId: 'BH4D9OD16A',
-            apiKey: '16267f96d135c47df8454efd5b448c9a',
-            });
-        */
-</script>
-
-
-<script>
     let asciinemaPlayers = document.querySelectorAll('asciinema-player');
     asciinemaPlayers.forEach(htmlPlayer => {
         let options = {fit: false};
         htmlPlayer.getAttributeNames().forEach(key => options[key] = htmlPlayer.getAttribute(key));
         AsciinemaPlayer.create(htmlPlayer.getAttribute('src'), htmlPlayer, options);
     });
-
 </script>
+
 <script>
     // init toggle state
     const isDarkThemeEnable = localStorage.getItem('theme') === 'dark';
