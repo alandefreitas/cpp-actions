@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CMake Workflow | C++ Actions</title>    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/cmake_workflow.html">
+<title>CMake Workflow | C++ Actions</title>    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/cmake-workflow.html">
     <meta name="generator" content="Antora 3.1.3">
 <link rel="stylesheet" href="../../_/stylesheets/vendor/libs.css">
 <link rel="stylesheet" href="../../_/stylesheets/site.css">
@@ -75,16 +75,16 @@
     <a class="nav-link" href="../index.html">Home</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="package_install.html">Install dependencies Action</a>
+    <a class="nav-link" href="package-install.html">Install dependencies Action</a>
   </li>
   <li class="nav-item is-current-page" data-depth="1">
-    <a class="nav-link" href="cmake_workflow.html">CMake Workflow Action</a>
+    <a class="nav-link" href="cmake-workflow.html">CMake Workflow Action</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="boost_clone.html">Boost Clone Action</a>
+    <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="b2_workflow.html">B2 Workflow Action</a>
+    <a class="nav-link" href="b2-workflow.html">B2 Workflow Action</a>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contribute</a>
@@ -125,15 +125,15 @@
   <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">C++ Actions</a></li>
-    <li><a href="cmake_workflow.html">CMake Workflow Action</a></li>
+    <li><a href="cmake-workflow.html">CMake Workflow Action</a></li>
   </ul>
 </nav>
   <div class="page-versions">
   <button class="version-menu-toggle"
     title="Show other versions of page">master</button>
   <div class="version-menu">
-    <a class="version is-current" href="cmake_workflow.html">master</a>
-    <a class="version is-missing" href="../develop/index.html">develop</a>
+    <a class="version is-current" href="cmake-workflow.html">master</a>
+    <a class="version" href="../develop/actions/cmake-workflow.html">develop</a>
   </div>
 </div>
   </div>
@@ -225,10 +225,10 @@ annotations for CMake errors at the configure step and build errors emitted from
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow@master
+  uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
     source-dir: tests
-    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
@@ -246,11 +246,11 @@ annotations for CMake errors at the configure step and build errors emitted from
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow@master
+  uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
     source-dir: tests
     generator: Unix Makefiles
-    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     build-type: Debug
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
@@ -266,10 +266,10 @@ annotations for CMake errors at the configure step and build errors emitted from
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow@master
+  uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
     source-dir: tests
-    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
@@ -309,14 +309,14 @@ annotations for CMake errors at the configure step and build errors emitted from
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>build</code></p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-exec</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The cmake executable.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake</code></p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-min-version</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The minimum cmake version for this workflow. If the existing version is below that, the action attempts to update CMake.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>3.5</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake_exec</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The cmake executable.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
@@ -388,13 +388,22 @@ annotations for CMake errors at the configure step and build errors emitted from
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>ref-source-dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A reference source directory for annotations. Any annotation filename will be relative to this directory.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A reference source directory for annotations. Any annotation filename will be relative to this directory.</p>
+<p class="tableblock">This is typically useful when the repository being tested is not the current directory, in which
+we need to make annotations relative to some other directory.</p>
+<p class="tableblock">In most cases, the default option should be enough.
+.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cpack-generators</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Run cpack with the specified generators after the install step.</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 </tbody>
 </table>

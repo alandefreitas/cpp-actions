@@ -75,16 +75,16 @@
     <a class="nav-link" href="../index.html">Home</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="package_install.html">Install dependencies Action</a>
+    <a class="nav-link" href="package-install.html">Install dependencies Action</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="cmake_workflow.html">CMake Workflow Action</a>
+    <a class="nav-link" href="cmake-workflow.html">CMake Workflow Action</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="boost_clone.html">Boost Clone Action</a>
+    <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="b2_workflow.html">B2 Workflow Action</a>
+    <a class="nav-link" href="b2-workflow.html">B2 Workflow Action</a>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contribute</a>
@@ -150,23 +150,23 @@
 <div class="ulist">
 <ul>
 <li>
-<p><a href="#package_install">Install dependencies</a></p>
+<p><a href="#package-install">Install dependencies</a></p>
 </li>
 <li>
-<p><a href="#cmake_workflow">CMake Workflow</a></p>
+<p><a href="#cmake-workflow">CMake Workflow</a></p>
 </li>
 <li>
-<p><a href="#boost_clone">Boost Clone</a></p>
+<p><a href="#boost-clone">Boost Clone</a></p>
 </li>
 <li>
-<p><a href="#b2_workflow">B2 Workflow</a></p>
+<p><a href="#b2-workflow">B2 Workflow</a></p>
 </li>
 </ul>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="package_install"><a class="anchor" href="#package_install"></a>Install dependencies</h2>
+<h2 id="package-install"><a class="anchor" href="#package-install"></a>Install dependencies</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>This action installs dependencies from multiple package managers for a workflow.</p>
@@ -184,7 +184,7 @@ Both vcpkg and its dependencies are cached.</p>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Install packages
-  uses: alandefreitas/cpp-actions/package_install@master
+  uses: alandefreitas/cpp-actions/package-install@master
   id: package-install
   with:
     vcpkg: fmt
@@ -200,7 +200,7 @@ Both vcpkg and its dependencies are cached.</p>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Install packages
-  uses: alandefreitas/cpp-actions/package_install@master
+  uses: alandefreitas/cpp-actions/package-install@master
   id: package-install
   with:
     vcpkg: fmt
@@ -253,23 +253,23 @@ Both vcpkg and its dependencies are cached.</p>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg_triplet</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-triplet</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The triplet used by vcpkg to install packages.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg_dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-dir</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The directory where vcpkg should be cloned and installed.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg_branch</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-branch</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">vcpkg branch we should use.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>master</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-retries</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Number of time we should retry when apt-get fails.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Number of times we should retry when apt-get fails.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>1</code></p></td>
 </tr>
 <tr>
@@ -303,11 +303,11 @@ Both vcpkg and its dependencies are cached.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg_toolchain</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-toolchain</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">vcpkg toolchain file</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg_executable</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-executable</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">vcpkg toolchain file</p></td>
 </tr>
 </tbody>
@@ -316,7 +316,7 @@ Both vcpkg and its dependencies are cached.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="cmake_workflow"><a class="anchor" href="#cmake_workflow"></a>CMake Workflow</h2>
+<h2 id="cmake-workflow"><a class="anchor" href="#cmake-workflow"></a>CMake Workflow</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>This action runs a complete CMake workflow from source files. A workflow is composed of the following steps:</p>
@@ -393,10 +393,10 @@ annotations for CMake errors at the configure step and build errors emitted from
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow@master
+  uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
     source-dir: tests
-    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
@@ -414,11 +414,11 @@ annotations for CMake errors at the configure step and build errors emitted from
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow@master
+  uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
     source-dir: tests
     generator: Unix Makefiles
-    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     build-type: Debug
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
@@ -434,10 +434,10 @@ annotations for CMake errors at the configure step and build errors emitted from
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow@master
+  uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
     source-dir: tests
-    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
@@ -475,14 +475,14 @@ annotations for CMake errors at the configure step and build errors emitted from
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>build</code></p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-exec</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The cmake executable.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake</code></p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-min-version</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The minimum cmake version for this workflow. If the existing version is below that, the action attempts to update CMake.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>3.5</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake_exec</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The cmake executable.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
@@ -554,7 +554,11 @@ annotations for CMake errors at the configure step and build errors emitted from
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>ref-source-dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A reference source directory for annotations. Any annotation filename will be relative to this directory.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A reference source directory for annotations. Any annotation filename will be relative to this directory.</p>
+<p class="tableblock">This is typically useful when the repository being tested is not the current directory, in which
+we need to make annotations relative to some other directory.</p>
+<p class="tableblock">In most cases, the default option should be enough.
+.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
 </tr>
 <tr>
@@ -562,13 +566,18 @@ annotations for CMake errors at the configure step and build errors emitted from
 <td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cpack-generators</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Run cpack with the specified generators after the install step.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
 </tbody>
 </table>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="boost_clone"><a class="anchor" href="#boost_clone"></a>Boost Clone</h2>
+<h2 id="boost-clone"><a class="anchor" href="#boost-clone"></a>Boost Clone</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>This action clones the Boost source directory, attempting to get it from the cache first. Only the specified
@@ -591,9 +600,9 @@ cache, the scanning scripting saves us about 3 minutes.</p>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Clone Boost.Variant2
-  uses: alandefreitas/cpp-actions/boost_clone@master
+  uses: alandefreitas/cpp-actions/boost-clone@master
   with:
-    boost_dir: boost-root
+    boost-dir: boost-root
     branch: master
     modules: variant2</code></pre>
 </div>
@@ -614,7 +623,7 @@ cache, the scanning scripting saves us about 3 minutes.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>boost_dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>boost-dir</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The boost directory. The default value assumes boost is in-source.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>boost</code></p></td>
 </tr>
@@ -654,7 +663,7 @@ cache, the scanning scripting saves us about 3 minutes.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="b2_workflow"><a class="anchor" href="#b2_workflow"></a>B2 Workflow</h2>
+<h2 id="b2-workflow"><a class="anchor" href="#b2-workflow"></a>B2 Workflow</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>This action runs a complete B2 workflow from Boost source files.</p>
@@ -675,7 +684,7 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow@master
+  uses: alandefreitas/cpp-actions/b2-workflow@master
   with:
     source-dir: boost-root
     modules: variant2
@@ -690,7 +699,7 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow@master
+  uses: alandefreitas/cpp-actions/b2-workflow@master
   with:
     source-dir: boost-root
     modules: variant2
@@ -706,7 +715,7 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow@master
+  uses: alandefreitas/cpp-actions/b2-workflow@master
   with:
     source-dir: boost-root
     modules: variant2
@@ -722,7 +731,7 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow@master
+  uses: alandefreitas/cpp-actions/b2-workflow@master
   with:
     source-dir: boost-root
     modules: variant2
@@ -738,7 +747,7 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow@master
+  uses: alandefreitas/cpp-actions/b2-workflow@master
   with:
     source-dir: boost-root
     modules: variant2
@@ -750,20 +759,20 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 </div>
 </div>
 <div class="paragraph">
-<p>Example 6 (<code>gcc_toolchain</code>):</p>
+<p>Example 6 (<code>gcc-toolchain</code>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow@master
+  uses: alandefreitas/cpp-actions/b2-workflow@master
   with:
     source-dir: boost-root
     modules: variant2
     toolset: clang
     cxx: clang++-8
     cxxstd: '17'
-    gcc_toolchain: '7'</code></pre>
+    gcc-toolchain: '7'</code></pre>
 </div>
 </div>
 </div>
@@ -797,7 +806,7 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc_toolchain</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc-toolchain</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Create a special GCC toolchain for this version of GCC and update user-config.jam.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
