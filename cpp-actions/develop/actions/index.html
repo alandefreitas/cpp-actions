@@ -399,7 +399,7 @@ annotations for CMake errors at the configure step and build errors emitted from
   uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
     source-dir: tests
-    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
@@ -421,7 +421,7 @@ annotations for CMake errors at the configure step and build errors emitted from
   with:
     source-dir: tests
     generator: Unix Makefiles
-    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     build-type: Debug
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
@@ -440,7 +440,7 @@ annotations for CMake errors at the configure step and build errors emitted from
   uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
     source-dir: tests
-    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
@@ -557,7 +557,11 @@ annotations for CMake errors at the configure step and build errors emitted from
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>ref-source-dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A reference source directory for annotations. Any annotation filename will be relative to this directory.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A reference source directory for annotations. Any annotation filename will be relative to this directory.</p>
+<p class="tableblock">This is typically useful when the repository being tested is not the current directory, in which
+we need to make annotations relative to some other directory.</p>
+<p class="tableblock">In most cases, the default option should be enough.
+.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
 </tr>
 <tr>
@@ -601,7 +605,7 @@ cache, the scanning scripting saves us about 3 minutes.</p>
 - name: Clone Boost.Variant2
   uses: alandefreitas/cpp-actions/boost-clone@master
   with:
-    boost_dir: boost-root
+    boost-dir: boost-root
     branch: master
     modules: variant2</code></pre>
 </div>
@@ -758,7 +762,7 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 </div>
 </div>
 <div class="paragraph">
-<p>Example 6 (<code>gcc_toolchain</code>):</p>
+<p>Example 6 (<code>gcc-toolchain</code>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -771,7 +775,7 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
     toolset: clang
     cxx: clang++-8
     cxxstd: '17'
-    gcc_toolchain: '7'</code></pre>
+    gcc-toolchain: '7'</code></pre>
 </div>
 </div>
 </div>

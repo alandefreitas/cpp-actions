@@ -231,7 +231,7 @@ annotations for CMake errors at the configure step and build errors emitted from
   uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
     source-dir: tests
-    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
@@ -253,7 +253,7 @@ annotations for CMake errors at the configure step and build errors emitted from
   with:
     source-dir: tests
     generator: Unix Makefiles
-    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     build-type: Debug
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
@@ -272,7 +272,7 @@ annotations for CMake errors at the configure step and build errors emitted from
   uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
     source-dir: tests
-    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
@@ -391,7 +391,11 @@ annotations for CMake errors at the configure step and build errors emitted from
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>ref-source-dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A reference source directory for annotations. Any annotation filename will be relative to this directory.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A reference source directory for annotations. Any annotation filename will be relative to this directory.</p>
+<p class="tableblock">This is typically useful when the repository being tested is not the current directory, in which
+we need to make annotations relative to some other directory.</p>
+<p class="tableblock">In most cases, the default option should be enough.
+.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
 </tr>
 <tr>
