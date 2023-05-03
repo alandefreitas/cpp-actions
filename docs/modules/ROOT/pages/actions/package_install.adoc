@@ -18,7 +18,7 @@ Example 1:
 ----
 steps:
 - name: Install packages
-  uses: alandefreitas/cpp-actions/package_install
+  uses: alandefreitas/cpp-actions/package_install@master
   id: package-install
   with:
     vcpkg: fmt
@@ -33,7 +33,7 @@ Example 2 (`apt-get-ignore-missing`):
 ----
 steps:
 - name: Install packages
-  uses: alandefreitas/cpp-actions/package_install
+  uses: alandefreitas/cpp-actions/package_install@master
   id: package-install
   with:
     vcpkg: fmt

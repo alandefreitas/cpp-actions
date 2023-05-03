@@ -22,7 +22,7 @@ cache, the scanning scripting saves us about 3 minutes.
 ----
 steps:
 - name: Clone Boost.Variant2
-  uses: alandefreitas/cpp-actions/boost_clone
+  uses: alandefreitas/cpp-actions/boost_clone@master
   with:
     boost_dir: boost-root
     branch: master

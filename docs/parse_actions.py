@@ -309,7 +309,7 @@ for action in actions:
     example_templates = []
     for step in steps:
         if 'uses' in step and step['uses'].endswith(action):
-            step['uses'] = f'alandefreitas/cpp-actions/{action}'
+            step['uses'] = f'alandefreitas/cpp-actions/{action}@master'
             example_templates.append(sort_step(step))
 
 

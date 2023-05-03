@@ -35,7 +35,7 @@ Example 1:
 ----
 steps:
 - name: Install packages
-  uses: alandefreitas/cpp-actions/package_install
+  uses: alandefreitas/cpp-actions/package_install@master
   id: package-install
   with:
     vcpkg: fmt
@@ -50,7 +50,7 @@ Example 2 (`apt-get-ignore-missing`):
 ----
 steps:
 - name: Install packages
-  uses: alandefreitas/cpp-actions/package_install
+  uses: alandefreitas/cpp-actions/package_install@master
   id: package-install
   with:
     vcpkg: fmt
@@ -137,7 +137,7 @@ Example 1:
 ----
 steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow@master
   with:
     source-dir: tests
     toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
@@ -157,7 +157,7 @@ Example 2 (`build-type`, `generator`):
 ----
 steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow@master
   with:
     source-dir: tests
     generator: Unix Makefiles
@@ -176,7 +176,7 @@ Example 3 (`cxxflags`):
 ----
 steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow@master
   with:
     source-dir: tests
     toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
@@ -245,7 +245,7 @@ cache, the scanning scripting saves us about 3 minutes.
 ----
 steps:
 - name: Clone Boost.Variant2
-  uses: alandefreitas/cpp-actions/boost_clone
+  uses: alandefreitas/cpp-actions/boost_clone@master
   with:
     boost_dir: boost-root
     branch: master
@@ -287,7 +287,7 @@ Example 1:
 ----
 steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow
+  uses: alandefreitas/cpp-actions/b2_workflow@master
   with:
     source-dir: boost-root
     modules: variant2
@@ -301,7 +301,7 @@ Example 2 (`cxx`):
 ----
 steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow
+  uses: alandefreitas/cpp-actions/b2_workflow@master
   with:
     source-dir: boost-root
     modules: variant2
@@ -316,7 +316,7 @@ Example 3 (`address-model`):
 ----
 steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow
+  uses: alandefreitas/cpp-actions/b2_workflow@master
   with:
     source-dir: boost-root
     modules: variant2
@@ -331,7 +331,7 @@ Example 4 (`ubsan`):
 ----
 steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow
+  uses: alandefreitas/cpp-actions/b2_workflow@master
   with:
     source-dir: boost-root
     modules: variant2
@@ -346,7 +346,7 @@ Example 5 (`cxxflags`, `linkflags`):
 ----
 steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow
+  uses: alandefreitas/cpp-actions/b2_workflow@master
   with:
     source-dir: boost-root
     modules: variant2
@@ -363,7 +363,7 @@ Example 6 (`gcc_toolchain`):
 ----
 steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow
+  uses: alandefreitas/cpp-actions/b2_workflow@master
   with:
     source-dir: boost-root
     modules: variant2

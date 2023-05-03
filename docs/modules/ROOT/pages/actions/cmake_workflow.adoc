@@ -42,7 +42,7 @@ Example 1:
 ----
 steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow@master
   with:
     source-dir: tests
     toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
@@ -62,7 +62,7 @@ Example 2 (`build-type`, `generator`):
 ----
 steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow@master
   with:
     source-dir: tests
     generator: Unix Makefiles
@@ -81,7 +81,7 @@ Example 3 (`cxxflags`):
 ----
 steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow@master
   with:
     source-dir: tests
     toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
