@@ -31,21 +31,21 @@ inputs:
     required: false
     default: ''
 
-  vcpkg_triplet:
+  vcpkg-triplet:
     description: 'The triplet used by vcpkg to install packages.'
     required: false
     default: ''
-  vcpkg_dir:
+  vcpkg-dir:
     description: 'The directory where vcpkg should be cloned and installed.'
     required: false
     default: 'vcpkg'
-  vcpkg_branch:
+  vcpkg-branch:
     description: 'vcpkg branch we should use'
     required: false
     default: 'master'
 
   apt-get-retries:
-    description: 'Number of time we should retry when apt-get fails.'
+    description: 'Number of times we should retry when apt-get fails.'
     required: false
     default: '1'
   apt-get-sources:
@@ -62,12 +62,12 @@ inputs:
     default: 'false'
 
 outputs:
-  vcpkg_toolchain:
+  vcpkg-toolchain:
     description: "vcpkg toolchain file"
-    value: ${{ steps.ctx.outputs.vcpkg_toolchain }}
-  vcpkg_executable:
+    value: ${{ steps.ctx.outputs.vcpkg-toolchain }}
+  vcpkg-executable:
     description: "vcpkg toolchain file"
-    value: ${{ steps.ctx.outputs.vcpkg_executable }}
+    value: ${{ steps.ctx.outputs.vcpkg-executable }}
 
 runs:
   using: "composite"
@@ -165,12 +165,12 @@ runs:
         ${{ (inputs.cc != '' && format('export CC="{0}"', inputs.cc)) || '' }}
         
         # vcpkg hash
-        vcpkg_hash="$(git ls-remote https://github.com/microsoft/vcpkg.git ${{ inputs.vcpkg_branch }} | awk '{ print $1 }')"
+        vcpkg_hash="$(git ls-remote https://github.com/microsoft/vcpkg.git ${{ inputs.vcpkg-branch }} | awk '{ print $1 }')"
         echo "vcpkg_hash=$vcpkg_hash" >> $GITHUB_OUTPUT
         
         # vcpkg triplet
         default_triplet="${{ (runner.os == 'Windows' && 'x64-windows') || (runner.os == 'Linux' && 'x64-linux') || (runner.os == 'macOS' && 'x64-osx') || '' }}"
-        input_triplet=${{ inputs.vcpkg_triplet }}
+        input_triplet=${{ inputs.vcpkg-triplet }}
         if [ "$input_triplet" == "" ]; then
             triplet=$default_triplet
         else
@@ -185,7 +185,7 @@ runs:
         echo "triplet_suffix=$triplet_suffix" >> $GITHUB_OUTPUT
         
         # vcpkg executable
-        vcpkg_target_dir=${{ inputs.vcpkg_dir }}
+        vcpkg_target_dir=${{ inputs.vcpkg-dir }}
         if [[ $vcpkg_target_dir == /* ]]; then
             vcpkg_exec_path=$vcpkg_target_dir
         else
@@ -199,14 +199,14 @@ runs:
         if [[ $vcpkg_toolchain != /* ]]; then
           vcpkg_toolchain="$(readlink -f "$vcpkg_toolchain" 2>/dev/null || realpath -e "$vcpkg_toolchain" 2>/dev/null || echo "$(pwd)/$vcpkg_toolchain")"
         fi
-        echo "vcpkg_toolchain=$vcpkg_toolchain" >> $GITHUB_OUTPUT
+        echo "vcpkg-toolchain=$vcpkg_toolchain" >> $GITHUB_OUTPUT
         
         # vcpkg executable
         vcpkg_executable=$vcpkg_exec_path/vcpkg
         if [[ $vcpkg_executable != /* ]]; then
           vcpkg_executable="$(readlink -f "$vcpkg_executable" 2>/dev/null || realpath -e "$vcpkg_executable" 2>/dev/null || echo "$(pwd)/$vcpkg_executable")"
         fi
-        echo "vcpkg_executable=$vcpkg_executable" >> $GITHUB_OUTPUT
+        echo "vcpkg-executable=$vcpkg_executable" >> $GITHUB_OUTPUT
         
         # vcpkg cache hash
         vcpkg_cache_hash="${{ runner.os }}-$vcpkg_hash$triplet_suffix"
@@ -226,7 +226,7 @@ runs:
       id: cache-vcpkg
       uses: actions/cache@v3
       with:
-        path: ${{ inputs.vcpkg_dir }}
+        path: ${{ inputs.vcpkg-dir }}
         key: ${{ steps.ctx.outputs.vcpkg_cache_hash }}
 
     - name: vcpkg install
@@ -234,9 +234,9 @@ runs:
       shell: bash
       run: |
         set -xe
-        git clone https://github.com/microsoft/vcpkg.git -b ${{ inputs.vcpkg_branch }} ${{ inputs.vcpkg_dir }}
+        git clone https://github.com/microsoft/vcpkg.git -b ${{ inputs.vcpkg-branch }} ${{ inputs.vcpkg-dir }}
         ${{ steps.ctx.outputs.vcpkg_bs_exe }}
-        cd ${{ inputs.vcpkg_dir }}
+        cd ${{ inputs.vcpkg-dir }}
         packages=${{ inputs.vcpkg }}
         ${{ (inputs.cxx != '' && format('export CXX="{0}"', inputs.cxx)) || '' }}
         ${{ (inputs.cc != '' && format('export CC="{0}"', inputs.cc)) || '' }}

@@ -21,7 +21,7 @@ description: |
   cache, the scanning scripting saves us about 3 minutes.
 
 inputs:
-  boost_dir:
+  boost-dir:
     description: 'The boost directory. The default value assumes boost is in-source.'
     required: false
     default: 'boost'
@@ -237,7 +237,7 @@ runs:
         
         # absolute cache directory
         working_dir="$(pwd)"
-        boost_dir="${{ inputs.boost_dir }}"
+        boost_dir="${{ inputs.boost-dir }}"
         if [[ $boost_dir != /* ]]; then
           boost_dir="$(readlink -f "$boost_dir" 2>/dev/null || realpath -e "$boost_dir" 2>/dev/null || echo "$working_dir/$boost_dir")"
         fi
@@ -256,13 +256,13 @@ runs:
       if: steps.cache-boost.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        git clone https://github.com/boostorg/boost.git -b ${{ inputs.branch }} "${{ inputs.boost_dir }}"
+        git clone https://github.com/boostorg/boost.git -b ${{ inputs.branch }} "${{ inputs.boost-dir }}"
 
     # Apply patches if boost not found in cache
     - name: boost patches
       if: steps.cache-boost.outputs.cache-hit != 'true' && inputs.patches != ''
       shell: bash
-      working-directory: ${{ inputs.boost_dir }}/libs
+      working-directory: ${{ inputs.boost-dir }}/libs
       run: |
         # Apply boost patches ${{ inputs.patches }}
         patches=${{ inputs.patches }}
@@ -278,7 +278,7 @@ runs:
     # Initialize all submodules if boost not found in cache and no specific modules were specified
     - name: Initialize all submodules
       if: (steps.cache-boost.outputs.cache-hit != 'true' && steps.ctx.outputs.all_modules == '')
-      working-directory: ${{ inputs.boost_dir }}
+      working-directory: ${{ inputs.boost-dir }}
       shell: bash
       run: |
         # Update all boost submodules
@@ -287,7 +287,7 @@ runs:
     # Initialize specified submodules if boost not found in cache and submodules were specified
     - name: Initialize specified submodules
       if: (steps.cache-boost.outputs.cache-hit != 'true' && steps.ctx.outputs.all_modules != '')
-      working-directory: ${{ inputs.boost_dir }}
+      working-directory: ${{ inputs.boost-dir }}
       shell: bash
       run: |
         # Scan transitive dependencies and update submodules

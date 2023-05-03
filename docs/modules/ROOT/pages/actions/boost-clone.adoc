@@ -1,7 +1,7 @@
-= Boost Clone [[boost_clone]]
+= Boost Clone [[boost-clone]]
 :reftext: Boost Clone
 :navtitle: Boost Clone Action
-// This boost_clone.adoc file is automatically generated.
+// This boost-clone.adoc file is automatically generated.
 // Edit parse_actions.py instead.
 
 This action clones the Boost source directory, attempting to get it from the cache first. Only the specified
@@ -22,9 +22,9 @@ cache, the scanning scripting saves us about 3 minutes.
 ----
 steps:
 - name: Clone Boost.Variant2
-  uses: alandefreitas/cpp-actions/boost_clone@master
+  uses: alandefreitas/cpp-actions/boost-clone@master
   with:
-    boost_dir: boost-root
+    boost-dir: boost-root
     branch: master
     modules: variant2
 ----
@@ -33,7 +33,7 @@ steps:
 
 |===
 |Parameter |Description |Default
-|`boost_dir` |The boost directory. The default value assumes boost is in-source. |`boost`
+|`boost-dir` |The boost directory. The default value assumes boost is in-source. |`boost`
 |`branch` |Branch of the super-project. |`master`
 |`patches` |Libraries used to patch the boost installation. |
 |`modules` |The boost submodules we need to clone. |

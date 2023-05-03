@@ -1,7 +1,7 @@
-= Install dependencies [[package_install]]
+= Install dependencies [[package-install]]
 :reftext: Install dependencies
 :navtitle: Install dependencies Action
-// This package_install.adoc file is automatically generated.
+// This package-install.adoc file is automatically generated.
 // Edit parse_actions.py instead.
 
 This action installs dependencies from multiple package managers for a workflow.
@@ -18,7 +18,7 @@ Example 1:
 ----
 steps:
 - name: Install packages
-  uses: alandefreitas/cpp-actions/package_install@master
+  uses: alandefreitas/cpp-actions/package-install@master
   id: package-install
   with:
     vcpkg: fmt
@@ -33,7 +33,7 @@ Example 2 (`apt-get-ignore-missing`):
 ----
 steps:
 - name: Install packages
-  uses: alandefreitas/cpp-actions/package_install@master
+  uses: alandefreitas/cpp-actions/package-install@master
   id: package-install
   with:
     vcpkg: fmt
@@ -60,10 +60,10 @@ Setting the compiler is particularly important in Linux workflows that use `clan
 This would cause conflict in workflows that later attempt to use vcpkg dependencies.
 . |
 |`cc` |C compiler used by vcpkg. |
-|`vcpkg_triplet` |The triplet used by vcpkg to install packages. |
-|`vcpkg_dir` |The directory where vcpkg should be cloned and installed. |`vcpkg`
-|`vcpkg_branch` |vcpkg branch we should use. |`master`
-|`apt-get-retries` |Number of time we should retry when apt-get fails. |`1`
+|`vcpkg-triplet` |The triplet used by vcpkg to install packages. |
+|`vcpkg-dir` |The directory where vcpkg should be cloned and installed. |`vcpkg`
+|`vcpkg-branch` |vcpkg branch we should use. |`master`
+|`apt-get-retries` |Number of times we should retry when apt-get fails. |`1`
 |`apt-get-sources` |List of sources for apt-get. |
 |`apt-get-source-keys` |List of source keys for apt-get. |
 |`apt-get-ignore-missing` |Whether apt-get should ignore missing packages. |`false`
@@ -73,6 +73,6 @@ This would cause conflict in workflows that later attempt to use vcpkg dependenc
 
 |===
 |Output |Description
-|`vcpkg_toolchain` |vcpkg toolchain file
-|`vcpkg_executable` |vcpkg toolchain file
+|`vcpkg-toolchain` |vcpkg toolchain file
+|`vcpkg-executable` |vcpkg toolchain file
 |===

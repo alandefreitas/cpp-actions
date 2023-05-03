@@ -1,7 +1,7 @@
-= CMake Workflow [[cmake_workflow]]
+= CMake Workflow [[cmake-workflow]]
 :reftext: CMake Workflow
 :navtitle: CMake Workflow Action
-// This cmake_workflow.adoc file is automatically generated.
+// This cmake-workflow.adoc file is automatically generated.
 // Edit parse_actions.py instead.
 
 This action runs a complete CMake workflow from source files. A workflow is composed of the following steps:
@@ -42,10 +42,10 @@ Example 1:
 ----
 steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow@master
+  uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
     source-dir: tests
-    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
@@ -62,11 +62,11 @@ Example 2 (`build-type`, `generator`):
 ----
 steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow@master
+  uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
     source-dir: tests
     generator: Unix Makefiles
-    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     build-type: Debug
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
@@ -81,10 +81,10 @@ Example 3 (`cxxflags`):
 ----
 steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow@master
+  uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
     source-dir: tests
-    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
@@ -102,8 +102,8 @@ steps:
 |Parameter |Description |Default
 |`source-dir` |Directory for the source files. |`.`
 |`build-dir` |Directory for the binaries relative to the source directory. |`build`
+|`cmake-exec` |The cmake executable. |`cmake`
 |`cmake-min-version` |The minimum cmake version for this workflow. If the existing version is below that, the action attempts to update CMake. |`3.5`
-|`cmake_exec` |The cmake executable. |`cmake`
 |`cc` |Path to C compiler. |
 |`cxx` |Path to C++ compiler. |
 |`cxxstd` |List of standards with which cmake will build and test the program. |
@@ -122,7 +122,14 @@ The latest std version described in `cxxstd` is used for the installed version.
 . |`true`
 |`extra-args` |Extra arguments to cmake configure command. |
 |`create-annotations` |Create github annotations on errors. |`true`
-|`ref-source-dir` |A reference source directory for annotations. Any annotation filename will be relative to this directory. |`.`
+|`ref-source-dir` |A reference source directory for annotations. Any annotation filename will be relative to this directory.
+
+This is typically useful when the repository being tested is not the current directory, in which
+we need to make annotations relative to some other directory.
+
+In most cases, the default option should be enough.
+. |`.`
 |`trace-commands` |Trace commands executed by the workflow. |`false`
+|`cpack-generators` |Run cpack with the specified generators after the install step. |
 |===
 

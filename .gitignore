@@ -23,6 +23,7 @@ docs/build
 .idea
 .vs
 .vscode/
+.PVS-Studio
 /.vs
 codealike.json
 

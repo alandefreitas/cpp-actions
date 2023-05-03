@@ -10,15 +10,15 @@ NOTE: READ THE DOCS: https://alandefreitas.github.io/cpp-actions/
 :reftext: Actions
 :navtitle: All Actions
 
-- <<package_install>>
-- <<cmake_workflow>>
-- <<boost_clone>>
-- <<b2_workflow>>
+- <<package-install>>
+- <<cmake-workflow>>
+- <<boost-clone>>
+- <<b2-workflow>>
 
-=== Install dependencies [[package_install]]
+=== Install dependencies [[package-install]]
 :reftext: Install dependencies
 :navtitle: Install dependencies Action
-// This package_install.adoc file is automatically generated.
+// This package-install.adoc file is automatically generated.
 // Edit parse_actions.py instead.
 
 This action installs dependencies from multiple package managers for a workflow.
@@ -35,7 +35,7 @@ Example 1:
 ----
 steps:
 - name: Install packages
-  uses: alandefreitas/cpp-actions/package_install@master
+  uses: alandefreitas/cpp-actions/package-install@master
   id: package-install
   with:
     vcpkg: fmt
@@ -50,7 +50,7 @@ Example 2 (`apt-get-ignore-missing`):
 ----
 steps:
 - name: Install packages
-  uses: alandefreitas/cpp-actions/package_install@master
+  uses: alandefreitas/cpp-actions/package-install@master
   id: package-install
   with:
     vcpkg: fmt
@@ -77,10 +77,10 @@ Setting the compiler is particularly important in Linux workflows that use `clan
 This would cause conflict in workflows that later attempt to use vcpkg dependencies.
 . |
 |`cc` |C compiler used by vcpkg. |
-|`vcpkg_triplet` |The triplet used by vcpkg to install packages. |
-|`vcpkg_dir` |The directory where vcpkg should be cloned and installed. |`vcpkg`
-|`vcpkg_branch` |vcpkg branch we should use. |`master`
-|`apt-get-retries` |Number of time we should retry when apt-get fails. |`1`
+|`vcpkg-triplet` |The triplet used by vcpkg to install packages. |
+|`vcpkg-dir` |The directory where vcpkg should be cloned and installed. |`vcpkg`
+|`vcpkg-branch` |vcpkg branch we should use. |`master`
+|`apt-get-retries` |Number of times we should retry when apt-get fails. |`1`
 |`apt-get-sources` |List of sources for apt-get. |
 |`apt-get-source-keys` |List of source keys for apt-get. |
 |`apt-get-ignore-missing` |Whether apt-get should ignore missing packages. |`false`
@@ -90,13 +90,13 @@ This would cause conflict in workflows that later attempt to use vcpkg dependenc
 
 |===
 |Output |Description
-|`vcpkg_toolchain` |vcpkg toolchain file
-|`vcpkg_executable` |vcpkg toolchain file
+|`vcpkg-toolchain` |vcpkg toolchain file
+|`vcpkg-executable` |vcpkg toolchain file
 |===
-=== CMake Workflow [[cmake_workflow]]
+=== CMake Workflow [[cmake-workflow]]
 :reftext: CMake Workflow
 :navtitle: CMake Workflow Action
-// This cmake_workflow.adoc file is automatically generated.
+// This cmake-workflow.adoc file is automatically generated.
 // Edit parse_actions.py instead.
 
 This action runs a complete CMake workflow from source files. A workflow is composed of the following steps:
@@ -137,10 +137,10 @@ Example 1:
 ----
 steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow@master
+  uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
     source-dir: tests
-    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
@@ -157,11 +157,11 @@ Example 2 (`build-type`, `generator`):
 ----
 steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow@master
+  uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
     source-dir: tests
     generator: Unix Makefiles
-    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     build-type: Debug
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
@@ -176,10 +176,10 @@ Example 3 (`cxxflags`):
 ----
 steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow@master
+  uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
     source-dir: tests
-    toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
@@ -197,8 +197,8 @@ steps:
 |Parameter |Description |Default
 |`source-dir` |Directory for the source files. |`.`
 |`build-dir` |Directory for the binaries relative to the source directory. |`build`
+|`cmake-exec` |The cmake executable. |`cmake`
 |`cmake-min-version` |The minimum cmake version for this workflow. If the existing version is below that, the action attempts to update CMake. |`3.5`
-|`cmake_exec` |The cmake executable. |`cmake`
 |`cc` |Path to C compiler. |
 |`cxx` |Path to C++ compiler. |
 |`cxxstd` |List of standards with which cmake will build and test the program. |
@@ -217,14 +217,21 @@ The latest std version described in `cxxstd` is used for the installed version.
 . |`true`
 |`extra-args` |Extra arguments to cmake configure command. |
 |`create-annotations` |Create github annotations on errors. |`true`
-|`ref-source-dir` |A reference source directory for annotations. Any annotation filename will be relative to this directory. |`.`
+|`ref-source-dir` |A reference source directory for annotations. Any annotation filename will be relative to this directory.
+
+This is typically useful when the repository being tested is not the current directory, in which
+we need to make annotations relative to some other directory.
+
+In most cases, the default option should be enough.
+. |`.`
 |`trace-commands` |Trace commands executed by the workflow. |`false`
+|`cpack-generators` |Run cpack with the specified generators after the install step. |
 |===
 
-=== Boost Clone [[boost_clone]]
+=== Boost Clone [[boost-clone]]
 :reftext: Boost Clone
 :navtitle: Boost Clone Action
-// This boost_clone.adoc file is automatically generated.
+// This boost-clone.adoc file is automatically generated.
 // Edit parse_actions.py instead.
 
 This action clones the Boost source directory, attempting to get it from the cache first. Only the specified
@@ -245,9 +252,9 @@ cache, the scanning scripting saves us about 3 minutes.
 ----
 steps:
 - name: Clone Boost.Variant2
-  uses: alandefreitas/cpp-actions/boost_clone@master
+  uses: alandefreitas/cpp-actions/boost-clone@master
   with:
-    boost_dir: boost-root
+    boost-dir: boost-root
     branch: master
     modules: variant2
 ----
@@ -256,7 +263,7 @@ steps:
 
 |===
 |Parameter |Description |Default
-|`boost_dir` |The boost directory. The default value assumes boost is in-source. |`boost`
+|`boost-dir` |The boost directory. The default value assumes boost is in-source. |`boost`
 |`branch` |Branch of the super-project. |`master`
 |`patches` |Libraries used to patch the boost installation. |
 |`modules` |The boost submodules we need to clone. |
@@ -265,10 +272,10 @@ steps:
 |`trace-commands` |Trace commands executed by the workflow. |`false`
 |===
 
-=== B2 Workflow [[b2_workflow]]
+=== B2 Workflow [[b2-workflow]]
 :reftext: B2 Workflow
 :navtitle: B2 Workflow Action
-// This b2_workflow.adoc file is automatically generated.
+// This b2-workflow.adoc file is automatically generated.
 // Edit parse_actions.py instead.
 
 This action runs a complete B2 workflow from Boost source files.
@@ -287,7 +294,7 @@ Example 1:
 ----
 steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow@master
+  uses: alandefreitas/cpp-actions/b2-workflow@master
   with:
     source-dir: boost-root
     modules: variant2
@@ -301,7 +308,7 @@ Example 2 (`cxx`):
 ----
 steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow@master
+  uses: alandefreitas/cpp-actions/b2-workflow@master
   with:
     source-dir: boost-root
     modules: variant2
@@ -316,7 +323,7 @@ Example 3 (`address-model`):
 ----
 steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow@master
+  uses: alandefreitas/cpp-actions/b2-workflow@master
   with:
     source-dir: boost-root
     modules: variant2
@@ -331,7 +338,7 @@ Example 4 (`ubsan`):
 ----
 steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow@master
+  uses: alandefreitas/cpp-actions/b2-workflow@master
   with:
     source-dir: boost-root
     modules: variant2
@@ -346,7 +353,7 @@ Example 5 (`cxxflags`, `linkflags`):
 ----
 steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow@master
+  uses: alandefreitas/cpp-actions/b2-workflow@master
   with:
     source-dir: boost-root
     modules: variant2
@@ -357,20 +364,20 @@ steps:
     linkflags: -stdlib=libc++
 ----
 
-Example 6 (`gcc_toolchain`):
+Example 6 (`gcc-toolchain`):
 
 [source,yml]
 ----
 steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow@master
+  uses: alandefreitas/cpp-actions/b2-workflow@master
   with:
     source-dir: boost-root
     modules: variant2
     toolset: clang
     cxx: clang++-8
     cxxstd: '17'
-    gcc_toolchain: '7'
+    gcc-toolchain: '7'
 ----
 
 ==== Input Parameters
@@ -380,7 +387,7 @@ steps:
 |`source-dir` |The boost source directory. |`.`
 |`build-variant` |Custom build variants. |
 |`modules` |The list of modules we should test. |
-|`gcc_toolchain` |Create a special GCC toolchain for this version of GCC and update user-config.jam. |
+|`gcc-toolchain` |Create a special GCC toolchain for this version of GCC and update user-config.jam. |
 |`toolset` |Toolset name. |
 |`address-model` |Valid b2 list of address models. |
 |`cxx` |Path to C++ compiler. |

@@ -20,7 +20,7 @@ inputs:
     description: 'The list of modules we should test.'
     required: true
     default: ''
-  gcc_toolchain:
+  gcc-toolchain:
     description: 'Create a special GCC toolchain for this version of GCC and update user-config.jam'
     required: false
     default: ''
@@ -81,7 +81,7 @@ runs:
         ./b2 headers
 
     - name: Setup GCC Toolchain
-      if: ${{ inputs.gcc_toolchain }}
+      if: ${{ inputs.gcc-toolchain }}
       shell: bash
       run: |
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
@@ -95,7 +95,7 @@ runs:
         ln -s /usr/include "$GCC_TOOLCHAIN_ROOT/include"
         ln -s /usr/bin "$GCC_TOOLCHAIN_ROOT/bin"
         mkdir -p "$GCC_TOOLCHAIN_ROOT/lib/gcc/$MULTIARCH_TRIPLET"
-        ln -s "/usr/lib/gcc/$MULTIARCH_TRIPLET/${{inputs.gcc_toolchain}}" "$GCC_TOOLCHAIN_ROOT/lib/gcc/$MULTIARCH_TRIPLET/${{inputs.gcc_toolchain}}"
+        ln -s "/usr/lib/gcc/$MULTIARCH_TRIPLET/${{inputs.gcc-toolchain}}" "$GCC_TOOLCHAIN_ROOT/lib/gcc/$MULTIARCH_TRIPLET/${{inputs.gcc-toolchain}}"
         
         # Write toolchain data to ~/user-config.jam
         cxx="${{ inputs.cxx }}"
@@ -113,7 +113,7 @@ runs:
         fi
 
     - name: Setup user-config.jam
-      if: ${{ !inputs.gcc_toolchain }}
+      if: ${{ !inputs.gcc-toolchain }}
       shell: bash
       run: |
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}

@@ -41,9 +41,9 @@ jobs:
 
           # Special
           - { name: 'UBSan (GCC 11: C++17-20)', toolset: gcc-11, cxx: g++-11, cc: gcc-11, cxxstd: "17,20", ubsan: true, os: ubuntu-22.04, install: [ g++-11 ], sources: [ "ppa:ubuntu-toolchain-r/test" ] }
-          - { name: 'Shared (GCC)', generator: 'Unix Makefiles', os: ubuntu-22.04, build_shared: true, build_type: Debug, cmake: true }
-          - { name: 'Shared (VS 2019)', toolset: msvc-14.2, generator: 'Visual Studio 16 2019', address-model: '32,64', cxxstd: "17,20", os: windows-2019, build_shared: true, build_type: Debug }
-          - { name: 'Shared (VS 2022)', toolset: msvc-14.3, generator: 'Visual Studio 17 2022', address-model: '32,64', cxxstd: "17,20", os: windows-2022, build_shared: true, build_type: Debug }
+          - { name: 'Shared (GCC)', generator: 'Unix Makefiles', os: ubuntu-22.04, build_shared: true, build-type: Debug, cmake: true }
+          - { name: 'Shared (VS 2019)', toolset: msvc-14.2, generator: 'Visual Studio 16 2019', address-model: '32,64', cxxstd: "17,20", os: windows-2019, build_shared: true, build-type: Debug }
+          - { name: 'Shared (VS 2022)', toolset: msvc-14.3, generator: 'Visual Studio 17 2022', address-model: '32,64', cxxstd: "17,20", os: windows-2022, build_shared: true, build-type: Debug }
           - { name: 'Clang 12 + libc++: C++17-20', toolset: clang, cxx: clang++-12, cc: clang-12, cxxstd: "17,20", cxxflags: -stdlib=libc++, linkflags: -stdlib=libc++, os: ubuntu-20.04, install: [ clang-12, libc++-12-dev, libc++abi-12-dev ] }
 
           # GCC
@@ -59,7 +59,7 @@ jobs:
           - { name: 'Clang 11: C++14-17', toolset: clang, cxx: clang++-11, cc: clang-11, cxxstd: "14,17", os: ubuntu-20.04, install: [ clang-11 ] }
           - { name: 'Clang 10: C++14-17', toolset: clang, cxx: clang++-10, cc: clang-10, cxxstd: "14,17", os: ubuntu-20.04, install: [ clang-10 ] }
           - { name: 'Clang 9: C++14-17', toolset: clang, cxx: clang++-9, cc: clang-9, cxxstd: "14,17", os: ubuntu-22.04, container: 'ubuntu:18.04', install: [ clang-9 ] }
-          - { name: 'Clang 8: C++17', toolset: clang, cxx: clang++-8, cc: clang-8, cxxstd: "17", os: ubuntu-22.04, container: 'ubuntu:18.04', install: [ clang-8, g++-7 ], gcc_toolchain: 7 }
+          - { name: 'Clang 8: C++17', toolset: clang, cxx: clang++-8, cc: clang-8, cxxstd: "17", os: ubuntu-22.04, container: 'ubuntu:18.04', install: [ clang-8, g++-7 ], gcc-toolchain: 7 }
           - { name: 'Clang 7: C++17', toolset: clang, cxx: clang++-7, cc: clang-7, cxxstd: "17", os: ubuntu-22.04, container: 'ubuntu:18.04', install: [ clang-7 ] }
           - { name: 'Clang 6.0: C++14-17', toolset: clang, cxx: clang++-6.0, cc: clang-6.0, cxxstd: "14,17", os: ubuntu-22.04, container: 'ubuntu:18.04', install: [ clang-6.0 ] }
           - { name: 'Clang 5.0: C++11-14', toolset: clang, cxx: clang++-5.0, cc: clang-5.0, cxxstd: "11,14", os: ubuntu-22.04, container: 'ubuntu:18.04', install: [ clang-5.0 ] }
@@ -75,7 +75,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Install packages
-        uses: ./package_install
+        uses: ./package-install
         id: package-install
         with:
           vcpkg: fmt
@@ -85,15 +85,15 @@ jobs:
           cc: ${{ matrix.cc }}
 
       - name: Clone Boost.Variant2
-        uses: ./boost_clone
+        uses: ./boost-clone
         with:
-          boost_dir: boost-root
+          boost-dir: boost-root
           branch: master
           modules: variant2
 
       - name: Test Boost.Variant2
         if: ${{ matrix.cxx == 'g++-11' }}
-        uses: ./b2_workflow
+        uses: ./b2-workflow
         with:
           source-dir: boost-root
           modules: variant2
@@ -104,15 +104,15 @@ jobs:
           linkflags: ${{ matrix.linkflags }}
           address-model: ${{ matrix.address-model }}
           ubsan: ${{ matrix.ubsan }}
-          gcc_toolchain: ${{ matrix.gcc_toolchain }}
+          gcc-toolchain: ${{ matrix.gcc-toolchain }}
 
       - name: CMake Workflow
-        uses: ./cmake_workflow
+        uses: ./cmake-workflow
         with:
           source-dir: tests
           generator: ${{ matrix.generator }}
-          toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
-          build-type: ${{ matrix.build_type }}
+          toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
+          build-type: ${{ matrix.build-type }}
           run-tests: true
           install-prefix: $GITHUB_WORKSPACE/.local
           cxxstd: ${{ matrix.cxxstd }}
@@ -124,7 +124,7 @@ jobs:
           ref-source-dir: .
 
   docs:
-    # needs: build
+    needs: build
     if: ${{ (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') && github.event_name == 'push' }}
     defaults:
       run:
@@ -180,6 +180,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: LICENSE
-          tag_name: ${{ github.ref_name || github.ref }}
+          name: ${{ github.ref_name || github.ref }}
+          tag_name: ${{ github.ref_name || github.ref }}${{ (!startsWith(github.ref, 'refs/tags/')) && '-release' }}
           token: ${{ github.token }}
 

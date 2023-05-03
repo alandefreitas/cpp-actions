@@ -1,8 +1,8 @@
 * xref:index.adoc[]
-* xref:actions/package_install.adoc[]
-* xref:actions/cmake_workflow.adoc[]
-* xref:actions/boost_clone.adoc[]
-* xref:actions/b2_workflow.adoc[]
+* xref:actions/package-install.adoc[]
+* xref:actions/cmake-workflow.adoc[]
+* xref:actions/boost-clone.adoc[]
+* xref:actions/b2-workflow.adoc[]
 * xref:contribute.adoc[]
 * xref:license.adoc[]
 
