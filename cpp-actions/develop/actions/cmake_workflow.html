@@ -228,7 +228,7 @@ annotations for CMake errors at the configure step and build errors emitted from
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow@master
   with:
     source-dir: tests
     toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
@@ -249,7 +249,7 @@ annotations for CMake errors at the configure step and build errors emitted from
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow@master
   with:
     source-dir: tests
     generator: Unix Makefiles
@@ -269,7 +269,7 @@ annotations for CMake errors at the configure step and build errors emitted from
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow@master
   with:
     source-dir: tests
     toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
