@@ -184,7 +184,7 @@ Both vcpkg and its dependencies are cached.</p>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Install packages
-  uses: alandefreitas/cpp-actions/package_install
+  uses: alandefreitas/cpp-actions/package_install@master
   id: package-install
   with:
     vcpkg: fmt
@@ -200,7 +200,7 @@ Both vcpkg and its dependencies are cached.</p>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Install packages
-  uses: alandefreitas/cpp-actions/package_install
+  uses: alandefreitas/cpp-actions/package_install@master
   id: package-install
   with:
     vcpkg: fmt
@@ -393,7 +393,7 @@ annotations for CMake errors at the configure step and build errors emitted from
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow@master
   with:
     source-dir: tests
     toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
@@ -414,7 +414,7 @@ annotations for CMake errors at the configure step and build errors emitted from
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow@master
   with:
     source-dir: tests
     generator: Unix Makefiles
@@ -434,7 +434,7 @@ annotations for CMake errors at the configure step and build errors emitted from
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake_workflow
+  uses: alandefreitas/cpp-actions/cmake_workflow@master
   with:
     source-dir: tests
     toolchain: ${{ steps.package-install.outputs.vcpkg_toolchain }}
@@ -591,7 +591,7 @@ cache, the scanning scripting saves us about 3 minutes.</p>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Clone Boost.Variant2
-  uses: alandefreitas/cpp-actions/boost_clone
+  uses: alandefreitas/cpp-actions/boost_clone@master
   with:
     boost_dir: boost-root
     branch: master
@@ -675,7 +675,7 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow
+  uses: alandefreitas/cpp-actions/b2_workflow@master
   with:
     source-dir: boost-root
     modules: variant2
@@ -690,7 +690,7 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow
+  uses: alandefreitas/cpp-actions/b2_workflow@master
   with:
     source-dir: boost-root
     modules: variant2
@@ -706,7 +706,7 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow
+  uses: alandefreitas/cpp-actions/b2_workflow@master
   with:
     source-dir: boost-root
     modules: variant2
@@ -722,7 +722,7 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow
+  uses: alandefreitas/cpp-actions/b2_workflow@master
   with:
     source-dir: boost-root
     modules: variant2
@@ -738,7 +738,7 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow
+  uses: alandefreitas/cpp-actions/b2_workflow@master
   with:
     source-dir: boost-root
     modules: variant2
@@ -756,7 +756,7 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2_workflow
+  uses: alandefreitas/cpp-actions/b2_workflow@master
   with:
     source-dir: boost-root
     modules: variant2
