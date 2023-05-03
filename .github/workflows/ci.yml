@@ -174,3 +174,12 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: docs/build/site
+
+      - name: Create Release
+        if: ${{ github.event_name == 'push' && (contains(fromJSON('["master", "develop"]'), github.ref_name) || startsWith(github.ref, 'refs/tags/')) }}
+        uses: softprops/action-gh-release@v1
+        with:
+          files: LICENSE
+          tag_name: ${{ github.ref_name || github.ref }}
+          token: ${{ github.token }}
+
