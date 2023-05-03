@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Install dependencies | C++ Actions</title>    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/package_install.html">
+<title>Boost Clone | C++ Actions</title>    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/develop/actions/boost-clone.html">
     <meta name="generator" content="Antora 3.1.3">
 <link rel="stylesheet" href="../../../_/stylesheets/vendor/libs.css">
 <link rel="stylesheet" href="../../../_/stylesheets/site.css">
@@ -22,7 +22,7 @@
 
         <div id="topbar-nav" class="navbar-menu">
             <div class="navbar-item is-hoverable">
-                <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions: Install dependencies</a>
+                <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions: Boost Clone</a>
             </div>
             <div class="navbar-item is-hoverable">
                 <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions" target="_blank">GitHub</a>
@@ -77,17 +77,17 @@
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../index.html">Home</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="1">
-    <a class="nav-link" href="package_install.html">Install dependencies Action</a>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="#actions/package_install.adoc">actions/package_install.adoc</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="cmake_workflow.html">CMake Workflow Action</a>
+    <a class="nav-link" href="#actions/cmake_workflow.adoc">actions/cmake_workflow.adoc</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="boost_clone.html">Boost Clone Action</a>
+    <a class="nav-link" href="#actions/boost_clone.adoc">actions/boost_clone.adoc</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="b2_workflow.html">B2 Workflow Action</a>
+    <a class="nav-link" href="#actions/b2_workflow.adoc">actions/b2_workflow.adoc</a>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contribute</a>
@@ -128,15 +128,15 @@
   <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">C++ Actions</a></li>
-    <li><a href="package_install.html">Install dependencies Action</a></li>
+    <li><a href="boost-clone.html">Boost Clone</a></li>
   </ul>
 </nav>
   <div class="page-versions">
   <button class="version-menu-toggle"
     title="Show other versions of page">develop</button>
   <div class="version-menu">
-    <a class="version" href="../../actions/package_install.html">master</a>
-    <a class="version is-current" href="package_install.html">develop</a>
+    <a class="version is-missing" href="../../index.html">master</a>
+    <a class="version is-current" href="boost-clone.html">develop</a>
   </div>
 </div>
   </div>
@@ -147,55 +147,38 @@
 </div>
   <div class="content">
 <article class="doc">
-<h1 class="page">Install dependencies</h1>
+<h1 class="page">Boost Clone</h1>
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>This action installs dependencies from multiple package managers for a workflow.</p>
+<p>This action clones the Boost source directory, attempting to get it from the cache first. Only the specified
+modules are cloned and cached.</p>
 </div>
 <div class="paragraph">
-<p>If vcpkg dependencies are required and vcpkg is not available, it will be installed.
-Both vcpkg and its dependencies are cached.</p>
+<p>Besides the explicitly specified list of modules, the action can also scan directories for boost dependencies
+to implicitly determine what modules should be cloned.</p>
+</div>
+<div class="paragraph">
+<p>The union of the implicitly and explicitly specified modules is cloned. Caching is based only on these dependencies.</p>
+</div>
+<div class="paragraph">
+<p>For a project with about 5 boost dependencies, caching saves about 4 minutes in the workflow. When there&#8217;s no
+cache, the scanning scripting saves us about 3 minutes.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_examples"><a class="anchor" href="#_examples"></a>Examples</h2>
+<h2 id="_example"><a class="anchor" href="#_example"></a>Example</h2>
 <div class="sectionbody">
-<div class="paragraph">
-<p>Example 1:</p>
-</div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Install packages
-  uses: alandefreitas/cpp-actions/package_install@master
-  id: package-install
+- name: Clone Boost.Variant2
+  uses: alandefreitas/cpp-actions/boost-clone@master
   with:
-    vcpkg: fmt
-    apt-get: g++-11
-    cxx: g++-11
-    cc: gcc-11</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 2 (<code>apt-get-ignore-missing</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Install packages
-  uses: alandefreitas/cpp-actions/package_install@master
-  id: package-install
-  with:
-    vcpkg: fmt
-    apt-get: g++-4.8 sudo software-properties-common tzdata wget curl apt-transport-https
-      make apt-file unzip libssl-dev build-essential autotools-dev autoconf automake
-      g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3
-      ccache libpython-dev python3-distutils python3-pip git cmake
-    apt-get-ignore-missing: 'true'
-    cxx: g++-4.8
-    cc: gcc-4.8</code></pre>
+    boost_dir: boost-root
+    branch: master
+    modules: variant2</code></pre>
 </div>
 </div>
 </div>
@@ -216,88 +199,39 @@ Both vcpkg and its dependencies are cached.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of packages we should install with vcpkg. (Whitespace-separated).</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>boost-dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The boost directory. The default value assumes boost is in-source.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>boost</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of packages we should install with apt-get. (Whitespace-separated).</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">C compiler used by vcpkg.</p>
-<p class="tableblock">Setting the compiler is particularly important in Linux workflows that use `clang`, since `clang` might link
-`libc` or <code>libstdc`, while the default compiler used by vcpkg will usually be GCC linking `libstdc</code>.</p>
-<p class="tableblock">This would cause conflict in workflows that later attempt to use vcpkg dependencies.
-.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">C compiler used by vcpkg.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg_triplet</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The triplet used by vcpkg to install packages.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg_dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The directory where vcpkg should be cloned and installed.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg_branch</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">vcpkg branch we should use.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>branch</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Branch of the super-project.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>master</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-retries</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Number of time we should retry when apt-get fails.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>1</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-sources</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of sources for apt-get.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>patches</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Libraries used to patch the boost installation.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-source-keys</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of source keys for apt-get.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>modules</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The boost submodules we need to clone.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-ignore-missing</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Whether apt-get should ignore missing packages.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>scan-modules-dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">An independent directory we should scan for boost dependencies to clone.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>scan-modules-ignore</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">List of modules that should be ignored in scan-modules.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_outputs"><a class="anchor" href="#_outputs"></a>Outputs</h2>
-<div class="sectionbody">
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 50%;">
-<col style="width: 50%;">
-</colgroup>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Output</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg_toolchain</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">vcpkg toolchain file</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg_executable</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">vcpkg toolchain file</p></td>
 </tr>
 </tbody>
 </table>

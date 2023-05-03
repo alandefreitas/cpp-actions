@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Boost Clone | C++ Actions</title>    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/boost_clone.html">
+<title>B2 Workflow | C++ Actions</title>    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/develop/actions/b2-workflow.html">
     <meta name="generator" content="Antora 3.1.3">
 <link rel="stylesheet" href="../../../_/stylesheets/vendor/libs.css">
 <link rel="stylesheet" href="../../../_/stylesheets/site.css">
@@ -22,7 +22,7 @@
 
         <div id="topbar-nav" class="navbar-menu">
             <div class="navbar-item is-hoverable">
-                <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions: Boost Clone</a>
+                <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions: B2 Workflow</a>
             </div>
             <div class="navbar-item is-hoverable">
                 <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions" target="_blank">GitHub</a>
@@ -78,16 +78,16 @@
     <a class="nav-link" href="../index.html">Home</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="package_install.html">Install dependencies Action</a>
+    <a class="nav-link" href="#actions/package_install.adoc">actions/package_install.adoc</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="cmake_workflow.html">CMake Workflow Action</a>
-  </li>
-  <li class="nav-item is-current-page" data-depth="1">
-    <a class="nav-link" href="boost_clone.html">Boost Clone Action</a>
+    <a class="nav-link" href="#actions/cmake_workflow.adoc">actions/cmake_workflow.adoc</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="b2_workflow.html">B2 Workflow Action</a>
+    <a class="nav-link" href="#actions/boost_clone.adoc">actions/boost_clone.adoc</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="#actions/b2_workflow.adoc">actions/b2_workflow.adoc</a>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contribute</a>
@@ -128,15 +128,15 @@
   <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">C++ Actions</a></li>
-    <li><a href="boost_clone.html">Boost Clone Action</a></li>
+    <li><a href="b2-workflow.html">B2 Workflow</a></li>
   </ul>
 </nav>
   <div class="page-versions">
   <button class="version-menu-toggle"
     title="Show other versions of page">develop</button>
   <div class="version-menu">
-    <a class="version" href="../../actions/boost_clone.html">master</a>
-    <a class="version is-current" href="boost_clone.html">develop</a>
+    <a class="version is-missing" href="../../index.html">master</a>
+    <a class="version is-current" href="b2-workflow.html">develop</a>
   </div>
 </div>
   </div>
@@ -147,38 +147,120 @@
 </div>
   <div class="content">
 <article class="doc">
-<h1 class="page">Boost Clone</h1>
+<h1 class="page">B2 Workflow</h1>
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>This action clones the Boost source directory, attempting to get it from the cache first. Only the specified
-modules are cloned and cached.</p>
+<p>This action runs a complete B2 workflow from Boost source files.</p>
 </div>
 <div class="paragraph">
-<p>Besides the explicitly specified list of modules, the action can also scan directories for boost dependencies
-to implicitly determine what modules should be cloned.</p>
+<p>It takes the Boost source directory and does whatever it needs to test the specified modules. This includes
+compiling <code>b2</code> if needed and generating a proper <code>user-config.jam</code> file.</p>
 </div>
 <div class="paragraph">
-<p>The union of the implicitly and explicitly specified modules is cloned. Caching is based only on these dependencies.</p>
-</div>
-<div class="paragraph">
-<p>For a project with about 5 boost dependencies, caching saves about 4 minutes in the workflow. When there&#8217;s no
-cache, the scanning scripting saves us about 3 minutes.</p>
+<p>This action is particularly useful for Boost library proposals.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_example"><a class="anchor" href="#_example"></a>Example</h2>
+<h2 id="_examples"><a class="anchor" href="#_examples"></a>Examples</h2>
 <div class="sectionbody">
+<div class="paragraph">
+<p>Example 1:</p>
+</div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Clone Boost.Variant2
-  uses: alandefreitas/cpp-actions/boost_clone@master
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2-workflow@master
   with:
-    boost_dir: boost-root
-    branch: master
-    modules: variant2</code></pre>
+    source-dir: boost-root
+    modules: variant2
+    toolset: gcc-11
+    cxxstd: 17,20</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 2 (<code>cxx</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2-workflow@master
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: clang
+    cxx: clang++-12
+    cxxstd: 17,20</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 3 (<code>address-model</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2-workflow@master
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: msvc-14.3
+    cxxstd: 17,20
+    address-model: 32,64</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 4 (<code>ubsan</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2-workflow@master
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: gcc-11
+    cxxstd: 17,20
+    ubsan: 'true'</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 5 (<code>cxxflags</code>, <code>linkflags</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2-workflow@master
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: clang
+    cxx: clang++-12
+    cxxstd: 17,20
+    cxxflags: -stdlib=libc++
+    linkflags: -stdlib=libc++</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 6 (<code>gcc_toolchain</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2-workflow@master
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: clang
+    cxx: clang++-8
+    cxxstd: '17'
+    gcc_toolchain: '7'</code></pre>
 </div>
 </div>
 </div>
@@ -199,33 +281,63 @@ cache, the scanning scripting saves us about 3 minutes.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>boost_dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The boost directory. The default value assumes boost is in-source.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>boost</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>source-dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The boost source directory.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>branch</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Branch of the super-project.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>master</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>patches</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Libraries used to patch the boost installation.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-variant</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Custom build variants.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>modules</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The boost submodules we need to clone.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The list of modules we should test.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>scan-modules-dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">An independent directory we should scan for boost dependencies to clone.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc-toolchain</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Create a special GCC toolchain for this version of GCC and update user-config.jam.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>scan-modules-ignore</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of modules that should be ignored in scan-modules.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>toolset</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Toolset name.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>address-model</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Valid b2 list of address models.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Path to C++ compiler.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extra compiler flags.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>linkflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extra linker flags.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxstd</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">List of standards with which cmake will build and test the program.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ubsan</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">List of standards with which cmake will build and test the program.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>threading</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">b2 threading option.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>

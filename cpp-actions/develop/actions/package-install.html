@@ -3,18 +3,21 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Install dependencies | C++ Actions</title>    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/package_install.html">
+<title>Install dependencies | C++ Actions</title>    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/develop/actions/package-install.html">
     <meta name="generator" content="Antora 3.1.3">
-<link rel="stylesheet" href="../../_/stylesheets/vendor/libs.css">
-<link rel="stylesheet" href="../../_/stylesheets/site.css">
-<link id="highlight-style-lnk" rel="stylesheet" href="../../_/stylesheets/vendor/highlight-light.css">
-<link rel="stylesheet" href="../../_/css/vendor/tabs.css"><link rel="icon" href="../../_/img/favicon.svg" type="image/x-icon">  </head>
+<link rel="stylesheet" href="../../../_/stylesheets/vendor/libs.css">
+<link rel="stylesheet" href="../../../_/stylesheets/site.css">
+<link id="highlight-style-lnk" rel="stylesheet" href="../../../_/stylesheets/vendor/highlight-light.css">
+<link rel="stylesheet" href="../../../_/css/vendor/tabs.css"><link rel="icon" href="../../../_/img/favicon.svg" type="image/x-icon">  </head>
   <body class="article">
-<script src="../../_/js/header-site.js"></script>
+<script src="../../../_/js/header-site.js"></script>
 <header class="header">
-    <nav class="navbar  ">
+    <nav class="navbar  navbar-nonProduction  ">
         <div class="navbar-brand">
             <a class="navbar-item" href="https://alandefreitas.github.io/cpp-actions">C++ Actions</a>
+            <div class="navbar-item-nonProduction">
+                <p>develop</p>
+            </div>
         </div>
 
         <div id="topbar-nav" class="navbar-menu">
@@ -62,7 +65,7 @@
         </div>
     </nav>
 </header><div class="body">
-<div class="nav-container" data-component="cpp-actions" data-version="master">
+<div class="nav-container" data-component="cpp-actions" data-version="develop">
   <aside class="nav">
     <div class="panels">
 <div class="nav-panel-menu is-active" data-panel="menu">
@@ -74,17 +77,17 @@
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../index.html">Home</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="1">
-    <a class="nav-link" href="package_install.html">Install dependencies Action</a>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="#actions/package_install.adoc">actions/package_install.adoc</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="cmake_workflow.html">CMake Workflow Action</a>
+    <a class="nav-link" href="#actions/cmake_workflow.adoc">actions/cmake_workflow.adoc</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="boost_clone.html">Boost Clone Action</a>
+    <a class="nav-link" href="#actions/boost_clone.adoc">actions/boost_clone.adoc</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="b2_workflow.html">B2 Workflow Action</a>
+    <a class="nav-link" href="#actions/b2_workflow.adoc">actions/b2_workflow.adoc</a>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contribute</a>
@@ -100,17 +103,17 @@
 <div class="nav-panel-explore" data-panel="explore">
   <div class="context">
     <span class="title">C++ Actions</span>
-    <span class="version">master</span>
+    <span class="version">develop</span>
   </div>
   <ul class="components">
     <li class="component is-current">
       <span class="title">C++ Actions</span>
       <ul class="versions">
-        <li class="version is-current is-latest">
-          <a href="../index.html">master</a>
+        <li class="version is-latest">
+          <a href="../../index.html">master</a>
         </li>
-        <li class="version">
-          <a href="../develop/index.html">develop</a>
+        <li class="version is-current">
+          <a href="../index.html">develop</a>
         </li>
       </ul>
     </li>
@@ -121,19 +124,19 @@
 <main class="article">
 <div class="toolbar toolbar-wrap">
   <div class="toolbar" role="navigation">
-  <button class="nav-toggle"></button>  <a href="../index.html" class="home-link"></a>
+  <button class="nav-toggle"></button>  <a href="../../index.html" class="home-link"></a>
   <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">C++ Actions</a></li>
-    <li><a href="package_install.html">Install dependencies Action</a></li>
+    <li><a href="package-install.html">Install dependencies</a></li>
   </ul>
 </nav>
   <div class="page-versions">
   <button class="version-menu-toggle"
-    title="Show other versions of page">master</button>
+    title="Show other versions of page">develop</button>
   <div class="version-menu">
-    <a class="version is-current" href="package_install.html">master</a>
-    <a class="version is-missing" href="../develop/index.html">develop</a>
+    <a class="version is-missing" href="../../index.html">master</a>
+    <a class="version is-current" href="package-install.html">develop</a>
   </div>
 </div>
   </div>
@@ -166,7 +169,7 @@ Both vcpkg and its dependencies are cached.</p>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Install packages
-  uses: alandefreitas/cpp-actions/package_install@master
+  uses: alandefreitas/cpp-actions/package-install@master
   id: package-install
   with:
     vcpkg: fmt
@@ -182,7 +185,7 @@ Both vcpkg and its dependencies are cached.</p>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Install packages
-  uses: alandefreitas/cpp-actions/package_install@master
+  uses: alandefreitas/cpp-actions/package-install@master
   id: package-install
   with:
     vcpkg: fmt
@@ -237,23 +240,23 @@ Both vcpkg and its dependencies are cached.</p>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg_triplet</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-triplet</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The triplet used by vcpkg to install packages.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg_dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-dir</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The directory where vcpkg should be cloned and installed.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg_branch</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-branch</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">vcpkg branch we should use.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>master</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-retries</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Number of time we should retry when apt-get fails.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Number of times we should retry when apt-get fails.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>1</code></p></td>
 </tr>
 <tr>
@@ -289,11 +292,11 @@ Both vcpkg and its dependencies are cached.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg_toolchain</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-toolchain</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">vcpkg toolchain file</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg_executable</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-executable</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">vcpkg toolchain file</p></td>
 </tr>
 </tbody>
@@ -324,15 +327,15 @@ Both vcpkg and its dependencies are cached.</p>
             </p>
         </div>
     </div>
-    <script src="../../_/js/vendor/lunr.js"></script>
-<script src="../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../.." data-snippet-length="100" data-stylesheet="../../_/css/search.css"></script>
-<script async src="../../search-index.js"></script>
-</footer><script>window.uiRootPath = '../../_'</script>
-<script src="../../_/js/vendor/highlight.min.js"></script>
-<script async src="../../_/js/vendor/tabs.js"></script>
-<script src="../../_/js/vendor/libs.js"></script>
+    <script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+</footer><script>window.uiRootPath = '../../../_'</script>
+<script src="../../../_/js/vendor/highlight.min.js"></script>
+<script async src="../../../_/js/vendor/tabs.js"></script>
+<script src="../../../_/js/vendor/libs.js"></script>
 <script>hljs.initHighlightingOnLoad();</script>
-<script src="../../_/js/site.js"></script>
+<script src="../../../_/js/site.js"></script>
 
 <script>
     let asciinemaPlayers = document.querySelectorAll('asciinema-player');
