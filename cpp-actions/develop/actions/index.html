@@ -398,6 +398,7 @@ annotations for CMake errors at the configure step and build errors emitted from
 - name: CMake Workflow
   uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
+    cmake-version: '&gt;=3.8'
     source-dir: tests
     toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
@@ -405,13 +406,12 @@ annotations for CMake errors at the configure step and build errors emitted from
     cxxstd: 17,20
     cxx: g++-11
     cc: gcc-11
-    cmake-min-version: 3.15
     extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
     ref-source-dir: .</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Example 2 (<code>build-type</code>, <code>generator</code>):</p>
+<p>Example 2 (<code>cmake-min-version</code>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -419,19 +419,41 @@ annotations for CMake errors at the configure step and build errors emitted from
 - name: CMake Workflow
   uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
+    cmake-version: '&gt;=3.8'
+    cmake-min-version: '3.8'
+    source-dir: tests
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
+    run-tests: 'true'
+    install-prefix: $GITHUB_WORKSPACE/.local
+    cxxstd: '11'
+    cxx: g++-4.8
+    cc: gcc-4.8
+    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
+    ref-source-dir: .</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 3 (<code>build-type</code>, <code>generator</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: CMake Workflow
+  uses: alandefreitas/cpp-actions/cmake-workflow@master
+  with:
+    cmake-version: '&gt;=3.8'
     source-dir: tests
     generator: Unix Makefiles
     toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     build-type: Debug
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
-    cmake-min-version: 3.15
     extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
     ref-source-dir: .</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Example 3 (<code>cxxflags</code>):</p>
+<p>Example 4 (<code>cxxflags</code>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -439,6 +461,7 @@ annotations for CMake errors at the configure step and build errors emitted from
 - name: CMake Workflow
   uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
+    cmake-version: '&gt;=3.8'
     source-dir: tests
     toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
@@ -447,7 +470,6 @@ annotations for CMake errors at the configure step and build errors emitted from
     cxx: clang++-12
     cxxflags: -stdlib=libc++
     cc: clang-12
-    cmake-min-version: 3.15
     extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
     ref-source-dir: .</code></pre>
 </div>
@@ -468,6 +490,34 @@ annotations for CMake errors at the configure step and build errors emitted from
 <td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-exec</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The cmake executable.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-version</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A semver range string with the cmake versions supported by this workflow.</p>
+<p class="tableblock"> If the existing version in the environment does not satisfy this requirement, the action attempts
+to install or update CMake using cmake-min-version.</p>
+<p class="tableblock">If this input is undefined, the version "&gt;= cmake-min-version" is considered.</p>
+<p class="tableblock">This should usually match the <code>cmake_minimum_required</code> defined in your CMakeLists.txt file.
+.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-min-version</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Set the minimum cmake version for this workflow when the cmake-version requirement is not satisfied.</p>
+<p class="tableblock">If the existing version in the environment does not satisfy this cmake-version requirement,
+the action attempts to install or update CMake using this cmake-min-version.</p>
+<p class="tableblock">If cmake-version is not set, this option overrides the <code>cmake-version</code> input as <code>&gt;= cmake-min-version</code>.</p>
+<p class="tableblock">If cmake-min-version is not defined, the action attempts to extract the cmake-min-version
+from CMakeLists.txt.</p>
+<p class="tableblock">If a minimum version cannot be found in CMakeLists.txt, the lastest CMake version is considered
+the minimum version.
+.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>source-dir</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Directory for the source files.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
@@ -476,16 +526,6 @@ annotations for CMake errors at the configure step and build errors emitted from
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-dir</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Directory for the binaries relative to the source directory.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>build</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-exec</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The cmake executable.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-min-version</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The minimum cmake version for this workflow. If the existing version is below that, the action attempts to update CMake.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>3.5</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
@@ -533,6 +573,11 @@ annotations for CMake errors at the configure step and build errors emitted from
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>.local/usr</code></p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>extra-args</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extra arguments to cmake configure command.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>run-tests</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Whether we should run tests.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
@@ -544,11 +589,6 @@ annotations for CMake errors at the configure step and build errors emitted from
 <p class="tableblock">The latest std version described in <code>cxxstd</code> is used for the installed version.
 .</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>extra-args</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Extra arguments to cmake configure command.</p></td>
-<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>create-annotations</code></p></td>
@@ -568,11 +608,6 @@ we need to make annotations relative to some other directory.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cpack-generators</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Run cpack with the specified generators after the install step.</p></td>
-<td class="tableblock halign-left valign-top"></td>
 </tr>
 </tbody>
 </table>
