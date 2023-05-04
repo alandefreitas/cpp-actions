@@ -242,5 +242,5 @@ runs:
         ${{ (inputs.cc != '' && format('export CC="{0}"', inputs.cc)) || '' }}
         for package in ${packages// / }
         do
-          ${{ steps.ctx.outputs.vcpkg_executable }} install $package${{ steps.ctx.outputs.triplet_suffix }}
+          ${{ steps.ctx.outputs.vcpkg-executable }} install $package${{ steps.ctx.outputs.triplet_suffix }}
         done
