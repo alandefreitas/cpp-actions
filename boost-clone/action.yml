@@ -53,41 +53,11 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Find python
-      shell: bash
-      id: find-python
-      if: inputs.modules != '' || inputs.scan-modules-dir != ''
-      run: |
-        # Looking for python
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        if command -v python3 &> /dev/null; then
-          python_path="$(which python3)"
-        elif command -v python &> /dev/null; then
-          python_version_output=$(python --version)
-          regex='[0-9]+\.[0-9]+\.[0-9]+'
-          [[ $python_version_output =~ $regex ]]
-          python_version=${BASH_REMATCH[0]}
-          IFS='.' read -r -a version_components <<< "$python_version"
-          major_version=${version_components[0]}
-          if [ "$major_version" -lt 3 ]; then
-            echo "Python $python_version found." >&2
-            echo "Please install Python 3!" >&2
-          else
-            python_path="$(which python)"
-          fi
-        else
-          echo "Cannot Python 3!" >&2
-        fi
-        if [ "$python_path" != "" ]; then
-          $python_path --version
-          echo "python_path=$python_path" >> $GITHUB_OUTPUT
-        fi 
-
     - uses: actions/setup-python@v4
       if: (inputs.modules != '' || inputs.scan-modules-dir != '') && !steps.find-python.outputs.python_path
       id: setup-python
       with:
-        python-version: '3.10'
+        python-version: '>= 3.5'
 
     - name: Scan Required Boost Modules
       if: inputs.scan-modules-dir != ''
@@ -101,7 +71,7 @@ runs:
           source_dir="$(readlink -f "$source_dir" 2>/dev/null || realpath -e "$source_dir" 2>/dev/null || echo "$(pwd)/$source_dir")"
         fi
         
-        python_path="${{ steps.find-python.outputs.python_path || steps.setup-python.outputs.python-path }}"
+        python_path="${{ steps.setup-python.outputs.python-path }}"
         
         # Go to action path to find the script and aux files
         # https://github.com/actions/runner/issues/716
@@ -306,7 +276,7 @@ runs:
         done
         
         # Initialize dependencies of each explicitly specified module
-        python_path="${{ steps.find-python.outputs.python_path || steps.setup-python.outputs.python-path }}"
+        python_path="${{ steps.setup-python.outputs.python-path }}"
         python_exit_code=0
         for module in ${modules// / }
         do
