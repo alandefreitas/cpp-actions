@@ -1,14 +1,14 @@
 #######################################################
 ### Project settings                                ###
 #######################################################
-cmake_minimum_required(VERSION 3.05)
+cmake_minimum_required(VERSION 3.5)
 project(cpp_actions)
 
 #######################################################
 ### Dependencies                                    ###
 #######################################################
 find_package(fmt)
-find_package(Boost CONFIG)
+find_package(Boost QUIET CONFIG)
 if (Boost_FOUND)
     add_library(Boost::variant2 ALIAS Boost::headers)
 else ()

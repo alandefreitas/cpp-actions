@@ -30,6 +30,44 @@ description: |
   annotations for CMake errors at the configure step and build errors emitted from the compiler at the build step.
 
 inputs:
+  # CMake options
+  cmake-exec:
+    description: 'The cmake executable'
+    required: false
+    default: 'cmake'
+  cmake-version:
+    description: |
+      A semver range string with the cmake versions supported by this workflow. 
+      
+       If the existing version in the environment does not satisfy this requirement, the action attempts
+      to install or update CMake using cmake-min-version.
+      
+      If this input is undefined, the version ">= cmake-min-version" is considered. 
+      
+      This should usually match the `cmake_minimum_required` defined in your CMakeLists.txt file.
+
+    required: false
+    default: ''
+
+  cmake-min-version:
+    description: |
+      Set the minimum cmake version for this workflow when the cmake-version requirement is not satisfied. 
+      
+      If the existing version in the environment does not satisfy this cmake-version requirement, 
+      the action attempts to install or update CMake using this cmake-min-version.
+      
+      If cmake-version is not set, this option overrides the `cmake-version` input as `>= cmake-min-version`.
+      
+      If cmake-min-version is not defined, the action attempts to extract the cmake-min-version
+      from CMakeLists.txt.
+      
+      If a minimum version cannot be found in CMakeLists.txt, the lastest CMake version is considered 
+      the minimum version. 
+
+    required: false
+    default: ''
+
+  # Configure options
   source-dir:
     description: 'Directory for the source files.'
     required: false
@@ -38,14 +76,6 @@ inputs:
     description: 'Directory for the binaries relative to the source directory.'
     required: false
     default: 'build'
-  cmake-exec:
-    description: 'The cmake executable'
-    required: false
-    default: 'cmake'
-  cmake-min-version:
-    description: 'The minimum cmake version for this workflow. If the existing version is below that, the action attempts to update CMake.'
-    required: false
-    default: '3.5'
   cc:
     description: 'Path to C compiler.'
     required: false
@@ -82,10 +112,18 @@ inputs:
     description: 'Path where the library should be installed.'
     required: false
     default: '.local/usr'
+  extra-args:
+    description: 'Extra arguments to cmake configure command.'
+    required: false
+    default: ''
+
+  # Test options
   run-tests:
     description: 'Whether we should run tests.'
     required: false
     default: 'true'
+
+  # Install options
   install:
     description: |
       Whether we should install the library. 
@@ -95,10 +133,18 @@ inputs:
       The latest std version described in `cxxstd` is used for the installed version.
     required: false
     default: 'true'
-  extra-args:
-    description: 'Extra arguments to cmake configure command.'
-    required: false
-    default: ''
+
+  # Packaging options
+  # package:
+  #   description: 'Run cpack with the specified generators after the install step.'
+  #   required: false
+  #   default: 'false'
+  # cpack-generators:
+  #   description: 'Generators used by cpack.'
+  #   required: false
+  #   default: ''
+
+  # Annotation options
   create-annotations:
     description: 'Create github annotations on errors.'
     required: false
@@ -118,10 +164,6 @@ inputs:
     description: 'Trace commands executed by the workflow.'
     required: false
     default: 'false'
-  cpack-generators:
-    description: 'Run cpack with the specified generators after the install step.'
-    required: false
-    default: ''
 
 runs:
   using: "composite"
@@ -134,154 +176,265 @@ runs:
       if: runner.os == 'Windows'
       uses: ilammy/msvc-dev-cmd@v1
 
-    - name: CMake Features
+    - name: Extract Required CMake version
+      if: ${{ !inputs.cmake-min-version }}
+      id: required-version-str
       shell: bash
-      id: version
-      working-directory: ${{ inputs.source_dir }}
       run: |
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }} 
-
-        # Extract cmake min version
-        cmake_min_version=${{ inputs.cmake-min-version }}
-        IFS='.' read -r -a version_components <<< "$cmake_min_version"
-        major_min_version=${version_components[0]}
-        minor_min_version=${version_components[1]:-0}
-        patch_min_version=${version_components[2]:-0}
-        cmake_min_version="$major_min_version.$minor_min_version.$patch_min_version"
+        cml_path="${{ inputs.source-dir }}"
+        if [[ $cml_path != /* ]]; then
+          cml_path="$(readlink -f "$cml_path" 2>/dev/null || realpath -e "$cml_path" 2>/dev/null || echo "$(pwd)/$cml_path")"
+        fi
+        cml_path+="/CMakeLists.txt"
+        file_contents=$(cat "$cml_path")
+        regex='cmake_minimum_required\s*\(\s*VERSION\s*([0-9.]+)'
         
-        # Extract cmake current version
-        cmake_version_output=$(${{ inputs.cmake-exec }} --version)
+        if [[ $file_contents =~ $regex ]]; then
+          min_version=${BASH_REMATCH[1]}
+          echo "min-version-str=$min_version" >> $GITHUB_OUTPUT
+        else
+          echo "min-version-str=" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Extract CMake Latest version
+      if: ${{ !inputs.cmake-min-version }}
+      id: latest-version-str
+      shell: bash
+      run: |
+        # Extract CMake Latest version
+        
+        # Download the Git tags from the CMake repository
+        git_tags=$(git ls-remote --tags https://github.com/Kitware/CMake.git | awk '{print $2}' | cut -d '/' -f 3)
+
+        # Extract the version numbers from the Git tags using a regular expression
+        regex='^v([0-9]+\.[0-9]+\.[0-9]+)$'
+        versions=()
+        for tag in $git_tags
+        do
+        if [[ $tag =~ $regex ]]; then
+        version=${BASH_REMATCH[1]}
+        versions+=("$version")
+        fi
+        done
+
+        # Sort the version numbers using the "sort -V" command and pick the latest one
+        if [ ${#versions[@]} -gt 0 ]; then
+        latest_version=$(printf "%s\n" "${versions[@]}" | sort -V | tail -n1)
+        else
+        latest_version="3.26.3" # placeholder when the tags fail. Should not happen.
+        fi
+        echo "latest-version=$latest_version" >> $GITHUB_OUTPUT
+
+    - name: Find CMake
+      id: system-cmake
+      shell: bash
+      run: |
+        # Find cmake executable
+        CMAKE_EXECUTABLE="${{ inputs.cmake-exec }}"
+        if [ "$CMAKE_EXECUTABLE" != "" ]; then
+            CMAKE_EXECUTABLE="cmake"
+        fi
+        if [ "$CMAKE_EXECUTABLE" != "" ]; then
+            if command -v "$CMAKE_EXECUTABLE" &> /dev/null; then
+              CMAKE_EXECUTABLE="$(which $CMAKE_EXECUTABLE)"
+            elif command -v "/usr/bin/$CMAKE_EXECUTABLE" &> /dev/null; then
+              CMAKE_EXECUTABLE="/usr/bin/$CMAKE_EXECUTABLE"
+            fi
+        fi
+        echo "path=$CMAKE_EXECUTABLE" >> $GITHUB_OUTPUT
+        
+        # Extract cmake current version string
+        cmake_version_output=$("$CMAKE_EXECUTABLE" --version)
+        
         # extract the version number using a regular expression
         regex='[0-9]+\.[0-9]+\.[0-9]+'
         [[ $cmake_version_output =~ $regex ]]
         cmake_version=${BASH_REMATCH[0]}
-        IFS='.' read -r -a version_components <<< "$cmake_version"
-        major_version=${version_components[0]}
-        minor_version=${version_components[1]}
-        patch_version=${version_components[2]}
-        
-        # Check version requirements
-        version_is_ge=false
-        if [ "$major_version" -gt "$major_min_version" ]; then
-          version_is_ge=true
-        elif [ "$major_version" -lt "$major_min_version" ]; then
-          version_is_ge=false
-        else
-          # major versions are equal, check minor versions
-          if [ "$minor_version" -gt "$minor_min_version" ]; then
-            version_is_ge=true
-          elif [ "$minor_version" -lt "$minor_min_version" ]; then
-            version_is_ge=false
-          else
-            # major and minor versions are equal, check patch versions
-            if [ "$patch_version" -ge "$patch_min_version" ]; then
-              version_is_ge=true
-            else
-              version_is_ge=false
-            fi
-          fi
-        fi
-        
-        # Update cmake if needed
-        if [ "$version_is_ge" == "false" ]; then
-          url_os=${{ runner.os }}
-          url_os="$(echo "$url_os" | tr '[:upper:]' '[:lower:]')"
-          if [ "$minor_min_version" -le "19" ]; then
-            if [ "$url_os" == "windows" ]; then
-              url_os="win${{ (runner.arch == 'X86' && '32') || '64' }}"
-            elif [ "$url_os" == "linux" ]; then
-              url_os="Linux"
-            elif [ "$url_os" == "macos" ]; then
-              if [ "$minor_min_version" -le "18" ]; then
-                url_os="Darwin"
-              elif [ "$patch_min_version" -le "2" ]; then
-                url_os="Darwin"  
-              fi
-            fi
-          fi
-        
-          url_arch=${{ runner.arch }}
-          url_arch="$(echo "$url_arch" | tr '[:upper:]' '[:lower:]')"
-          if [ "$url_os" == "windows" ]; then
-            url_arch="${{ (startswith(runner.arch, 'ARM') && 'arm64') || 'x86_64' }}"
-          elif [ "$url_os" == "win32" ]; then
-            url_arch="x86"
-          elif [ "$url_os" == "win64" ]; then
-            url_arch="x64"
-          elif [ "$url_os" == "linux" ]; then
-            url_arch="${{ (startswith(runner.arch, 'ARM') && 'aarch64') || 'x86_64' }}"
-          elif [ "$url_os" == "Linux" ]; then
-            url_arch="${{ (startswith(runner.arch, 'ARM') && 'aarch64') || 'x86_64' }}"
-          elif [ "$url_os" == "macos" ]; then
-            url_arch="universal"
-          fi
-        
-          url_extension="${{ (runner.os == 'Windows' && 'zip') || 'tar.gz' }}"
-        
-          cmake_basename="cmake-$cmake_min_version-$url_os-$url_arch"
-          cmake_filename="$cmake_basename.$url_extension"
-          cmake_url="https://cmake.org/files/v$major_min_version.$minor_min_version/$cmake_filename"
-          if command -v curl &> /dev/null; then
-            curl -o "$cmake_filename" "$cmake_url"
-          elif command -v wget &> /dev/null; then
-            wget -O "$cmake_filename" "$cmake_url"
-          fi
-        
-          ${{ (runner.os == 'Windows' && 'unzip $cmake_filename') || (inputs.trace-commands == 'true' && 'tar -xvf $cmake_filename') || 'tar -xf $cmake_filename' }}
-          cmake_bin_path="$(pwd)/$cmake_basename/bin"
-          echo "$cmake_bin_path" >> $GITHUB_PATH
-          export PATH=$PATH:"$cmake_bin_path"
-          $cmake_bin_path/cmake --version
-        
-          cmake_version="$cmake_min_version"
-          major_version="$major_min_version"
-          minor_version="$minor_min_version"
-          patch_version="$patch_min_version"
-        fi
-        
-        # Identify features
-        if [ "$minor_version" -ge 13 ]; then
-          ${{ (inputs.trace-commands == 'true' && 'echo "CMake version is greater than or equal to 3.13"') || '' }}
-          ${{ (inputs.trace-commands == 'true' && 'echo "-B <path-to-build> syntax is supported"') || '' }}
-          path_to_build=true
-        else
-          ${{ (inputs.trace-commands == 'true' && 'echo "CMake version is NOT greater than or equal to 3.13"') || '' }}
-          ${{ (inputs.trace-commands == 'true' && 'echo "-B <path-to-build> syntax is NOT supported"') || '' }}
-          path_to_build=false
-        fi
 
-        if [ "$minor_version" -ge 12 ]; then
-          ${{ (inputs.trace-commands == 'true' && 'echo "CMake version is greater than or equal to 3.12"') || '' }}
-          ${{ (inputs.trace-commands == 'true' && 'echo "-j <threads> syntax is supported"') || '' }}
-          parallel_build=true
-        else
-          ${{ (inputs.trace-commands == 'true' && 'echo "CMake version is NOT greater than or equal to 3.12"') || '' }}
-          ${{ (inputs.trace-commands == 'true' && 'echo "-j <threads> syntax is NOT supported"') || '' }}
-          parallel_build=false
+        echo "version=$cmake_version" >> $GITHUB_OUTPUT
+
+    - name: Check host CMake version requirements
+      uses: madhead/semver-utils@v3.1.0
+      id: system-version
+      with:
+        version: ${{ steps.system-cmake.outputs.version }}
+        satisfies: ${{ inputs.cmake-version || format('>= {0}', inputs.cmake-min-version || steps.required-version-str.outputs.min-version-str) }}
+        lenient: true
+
+    - name: Normalize Min CMake version
+      if: ${{ steps.system-version.outputs.satisfies == 'false' }}
+      shell: bash
+      id: normalize-min-version
+      run: |
+        # Normalize version string
+        
+        echo "Min version string"
+        echo "${{ inputs.cmake-min-version }}"
+        echo "CMakeLists.txt minimum required"
+        echo "${{ steps.required-version-str.outputs.min-version-str }}"
+        echo "Latest CMake version"
+        echo "${{ steps.latest-version-str.outputs.latest-version }}"
+        
+        version="${{ inputs.cmake-min-version || steps.required-version-str.outputs.min-version-str || steps.latest-version-str.outputs.latest-version }}"
+        echo "Reference minimum version"
+        echo "$version"
+        
+        major=$(echo $version | cut -d. -f1)
+        minor=$(echo $version | cut -d. -f2)
+        patch=$(echo $version | cut -d. -f3)
+        
+        # Normalize minor and patch components if they are missing
+        if [ -z "$minor" ]; then
+        minor=0
+        fi
+        if [ -z "$patch" ]; then
+        patch=0
         fi
         
-        if [ "$minor_version" -ge 15 ]; then
-          ${{ (inputs.trace-commands == 'true' && 'echo "CMake version is greater than or equal to 3.15"') || '' }}
-          ${{ (inputs.trace-commands == 'true' && 'echo "--target with multiple targets is supported"') || '' }}
-          ${{ (inputs.trace-commands == 'true' && 'echo "cmake --install is supported"') || '' }}
-          build_multiple_targets=true
-          cmake_install=true
-        else
-          ${{ (inputs.trace-commands == 'true' && 'echo "CMake version is NOT greater than or equal to 3.15"') || '' }}
-          ${{ (inputs.trace-commands == 'true' && 'echo "--target with multiple targets is NOT supported"') || '' }}
-          ${{ (inputs.trace-commands == 'true' && 'echo "cmake --install is NOT supported"') || '' }}
-          build_multiple_targets=false
-          cmake_install=false
+        # Print normalized SemVer string
+        echo "Normalized version: $major.$minor.$patch"
+        echo "version=$major.$minor.$patch" >> $GITHUB_OUTPUT
+
+    - name: Parse CMake Min version
+      uses: madhead/semver-utils@v3.1.0
+      if: ${{ steps.system-version.outputs.satisfies == 'false' }}
+      id: min-version
+      with:
+        version: ${{ steps.normalize-min-version.outputs.version }}
+        lenient: true
+
+    - name: Setup CMake
+      if: ${{ steps.system-version.outputs.satisfies == 'false' }}
+      shell: bash
+      id: setup-cmake
+      run: |
+        # Install proper CMake version
+        
+        # Identify OS string for the URL
+        url_os=${{ runner.os }}
+        url_os="$(echo "$url_os" | tr '[:upper:]' '[:lower:]')"
+        if [ "${{ steps.min-version.outputs.minor }}" -le "19" ]; then
+          if [ "$url_os" == "windows" ]; then
+            url_os="win${{ (runner.arch == 'X86' && '32') || '64' }}"
+          elif [ "$url_os" == "linux" ]; then
+            url_os="Linux"
+          elif [ "$url_os" == "macos" ]; then
+            if [ "${{ steps.min-version.outputs.minor }}" -le "18" ]; then
+              url_os="Darwin"
+            elif [ "${{ steps.min-version.outputs.patch }}" -le "2" ]; then
+              url_os="Darwin"  
+            fi
+          fi
         fi
         
+        # Identify arch for the URL
+        url_arch=${{ runner.arch }}
+        url_arch="$(echo "$url_arch" | tr '[:upper:]' '[:lower:]')"
+        if [ "$url_os" == "windows" ]; then
+          url_arch="${{ (startswith(runner.arch, 'ARM') && 'arm64') || 'x86_64' }}"
+        elif [ "$url_os" == "win32" ]; then
+          url_arch="x86"
+        elif [ "$url_os" == "win64" ]; then
+          url_arch="x64"
+        elif [ "$url_os" == "linux" ]; then
+          url_arch="${{ (startswith(runner.arch, 'ARM') && 'aarch64') || 'x86_64' }}"
+        elif [ "$url_os" == "Linux" ]; then
+          url_arch="${{ (startswith(runner.arch, 'ARM') && 'aarch64') || 'x86_64' }}"
+        elif [ "$url_os" == "macos" ]; then
+          url_arch="universal"
+        fi
+        
+        # Identify extension for the URL
+        url_extension="${{ (runner.os == 'Windows' && 'zip') || 'tar.gz' }}"
+        
+        # Construct URL to download CMake binaries
+        cmake_basename="cmake-${{ steps.min-version.outputs.release }}-$url_os-$url_arch"
+        cmake_filename="$cmake_basename.$url_extension"
+        cmake_url="https://cmake.org/files/v${{ steps.min-version.outputs.major }}.${{ steps.min-version.outputs.minor }}/$cmake_filename"
+        
+        # Download binaries
+        echo "Download CMake: $cmake_url"
+        if command -v curl &> /dev/null; then
+          curl -o "$cmake_filename" "$cmake_url"
+        elif command -v wget &> /dev/null; then
+          wget -O "$cmake_filename" "$cmake_url"
+        fi
+        
+        # Unzip binaries
+        ${{ (runner.os == 'Windows' && 'unzip $cmake_filename') || (inputs.trace-commands == 'true' && 'tar -xvf $cmake_filename') || 'tar -xf $cmake_filename' }}
+        
+        # Add cmake to PATH
+        cmake_bin_path="$(pwd)/$cmake_basename/bin"
+        echo "$cmake_bin_path" >> $GITHUB_PATH
+        echo "path=$cmake_bin_path/cmake" >> $GITHUB_OUTPUT
+        export PATH=$PATH:"$cmake_bin_path"
+        
+        # Print installed version
+        $cmake_bin_path/cmake --version
+        
+        # Extract cmake installed version
+        cmake_version_output=$("$cmake_bin_path/cmake" --version)
+        regex='[0-9]+\.[0-9]+\.[0-9]+'
+        [[ $cmake_version_output =~ $regex ]]
+        cmake_version=${BASH_REMATCH[0]}
+        echo "version=$cmake_version" >> $GITHUB_OUTPUT
+
+    - name: Parse Ultimate CMake Setup version
+      uses: madhead/semver-utils@v3.1.0
+      id: version
+      with:
+        version: ${{ steps.setup-cmake.outputs.version || steps.system-cmake.outputs.version }}
+        lenient: true
+
+    - name: CMake Features
+      shell: bash
+      id: features
+      working-directory: ${{ inputs.source_dir }}
+      run: |
+        # Find what features this version of cmake supports
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }} 
+
+        # CMake path
+        path="${{ steps.setup-cmake.outputs.path || steps.system-cmake.outputs.path }}"
+        echo "path=$path" >> $GITHUB_OUTPUT
+        
+        # -B <path-to-build> syntax
+        path_to_build="${{ steps.version.outputs.major >= 3 && steps.version.outputs.minor >= 13 }}"
+        echo "path_to_build=$path_to_build" >> $GITHUB_OUTPUT
+        
+        # -j <threads> syntax
+        parallel_build="${{ steps.version.outputs.major >= 3 && steps.version.outputs.minor >= 12 }}"
+        echo "parallel_build=$parallel_build" >> $GITHUB_OUTPUT
+        
+        # --target with multiple targets
+        build_multiple_targets="${{ steps.version.outputs.major >= 3 && steps.version.outputs.minor >= 15 }}"
+        echo "build_multiple_targets=$build_multiple_targets" >> $GITHUB_OUTPUT
+        
+        # cmake --install
+        cmake_install="${{ steps.version.outputs.major >= 3 && steps.version.outputs.minor >= 15 }}"
+        echo "cmake_install=$cmake_install" >> $GITHUB_OUTPUT
+
+    - name: CMake Generator Features
+      shell: bash
+      id: generator
+      working-directory: ${{ inputs.source_dir }}
+      run: |
+        # Generator features
+        
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+        
+        cmake_path="${{ steps.features.outputs.path }}"
+        
+        # Find the generator that will effectively be used by this workflow
         generator="${{ inputs.generator }}"
         if [ "$generator" == "" ]; then
-          generator=$(cmake --system-information | sed -n 's/^CMAKE_GENERATOR [[:space:]]*"\([^"]*\)".*/\1/p')
+          generator=$("$cmake_path" --system-information | sed -n 's/^CMAKE_GENERATOR [[:space:]]*"\([^"]*\)".*/\1/p')
         fi
         if [ "$generator" == "" ]; then
           generator=${{ ((runner.os == 'macOS') && '"XCode"') || ((runner.os == 'Windows') && '"Visual Studio"') || '"Unix Makefiles"' }}
         fi
         
+        # Identify if this generator is multi-config
         if [[ $generator == "Visual Studio"* ]]; then
           generator_is_multi_config=true
         elif [ "$generator" == "Xcode" ]; then
@@ -291,27 +444,31 @@ runs:
         else
           generator_is_multi_config=false
         fi
+        
+        # Report results
         ${{ (inputs.trace-commands == 'true' && 'if [ "$generator_is_multi_config" == "true" ]; then echo "Generator is multi-config"; fi') || '' }}
         
-        echo "cmake_version=$cmake_version" >> $GITHUB_OUTPUT
-        echo "major_version=$major_version" >> $GITHUB_OUTPUT
-        echo "minor_version=$minor_version" >> $GITHUB_OUTPUT
-        echo "patch_version=$patch_version" >> $GITHUB_OUTPUT
-        echo "cmake_min_version=$cmake_min_version" >> $GITHUB_OUTPUT
-        echo "major_min_version=$major_min_version" >> $GITHUB_OUTPUT
-        echo "minor_min_version=$minor_min_version" >> $GITHUB_OUTPUT
-        echo "patch_min_version=$patch_min_version" >> $GITHUB_OUTPUT
-        echo "path_to_build=$path_to_build" >> $GITHUB_OUTPUT
-        echo "parallel_build=$parallel_build" >> $GITHUB_OUTPUT
-        echo "build_multiple_targets=$build_multiple_targets" >> $GITHUB_OUTPUT
-        echo "cmake_install=$cmake_install" >> $GITHUB_OUTPUT
-        echo "generator_is_multi_config=$generator_is_multi_config" >> $GITHUB_OUTPUT
+        # Export
+        echo "is_multi_config=$generator_is_multi_config" >> $GITHUB_OUTPUT
 
     - name: CMake Workflow
       shell: bash
       working-directory: ${{ inputs.source_dir }}
       run: |
+        # Run the workflows
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+        
+        # CMake path
+        cmake_path="${{ steps.features.outputs.path }}"
+        cmake_dir="$(dirname "$cmake_path")"
+        
+        # CMake features
+        echo "path: ${{ steps.features.outputs.path }}"
+        echo "path_to_build: ${{ steps.features.outputs.path_to_build }}"
+        echo "parallel_build: ${{ steps.features.outputs.parallel_build }}"
+        echo "build_multiple_targets: ${{ steps.features.outputs.build_multiple_targets }}"
+        echo "cmake_install: ${{ steps.features.outputs.cmake_install }}"
+        echo "generator_is_multi_config: ${{ steps.generator.outputs.is_multi_config }}"
         
         # compiler executables
         cc=${{ inputs.cc }}
@@ -369,10 +526,10 @@ runs:
             std_build_dir="$build_dir$( [ "$cxxstd" == "$main_cxxstd" ] && echo "" || echo "-$cxxstd" )"
 
             # Configure step
-            CONFIGURE_ARGS=(${{ (steps.version.outputs.path_to_build == 'true' && '"-S" "$source_dir" "-B" "$std_build_dir"') || '' }})
+            CONFIGURE_ARGS=(${{ (steps.features.outputs.path_to_build == 'true' && '"-S" "$source_dir" "-B" "$std_build_dir"') || '' }})
             CONFIGURE_ARGS+=(${{ (inputs.generator && format('"-G" "{0}"', inputs.generator)) || '' }})
-            CONFIGURE_ARGS+=(${{ (steps.version.outputs.generator_is_multi_config == 'false' && format('"-D" "CMAKE_BUILD_TYPE={0}"', inputs.build-type || 'Release')) || '' }})
-            CONFIGURE_ARGS+=(${{ (steps.version.outputs.generator_is_multi_config == 'true' && format('"-D" "CMAKE_CONFIGURATION_TYPES={0}"', inputs.build-type || 'Release')) || '' }})
+            CONFIGURE_ARGS+=(${{ (steps.generator.outputs.is_multi_config == 'false' && format('"-D" "CMAKE_BUILD_TYPE={0}"', inputs.build-type || 'Release')) || '' }})
+            CONFIGURE_ARGS+=(${{ (steps.generator.outputs.is_multi_config == 'true' && format('"-D" "CMAKE_CONFIGURATION_TYPES={0}"', inputs.build-type || 'Release')) || '' }})
             CONFIGURE_ARGS+=(${{ (inputs.toolchain && format('"-D" "CMAKE_TOOLCHAIN_FILE={0}"', inputs.toolchain)) || '' }})
             CONFIGURE_ARGS+=(${{ (inputs.install-prefix && format('"-D" "CMAKE_INSTALL_PREFIX={0}"', inputs.install-prefix)) || '' }})
             CONFIGURE_ARGS+=(${{ (inputs.run-tests && '"-D" "BUILD_TESTING=ON"') || '' }})
@@ -381,15 +538,15 @@ runs:
             CONFIGURE_ARGS+=(${{ (inputs.cxxflags && format('"-D" "CMAKE_CXX_FLAGS={0}"', inputs.cxxflags)) || '' }})
             CONFIGURE_ARGS+=($( [ "$cxxstd" == "defaultcxx" ] && echo "" || echo "-D CMAKE_CXX_STANDARD=$cxxstd" ))
             CONFIGURE_ARGS+=(${{ inputs.extra-args }})
-            SOURCE_DIR_ARG=${{ (steps.version.outputs.path_to_build == 'false' && '"$source_dir"') || '' }}
+            SOURCE_DIR_ARG=${{ (steps.features.outputs.path_to_build == 'false' && '"$source_dir"') || '' }}
         
             mkdir "$std_build_dir" || true
             cd "$std_build_dir"
             set +e
             set -x
-            cmake "${CONFIGURE_ARGS[@]}" $SOURCE_DIR_ARG 2>&1 | tee -a "$std_build_dir/cmake-configure-output.txt"
-            ${{ (inputs.trace-commands != 'true' && 'set +x') || '' }}
+            "$cmake_path" "${CONFIGURE_ARGS[@]}" $SOURCE_DIR_ARG 2>&1 | tee -a "$std_build_dir/cmake-configure-output.txt"
             cmake_exit_code=$?
+            ${{ (inputs.trace-commands != 'true' && 'set +x') || '' }}
             set -e
             cd "$working_dir"
         
@@ -453,20 +610,24 @@ runs:
 
             # Build step
             set +e
-            jobs_args="${{ (steps.version.outputs.parallel_build == 'false' && '') || format('-j {0}', steps.cpu-cores.outputs.count) }}"
-            if [[ "${{ steps.version.outputs.build_multiple_targets }}" == "true" || "${{ inputs.build-target }}" != *" "* ]]; then
+            jobs_args=${{ (steps.features.outputs.parallel_build == 'false' && '""') || format('"-j {0}"', steps.cpu-cores.outputs.count) }}
+            if [[ "${{ steps.features.outputs.build_multiple_targets }}" == "true" || "${{ inputs.build-target }}" != *" "* ]]; then
               set -x
-              cmake --build "$std_build_dir" --config "${{ inputs.build-type || 'Release' }}" $jobs_args ${{ (inputs.build-target != '' && format('--target {0}', inputs.build-target)) || '' }} 2>&1 | tee -a "$std_build_dir/cmake-build-output.txt"
+              "$cmake_path" --build "$std_build_dir" --config "${{ inputs.build-type || 'Release' }}" $jobs_args ${{ (inputs.build-target != '' && format('--target {0}', inputs.build-target)) || '' }} 2>&1 | tee -a "$std_build_dir/cmake-build-output.txt"
+              cmake_exit_code=$?
               ${{ (inputs.trace-commands != 'true' && 'set +x') || '' }}
             else
               build_targets="${{ inputs.build-target }}"
               for build_target in ${build_targets// / }; do
                 set -x
-                cmake --build "$std_build_dir" --config "${{ inputs.build-type || 'Release' }}" $jobs_args --target $build_target 2>&1 | tee -a "$std_build_dir/cmake-build-output.txt"
+                "$cmake_path" --build "$std_build_dir" --config "${{ inputs.build-type || 'Release' }}" $jobs_args --target $build_target 2>&1 | tee -a "$std_build_dir/cmake-build-output.txt"
+                cmake_build_exit_code=$?
+                if [[ $cmake_build_exit_code -ne 0 ]]; then
+                  cmake_exit_code="$cmake_build_exit_code"
+                fi
                 ${{ (inputs.trace-commands != 'true' && 'set +x') || '' }}
               done
             fi
-            cmake_exit_code=$?
             set -e
         
             # Build step annotations
@@ -533,14 +694,14 @@ runs:
               mkdir "${{ inputs.install-prefix }}" || true
               INSTALL_ARGS=("$std_build_dir")
               INSTALL_ARGS+=("--config" "${{ inputs.build-type || 'Release' }}")
-              if [[ ${{ steps.version.outputs.cmake_install }}  == "true" ]]; then
+              if [[ ${{ steps.features.outputs.cmake_install }}  == "true" ]]; then
                 INSTALL_ARGS+=(${{ (inputs.install-prefix != '' && format('"--prefix" "{0}"', inputs.install-prefix)) || '' }})
                 set -x
-                cmake --install "${INSTALL_ARGS[@]}" 2>&1 | tee -a "$std_build_dir/cmake-install-output.txt"
+                "$cmake_path" --install "${INSTALL_ARGS[@]}" 2>&1 | tee -a "$std_build_dir/cmake-install-output.txt"
                 ${{ (inputs.trace-commands != 'true' && 'set +x') || '' }}
               else
                 set -x
-                cmake --build "${INSTALL_ARGS[@]}" --target install || true 2>&1 | tee -a "$std_build_dir/cmake-install-output.txt"
+                "$cmake_path" --build "${INSTALL_ARGS[@]}" --target install || true 2>&1 | tee -a "$std_build_dir/cmake-install-output.txt"
                 ${{ (inputs.trace-commands != 'true' && 'set +x') || '' }}
               fi
             fi
@@ -548,7 +709,7 @@ runs:
             # Test step
             if [[ "$run_tests" == true && "$cxxstd" == "$main_cxxstd" ]]; then
               set +e
-              ctest --test-dir "$std_build_dir" $jobs_args -C "${{ inputs.build-type || 'Release' }}" --no-tests=error --progress --output-on-failure  2>&1 | tee -a "$std_build_dir/cmake-test-output.txt"
+              "$cmake_dir/ctest" --test-dir "$std_build_dir" $jobs_args -C "${{ inputs.build-type || 'Release' }}" --no-tests=error --progress --output-on-failure  2>&1 | tee -a "$std_build_dir/cmake-test-output.txt"
               cmake_exit_code=$?
               set -e
         
