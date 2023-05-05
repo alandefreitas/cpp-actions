@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>B2 Workflow | C++ Actions</title>    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/b2-workflow.html">
+<title>Create initial change log | C++ Actions</title>    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/develop/actions/create-changelog.html">
     <meta name="generator" content="Antora 3.1.3">
 <link rel="stylesheet" href="../../../_/stylesheets/vendor/libs.css">
 <link rel="stylesheet" href="../../../_/stylesheets/site.css">
@@ -22,7 +22,7 @@
 
         <div id="topbar-nav" class="navbar-menu">
             <div class="navbar-item is-hoverable">
-                <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions: B2 Workflow</a>
+                <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions: Create initial change log</a>
             </div>
             <div class="navbar-item is-hoverable">
                 <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions" target="_blank">GitHub</a>
@@ -86,10 +86,10 @@
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="1">
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="b2-workflow.html">B2 Workflow Action</a>
   </li>
-  <li class="nav-item" data-depth="1">
+  <li class="nav-item is-current-page" data-depth="1">
     <a class="nav-link" href="create-changelog.html">Create initial change log Action</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -131,15 +131,15 @@
   <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">C++ Actions</a></li>
-    <li><a href="b2-workflow.html">B2 Workflow Action</a></li>
+    <li><a href="create-changelog.html">Create initial change log Action</a></li>
   </ul>
 </nav>
   <div class="page-versions">
   <button class="version-menu-toggle"
     title="Show other versions of page">develop</button>
   <div class="version-menu">
-    <a class="version" href="../../actions/b2-workflow.html">master</a>
-    <a class="version is-current" href="b2-workflow.html">develop</a>
+    <a class="version is-missing" href="../../index.html">master</a>
+    <a class="version is-current" href="create-changelog.html">develop</a>
   </div>
 </div>
   </div>
@@ -150,120 +150,60 @@
 </div>
   <div class="content">
 <article class="doc">
-<h1 class="page">B2 Workflow</h1>
+<h1 class="page">Create initial change log</h1>
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>This action runs a complete B2 workflow from Boost source files.</p>
+<p>This action creates an initial change log from the commit history.</p>
 </div>
 <div class="paragraph">
-<p>It takes the Boost source directory and does whatever it needs to test the specified modules. This includes
-compiling <code>b2</code> if needed and generating a proper <code>user-config.jam</code> file.</p>
+<p>The commits considered go from the latest commit up to a commit containing a version
+commit pattern specified by version-pattern.</p>
 </div>
 <div class="paragraph">
-<p>This action is particularly useful for Boost library proposals.</p>
+<p>The result can be used as the initial body for an automated release, a CHANGELOG file, or a job summary.</p>
+</div>
+<div class="paragraph">
+<p>Each commit is parsed as a loose variant of a <a href="https://www.conventionalcommits.org/en/v1.0.0/">conventional commit</a>
+in the following format:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-asciidoc hljs" data-lang="asciidoc">&lt;type&gt;[optional scope]: &lt;description&gt;
+
+[optional body]
+
+[optional footer(s)]</code></pre>
+</div>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The body and footer are always ignored.</p>
+</li>
+<li>
+<p>If no type is indicated, the description goes to an initial "general" category in the message.</p>
+</li>
+<li>
+<p>If no scope is indicated, the description goes to an initial "general" scope in the type messages.</p>
+</li>
+<li>
+<p>Breaking changes are indicated.</p>
+</li>
+</ul>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_examples"><a class="anchor" href="#_examples"></a>Examples</h2>
+<h2 id="_example"><a class="anchor" href="#_example"></a>Example</h2>
 <div class="sectionbody">
-<div class="paragraph">
-<p>Example 1:</p>
-</div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
+- name: Create release notes
+  uses: alandefreitas/cpp-actions/create-changelog@master
   with:
-    source-dir: boost-root
-    modules: variant2
-    toolset: gcc-11
-    cxxstd: 17,20</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 2 (<code>cxx</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
-  with:
-    source-dir: boost-root
-    modules: variant2
-    toolset: clang
-    cxx: clang++-12
-    cxxstd: 17,20</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 3 (<code>address-model</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
-  with:
-    source-dir: boost-root
-    modules: variant2
-    toolset: msvc-14.3
-    cxxstd: 17,20
-    address-model: 32,64</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 4 (<code>ubsan</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
-  with:
-    source-dir: boost-root
-    modules: variant2
-    toolset: gcc-11
-    cxxstd: 17,20
-    ubsan: 'true'</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 5 (<code>cxxflags</code>, <code>linkflags</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
-  with:
-    source-dir: boost-root
-    modules: variant2
-    toolset: clang
-    cxx: clang++-12
-    cxxstd: 17,20
-    cxxflags: -stdlib=libc++
-    linkflags: -stdlib=libc++</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 6 (<code>gcc-toolchain</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
-  with:
-    source-dir: boost-root
-    modules: variant2
-    toolset: clang
-    cxx: clang++-8
-    cxxstd: '17'
-    gcc-toolchain: '7'</code></pre>
+    output-path: CHANGELOG.md</code></pre>
 </div>
 </div>
 </div>
@@ -285,63 +225,21 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>source-dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The boost source directory.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The source directory from whose commits will be analyzed
+.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-variant</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Custom build variants.</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-pattern</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A regex pattern used to identify if a commit is a version delimiter
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>(Bump|Set)\s+version</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>modules</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The list of modules we should test.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc-toolchain</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Create a special GCC toolchain for this version of GCC and update user-config.jam.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>toolset</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Toolset name.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>address-model</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Valid b2 list of address models.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Path to C++ compiler.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Extra compiler flags.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>linkflags</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Extra linker flags.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxstd</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of standards with which cmake will build and test the program.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ubsan</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of standards with which cmake will build and test the program.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>threading</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">b2 threading option.</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>output-path</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The path where the changelog will be stored
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>CHANGELOG.md</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
