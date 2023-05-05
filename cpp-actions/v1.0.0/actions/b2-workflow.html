@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Install dependencies | C++ Actions</title>    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/package-install.html">
+<title>B2 Workflow | C++ Actions</title>    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/b2-workflow.html">
     <meta name="generator" content="Antora 3.1.3">
 <link rel="stylesheet" href="../../../_/stylesheets/vendor/libs.css">
 <link rel="stylesheet" href="../../../_/stylesheets/site.css">
@@ -12,17 +12,17 @@
   <body class="article">
 <script src="../../../_/js/header-site.js"></script>
 <header class="header">
-    <nav class="navbar  navbar-nonProduction  ">
+    <nav class="navbar  ">
         <div class="navbar-brand">
             <a class="navbar-item" href="https://alandefreitas.github.io/cpp-actions">C++ Actions</a>
             <div class="navbar-item-nonProduction">
-                <p>develop</p>
+                <p>v1.0.0</p>
             </div>
         </div>
 
         <div id="topbar-nav" class="navbar-menu">
             <div class="navbar-item is-hoverable">
-                <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions: Install dependencies</a>
+                <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions: B2 Workflow</a>
             </div>
             <div class="navbar-item is-hoverable">
                 <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions" target="_blank">GitHub</a>
@@ -65,7 +65,7 @@
         </div>
     </nav>
 </header><div class="body">
-<div class="nav-container" data-component="cpp-actions" data-version="develop">
+<div class="nav-container" data-component="cpp-actions" data-version="v1.0.0">
   <aside class="nav">
     <div class="panels">
 <div class="nav-panel-menu is-active" data-panel="menu">
@@ -77,7 +77,7 @@
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../index.html">Home</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="1">
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="package-install.html">Install dependencies Action</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -86,7 +86,7 @@
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
   </li>
-  <li class="nav-item" data-depth="1">
+  <li class="nav-item is-current-page" data-depth="1">
     <a class="nav-link" href="b2-workflow.html">B2 Workflow Action</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -106,7 +106,7 @@
 <div class="nav-panel-explore" data-panel="explore">
   <div class="context">
     <span class="title">C++ Actions</span>
-    <span class="version">develop</span>
+    <span class="version">v1.0.0</span>
   </div>
   <ul class="components">
     <li class="component is-current">
@@ -115,11 +115,11 @@
         <li class="version is-latest">
           <a href="../../index.html">master</a>
         </li>
-        <li class="version is-current">
-          <a href="../index.html">develop</a>
-        </li>
         <li class="version">
-          <a href="../../v1.0.0/index.html">v1.0.0</a>
+          <a href="../../develop/index.html">develop</a>
+        </li>
+        <li class="version is-current">
+          <a href="../index.html">v1.0.0</a>
         </li>
       </ul>
     </li>
@@ -134,16 +134,16 @@
   <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">C++ Actions</a></li>
-    <li><a href="package-install.html">Install dependencies Action</a></li>
+    <li><a href="b2-workflow.html">B2 Workflow Action</a></li>
   </ul>
 </nav>
   <div class="page-versions">
   <button class="version-menu-toggle"
-    title="Show other versions of page">develop</button>
+    title="Show other versions of page">v1.0.0</button>
   <div class="version-menu">
-    <a class="version" href="../../actions/package-install.html">master</a>
-    <a class="version is-current" href="package-install.html">develop</a>
-    <a class="version" href="../../v1.0.0/actions/package-install.html">v1.0.0</a>
+    <a class="version" href="../../actions/b2-workflow.html">master</a>
+    <a class="version" href="../../develop/actions/b2-workflow.html">develop</a>
+    <a class="version is-current" href="b2-workflow.html">v1.0.0</a>
   </div>
 </div>
   </div>
@@ -154,15 +154,18 @@
 </div>
   <div class="content">
 <article class="doc">
-<h1 class="page">Install dependencies</h1>
+<h1 class="page">B2 Workflow</h1>
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>This action installs dependencies from multiple package managers for a workflow.</p>
+<p>This action runs a complete B2 workflow from Boost source files.</p>
 </div>
 <div class="paragraph">
-<p>If vcpkg dependencies are required and vcpkg is not available, it will be installed.
-Both vcpkg and its dependencies are cached.</p>
+<p>It takes the Boost source directory and does whatever it needs to test the specified modules. This includes
+compiling <code>b2</code> if needed and generating a proper <code>user-config.jam</code> file.</p>
+</div>
+<div class="paragraph">
+<p>This action is particularly useful for Boost library proposals.</p>
 </div>
 </div>
 </div>
@@ -175,34 +178,96 @@ Both vcpkg and its dependencies are cached.</p>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Install packages
-  uses: alandefreitas/cpp-actions/package-install@master
-  id: package-install
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2-workflow@master
   with:
-    vcpkg: fmt
-    apt-get: g++-11
-    cxx: g++-11
-    cc: gcc-11</code></pre>
+    source-dir: boost-root
+    modules: variant2
+    toolset: gcc-11
+    cxxstd: 17,20</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Example 2 (<code>apt-get-ignore-missing</code>):</p>
+<p>Example 2 (<code>cxx</code>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Install packages
-  uses: alandefreitas/cpp-actions/package-install@master
-  id: package-install
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2-workflow@master
   with:
-    vcpkg: fmt
-    apt-get: g++-4.8 sudo software-properties-common tzdata wget curl apt-transport-https
-      make apt-file unzip libssl-dev build-essential autotools-dev autoconf automake
-      g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3
-      ccache libpython-dev python3-distutils python3-pip git cmake
-    apt-get-ignore-missing: 'true'
-    cxx: g++-4.8
-    cc: gcc-4.8</code></pre>
+    source-dir: boost-root
+    modules: variant2
+    toolset: clang
+    cxx: clang++-12
+    cxxstd: 17,20</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 3 (<code>address-model</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2-workflow@master
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: msvc-14.3
+    cxxstd: 17,20
+    address-model: 32,64</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 4 (<code>ubsan</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2-workflow@master
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: gcc-11
+    cxxstd: 17,20
+    ubsan: 'true'</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 5 (<code>cxxflags</code>, <code>linkflags</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2-workflow@master
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: clang
+    cxx: clang++-12
+    cxxstd: 17,20
+    cxxflags: -stdlib=libc++
+    linkflags: -stdlib=libc++</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 6 (<code>gcc-toolchain</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2-workflow@master
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: clang
+    cxx: clang++-8
+    cxxstd: '17'
+    gcc-toolchain: '7'</code></pre>
 </div>
 </div>
 </div>
@@ -223,88 +288,69 @@ Both vcpkg and its dependencies are cached.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of packages we should install with vcpkg. (Whitespace-separated).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>source-dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The boost source directory.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-variant</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Custom build variants.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of packages we should install with apt-get. (Whitespace-separated).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>modules</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The list of modules we should test.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc-toolchain</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Create a special GCC toolchain for this version of GCC and update user-config.jam.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>toolset</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Toolset name.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>address-model</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Valid b2 list of address models.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">C compiler used by vcpkg.</p>
-<p class="tableblock">Setting the compiler is particularly important in Linux workflows that use `clang`, since `clang` might link
-`libc` or <code>libstdc`, while the default compiler used by vcpkg will usually be GCC linking `libstdc</code>.</p>
-<p class="tableblock">This would cause conflict in workflows that later attempt to use vcpkg dependencies.
-.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Path to C++ compiler.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">C compiler used by vcpkg.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extra compiler flags.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-triplet</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The triplet used by vcpkg to install packages.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>linkflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extra linker flags.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The directory where vcpkg should be cloned and installed.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-branch</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">vcpkg branch we should use.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>master</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-retries</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Number of times we should retry when apt-get fails.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>1</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-sources</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of sources for apt-get.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxstd</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">List of standards with which cmake will build and test the program.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-source-keys</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of source keys for apt-get.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-ignore-missing</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Whether apt-get should ignore missing packages.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ubsan</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">List of standards with which cmake will build and test the program.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
-</tbody>
-</table>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_outputs"><a class="anchor" href="#_outputs"></a>Outputs</h2>
-<div class="sectionbody">
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 50%;">
-<col style="width: 50%;">
-</colgroup>
-<tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Output</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>threading</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">b2 threading option.</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-toolchain</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">vcpkg toolchain file</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-executable</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">vcpkg toolchain file</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 </tbody>
 </table>
