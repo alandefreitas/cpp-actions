@@ -6,8 +6,10 @@
 - <<cmake-workflow>>
 - <<boost-clone>>
 - <<b2-workflow>>
+- <<create-changelog>>
 
 include::package-install.adoc[leveloffset=+1]
 include::cmake-workflow.adoc[leveloffset=+1]
 include::boost-clone.adoc[leveloffset=+1]
 include::b2-workflow.adoc[leveloffset=+1]
+include::create-changelog.adoc[leveloffset=+1]

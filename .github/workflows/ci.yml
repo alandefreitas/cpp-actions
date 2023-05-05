@@ -131,21 +131,17 @@ jobs:
       run:
         shell: bash
 
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { name: 'Docs', os: ubuntu-22.04 }
-
-    name: ${{ matrix.name }}
+    name: Docs and Release
     timeout-minutes: 120
-    runs-on: ${{matrix.os}}
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
 
     steps:
-      - name: Clone Boost.URL
+      - name: Clone cpp-actions
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 100
 
       - name: Install Node.js
         uses: actions/setup-node@v3
@@ -176,6 +172,20 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: docs/build/site
 
+      - name: Create release notes
+        uses: ./create-changelog
+        with:
+          output-path: CHANGELOG.md
+          trace-commands: true
+
+      - name: Remove branch release
+        if: ${{ github.event_name == 'push' && contains(fromJSON('["master", "develop"]'), github.ref_name) }}
+        uses: dev-drprasad/delete-tag-and-release@v1.0
+        with:
+          tag_name: ${{ github.ref_name || github.ref }}-release
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          delete_release: true
+
       - name: Create Release
         if: ${{ github.event_name == 'push' && (contains(fromJSON('["master", "develop"]'), github.ref_name) || startsWith(github.ref, 'refs/tags/')) }}
         uses: softprops/action-gh-release@v1
@@ -183,5 +193,8 @@ jobs:
           files: LICENSE
           name: ${{ github.ref_name || github.ref }}
           tag_name: ${{ github.ref_name || github.ref }}${{ (!startsWith(github.ref, 'refs/tags/')) && '-release' }}
+          body_path: CHANGELOG.md
+          prerelease: false
+          draft: false
           token: ${{ github.token }}
 

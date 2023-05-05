@@ -1,0 +1,88 @@
+#
+# Copyright (c) 2023 Alan de Freitas (alandefreitas@gmail.com)
+#
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+#
+# Official repository: https://github.com/alandefreitas/cpp-actions
+#
+
+name: "Create Changelog"
+description: |
+  This action creates an initial Changelog from the commit history.
+  
+  The commits considered go from the latest commit up to a commit containing a version
+  commit pattern specified by version-pattern.
+  
+  The result can be used as the initial body for an automated release, a CHANGELOG.md file, or a job summary.
+  
+  Each commit is parsed as a loose variant of a https://www.conventionalcommits.org/en/v1.0.0/[conventional commit]
+  in the following format:
+  
+  [source]
+  ----
+  <type>[optional scope]: <description>
+  
+  [optional body]
+  
+  [optional footer(s)]
+  ----
+  
+  * The body and footer are always ignored.
+  * If no type is indicated, the description goes to an initial "other" category in the message.
+  * If no scope is indicated, the description goes to an initial "general" scope in the type messages.
+  * Breaking changes are indicated.
+  
+  This action uses the local commit history to generate the notes. Ensure the `fetch-depth` option
+  is set when cloning your repository in CI. If this option is unset, the checkout action will
+  perform a shallow clone and the Changelog will only include the latest commit.
+  
+  [source,yml]
+  ----
+  - uses: actions/checkout@v3
+    with:
+      fetch-depth: 100
+  ----
+  
+  This parameter can also be used as a limit on the number of commits the action should consider.
+
+inputs:
+  source-dir:
+    description: |
+      The source directory from whose commits will be analyzed
+    required: false
+    default: '.'
+  version-pattern:
+    description: |
+      A regex pattern used to identify if a commit is a version delimiter
+    required: false
+    default: '(Bump|Set)\s+version'
+  output-path:
+    description: |
+      The path where the changelog will be stored
+    required: false
+    default: 'CHANGELOG.md'
+  limit:
+    description: |
+      The limit on the number of commits considered in the Changelog
+    required: false
+    default: '0'
+  trace-commands:
+    description: 'Trace commands executed by the workflow.'
+    required: false
+    default: 'false'
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-python@v4
+      id: setup-python
+      with:
+        python-version: '>= 3.10'
+
+    - name: Generate changelog
+      shell: bash
+      run: |
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+        python_path="${{ steps.setup-python.outputs.python-path || 'python' }}"
+        $python_path "$GITHUB_ACTION_PATH/create-changelog.py" --dir "${{ inputs.source-dir }}" --version-pattern "${{ inputs.version-pattern }}" --output "${{ inputs.output-path }}" --limit "${{ inputs.limit }}"

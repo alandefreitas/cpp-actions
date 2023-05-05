@@ -1,0 +1,71 @@
+= Create Changelog [[create-changelog]]
+:reftext: Create Changelog
+:navtitle: Create Changelog Action
+// This create-changelog.adoc file is automatically generated.
+// Edit parse_actions.py instead.
+
+This action creates an initial Changelog from the commit history.
+
+The commits considered go from the latest commit up to a commit containing a version
+commit pattern specified by version-pattern.
+
+The result can be used as the initial body for an automated release, a CHANGELOG.md file, or a job summary.
+
+Each commit is parsed as a loose variant of a https://www.conventionalcommits.org/en/v1.0.0/[conventional commit]
+in the following format:
+
+[source]
+----
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+----
+
+* The body and footer are always ignored.
+* If no type is indicated, the description goes to an initial "other" category in the message.
+* If no scope is indicated, the description goes to an initial "general" scope in the type messages.
+* Breaking changes are indicated.
+
+This action uses the local commit history to generate the notes. Ensure the `fetch-depth` option
+is set when cloning your repository in CI. If this option is unset, the checkout action will
+perform a shallow clone and the Changelog will only include the latest commit.
+
+[source,yml]
+----
+- uses: actions/checkout@v3
+  with:
+    fetch-depth: 100
+----
+
+This parameter can also be used as a limit on the number of commits the action should consider.
+
+
+== Example
+
+[source,yml]
+----
+steps:
+- name: Create release notes
+  uses: alandefreitas/cpp-actions/create-changelog@master
+  with:
+    output-path: CHANGELOG.md
+    trace-commands: 'true'
+----
+
+== Input Parameters
+
+|===
+|Parameter |Description |Default
+|`source-dir` |The source directory from whose commits will be analyzed
+. |`.`
+|`version-pattern` |A regex pattern used to identify if a commit is a version delimiter
+. |`(Bump\|Set)\s+version`
+|`output-path` |The path where the changelog will be stored
+. |`CHANGELOG.md`
+|`limit` |The limit on the number of commits considered in the Changelog
+. |`0`
+|`trace-commands` |Trace commands executed by the workflow. |`false`
+|===
+

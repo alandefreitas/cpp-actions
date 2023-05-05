@@ -53,12 +53,13 @@ def sort_step(d):
 readme_base = os.path.join('README.base.adoc')
 reference_dir = os.path.join('docs', 'modules', 'ROOT', 'pages', 'actions')
 example_path = os.path.join('.github', 'workflows', 'ci.yml')
-actions = ['package-install', 'cmake-workflow', 'boost-clone', 'b2-workflow']
+actions = ['package-install', 'cmake-workflow', 'boost-clone', 'b2-workflow', 'create-changelog']
 
 with open(example_path, 'r') as f:
     ci_yml = yaml.load(f, Loader=OrderedLoader)
     matrix = ci_yml['jobs']['build']['strategy']['matrix']['include']
     steps = ci_yml['jobs']['build']['steps']
+    steps += ci_yml['jobs']['docs']['steps']
 
 # Load the YAML file
 toc_output = ''
@@ -374,8 +375,10 @@ for action in actions:
         required = details['required']
         if required == 'True':
             description += ' ⚠️ This parameter is required.'
+        description = description.replace("|", "\\|")
         default = details['default']
         default = '' if not default else f'`{default}`'
+        default = default.replace("|", "\\|")
         output += f'|`{parameter}` |{description} |{default}\n'
     output += '|===\n\n'
 
