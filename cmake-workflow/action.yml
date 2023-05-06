@@ -258,7 +258,7 @@ runs:
       id: system-version
       with:
         version: ${{ steps.system-cmake.outputs.version }}
-        satisfies: ${{ inputs.cmake-version || format('>= {0}', inputs.cmake-min-version || steps.required-version-str.outputs.min-version-str) }}
+        satisfies: ${{ inputs.cmake-version || format('>= {0}', inputs.cmake-min-version || steps.required-version-str.outputs.min-version-str || steps.latest-version-str.outputs.latest-version) }}
         lenient: true
 
     - name: Normalize Min CMake version
