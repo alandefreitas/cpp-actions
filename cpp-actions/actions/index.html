@@ -997,9 +997,22 @@ perform a shallow clone and the Changelog will only include the latest commit.</
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-pattern</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A regex pattern used to identify if a commit is a version delimiter
+<td class="tableblock halign-left valign-top"><p class="tableblock">A regex pattern used to identify if a commit is a version delimiter.</p>
+<p class="tableblock">When a commit has a message that matches this pattern, the list of
+commits considered in the notes is complete.</p>
+<p class="tableblock">This constraint does not apply to the current and latest commit.
 .</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>(Bump|Set)\s+version</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>tag-pattern</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A regex pattern used to identify if a commit is a tagged delimiter.</p>
+<p class="tableblock">When a commit has the same hash has the commit associated with a
+tag whose name matches this pattern, the list of commits considered
+in the notes is complete.</p>
+<p class="tableblock">This constraint does not apply to the current and latest commit.
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>v.<strong>\..</strong>\..*</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>output-path</code></p></td>
