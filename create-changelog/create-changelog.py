@@ -25,6 +25,8 @@ if __name__ == "__main__":
     parser.add_argument('--dir', help="directory to scan", default=os.getcwd())
     parser.add_argument('--version-pattern', help="regex pattern indicating a version commit",
                         default='(Bump|Set)\s+version')
+    parser.add_argument('--tag-pattern', help="regex indicating a tagged commit",
+                        default='v.*\..*\..*')
     parser.add_argument('-o', '--output', help="output file", default='CHANGELOG.md')
     parser.add_argument('--limit', type=int, help="max number of commits in the log", default=0)
     args = parser.parse_args()
@@ -32,14 +34,37 @@ if __name__ == "__main__":
     # Parameters
     project_path = args.dir
     version_pattern = re.compile(args.version_pattern, flags=re.IGNORECASE)
+    tag_pattern = re.compile(args.tag_pattern, flags=re.IGNORECASE)
     output_path = args.output
 
     # Get commit log
     result = subprocess.run(['git', '--no-pager', 'log'], stdout=subprocess.PIPE, cwd=project_path)
     commit_log_output = result.stdout.decode('utf-8').splitlines()
 
+    # Get tagged commits
+    tagged_commits = set()
+    tags_result = subprocess.run(['git', 'tag', '-l'], stdout=subprocess.PIPE, cwd=project_path)
+    tags_output = tags_result.stdout.decode('utf-8').splitlines()
+    for tag in tags_output:
+        matches = re.findall(tag_pattern, tag)
+        if matches:
+            commit_result = subprocess.run(['git', 'rev-list', '-n', '1', tag], stdout=subprocess.PIPE, cwd=project_path)
+            commit_output = commit_result.stdout.decode('utf-8').strip()
+            tagged_commits.add(commit_output)
+    ls_remote_result = subprocess.run(['git', 'ls-remote', '--tags'], stdout=subprocess.PIPE, cwd=project_path)
+    ls_remote_output = ls_remote_result.stdout.decode('utf-8').splitlines()
+    for line in ls_remote_output:
+        parts = line.split()
+        if len(parts) == 2 and parts[1].startswith("refs/tags/"):
+            parts[1] = parts[1].split('/')[-1]
+            matches = re.findall(tag_pattern, parts[1])
+            if matches:
+                tagged_commits.add(parts[0])
+    print(f'{len(tagged_commits)} tagged commits')
+
     state = 'init'
     commit_msgs = []
+    current_commit_id = ''
     msg = ''
     for line in commit_log_output:
         if state == 'init' and line.startswith('commit ') and ' ' not in line[7:]:
@@ -47,6 +72,9 @@ if __name__ == "__main__":
             if msg != '':
                 commit_msgs.append(msg)
             msg = ''
+            current_commit_id = line[7:]
+            if commit_msgs and current_commit_id in tagged_commits:
+                break
             state = 'author'
             continue
         if state == 'author' and line.startswith('Author:'):

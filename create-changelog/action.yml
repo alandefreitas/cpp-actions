@@ -54,9 +54,27 @@ inputs:
     default: '.'
   version-pattern:
     description: |
-      A regex pattern used to identify if a commit is a version delimiter
+      A regex pattern used to identify if a commit is a version delimiter.
+      
+      When a commit has a message that matches this pattern, the list of
+      commits considered in the notes is complete.
+      
+      This constraint does not apply to the current and latest commit.
+
     required: false
     default: '(Bump|Set)\s+version'
+  tag-pattern:
+    description: |
+      A regex pattern used to identify if a commit is a tagged delimiter.
+      
+      When a commit has the same hash has the commit associated with a
+      tag whose name matches this pattern, the list of commits considered
+      in the notes is complete.
+      
+      This constraint does not apply to the current and latest commit.
+
+    required: false
+    default: 'v.*\..*\..*'
   output-path:
     description: |
       The path where the changelog will be stored
@@ -85,4 +103,4 @@ runs:
       run: |
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         python_path="${{ steps.setup-python.outputs.python-path || 'python' }}"
-        $python_path "$GITHUB_ACTION_PATH/create-changelog.py" --dir "${{ inputs.source-dir }}" --version-pattern "${{ inputs.version-pattern }}" --output "${{ inputs.output-path }}" --limit "${{ inputs.limit }}"
+        $python_path "$GITHUB_ACTION_PATH/create-changelog.py" --dir "${{ inputs.source-dir }}" --version-pattern "${{ inputs.version-pattern }}" --tag-pattern "${{ inputs.tag-pattern }}" --output "${{ inputs.output-path }}" --limit "${{ inputs.limit }}"

@@ -518,8 +518,21 @@ steps:
 |Parameter |Description |Default
 |`source-dir` |The source directory from whose commits will be analyzed
 . |`.`
-|`version-pattern` |A regex pattern used to identify if a commit is a version delimiter
+|`version-pattern` |A regex pattern used to identify if a commit is a version delimiter.
+
+When a commit has a message that matches this pattern, the list of
+commits considered in the notes is complete.
+
+This constraint does not apply to the current and latest commit.
 . |`(Bump\|Set)\s+version`
+|`tag-pattern` |A regex pattern used to identify if a commit is a tagged delimiter.
+
+When a commit has the same hash has the commit associated with a
+tag whose name matches this pattern, the list of commits considered
+in the notes is complete.
+
+This constraint does not apply to the current and latest commit.
+. |`v.*\..*\..*`
 |`output-path` |The path where the changelog will be stored
 . |`CHANGELOG.md`
 |`limit` |The limit on the number of commits considered in the Changelog
