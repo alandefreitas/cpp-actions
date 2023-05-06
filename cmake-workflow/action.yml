@@ -375,8 +375,8 @@ runs:
         
         # Add cmake to PATH
         cmake_bin_path="$cmake_dest/$cmake_basename/bin"
-        echo "$cmake_bin_path" >> $GITHUB_PATH
-        echo "path=$cmake_bin_path/cmake" >> $GITHUB_OUTPUT
+        echo -E "$cmake_bin_path" >> $GITHUB_PATH
+        echo -E "path=$cmake_bin_path/cmake" >> $GITHUB_OUTPUT
         export PATH=$PATH:"$cmake_bin_path"
         
         # Print installed version
@@ -406,7 +406,8 @@ runs:
 
         # CMake path
         path="${{ steps.setup-cmake.outputs.path || steps.system-cmake.outputs.path }}"
-        echo "path=$path" >> $GITHUB_OUTPUT
+        echo "path=$path"
+        echo -E "path=$path" >> $GITHUB_OUTPUT
         
         # -B <path-to-build> syntax
         path_to_build="${{ steps.version.outputs.major >= 3 && steps.version.outputs.minor >= 13 }}"
@@ -433,6 +434,7 @@ runs:
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         
         cmake_path="${{ steps.features.outputs.path }}"
+        echo "cmake_path=$cmake_path"
         
         # Find the generator that will effectively be used by this workflow
         generator="${{ inputs.generator }}"
