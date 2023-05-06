@@ -42,29 +42,34 @@ if __name__ == "__main__":
     commit_log_output = result.stdout.decode('utf-8').splitlines()
 
     # Get tagged commits
-    tagged_commits = set()
+    tagged_commit_ids = set()
+    commit_tags = {}
     tags_result = subprocess.run(['git', 'tag', '-l'], stdout=subprocess.PIPE, cwd=project_path)
     tags_output = tags_result.stdout.decode('utf-8').splitlines()
     for tag in tags_output:
         matches = re.findall(tag_pattern, tag)
         if matches:
-            commit_result = subprocess.run(['git', 'rev-list', '-n', '1', tag], stdout=subprocess.PIPE, cwd=project_path)
-            commit_output = commit_result.stdout.decode('utf-8').strip()
-            tagged_commits.add(commit_output)
+            commit_result = subprocess.run(['git', 'rev-list', '-n', '1', tag], stdout=subprocess.PIPE,
+                                           cwd=project_path)
+            commit_id = commit_result.stdout.decode('utf-8').strip()
+            tagged_commit_ids.add(commit_id)
+            commit_tags[commit_id] = tag
     ls_remote_result = subprocess.run(['git', 'ls-remote', '--tags'], stdout=subprocess.PIPE, cwd=project_path)
     ls_remote_output = ls_remote_result.stdout.decode('utf-8').splitlines()
     for line in ls_remote_output:
         parts = line.split()
         if len(parts) == 2 and parts[1].startswith("refs/tags/"):
-            parts[1] = parts[1].split('/')[-1]
-            matches = re.findall(tag_pattern, parts[1])
+            commit_id = parts[0]
+            tag = parts[1].split('/')[-1]
+            matches = re.findall(tag_pattern, tag)
             if matches:
-                tagged_commits.add(parts[0])
-    print(f'{len(tagged_commits)} tagged commits')
+                tagged_commit_ids.add(commit_id)
+                commit_tags[commit_id] = tag
+    print(f'{len(tagged_commit_ids)} tagged commits')
 
     state = 'init'
     commit_msgs = []
-    current_commit_id = ''
+    delimiter_commit_id = ''
     msg = ''
     for line in commit_log_output:
         if state == 'init' and line.startswith('commit ') and ' ' not in line[7:]:
@@ -72,8 +77,8 @@ if __name__ == "__main__":
             if msg != '':
                 commit_msgs.append(msg)
             msg = ''
-            current_commit_id = line[7:]
-            if commit_msgs and current_commit_id in tagged_commits:
+            delimiter_commit_id = line[7:]
+            if commit_msgs and delimiter_commit_id in tagged_commit_ids:
                 break
             state = 'author'
             continue
@@ -251,6 +256,21 @@ if __name__ == "__main__":
                     else:
                         comment_suffix = ""
                     output += f'{pad}- {feat_icon}{scope_prefix}{c.description}{breaking_suffix}{comment_suffix}\n'
+
+    if delimiter_commit_id in tagged_commit_ids and delimiter_commit_id in commit_tags:
+        parent_tag = commit_tags[delimiter_commit_id]
+        parent_id = delimiter_commit_id[:7]
+        cmd = ['git', 'config', '--get', 'remote.origin.url']
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        output += '\n\n'
+        if result.returncode == 0:
+            # Decode output and remove any trailing whitespace
+            repo_url = result.stdout.strip()
+            if repo_url.endswith('.git'):
+                repo_url = repo_url[:-len('.git')]
+            output += f'> Parent release: [{parent_tag}]({repo_url}/releases/tag/{parent_tag}) (commit [{parent_id}]({repo_url}/tree/{parent_tag}))\n'
+        else:
+            output += f'> Parent release: {parent_tag} (commit {parent_id})\n'
 
     print(f'CHANGELOG Contents:', output)
 
