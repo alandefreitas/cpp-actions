@@ -1,8 +1,23 @@
 = C++ Actions
+Alan Freitas <alandefreitas@gmail.com>
+:description: GitHub Actions for C++ Libraries
+:sectanchors:
+:url-repo: https://github.com/alandefreitas/cpp-actions
+:page-tags: cpp-actions
+:navtitle: Home
 
-This repository includes a number of useful GitHub actions to test C++ libraries.
-Part of the difficulty to test C++ libraries comes from the diversity of the C++ ecosystem.
-Our intention is to create a common and resilient set of actions that can work on as many environments as possible.
+Testing {cpp} libraries can be a challenging task, as there are various factors to consider such as the different compilers, operating systems, and architectures that the library may need to support.
+Furthermore, {cpp} itself is a complex language with a wide range of features, making it difficult to write comprehensive tests that cover all possible scenarios.
+
+To address these challenges, this repository provides a collection of GitHub actions that are specifically designed to test {cpp} libraries in a variety of environments.
+These actions aim to create a common and resilient set of tools that can be used to test libraries across a wide range of platforms and configurations.
+
+By leveraging the power of GitHub Actions, these {cpp} testing tools can be easily integrated into a development workflow, allowing developers to quickly and efficiently test their libraries with minimal effort.
+This can help to ensure that the library is functioning correctly and that it is compatible with a wide range of platforms and configurations.
+
+Whether you are a seasoned {cpp} developer or just starting out, these testing tools can help you to streamline your development workflow and ensure that your library is robust and reliable.
+With a comprehensive set of testing tools at your disposal, you can focus on writing high-quality code and delivering great software to your users.
+
 
 NOTE: READ THE DOCS: https://alandefreitas.github.io/cpp-actions/
 
