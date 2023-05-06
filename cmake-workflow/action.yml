@@ -181,6 +181,9 @@ runs:
       id: required-version-str
       shell: bash
       run: |
+        # Extract Require CMake version
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+        
         cml_path="${{ inputs.source-dir }}"
         if [[ $cml_path != /* ]]; then
           cml_path="$(readlink -f "$cml_path" 2>/dev/null || realpath -e "$cml_path" 2>/dev/null || echo "$(pwd)/$cml_path")"
@@ -202,6 +205,7 @@ runs:
       shell: bash
       run: |
         # Extract CMake Latest version
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         
         # Download the Git tags from the CMake repository
         git_tags=$(git ls-remote --tags https://github.com/Kitware/CMake.git | awk '{print $2}' | cut -d '/' -f 3)
@@ -230,6 +234,8 @@ runs:
       shell: bash
       run: |
         # Find cmake executable
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+        
         CMAKE_EXECUTABLE="${{ inputs.cmake-exec }}"
         if [ "$CMAKE_EXECUTABLE" != "" ]; then
             CMAKE_EXECUTABLE="cmake"
@@ -266,7 +272,8 @@ runs:
       shell: bash
       id: normalize-min-version
       run: |
-        # Normalize version string
+        # Normalize Min CMake version
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         
         echo "Min version string"
         echo "${{ inputs.cmake-min-version }}"
@@ -308,7 +315,8 @@ runs:
       shell: bash
       id: setup-cmake
       run: |
-        # Install proper CMake version
+        # Setup compatible CMake version
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         
         # Identify OS string for the URL
         url_os=${{ runner.os }}
@@ -361,10 +369,12 @@ runs:
         fi
         
         # Unzip binaries
-        ${{ (runner.os == 'Windows' && 'unzip $cmake_filename') || (inputs.trace-commands == 'true' && 'tar -xvf $cmake_filename') || 'tar -xf $cmake_filename' }}
+        cmake_dest="${{runner.tool_cache}}/cmake/${{ steps.min-version.outputs.major }}.${{ steps.min-version.outputs.minor }}"
+        mkdir -p "$cmake_dest" || true
+        ${{ (runner.os == 'Windows' && 'unzip $cmake_filename -d $cmake_dest') || (inputs.trace-commands == 'true' && 'tar -xvf $cmake_filename -C "$cmake_dest"') || 'tar -xf $cmake_filename -C "$cmake_dest"' }}
         
         # Add cmake to PATH
-        cmake_bin_path="$(pwd)/$cmake_basename/bin"
+        cmake_bin_path="$cmake_dest/$cmake_basename/bin"
         echo "$cmake_bin_path" >> $GITHUB_PATH
         echo "path=$cmake_bin_path/cmake" >> $GITHUB_OUTPUT
         export PATH=$PATH:"$cmake_bin_path"
@@ -420,7 +430,6 @@ runs:
       working-directory: ${{ inputs.source_dir }}
       run: |
         # Generator features
-        
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         
         cmake_path="${{ steps.features.outputs.path }}"

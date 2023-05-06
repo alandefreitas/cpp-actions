@@ -152,7 +152,7 @@ jobs:
 
       - name: Install Antora
         working-directory: docs
-        run: | 
+        run: |
           npm install
 
       - name: Recreate symlinks
@@ -165,7 +165,7 @@ jobs:
 
       - name: Generate Site
         working-directory: docs
-        run: | 
+        run: |
           npx antora antora-playbook.yml
 
       - name: Publish to GitHub Pages
