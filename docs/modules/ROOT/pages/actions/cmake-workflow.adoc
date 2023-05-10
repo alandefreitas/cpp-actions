@@ -50,13 +50,34 @@ steps:
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
-    cxx: g++-11
-    cc: gcc-11
+    cc: ${{ steps.setup-gcc.outputs.cc || 'gcc-13' }}
+    cxx: ${{ steps.setup-gcc.outputs.cxx || 'g++-13' }}
     extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
     ref-source-dir: .
 ----
 
-Example 2 (`build-type`, `generator`):
+Example 2 (`cxxflags`):
+
+[source,yml]
+----
+steps:
+- name: CMake Workflow
+  uses: alandefreitas/cpp-actions/cmake-workflow@master
+  with:
+    cmake-version: '>=3.20'
+    source-dir: tests
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
+    run-tests: 'true'
+    install-prefix: $GITHUB_WORKSPACE/.local
+    cxxstd: 17,20
+    cc: ${{ steps.setup-gcc.outputs.cc || 'gcc-13' }}
+    cxx: ${{ steps.setup-gcc.outputs.cxx || 'g++-13' }}
+    cxxflags: -fsanitize=undefined
+    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
+    ref-source-dir: .
+----
+
+Example 3 (`build-type`, `generator`):
 
 [source,yml]
 ----
@@ -71,27 +92,8 @@ steps:
     build-type: Debug
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
-    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
-    ref-source-dir: .
-----
-
-Example 3 (`cxxflags`):
-
-[source,yml]
-----
-steps:
-- name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake-workflow@master
-  with:
-    cmake-version: '>=3.20'
-    source-dir: tests
-    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
-    run-tests: 'true'
-    install-prefix: $GITHUB_WORKSPACE/.local
-    cxxstd: 17,20
-    cxx: clang++-12
-    cxxflags: -stdlib=libc++
-    cc: clang-12
+    cc: ${{ steps.setup-gcc.outputs.cc || '' }}
+    cxx: ${{ steps.setup-gcc.outputs.cxx || '' }}
     extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
     ref-source-dir: .
 ----

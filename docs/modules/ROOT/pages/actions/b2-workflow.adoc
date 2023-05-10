@@ -24,7 +24,7 @@ steps:
   with:
     source-dir: boost-root
     modules: variant2
-    toolset: gcc-11
+    toolset: gcc-13
     cxxstd: 17,20
 ----
 
@@ -68,7 +68,7 @@ steps:
   with:
     source-dir: boost-root
     modules: variant2
-    toolset: gcc-11
+    toolset: gcc-13
     cxxstd: 17,20
     ubsan: 'true'
 ----
@@ -119,8 +119,8 @@ steps:
 |`cxx` |Path to C++ compiler. |
 |`cxxflags` |Extra compiler flags. |
 |`linkflags` |Extra linker flags. |
-|`cxxstd` |List of standards with which cmake will build and test the program. |
-|`ubsan` |List of standards with which cmake will build and test the program. |`false`
+|`cxxstd` |List of standards with which b2 will build and test the program. |
+|`ubsan` |Whether the undefined behavior sanitizer should be used. |`false`
 |`threading` |b2 threading option. |
 |`trace-commands` |Trace commands executed by the workflow. |`false`
 |===

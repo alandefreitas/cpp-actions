@@ -53,7 +53,7 @@ def sort_step(d):
 readme_base = os.path.join('README.base.adoc')
 reference_dir = os.path.join('docs', 'modules', 'ROOT', 'pages', 'actions')
 example_path = os.path.join('.github', 'workflows', 'ci.yml')
-actions = ['package-install', 'cmake-workflow', 'boost-clone', 'b2-workflow', 'create-changelog', 'setup-cmake']
+actions = ['package-install', 'cmake-workflow', 'boost-clone', 'b2-workflow', 'create-changelog', 'setup-cmake', 'setup-gcc']
 
 with open(example_path, 'r') as f:
     ci_yml = yaml.load(f, Loader=OrderedLoader)
@@ -116,7 +116,10 @@ def gha_evaluate(template: str, context):
                     tokens[i] = "''"
 
         # Reduce tokens to a single element
-        while len(tokens) > 1:
+        reduced = True
+        while len(tokens) > 1 and reduced:
+            reduced = False
+
             # resolved '()'
             for i in range(len(tokens)):
                 if tokens[i] == '(':
@@ -127,6 +130,7 @@ def gha_evaluate(template: str, context):
                     tokens_pre = tokens[:i]
                     tokens_post = tokens[i + 3:]
                     tokens = tokens_pre + [value] + tokens_post
+                    reduced = True
                     break
 
             # resolved &&
@@ -142,6 +146,7 @@ def gha_evaluate(template: str, context):
                         tokens = tokens[:i - 1] + ["''"] + tokens[i + 2:]
                     else:
                         tokens = tokens[:i - 1] + [rhs] + tokens[i + 2:]
+                    reduced = True
                     break
 
             for i in range(len(tokens)):
@@ -156,6 +161,7 @@ def gha_evaluate(template: str, context):
                         tokens = tokens[:i - 1] + [rhs] + tokens[i + 2:]
                     else:
                         tokens = tokens[:i - 1] + [lhs] + tokens[i + 2:]
+                    reduced = True
                     break
 
             for i in range(len(tokens)):
@@ -170,6 +176,7 @@ def gha_evaluate(template: str, context):
                         tokens = tokens[:i - 1] + ["'true'"] + tokens[i + 2:]
                     else:
                         tokens = tokens[:i - 1] + ["'false'"] + tokens[i + 2:]
+                    reduced = True
                     break
 
             # startsWith
@@ -191,6 +198,7 @@ def gha_evaluate(template: str, context):
                         tokens = tokens[:i] + ["'true'"] + tokens[end + 1:]
                     else:
                         tokens = tokens[:i] + ["'false'"] + tokens[end + 1:]
+                    reduced = True
                     break
 
             # join
@@ -211,6 +219,7 @@ def gha_evaluate(template: str, context):
                         tokens = tokens[:i] + ["'" + separator.join(context[array_name]) + "'"] + tokens[end + 1:]
                     else:
                         tokens = tokens[:i] + ["''"] + tokens[end + 1:]
+                    reduced = True
                     break
 
             for i in range(len(tokens)):
@@ -245,6 +254,7 @@ def gha_evaluate(template: str, context):
                         format_string = format_string.replace(f'{{{count}}}', tokens[j][1:-1])
                         count += 1
                     tokens = tokens[:i] + ["'" + format_string + "'"] + tokens[end + 1:]
+                    reduced = True
                     break
 
         if len(tokens) == 1 and tokens[0].startswith("'"):

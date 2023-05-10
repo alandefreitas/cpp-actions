@@ -22,12 +22,11 @@ steps:
   id: package-install
   with:
     vcpkg: fmt
-    apt-get: g++-11
-    cxx: g++-11
-    cc: gcc-11
+    cxx: g++-13
+    cc: gcc-13
 ----
 
-Example 2 (`apt-get-ignore-missing`):
+Example 2 (`apt-get`):
 
 [source,yml]
 ----
@@ -37,13 +36,28 @@ steps:
   id: package-install
   with:
     vcpkg: fmt
-    apt-get: g++-4.8 sudo software-properties-common tzdata wget curl apt-transport-https
+    apt-get: clang-12
+    cxx: clang++-12
+    cc: clang-12
+----
+
+Example 3 (`apt-get-ignore-missing`):
+
+[source,yml]
+----
+steps:
+- name: Install packages
+  uses: alandefreitas/cpp-actions/package-install@master
+  id: package-install
+  with:
+    vcpkg: fmt
+    apt-get: clang-3.8 sudo software-properties-common tzdata wget curl apt-transport-https
       make apt-file unzip libssl-dev build-essential autotools-dev autoconf automake
       g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3
       ccache libpython-dev python3-distutils python3-pip git cmake
     apt-get-ignore-missing: 'true'
-    cxx: g++-4.8
-    cc: gcc-4.8
+    cxx: clang++-3.8
+    cc: clang-3.8
 ----
 
 == Input Parameters

@@ -45,11 +45,11 @@ inputs:
     required: false
     default: ''
   cxxstd:
-    description: 'List of standards with which cmake will build and test the program.'
+    description: 'List of standards with which b2 will build and test the program.'
     required: false
     default: ''
   ubsan:
-    description: 'List of standards with which cmake will build and test the program.'
+    description: 'Whether the undefined behavior sanitizer should be used.'
     required: false
     default: 'false'
   threading:
@@ -68,14 +68,11 @@ runs:
       uses: SimenB/github-actions-cpu-cores@v1
       id: cpu-cores
 
-    - name: Setup msvc dev-cmd
-      if: runner.os == 'Windows'
-      uses: ilammy/msvc-dev-cmd@v1
-
     - name: Bootstrap
       working-directory: ${{ inputs.source-dir }}
       shell: bash
       run: |
+        # Bootstrap headers
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         ./bootstrap.sh
         ./b2 headers
@@ -84,6 +81,7 @@ runs:
       if: ${{ inputs.gcc-toolchain }}
       shell: bash
       run: |
+        # Setup GCC Toolchain
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         # Create dir for toolchain
         GCC_TOOLCHAIN_ROOT="$HOME/gcc-toolchain"
@@ -116,6 +114,7 @@ runs:
       if: ${{ !inputs.gcc-toolchain }}
       shell: bash
       run: |
+        # Setup user-config.jam
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         if [ -n "${{ inputs.cxx }}" -o -n "$GCC_TOOLCHAIN_ROOT" ]; then
             echo -n "using ${{ inputs.toolset }} : : ${{ inputs.cxx }}" > ~/user-config.jam
@@ -130,6 +129,7 @@ runs:
       working-directory: ${{ inputs.source-dir }}
       shell: bash
       run: |
+        # B2 Workflow
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         
         B2_ARGS+=(${{ (steps.cpu-cores.outputs.count != '1' && format('"-j" "{0}"', steps.cpu-cores.outputs.count)) || '' }})
@@ -139,7 +139,7 @@ runs:
         B2_ARGS+=(${{ (inputs.build-variant && format('"variant={0}"', inputs.build-variant)) || '' }})
         B2_ARGS+=(${{ (inputs.threading && format('"threading={0}"', inputs.threading)) || '' }})
         ${{ (inputs.ubsan == 'true' && 'export UBSAN_OPTIONS="print_stacktrace=1"') || '' }}
-        B2_ARGS+=(${{ (inputs.ubsan == 'true' && '"cxxflags=-fsanitize=undefined -fno-sanitize-recover=undefined" "linkflags=-fsanitize=undefined -fuse-ld=gold" "define=UBSAN=1" "debug-symbols=on" "visibility=global"') || '' }})
+        B2_ARGS+=(${{ (inputs.ubsan == 'true' && '"cxxflags=-fsanitize=undefined -fno-sanitize-recover=undefined" "linkflags=-fsanitize=undefined" "define=UBSAN=1" "debug-symbols=on" "visibility=global"') || '' }})
         B2_ARGS+=(${{ (inputs.cxxflags && format('"cxxflags={0}"', inputs.cxxflags)) || '' }})
         B2_ARGS+=(${{ (inputs.linkflags && format('"linkflags={0}"', inputs.linkflags)) || '' }})
         

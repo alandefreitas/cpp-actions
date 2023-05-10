@@ -31,6 +31,7 @@ NOTE: READ THE DOCS: https://alandefreitas.github.io/cpp-actions/
 - <<b2-workflow>>
 - <<create-changelog>>
 - <<setup-cmake>>
+- <<setup-gcc>>
 
 === Install dependencies [[package-install]]
 :reftext: Install dependencies
@@ -56,12 +57,11 @@ steps:
   id: package-install
   with:
     vcpkg: fmt
-    apt-get: g++-11
-    cxx: g++-11
-    cc: gcc-11
+    cxx: g++-13
+    cc: gcc-13
 ----
 
-Example 2 (`apt-get-ignore-missing`):
+Example 2 (`apt-get`):
 
 [source,yml]
 ----
@@ -71,13 +71,28 @@ steps:
   id: package-install
   with:
     vcpkg: fmt
-    apt-get: g++-4.8 sudo software-properties-common tzdata wget curl apt-transport-https
+    apt-get: clang-12
+    cxx: clang++-12
+    cc: clang-12
+----
+
+Example 3 (`apt-get-ignore-missing`):
+
+[source,yml]
+----
+steps:
+- name: Install packages
+  uses: alandefreitas/cpp-actions/package-install@master
+  id: package-install
+  with:
+    vcpkg: fmt
+    apt-get: clang-3.8 sudo software-properties-common tzdata wget curl apt-transport-https
       make apt-file unzip libssl-dev build-essential autotools-dev autoconf automake
       g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3
       ccache libpython-dev python3-distutils python3-pip git cmake
     apt-get-ignore-missing: 'true'
-    cxx: g++-4.8
-    cc: gcc-4.8
+    cxx: clang++-3.8
+    cc: clang-3.8
 ----
 
 ==== Input Parameters
@@ -162,13 +177,34 @@ steps:
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
-    cxx: g++-11
-    cc: gcc-11
+    cc: ${{ steps.setup-gcc.outputs.cc || 'gcc-13' }}
+    cxx: ${{ steps.setup-gcc.outputs.cxx || 'g++-13' }}
     extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
     ref-source-dir: .
 ----
 
-Example 2 (`build-type`, `generator`):
+Example 2 (`cxxflags`):
+
+[source,yml]
+----
+steps:
+- name: CMake Workflow
+  uses: alandefreitas/cpp-actions/cmake-workflow@master
+  with:
+    cmake-version: '>=3.20'
+    source-dir: tests
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
+    run-tests: 'true'
+    install-prefix: $GITHUB_WORKSPACE/.local
+    cxxstd: 17,20
+    cc: ${{ steps.setup-gcc.outputs.cc || 'gcc-13' }}
+    cxx: ${{ steps.setup-gcc.outputs.cxx || 'g++-13' }}
+    cxxflags: -fsanitize=undefined
+    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
+    ref-source-dir: .
+----
+
+Example 3 (`build-type`, `generator`):
 
 [source,yml]
 ----
@@ -183,27 +219,8 @@ steps:
     build-type: Debug
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
-    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
-    ref-source-dir: .
-----
-
-Example 3 (`cxxflags`):
-
-[source,yml]
-----
-steps:
-- name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake-workflow@master
-  with:
-    cmake-version: '>=3.20'
-    source-dir: tests
-    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
-    run-tests: 'true'
-    install-prefix: $GITHUB_WORKSPACE/.local
-    cxxstd: 17,20
-    cxx: clang++-12
-    cxxflags: -stdlib=libc++
-    cc: clang-12
+    cc: ${{ steps.setup-gcc.outputs.cc || '' }}
+    cxx: ${{ steps.setup-gcc.outputs.cxx || '' }}
     extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
     ref-source-dir: .
 ----
@@ -320,7 +337,7 @@ steps:
   with:
     source-dir: boost-root
     modules: variant2
-    toolset: gcc-11
+    toolset: gcc-13
     cxxstd: 17,20
 ----
 
@@ -364,7 +381,7 @@ steps:
   with:
     source-dir: boost-root
     modules: variant2
-    toolset: gcc-11
+    toolset: gcc-13
     cxxstd: 17,20
     ubsan: 'true'
 ----
@@ -415,8 +432,8 @@ steps:
 |`cxx` |Path to C++ compiler. |
 |`cxxflags` |Extra compiler flags. |
 |`linkflags` |Extra linker flags. |
-|`cxxstd` |List of standards with which cmake will build and test the program. |
-|`ubsan` |List of standards with which cmake will build and test the program. |`false`
+|`cxxstd` |List of standards with which b2 will build and test the program. |
+|`ubsan` |Whether the undefined behavior sanitizer should be used. |`false`
 |`threading` |b2 threading option. |
 |`trace-commands` |Trace commands executed by the workflow. |`false`
 |===
@@ -562,6 +579,84 @@ instead.
 |`supports-parallel-build` |Whether CMake supports the -j <threads> syntax
 |`supports-build-multiple-targets` |Whether CMake supports the --target with multiple targets
 |`supports-cmake-install` |Whether CMake supports the cmake --install
+|===
+=== Setup GCC [[setup-gcc]]
+:reftext: Setup GCC
+:navtitle: Setup GCC Action
+// This setup-gcc.adoc file is automatically generated.
+// Edit parse_actions.py instead.
+
+Set up a specific version of a GCC compiler and add it to the PATH.
+In most workflows, this is used as an auxiliary action for the setup-cpp action.
+
+This allows us to test a C++ library with any GCC version, and not only the versions 
+circumstantially provided by apt-get.
+
+This action uses a number of alternatives to find or install GCC:
+
+- The GCC path provided to 'path'
+- Any other version of GCC it can find in the system
+- A version of GCC from our own binary releases
+
+The action will *not* attempt to install GCC from source files, which is the only 
+officially supported method but impossible to run in CI because the machines would take
+hours to do that.
+
+If a version of GCC is not available by any other methods above, the GCC binaries for
+a given platform can be built locally with a 
+https://github.com/alandefreitas/cpp-actions/tree/develop/setup-gcc[script,window="_blank"]
+provided in this repository and added to our binary release. 
+
+
+==== Example
+
+[source,yml]
+----
+steps:
+- name: Setup GCC
+  uses: alandefreitas/cpp-actions/setup-gcc@master
+  id: setup-gcc
+  with:
+    version: g++-13
+----
+
+==== Input Parameters
+
+|===
+|Parameter |Description |Default
+|`version` |Version range or exact version of GCC to use, using SemVer's version range syntax. 
+
+Reads from `gcc-file` input if unset.
+
+By default, it uses any version available in the environment.
+. |`*`
+|`path` |The gcc or g++ executable. We attempt to find GCC at this path first. |`g++`
+|`cache` |Used to specify whether the GCC installation should be cached in the case GCC needs to be downloaded."
+. |`True`
+|`architecture` |The target architecture (x86, x64). By default, this value is inferred.
+. |
+|`check-latest` |By default, when GCC is not available, this action will install the minimum version in the version spec.
+This ensures the code respects its contract in terms of what minimum GCC version is supported.
+
+Set this option if you want the action to check for the latest available version that satisfies the version spec
+instead.
+. |`false`
+|`update-environment` |Set this option if you want the action to update environment variables. |`true`
+|`trace-commands` |Trace commands executed by the workflow. |`true`
+|===
+
+==== Outputs
+
+|===
+|Output |Description
+|`cc` |The absolute path to the gcc executable.
+|`cxx` |The absolute path to the g++ executable.
+|`dir` |The absolute path to the GCC directory containing the executable.
+|`version` |The installed GCC version. Useful when given a version range as input.
+|`version-major` |The installed GCC version major. Useful when given a version range as input.
+|`version-minor` |The installed GCC version minor. Useful when given a version range as input.
+|`version-patch` |The installed GCC version patch. Useful when given a version range as input.
+|`cache-hit` |A boolean value to indicate a cache entry was found
 |===
 
 

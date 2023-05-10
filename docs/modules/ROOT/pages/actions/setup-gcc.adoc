@@ -1,0 +1,78 @@
+= Setup GCC [[setup-gcc]]
+:reftext: Setup GCC
+:navtitle: Setup GCC Action
+// This setup-gcc.adoc file is automatically generated.
+// Edit parse_actions.py instead.
+
+Set up a specific version of a GCC compiler and add it to the PATH.
+In most workflows, this is used as an auxiliary action for the setup-cpp action.
+
+This allows us to test a C++ library with any GCC version, and not only the versions 
+circumstantially provided by apt-get.
+
+This action uses a number of alternatives to find or install GCC:
+
+- The GCC path provided to 'path'
+- Any other version of GCC it can find in the system
+- A version of GCC from our own binary releases
+
+The action will *not* attempt to install GCC from source files, which is the only 
+officially supported method but impossible to run in CI because the machines would take
+hours to do that.
+
+If a version of GCC is not available by any other methods above, the GCC binaries for
+a given platform can be built locally with a 
+https://github.com/alandefreitas/cpp-actions/tree/develop/setup-gcc[script,window="_blank"]
+provided in this repository and added to our binary release. 
+
+
+== Example
+
+[source,yml]
+----
+steps:
+- name: Setup GCC
+  uses: alandefreitas/cpp-actions/setup-gcc@master
+  id: setup-gcc
+  with:
+    version: g++-13
+----
+
+== Input Parameters
+
+|===
+|Parameter |Description |Default
+|`version` |Version range or exact version of GCC to use, using SemVer's version range syntax. 
+
+Reads from `gcc-file` input if unset.
+
+By default, it uses any version available in the environment.
+. |`*`
+|`path` |The gcc or g++ executable. We attempt to find GCC at this path first. |`g++`
+|`cache` |Used to specify whether the GCC installation should be cached in the case GCC needs to be downloaded."
+. |`True`
+|`architecture` |The target architecture (x86, x64). By default, this value is inferred.
+. |
+|`check-latest` |By default, when GCC is not available, this action will install the minimum version in the version spec.
+This ensures the code respects its contract in terms of what minimum GCC version is supported.
+
+Set this option if you want the action to check for the latest available version that satisfies the version spec
+instead.
+. |`false`
+|`update-environment` |Set this option if you want the action to update environment variables. |`true`
+|`trace-commands` |Trace commands executed by the workflow. |`true`
+|===
+
+== Outputs
+
+|===
+|Output |Description
+|`cc` |The absolute path to the gcc executable.
+|`cxx` |The absolute path to the g++ executable.
+|`dir` |The absolute path to the GCC directory containing the executable.
+|`version` |The installed GCC version. Useful when given a version range as input.
+|`version-major` |The installed GCC version major. Useful when given a version range as input.
+|`version-minor` |The installed GCC version minor. Useful when given a version range as input.
+|`version-patch` |The installed GCC version patch. Useful when given a version range as input.
+|`cache-hit` |A boolean value to indicate a cache entry was found
+|===

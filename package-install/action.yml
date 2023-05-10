@@ -78,6 +78,7 @@ runs:
       shell: bash
       if: ${{ runner.os == 'Linux' && inputs.apt-get }}
       run: |
+        # apt-get ${{ inputs.apt-get }}
         set -xe
         
         # Determine if apt-get should be called with `sudo`, which is often not the case with containers
