@@ -1,0 +1,58 @@
+= Setup CMake [[setup-cmake]]
+:reftext: Setup CMake
+:navtitle: Setup CMake Action
+// This setup-cmake.adoc file is automatically generated.
+// Edit parse_actions.py instead.
+
+Set up a specific version of a CMake compiler and add it to the PATH.
+
+This action will also set-up any dependencies required by CMake.
+
+In most workflows, this is used as an auxiliary action for the cmake-workflow action. 
+
+
+== Input Parameters
+
+|===
+|Parameter |Description |Default
+|`version` |Version range or exact version of CMake to use, using SemVer's version range syntax. 
+
+Reads from `cmake-file` input if unset.
+
+By default, it uses any version available in the environment.
+. |`*`
+|`cmake-file` |File containing the CMake version to use in a cmake_minimum_required command. 
+
+Example: A CMakeLists.txt file containing a call to cmake_minimum_required."
+. |`CMakeLists.txt`
+|`cmake-path` |The cmake executable. We attempt to find cmake at this path first. |`cmake`
+|`cache` |Used to specify whether the CMake installation should be cached in the case CMake needs to be downloaded."
+. |`True`
+|`architecture` |The target architecture (x86, x64). By default, this value is inferred.
+. |
+|`check-latest` |By default, when CMake is not available, this action will install the minimum version in the version spec.
+This ensures the code respects its contract in terms of what minimum CMake version is supported.
+
+Set this option if you want the action to check for the latest available version that satisfies the version spec
+instead.
+. |
+|`update-environment` |Set this option if you want the action to update environment variables. |`True`
+|`trace-commands` |Trace commands executed by the workflow. |`false`
+|===
+
+== Outputs
+
+|===
+|Output |Description
+|`version` |The installed CMake version. Useful when given a version range as input.
+|`version-major` |The installed CMake version major. Useful when given a version range as input.
+|`version-minor` |The installed CMake version minor. Useful when given a version range as input.
+|`version-patch` |The installed CMake version patch. Useful when given a version range as input.
+|`cache-hit` |A boolean value to indicate a cache entry was found
+|`path` |The absolute path to the CMake executable.
+|`dir` |The absolute path to the CMake directory.
+|`supports-path-to-build` |Whether CMake supports the -B <path-to-build> syntax
+|`supports-parallel-build` |Whether CMake supports the -j <threads> syntax
+|`supports-build-multiple-targets` |Whether CMake supports the --target with multiple targets
+|`supports-cmake-install` |Whether CMake supports the cmake --install
+|===

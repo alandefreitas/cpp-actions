@@ -30,6 +30,7 @@ NOTE: READ THE DOCS: https://alandefreitas.github.io/cpp-actions/
 - <<boost-clone>>
 - <<b2-workflow>>
 - <<create-changelog>>
+- <<setup-cmake>>
 
 === Install dependencies [[package-install]]
 :reftext: Install dependencies
@@ -155,7 +156,7 @@ steps:
 - name: CMake Workflow
   uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
-    cmake-version: '>=3.8'
+    cmake-version: '>=3.20'
     source-dir: tests
     toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
@@ -167,7 +168,7 @@ steps:
     ref-source-dir: .
 ----
 
-Example 2 (`cmake-min-version`):
+Example 2 (`build-type`, `generator`):
 
 [source,yml]
 ----
@@ -175,28 +176,7 @@ steps:
 - name: CMake Workflow
   uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
-    cmake-version: '>=3.8'
-    cmake-min-version: '3.8'
-    source-dir: tests
-    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
-    run-tests: 'true'
-    install-prefix: $GITHUB_WORKSPACE/.local
-    cxxstd: '11'
-    cxx: g++-4.8
-    cc: gcc-4.8
-    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
-    ref-source-dir: .
-----
-
-Example 3 (`build-type`, `generator`):
-
-[source,yml]
-----
-steps:
-- name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake-workflow@master
-  with:
-    cmake-version: '>=3.8'
+    cmake-version: '>=3.20'
     source-dir: tests
     generator: Unix Makefiles
     toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
@@ -207,7 +187,7 @@ steps:
     ref-source-dir: .
 ----
 
-Example 4 (`cxxflags`):
+Example 3 (`cxxflags`):
 
 [source,yml]
 ----
@@ -215,7 +195,7 @@ steps:
 - name: CMake Workflow
   uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
-    cmake-version: '>=3.8'
+    cmake-version: '>=3.20'
     source-dir: tests
     toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
@@ -232,28 +212,13 @@ steps:
 
 |===
 |Parameter |Description |Default
-|`cmake-exec` |The cmake executable. |`cmake`
+|`cmake-path` |The cmake executable. |`cmake`
 |`cmake-version` |A semver range string with the cmake versions supported by this workflow. 
 
- If the existing version in the environment does not satisfy this requirement, the action attempts
-to install or update CMake using cmake-min-version.
-
-If this input is undefined, the version ">= cmake-min-version" is considered. 
+If the existing version in the environment does not satisfy this requirement, the action install
+the min CMake version that satisfies it.
 
 This should usually match the `cmake_minimum_required` defined in your CMakeLists.txt file.
-. |
-|`cmake-min-version` |Set the minimum cmake version for this workflow when the cmake-version requirement is not satisfied. 
-
-If the existing version in the environment does not satisfy this cmake-version requirement, 
-the action attempts to install or update CMake using this cmake-min-version.
-
-If cmake-version is not set, this option overrides the `cmake-version` input as `>= cmake-min-version`.
-
-If cmake-min-version is not defined, the action attempts to extract the cmake-min-version
-from CMakeLists.txt.
-
-If a minimum version cannot be found in CMakeLists.txt, the lastest CMake version is considered 
-the minimum version. 
 . |
 |`source-dir` |Directory for the source files. |`.`
 |`build-dir` |Directory for the binaries relative to the source directory. |`build`
@@ -540,6 +505,64 @@ This constraint does not apply to the current and latest commit.
 |`trace-commands` |Trace commands executed by the workflow. |`false`
 |===
 
+=== Setup CMake [[setup-cmake]]
+:reftext: Setup CMake
+:navtitle: Setup CMake Action
+// This setup-cmake.adoc file is automatically generated.
+// Edit parse_actions.py instead.
+
+Set up a specific version of a CMake compiler and add it to the PATH.
+
+This action will also set-up any dependencies required by CMake.
+
+In most workflows, this is used as an auxiliary action for the cmake-workflow action. 
+
+
+==== Input Parameters
+
+|===
+|Parameter |Description |Default
+|`version` |Version range or exact version of CMake to use, using SemVer's version range syntax. 
+
+Reads from `cmake-file` input if unset.
+
+By default, it uses any version available in the environment.
+. |`*`
+|`cmake-file` |File containing the CMake version to use in a cmake_minimum_required command. 
+
+Example: A CMakeLists.txt file containing a call to cmake_minimum_required."
+. |`CMakeLists.txt`
+|`cmake-path` |The cmake executable. We attempt to find cmake at this path first. |`cmake`
+|`cache` |Used to specify whether the CMake installation should be cached in the case CMake needs to be downloaded."
+. |`True`
+|`architecture` |The target architecture (x86, x64). By default, this value is inferred.
+. |
+|`check-latest` |By default, when CMake is not available, this action will install the minimum version in the version spec.
+This ensures the code respects its contract in terms of what minimum CMake version is supported.
+
+Set this option if you want the action to check for the latest available version that satisfies the version spec
+instead.
+. |
+|`update-environment` |Set this option if you want the action to update environment variables. |`True`
+|`trace-commands` |Trace commands executed by the workflow. |`false`
+|===
+
+==== Outputs
+
+|===
+|Output |Description
+|`version` |The installed CMake version. Useful when given a version range as input.
+|`version-major` |The installed CMake version major. Useful when given a version range as input.
+|`version-minor` |The installed CMake version minor. Useful when given a version range as input.
+|`version-patch` |The installed CMake version patch. Useful when given a version range as input.
+|`cache-hit` |A boolean value to indicate a cache entry was found
+|`path` |The absolute path to the CMake executable.
+|`dir` |The absolute path to the CMake directory.
+|`supports-path-to-build` |Whether CMake supports the -B <path-to-build> syntax
+|`supports-parallel-build` |Whether CMake supports the -j <threads> syntax
+|`supports-build-multiple-targets` |Whether CMake supports the --target with multiple targets
+|`supports-cmake-install` |Whether CMake supports the cmake --install
+|===
 
 
 == Contributions

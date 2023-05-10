@@ -44,7 +44,7 @@ steps:
 - name: CMake Workflow
   uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
-    cmake-version: '>=3.8'
+    cmake-version: '>=3.20'
     source-dir: tests
     toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
@@ -56,7 +56,7 @@ steps:
     ref-source-dir: .
 ----
 
-Example 2 (`cmake-min-version`):
+Example 2 (`build-type`, `generator`):
 
 [source,yml]
 ----
@@ -64,28 +64,7 @@ steps:
 - name: CMake Workflow
   uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
-    cmake-version: '>=3.8'
-    cmake-min-version: '3.8'
-    source-dir: tests
-    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
-    run-tests: 'true'
-    install-prefix: $GITHUB_WORKSPACE/.local
-    cxxstd: '11'
-    cxx: g++-4.8
-    cc: gcc-4.8
-    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
-    ref-source-dir: .
-----
-
-Example 3 (`build-type`, `generator`):
-
-[source,yml]
-----
-steps:
-- name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake-workflow@master
-  with:
-    cmake-version: '>=3.8'
+    cmake-version: '>=3.20'
     source-dir: tests
     generator: Unix Makefiles
     toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
@@ -96,7 +75,7 @@ steps:
     ref-source-dir: .
 ----
 
-Example 4 (`cxxflags`):
+Example 3 (`cxxflags`):
 
 [source,yml]
 ----
@@ -104,7 +83,7 @@ steps:
 - name: CMake Workflow
   uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
-    cmake-version: '>=3.8'
+    cmake-version: '>=3.20'
     source-dir: tests
     toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
@@ -121,28 +100,13 @@ steps:
 
 |===
 |Parameter |Description |Default
-|`cmake-exec` |The cmake executable. |`cmake`
+|`cmake-path` |The cmake executable. |`cmake`
 |`cmake-version` |A semver range string with the cmake versions supported by this workflow. 
 
- If the existing version in the environment does not satisfy this requirement, the action attempts
-to install or update CMake using cmake-min-version.
-
-If this input is undefined, the version ">= cmake-min-version" is considered. 
+If the existing version in the environment does not satisfy this requirement, the action install
+the min CMake version that satisfies it.
 
 This should usually match the `cmake_minimum_required` defined in your CMakeLists.txt file.
-. |
-|`cmake-min-version` |Set the minimum cmake version for this workflow when the cmake-version requirement is not satisfied. 
-
-If the existing version in the environment does not satisfy this cmake-version requirement, 
-the action attempts to install or update CMake using this cmake-min-version.
-
-If cmake-version is not set, this option overrides the `cmake-version` input as `>= cmake-min-version`.
-
-If cmake-min-version is not defined, the action attempts to extract the cmake-min-version
-from CMakeLists.txt.
-
-If a minimum version cannot be found in CMakeLists.txt, the lastest CMake version is considered 
-the minimum version. 
 . |
 |`source-dir` |Directory for the source files. |`.`
 |`build-dir` |Directory for the binaries relative to the source directory. |`build`

@@ -4,6 +4,7 @@
 * xref:actions/boost-clone.adoc[]
 * xref:actions/b2-workflow.adoc[]
 * xref:actions/create-changelog.adoc[]
+* xref:actions/setup-cmake.adoc[]
 * xref:contribute.adoc[]
 * xref:license.adoc[]
 
