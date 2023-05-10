@@ -93,6 +93,9 @@
     <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contribute</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -237,7 +240,7 @@ annotations for CMake errors at the configure step and build errors emitted from
 - name: CMake Workflow
   uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
-    cmake-version: '&gt;=3.8'
+    cmake-version: '&gt;=3.20'
     source-dir: tests
     toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
@@ -250,7 +253,7 @@ annotations for CMake errors at the configure step and build errors emitted from
 </div>
 </div>
 <div class="paragraph">
-<p>Example 2 (<code>cmake-min-version</code>):</p>
+<p>Example 2 (<code>build-type</code>, <code>generator</code>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -258,29 +261,7 @@ annotations for CMake errors at the configure step and build errors emitted from
 - name: CMake Workflow
   uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
-    cmake-version: '&gt;=3.8'
-    cmake-min-version: '3.8'
-    source-dir: tests
-    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
-    run-tests: 'true'
-    install-prefix: $GITHUB_WORKSPACE/.local
-    cxxstd: '11'
-    cxx: g++-4.8
-    cc: gcc-4.8
-    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
-    ref-source-dir: .</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 3 (<code>build-type</code>, <code>generator</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake-workflow@master
-  with:
-    cmake-version: '&gt;=3.8'
+    cmake-version: '&gt;=3.20'
     source-dir: tests
     generator: Unix Makefiles
     toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
@@ -292,7 +273,7 @@ annotations for CMake errors at the configure step and build errors emitted from
 </div>
 </div>
 <div class="paragraph">
-<p>Example 4 (<code>cxxflags</code>):</p>
+<p>Example 3 (<code>cxxflags</code>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -300,7 +281,7 @@ annotations for CMake errors at the configure step and build errors emitted from
 - name: CMake Workflow
   uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
-    cmake-version: '&gt;=3.8'
+    cmake-version: '&gt;=3.20'
     source-dir: tests
     toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
@@ -331,30 +312,16 @@ annotations for CMake errors at the configure step and build errors emitted from
 <td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-exec</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-path</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The cmake executable.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-version</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">A semver range string with the cmake versions supported by this workflow.</p>
-<p class="tableblock"> If the existing version in the environment does not satisfy this requirement, the action attempts
-to install or update CMake using cmake-min-version.</p>
-<p class="tableblock">If this input is undefined, the version "&gt;= cmake-min-version" is considered.</p>
+<p class="tableblock">If the existing version in the environment does not satisfy this requirement, the action install
+the min CMake version that satisfies it.</p>
 <p class="tableblock">This should usually match the <code>cmake_minimum_required</code> defined in your CMakeLists.txt file.
-.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-min-version</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Set the minimum cmake version for this workflow when the cmake-version requirement is not satisfied.</p>
-<p class="tableblock">If the existing version in the environment does not satisfy this cmake-version requirement,
-the action attempts to install or update CMake using this cmake-min-version.</p>
-<p class="tableblock">If cmake-version is not set, this option overrides the <code>cmake-version</code> input as <code>&gt;= cmake-min-version</code>.</p>
-<p class="tableblock">If cmake-min-version is not defined, the action attempts to extract the cmake-min-version
-from CMakeLists.txt.</p>
-<p class="tableblock">If a minimum version cannot be found in CMakeLists.txt, the lastest CMake version is considered
-the minimum version.
 .</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>

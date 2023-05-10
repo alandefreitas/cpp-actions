@@ -93,6 +93,9 @@
     <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contribute</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -173,6 +176,9 @@
 </li>
 <li>
 <p><a href="#create-changelog">Create Changelog</a></p>
+</li>
+<li>
+<p><a href="#setup-cmake">Setup CMake</a></p>
 </li>
 </ul>
 </div>
@@ -408,7 +414,7 @@ annotations for CMake errors at the configure step and build errors emitted from
 - name: CMake Workflow
   uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
-    cmake-version: '&gt;=3.8'
+    cmake-version: '&gt;=3.20'
     source-dir: tests
     toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
@@ -421,7 +427,7 @@ annotations for CMake errors at the configure step and build errors emitted from
 </div>
 </div>
 <div class="paragraph">
-<p>Example 2 (<code>cmake-min-version</code>):</p>
+<p>Example 2 (<code>build-type</code>, <code>generator</code>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -429,29 +435,7 @@ annotations for CMake errors at the configure step and build errors emitted from
 - name: CMake Workflow
   uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
-    cmake-version: '&gt;=3.8'
-    cmake-min-version: '3.8'
-    source-dir: tests
-    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
-    run-tests: 'true'
-    install-prefix: $GITHUB_WORKSPACE/.local
-    cxxstd: '11'
-    cxx: g++-4.8
-    cc: gcc-4.8
-    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
-    ref-source-dir: .</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 3 (<code>build-type</code>, <code>generator</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake-workflow@master
-  with:
-    cmake-version: '&gt;=3.8'
+    cmake-version: '&gt;=3.20'
     source-dir: tests
     generator: Unix Makefiles
     toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
@@ -463,7 +447,7 @@ annotations for CMake errors at the configure step and build errors emitted from
 </div>
 </div>
 <div class="paragraph">
-<p>Example 4 (<code>cxxflags</code>):</p>
+<p>Example 3 (<code>cxxflags</code>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -471,7 +455,7 @@ annotations for CMake errors at the configure step and build errors emitted from
 - name: CMake Workflow
   uses: alandefreitas/cpp-actions/cmake-workflow@master
   with:
-    cmake-version: '&gt;=3.8'
+    cmake-version: '&gt;=3.20'
     source-dir: tests
     toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
@@ -500,30 +484,16 @@ annotations for CMake errors at the configure step and build errors emitted from
 <td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-exec</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-path</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The cmake executable.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-version</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">A semver range string with the cmake versions supported by this workflow.</p>
-<p class="tableblock"> If the existing version in the environment does not satisfy this requirement, the action attempts
-to install or update CMake using cmake-min-version.</p>
-<p class="tableblock">If this input is undefined, the version "&gt;= cmake-min-version" is considered.</p>
+<p class="tableblock">If the existing version in the environment does not satisfy this requirement, the action install
+the min CMake version that satisfies it.</p>
 <p class="tableblock">This should usually match the <code>cmake_minimum_required</code> defined in your CMakeLists.txt file.
-.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-min-version</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Set the minimum cmake version for this workflow when the cmake-version requirement is not satisfied.</p>
-<p class="tableblock">If the existing version in the environment does not satisfy this cmake-version requirement,
-the action attempts to install or update CMake using this cmake-min-version.</p>
-<p class="tableblock">If cmake-version is not set, this option overrides the <code>cmake-version</code> input as <code>&gt;= cmake-min-version</code>.</p>
-<p class="tableblock">If cmake-min-version is not defined, the action attempts to extract the cmake-min-version
-from CMakeLists.txt.</p>
-<p class="tableblock">If a minimum version cannot be found in CMakeLists.txt, the lastest CMake version is considered
-the minimum version.
 .</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
@@ -1033,6 +1003,147 @@ in the notes is complete.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="setup-cmake"><a class="anchor" href="#setup-cmake"></a>Setup CMake</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Set up a specific version of a CMake compiler and add it to the PATH.</p>
+</div>
+<div class="paragraph">
+<p>This action will also set-up any dependencies required by CMake.</p>
+</div>
+<div class="paragraph">
+<p>In most workflows, this is used as an auxiliary action for the cmake-workflow action.</p>
+</div>
+<div class="sect2">
+<h3 id="_input_parameters_6"><a class="anchor" href="#_input_parameters_6"></a>Input Parameters</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Parameter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Version range or exact version of CMake to use, using SemVer&#8217;s version range syntax.</p>
+<p class="tableblock">Reads from <code>cmake-file</code> input if unset.</p>
+<p class="tableblock">By default, it uses any version available in the environment.
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>*</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-file</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">File containing the CMake version to use in a cmake_minimum_required command.</p>
+<p class="tableblock">Example: A CMakeLists.txt file containing a call to cmake_minimum_required."
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>CMakeLists.txt</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-path</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The cmake executable. We attempt to find cmake at this path first.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Used to specify whether the CMake installation should be cached in the case CMake needs to be downloaded."
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>True</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>architecture</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The target architecture (x86, x64). By default, this value is inferred.
+.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>check-latest</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">By default, when CMake is not available, this action will install the minimum version in the version spec.
+This ensures the code respects its contract in terms of what minimum CMake version is supported.</p>
+<p class="tableblock">Set this option if you want the action to check for the latest available version that satisfies the version spec
+instead.
+.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>update-environment</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Set this option if you want the action to update environment variables.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>True</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_outputs_2"><a class="anchor" href="#_outputs_2"></a>Outputs</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Output</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The installed CMake version. Useful when given a version range as input.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-major</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The installed CMake version major. Useful when given a version range as input.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-minor</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The installed CMake version minor. Useful when given a version range as input.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-patch</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The installed CMake version patch. Useful when given a version range as input.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache-hit</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A boolean value to indicate a cache entry was found</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>path</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the CMake executable.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the CMake directory.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>supports-path-to-build</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether CMake supports the -B &lt;path-to-build&gt; syntax</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>supports-parallel-build</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether CMake supports the -j &lt;threads&gt; syntax</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>supports-build-multiple-targets</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether CMake supports the --target with multiple targets</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>supports-cmake-install</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether CMake supports the cmake --install</p></td>
 </tr>
 </tbody>
 </table>
