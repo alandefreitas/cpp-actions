@@ -220,7 +220,7 @@ runs:
         lenient: true
 
     - name: Find a CMake release version that satisfies the requirements
-      uses: alandefreitas/cpp-actions/semver-utils@develop
+      uses: alandefreitas/cpp-actions/semver-utils@v1.1.0
       if: ${{ steps.system-version.outputs.satisfies == 'false' }}
       id: min-version
       with:

@@ -172,7 +172,7 @@ runs:
         fi
 
     - name: Setup CMake
-      uses: alandefreitas/cpp-actions/setup-cmake@develop
+      uses: alandefreitas/cpp-actions/setup-cmake@v1.1.0
       id: setup-cmake
       with:
         version: ${{ inputs.cmake-version }}

@@ -58,7 +58,7 @@ inputs:
   trace-commands:
     description: 'Trace commands executed by the workflow.'
     required: false
-    default: 'true'
+    default: 'false'
 
 outputs:
   cc:
@@ -129,7 +129,7 @@ runs:
 
     - name: Setup GCC
       if: ${{ steps.split-compiler.outputs.compiler == 'gcc' }}
-      uses: alandefreitas/cpp-actions/setup-gcc@develop
+      uses: alandefreitas/cpp-actions/setup-gcc@v1.1.0
       id: setup-gcc
       with:
         version: ${{ steps.split-compiler.outputs.version }}
@@ -142,7 +142,7 @@ runs:
         
     - name: Setup Clang
       if: ${{ steps.split-compiler.outputs.compiler == 'clang' }}
-      uses: alandefreitas/cpp-actions/setup-clang@develop
+      uses: alandefreitas/cpp-actions/setup-clang@v1.1.0
       id: setup-clang
       with:
         version: ${{ steps.split-compiler.outputs.version }}
