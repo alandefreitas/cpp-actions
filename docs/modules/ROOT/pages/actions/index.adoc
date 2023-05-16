@@ -9,6 +9,7 @@
 - <<create-changelog>>
 - <<setup-cmake>>
 - <<setup-gcc>>
+- <<setup-clang>>
 
 include::package-install.adoc[leveloffset=+1]
 include::cmake-workflow.adoc[leveloffset=+1]
@@ -17,3 +18,4 @@ include::b2-workflow.adoc[leveloffset=+1]
 include::create-changelog.adoc[leveloffset=+1]
 include::setup-cmake.adoc[leveloffset=+1]
 include::setup-gcc.adoc[leveloffset=+1]
+include::setup-clang.adoc[leveloffset=+1]

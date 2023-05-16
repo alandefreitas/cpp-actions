@@ -234,7 +234,8 @@ runs:
       if: steps.cache-vcpkg.outputs.cache-hit != 'true' && inputs.vcpkg != ''
       shell: bash
       run: |
-        set -xe
+        # Vcpkg bootstrap and install packages 
+        set -x
         git clone https://github.com/microsoft/vcpkg.git -b ${{ inputs.vcpkg-branch }} ${{ inputs.vcpkg-dir }}
         ${{ steps.ctx.outputs.vcpkg_bs_exe }}
         cd ${{ inputs.vcpkg-dir }}
@@ -243,5 +244,16 @@ runs:
         ${{ (inputs.cc != '' && format('export CC="{0}"', inputs.cc)) || '' }}
         for package in ${packages// / }
         do
+          set +e
           ${{ steps.ctx.outputs.vcpkg-executable }} install $package${{ steps.ctx.outputs.triplet_suffix }}
+          set -e
+          if [ -f /home/runner/work/cpp-actions/cpp-actions/vcpkg/buildtrees/detect_compiler/config-x64-linux-rel-CMakeCache.txt.log ]; then
+            cat /home/runner/work/cpp-actions/cpp-actions/vcpkg/buildtrees/detect_compiler/config-x64-linux-rel-CMakeCache.txt.log
+          fi
+          if [ -f /home/runner/work/cpp-actions/cpp-actions/vcpkg/buildtrees/detect_compiler/config-x64-linux-rel-out.log ]; then
+            cat /home/runner/work/cpp-actions/cpp-actions/vcpkg/buildtrees/detect_compiler/config-x64-linux-rel-out.log
+          fi
+          if [ -f /home/runner/work/cpp-actions/cpp-actions/vcpkg/buildtrees/detect_compiler/config-x64-linux-rel-err.log ]; then
+            cat /home/runner/work/cpp-actions/cpp-actions/vcpkg/buildtrees/detect_compiler/config-x64-linux-rel-err.log
+          fi
         done

@@ -22,26 +22,13 @@ steps:
   id: package-install
   with:
     vcpkg: fmt
-    cxx: g++-13
-    cc: gcc-13
+    cxx: ${{ ( 'g++-13' && format ( '{0} {1}' , steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx
+      || 'g++-13' , '' ) ) || '' }}
+    cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || 'gcc-13'
+      }}
 ----
 
-Example 2 (`apt-get`):
-
-[source,yml]
-----
-steps:
-- name: Install packages
-  uses: alandefreitas/cpp-actions/package-install@master
-  id: package-install
-  with:
-    vcpkg: fmt
-    apt-get: clang-12
-    cxx: clang++-12
-    cc: clang-12
-----
-
-Example 3 (`apt-get-ignore-missing`):
+Example 2 (`apt-get-ignore-missing`, `apt-get`):
 
 [source,yml]
 ----
@@ -56,8 +43,10 @@ steps:
       g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3
       ccache libpython-dev python3-distutils python3-pip git cmake
     apt-get-ignore-missing: 'true'
-    cxx: clang++-3.8
-    cc: clang-3.8
+    cxx: ${{ ( 'clang++-3.8' && format ( '{0} {1}' , steps.setup-gcc.outputs.cxx ||
+      steps.setup-clang.outputs.cxx || 'clang++-3.8' , '' ) ) || '' }}
+    cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || 'clang-3.8'
+      }}
 ----
 
 == Input Parameters

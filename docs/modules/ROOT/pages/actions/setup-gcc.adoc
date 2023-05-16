@@ -44,13 +44,11 @@ steps:
 |Parameter |Description |Default
 |`version` |Version range or exact version of GCC to use, using SemVer's version range syntax. 
 
-Reads from `gcc-file` input if unset.
-
 By default, it uses any version available in the environment.
 . |`*`
 |`path` |The gcc or g++ executable. We attempt to find GCC at this path first. |`g++`
 |`cache` |Used to specify whether the GCC installation should be cached in the case GCC needs to be downloaded."
-. |`True`
+. |`true`
 |`architecture` |The target architecture (x86, x64). By default, this value is inferred.
 . |
 |`check-latest` |By default, when GCC is not available, this action will install the minimum version in the version spec.

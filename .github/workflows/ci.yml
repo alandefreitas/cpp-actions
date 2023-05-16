@@ -32,7 +32,7 @@ jobs:
         include:
           # Latest
           - { name: 'GCC 13 (Latest): C++17-20', toolset: gcc-13, cxx: g++-13, cc: gcc-13, cxxstd: "17,20", os: ubuntu-22.04 }
-          - { name: 'Clang 12 (Latest): C++17-20', toolset: clang, cxx: clang++-12, cc: clang-12, cxxstd: "17,20", os: ubuntu-22.04, install: [ clang-12 ] }
+          - { name: 'Clang 12 (Latest): C++17-20', toolset: clang, cxx: clang++-12, cc: clang-12, cxxstd: "17,20", os: ubuntu-22.04 }
           - { name: 'MSVC 14.3 (Latest): C++17-20', toolset: msvc-14.3, cxxstd: "17,20", address-model: '32,64', os: windows-2022 }
           - { name: 'AppleClang (Latest): C++11-17', toolset: clang, cxxstd: "11,14,17", os: macos-11 }
 
@@ -61,12 +61,12 @@ jobs:
           # Clang
           - { name: 'Clang 11: C++14-17', toolset: clang, cxx: clang++-11, cc: clang-11, cxxstd: "14,17", os: ubuntu-20.04, install: [ clang-11 ] }
           - { name: 'Clang 10: C++14-17', toolset: clang, cxx: clang++-10, cc: clang-10, cxxstd: "14,17", os: ubuntu-20.04, install: [ clang-10 ] }
-          - { name: 'Clang 9: C++14-17', toolset: clang, cxx: clang++-9, cc: clang-9, cxxstd: "14,17", os: ubuntu-22.04, container: 'ubuntu:18.04', install: [ clang-9 ] }
-          - { name: 'Clang 8: C++17', toolset: clang, cxx: clang++-8, cc: clang-8, cxxstd: "17", os: ubuntu-22.04, container: 'ubuntu:18.04', install: [ clang-8, g++-7 ], gcc-toolchain: 7 }
-          - { name: 'Clang 7: C++17', toolset: clang, cxx: clang++-7, cc: clang-7, cxxstd: "17", os: ubuntu-22.04, container: 'ubuntu:18.04', install: [ clang-7 ] }
-          - { name: 'Clang 6.0: C++14-17', toolset: clang, cxx: clang++-6.0, cc: clang-6.0, cxxstd: "14,17", os: ubuntu-22.04, container: 'ubuntu:18.04', install: [ clang-6.0 ] }
-          - { name: 'Clang 5.0: C++11-14', toolset: clang, cxx: clang++-5.0, cc: clang-5.0, cxxstd: "11,14", os: ubuntu-22.04, container: 'ubuntu:18.04', install: [ clang-5.0 ] }
-          - { name: 'Clang 4.0: C++11-14', toolset: clang, cxx: clang++-4.0, cc: clang-4.0, cxxstd: "11,14", os: ubuntu-22.04, container: 'ubuntu:18.04', install: [ clang-4.0 ] }
+          - { name: 'Clang 9: C++14-17', toolset: clang, cxx: clang++-9, cc: clang-9, cxxstd: "14,17", os: ubuntu-22.04 }
+          - { name: 'Clang 8 + GCC7: C++17', toolset: clang, cxx: clang++-8, cc: clang-8, cxxstd: "17", os: ubuntu-22.04, container: 'ubuntu:18.04', install: [ clang-8, g++-7 ], gcc-toolchain: 7 }
+          - { name: 'Clang 7: C++17', toolset: clang, cxx: clang++-7, cc: clang-7, cxxstd: "17", os: ubuntu-22.04 }
+          - { name: 'Clang 6.0: C++14-17', toolset: clang, cxx: clang++-6.0, cc: clang-6.0, cxxstd: "14,17", os: ubuntu-22.04 }
+          - { name: 'Clang 5.0: C++11-14', toolset: clang, cxx: clang++-5.0, cc: clang-5.0, cxxstd: "11,14", os: ubuntu-22.04 }
+          - { name: 'Clang 4.0: C++11-14', toolset: clang, cxx: clang++-4.0, cc: clang-4.0, cxxstd: "11,14", os: ubuntu-22.04 }
 
     name: ${{ matrix.name }}
     timeout-minutes: 120
@@ -87,6 +87,13 @@ jobs:
         with:
           version: ${{ matrix.cxx }}
 
+      - name: Setup Clang
+        if: ${{ startsWith(matrix.cxx, 'clang++') && !matrix.install }}
+        uses: ./setup-clang
+        id: setup-clang
+        with:
+          version: ${{ matrix.cxx }}
+
       - name: Install packages
         uses: ./package-install
         id: package-install
@@ -94,8 +101,8 @@ jobs:
           vcpkg: fmt
           apt-get: ${{ join(matrix.install, ' ') }} ${{ matrix.container && 'sudo software-properties-common tzdata wget curl apt-transport-https make apt-file unzip libssl-dev build-essential autotools-dev autoconf automake g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3 ccache libpython-dev python3-distutils python3-pip git cmake' }}
           apt-get-ignore-missing: ${{ matrix.container && 'true' }}
-          cxx: ${{ ( matrix.cxx && format('{0} {1}', matrix.cxx, matrix.cxxflags)) || '' }}
-          cc: ${{ matrix.cc }}
+          cxx: ${{ ( matrix.cxx && format('{0} {1}', steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx || matrix.cxx, matrix.cxxflags)) || '' }}
+          cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || matrix.cc }}
 
       - name: Clone Boost.Variant2
         uses: ./boost-clone
@@ -131,8 +138,8 @@ jobs:
           run-tests: true
           install-prefix: $GITHUB_WORKSPACE/.local
           cxxstd: ${{ matrix.cxxstd }}
-          cc: ${{ steps.setup-gcc.outputs.cc || matrix.cc }}
-          cxx: ${{ steps.setup-gcc.outputs.cxx || matrix.cxx }}
+          cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || matrix.cc }}
+          cxx: ${{ steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx || matrix.cxx }}
           cxxflags: ${{ matrix.cxxflags }} ${{ matrix.ubsan && '-fsanitize=undefined' }}
           extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
           ref-source-dir: .
