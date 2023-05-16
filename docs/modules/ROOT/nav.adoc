@@ -1,4 +1,5 @@
 * xref:index.adoc[]
+* xref:actions/setup-cpp.adoc[]
 * xref:actions/package-install.adoc[]
 * xref:actions/cmake-workflow.adoc[]
 * xref:actions/boost-clone.adoc[]
@@ -6,6 +7,7 @@
 * xref:actions/create-changelog.adoc[]
 * xref:actions/setup-cmake.adoc[]
 * xref:actions/setup-gcc.adoc[]
+* xref:actions/setup-clang.adoc[]
 * xref:contribute.adoc[]
 * xref:license.adoc[]
 

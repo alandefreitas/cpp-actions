@@ -37,7 +37,7 @@ Set this option if you want the action to check for the latest available version
 instead.
 . |`false`
 |`update-environment` |Set this option if you want the action to update environment variables. |`true`
-|`trace-commands` |Trace commands executed by the workflow. |`true`
+|`trace-commands` |Trace commands executed by the workflow. |`false`
 |===
 
 == Outputs
