@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>B2 Workflow | C++ Actions</title>    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/b2-workflow.html">
+<title>Setup Clang | C++ Actions</title>    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/setup-clang.html">
     <meta name="generator" content="Antora 3.1.3">
 <link rel="stylesheet" href="../../_/stylesheets/vendor/libs.css">
 <link rel="stylesheet" href="../../_/stylesheets/site.css">
@@ -19,7 +19,7 @@
 
         <div id="topbar-nav" class="navbar-menu">
             <div class="navbar-item is-hoverable">
-                <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions: B2 Workflow</a>
+                <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions: Setup Clang</a>
             </div>
             <div class="navbar-item is-hoverable">
                 <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions" target="_blank">GitHub</a>
@@ -83,7 +83,7 @@
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="1">
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="b2-workflow.html">B2 Workflow Action</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -140,17 +140,17 @@
   <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">C++ Actions</a></li>
-    <li><a href="b2-workflow.html">B2 Workflow Action</a></li>
+    <li><a href="setup-clang.html">Setup Clang</a></li>
   </ul>
 </nav>
   <div class="page-versions">
   <button class="version-menu-toggle"
     title="Show other versions of page">master</button>
   <div class="version-menu">
-    <a class="version is-current" href="b2-workflow.html">master</a>
-    <a class="version" href="../develop/actions/b2-workflow.html">develop</a>
-    <a class="version" href="../v1.1.0/actions/b2-workflow.html">v1.1.0</a>
-    <a class="version" href="../v1.0.0/actions/b2-workflow.html">v1.0.0</a>
+    <a class="version is-current" href="setup-clang.html">master</a>
+    <a class="version" href="../develop/actions/setup-clang.html">develop</a>
+    <a class="version" href="../v1.1.0/actions/setup-clang.html">v1.1.0</a>
+    <a class="version is-missing" href="../v1.0.0/index.html">v1.0.0</a>
   </div>
 </div>
   </div>
@@ -161,121 +161,32 @@
 </div>
   <div class="content">
 <article class="doc">
-<h1 class="page">B2 Workflow</h1>
+<h1 class="page">Setup Clang</h1>
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>This action runs a complete B2 workflow from Boost source files.</p>
+<p>Set up a specific version of a Clang compiler and add it to the PATH.
+In most workflows, this is used as an auxiliary action for the setup-cpp action.</p>
 </div>
 <div class="paragraph">
-<p>It takes the Boost source directory and does whatever it needs to test the specified modules. This includes
-compiling <code>b2</code> if needed and generating a proper <code>user-config.jam</code> file.</p>
+<p>This allows us to test a C++ library with any Clang version, and not only the versions
+circumstantially provided by apt-get.</p>
 </div>
 <div class="paragraph">
-<p>This action is particularly useful for Boost library proposals.</p>
+<p>This action uses a number of alternatives to find or install Clang:</p>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_examples"><a class="anchor" href="#_examples"></a>Examples</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>Example 1:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
-  with:
-    source-dir: boost-root
-    modules: variant2
-    toolset: gcc-13
-    cxxstd: 17,20</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 2 (<code>cxx</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
-  with:
-    source-dir: boost-root
-    modules: variant2
-    toolset: clang
-    cxx: clang++-12
-    cxxstd: 17,20</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 3 (<code>address-model</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
-  with:
-    source-dir: boost-root
-    modules: variant2
-    toolset: msvc-14.3
-    cxxstd: 17,20
-    address-model: 32,64</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 4 (<code>ubsan</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
-  with:
-    source-dir: boost-root
-    modules: variant2
-    toolset: gcc-13
-    cxxstd: 17,20
-    ubsan: 'true'</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 5 (<code>cxxflags</code>, <code>linkflags</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
-  with:
-    source-dir: boost-root
-    modules: variant2
-    toolset: clang
-    cxx: clang++-12
-    cxxstd: 17,20
-    cxxflags: -stdlib=libc++
-    linkflags: -stdlib=libc++</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 6 (<code>gcc-toolchain</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
-  with:
-    source-dir: boost-root
-    modules: variant2
-    toolset: clang
-    cxx: clang++-8
-    cxxstd: '17'
-    gcc-toolchain: '7'</code></pre>
-</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The Clang path provided to 'path'</p>
+</li>
+<li>
+<p>Any other version of Clang it can find in the system</p>
+</li>
+<li>
+<p>A version of Clang from our own binary releases</p>
+</li>
+</ul>
 </div>
 </div>
 </div>
@@ -295,69 +206,96 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 <td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>source-dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The boost source directory.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Version range or exact version of Clang to use, using SemVer&#8217;s version range syntax.</p>
+<p class="tableblock">By default, it uses any version available in the environment.
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>*</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-variant</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Custom build variants.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>path</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The clang or clang++ executable. We attempt to find Clang at this path first.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>clang++</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Used to specify whether the Clang installation should be cached in the case Clang needs to be downloaded."
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>architecture</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The target architecture (x86, x64). By default, this value is inferred.
+.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>modules</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The list of modules we should test.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc-toolchain</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Create a special GCC toolchain for this version of GCC and update user-config.jam.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>toolset</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Toolset name.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>address-model</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Valid b2 list of address models.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Path to C++ compiler.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Extra compiler flags.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>linkflags</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Extra linker flags.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxstd</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of standards with which b2 will build and test the program.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ubsan</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Whether the undefined behavior sanitizer should be used.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>check-latest</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">By default, when Clang is not available, this action will install the minimum version in the version spec.
+This ensures the code respects its contract in terms of what minimum Clang version is supported.</p>
+<p class="tableblock">Set this option if you want the action to check for the latest available version that satisfies the version spec
+instead.
+.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>threading</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">b2 threading option.</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>update-environment</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Set this option if you want the action to update environment variables.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_outputs"><a class="anchor" href="#_outputs"></a>Outputs</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Output</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the clang executable.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the clang++ executable.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the Clang directory containing the executable.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The installed Clang version. Useful when given a version range as input.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-major</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The installed Clang version major. Useful when given a version range as input.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-minor</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The installed Clang version minor. Useful when given a version range as input.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-patch</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The installed Clang version patch. Useful when given a version range as input.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache-hit</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A boolean value to indicate a cache entry was found</p></td>
 </tr>
 </tbody>
 </table>

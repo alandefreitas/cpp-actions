@@ -90,6 +90,12 @@
     <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="setup-gcc.html">Setup GCC Action</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contribute</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -116,6 +122,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.1.0/index.html">v1.1.0</a>
+        </li>
+        <li class="version">
           <a href="../v1.0.0/index.html">v1.0.0</a>
         </li>
       </ul>
@@ -140,6 +149,7 @@
   <div class="version-menu">
     <a class="version is-current" href="package-install.html">master</a>
     <a class="version" href="../develop/actions/package-install.html">develop</a>
+    <a class="version" href="../v1.1.0/actions/package-install.html">v1.1.0</a>
     <a class="version" href="../v1.0.0/actions/package-install.html">v1.0.0</a>
   </div>
 </div>
@@ -177,13 +187,14 @@ Both vcpkg and its dependencies are cached.</p>
   id: package-install
   with:
     vcpkg: fmt
-    apt-get: g++-11
-    cxx: g++-11
-    cc: gcc-11</code></pre>
+    cxx: ${{ ( 'g++-13' &amp;&amp; format ( '{0} {1}' , steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx
+      || 'g++-13' , '' ) ) || '' }}
+    cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || 'gcc-13'
+      }}</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Example 2 (<code>apt-get-ignore-missing</code>):</p>
+<p>Example 2 (<code>apt-get-ignore-missing</code>, <code>apt-get</code>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -193,13 +204,15 @@ Both vcpkg and its dependencies are cached.</p>
   id: package-install
   with:
     vcpkg: fmt
-    apt-get: g++-4.8 sudo software-properties-common tzdata wget curl apt-transport-https
+    apt-get: clang-3.8 sudo software-properties-common tzdata wget curl apt-transport-https
       make apt-file unzip libssl-dev build-essential autotools-dev autoconf automake
       g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3
       ccache libpython-dev python3-distutils python3-pip git cmake
     apt-get-ignore-missing: 'true'
-    cxx: g++-4.8
-    cc: gcc-4.8</code></pre>
+    cxx: ${{ ( 'clang++-3.8' &amp;&amp; format ( '{0} {1}' , steps.setup-gcc.outputs.cxx ||
+      steps.setup-clang.outputs.cxx || 'clang++-3.8' , '' ) ) || '' }}
+    cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || 'clang-3.8'
+      }}</code></pre>
 </div>
 </div>
 </div>
