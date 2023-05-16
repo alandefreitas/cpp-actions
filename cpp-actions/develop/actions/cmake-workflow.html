@@ -96,6 +96,9 @@
     <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="setup-gcc.html">Setup GCC Action</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contribute</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -246,14 +249,36 @@ annotations for CMake errors at the configure step and build errors emitted from
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
-    cxx: g++-11
-    cc: gcc-11
+    cc: ${{ steps.setup-gcc.outputs.cc || 'gcc-13' }}
+    cxx: ${{ steps.setup-gcc.outputs.cxx || 'g++-13' }}
     extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
     ref-source-dir: .</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Example 2 (<code>build-type</code>, <code>generator</code>):</p>
+<p>Example 2 (<code>cxxflags</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: CMake Workflow
+  uses: alandefreitas/cpp-actions/cmake-workflow@master
+  with:
+    cmake-version: '&gt;=3.20'
+    source-dir: tests
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
+    run-tests: 'true'
+    install-prefix: $GITHUB_WORKSPACE/.local
+    cxxstd: 17,20
+    cc: ${{ steps.setup-gcc.outputs.cc || 'gcc-13' }}
+    cxx: ${{ steps.setup-gcc.outputs.cxx || 'g++-13' }}
+    cxxflags: -fsanitize=undefined
+    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
+    ref-source-dir: .</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 3 (<code>build-type</code>, <code>generator</code>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -268,28 +293,8 @@ annotations for CMake errors at the configure step and build errors emitted from
     build-type: Debug
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
-    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
-    ref-source-dir: .</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 3 (<code>cxxflags</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake-workflow@master
-  with:
-    cmake-version: '&gt;=3.20'
-    source-dir: tests
-    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
-    run-tests: 'true'
-    install-prefix: $GITHUB_WORKSPACE/.local
-    cxxstd: 17,20
-    cxx: clang++-12
-    cxxflags: -stdlib=libc++
-    cc: clang-12
+    cc: ${{ steps.setup-gcc.outputs.cc || '' }}
+    cxx: ${{ steps.setup-gcc.outputs.cxx || '' }}
     extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
     ref-source-dir: .</code></pre>
 </div>

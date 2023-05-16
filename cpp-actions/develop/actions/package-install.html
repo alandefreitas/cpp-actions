@@ -96,6 +96,9 @@
     <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="setup-gcc.html">Setup GCC Action</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contribute</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -183,13 +186,12 @@ Both vcpkg and its dependencies are cached.</p>
   id: package-install
   with:
     vcpkg: fmt
-    apt-get: g++-11
-    cxx: g++-11
-    cc: gcc-11</code></pre>
+    cxx: g++-13
+    cc: gcc-13</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Example 2 (<code>apt-get-ignore-missing</code>):</p>
+<p>Example 2 (<code>apt-get</code>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -199,13 +201,29 @@ Both vcpkg and its dependencies are cached.</p>
   id: package-install
   with:
     vcpkg: fmt
-    apt-get: g++-4.8 sudo software-properties-common tzdata wget curl apt-transport-https
+    apt-get: clang-12
+    cxx: clang++-12
+    cc: clang-12</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 3 (<code>apt-get-ignore-missing</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Install packages
+  uses: alandefreitas/cpp-actions/package-install@master
+  id: package-install
+  with:
+    vcpkg: fmt
+    apt-get: clang-3.8 sudo software-properties-common tzdata wget curl apt-transport-https
       make apt-file unzip libssl-dev build-essential autotools-dev autoconf automake
       g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3
       ccache libpython-dev python3-distutils python3-pip git cmake
     apt-get-ignore-missing: 'true'
-    cxx: g++-4.8
-    cc: gcc-4.8</code></pre>
+    cxx: clang++-3.8
+    cc: clang-3.8</code></pre>
 </div>
 </div>
 </div>
