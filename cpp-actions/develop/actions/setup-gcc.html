@@ -201,21 +201,6 @@ provided in this repository and added to our binary release.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_example"><a class="anchor" href="#_example"></a>Example</h2>
-<div class="sectionbody">
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Setup GCC
-  uses: alandefreitas/cpp-actions/setup-gcc@master
-  id: setup-gcc
-  with:
-    version: g++-13</code></pre>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
 <h2 id="_input_parameters"><a class="anchor" href="#_input_parameters"></a>Input Parameters</h2>
 <div class="sectionbody">
 <table class="tableblock frame-all grid-all stretch">
@@ -233,7 +218,6 @@ provided in this repository and added to our binary release.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>version</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Version range or exact version of GCC to use, using SemVer&#8217;s version range syntax.</p>
-<p class="tableblock">Reads from <code>gcc-file</code> input if unset.</p>
 <p class="tableblock">By default, it uses any version available in the environment.
 .</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>*</code></p></td>
@@ -247,7 +231,7 @@ provided in this repository and added to our binary release.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Used to specify whether the GCC installation should be cached in the case GCC needs to be downloaded."
 .</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>True</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>architecture</code></p></td>

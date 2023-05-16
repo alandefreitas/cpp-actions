@@ -249,8 +249,10 @@ annotations for CMake errors at the configure step and build errors emitted from
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
-    cc: ${{ steps.setup-gcc.outputs.cc || 'gcc-13' }}
-    cxx: ${{ steps.setup-gcc.outputs.cxx || 'g++-13' }}
+    cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || 'gcc-13'
+      }}
+    cxx: ${{ steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx || 'g++-13'
+      }}
     extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
     ref-source-dir: .</code></pre>
 </div>
@@ -270,8 +272,10 @@ annotations for CMake errors at the configure step and build errors emitted from
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
-    cc: ${{ steps.setup-gcc.outputs.cc || 'gcc-13' }}
-    cxx: ${{ steps.setup-gcc.outputs.cxx || 'g++-13' }}
+    cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || 'gcc-13'
+      }}
+    cxx: ${{ steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx || 'g++-13'
+      }}
     cxxflags: -fsanitize=undefined
     extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
     ref-source-dir: .</code></pre>
@@ -293,8 +297,8 @@ annotations for CMake errors at the configure step and build errors emitted from
     build-type: Debug
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
-    cc: ${{ steps.setup-gcc.outputs.cc || '' }}
-    cxx: ${{ steps.setup-gcc.outputs.cxx || '' }}
+    cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || '' }}
+    cxx: ${{ steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx || '' }}
     extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
     ref-source-dir: .</code></pre>
 </div>

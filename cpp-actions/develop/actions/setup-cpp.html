@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Install dependencies | C++ Actions</title>    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/package-install.html">
+<title>Setup C++ | C++ Actions</title>    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/develop/actions/setup-cpp.html">
     <meta name="generator" content="Antora 3.1.3">
 <link rel="stylesheet" href="../../../_/stylesheets/vendor/libs.css">
 <link rel="stylesheet" href="../../../_/stylesheets/site.css">
@@ -22,7 +22,7 @@
 
         <div id="topbar-nav" class="navbar-menu">
             <div class="navbar-item is-hoverable">
-                <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions: Install dependencies</a>
+                <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions: Setup C++</a>
             </div>
             <div class="navbar-item is-hoverable">
                 <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions" target="_blank">GitHub</a>
@@ -77,7 +77,7 @@
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../index.html">Home</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="1">
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="package-install.html">Install dependencies Action</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -140,16 +140,16 @@
   <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">C++ Actions</a></li>
-    <li><a href="package-install.html">Install dependencies Action</a></li>
+    <li><a href="setup-cpp.html">Setup C++</a></li>
   </ul>
 </nav>
   <div class="page-versions">
   <button class="version-menu-toggle"
     title="Show other versions of page">develop</button>
   <div class="version-menu">
-    <a class="version" href="../../actions/package-install.html">master</a>
-    <a class="version is-current" href="package-install.html">develop</a>
-    <a class="version" href="../../v1.0.0/actions/package-install.html">v1.0.0</a>
+    <a class="version is-missing" href="../../index.html">master</a>
+    <a class="version is-current" href="setup-cpp.html">develop</a>
+    <a class="version is-missing" href="../../v1.0.0/index.html">v1.0.0</a>
   </div>
 </div>
   </div>
@@ -160,58 +160,32 @@
 </div>
   <div class="content">
 <article class="doc">
-<h1 class="page">Install dependencies</h1>
+<h1 class="page">Setup C++</h1>
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>This action installs dependencies from multiple package managers for a workflow.</p>
+<p>Set up a C++ compiler and add it to the PATH.</p>
 </div>
 <div class="paragraph">
-<p>If vcpkg dependencies are required and vcpkg is not available, it will be installed.
-Both vcpkg and its dependencies are cached.</p>
+<p>This action routes to the appropriate setup-gcc or setup-clang actions.</p>
+</div>
+<div class="paragraph">
+<p>Other compilers are passed through.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_examples"><a class="anchor" href="#_examples"></a>Examples</h2>
+<h2 id="_example"><a class="anchor" href="#_example"></a>Example</h2>
 <div class="sectionbody">
-<div class="paragraph">
-<p>Example 1:</p>
-</div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Install packages
-  uses: alandefreitas/cpp-actions/package-install@master
-  id: package-install
+- name: Setup C++ Compiler
+  uses: alandefreitas/cpp-actions/setup-cpp@master
+  if: ${{ 'true' &amp;&amp; !matrix.install }}
+  id: setup-cpp
   with:
-    vcpkg: fmt
-    cxx: ${{ ( 'g++-13' &amp;&amp; format ( '{0} {1}' , steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx
-      || 'g++-13' , '' ) ) || '' }}
-    cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || 'gcc-13'
-      }}</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 2 (<code>apt-get-ignore-missing</code>, <code>apt-get</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Install packages
-  uses: alandefreitas/cpp-actions/package-install@master
-  id: package-install
-  with:
-    vcpkg: fmt
-    apt-get: clang-3.8 sudo software-properties-common tzdata wget curl apt-transport-https
-      make apt-file unzip libssl-dev build-essential autotools-dev autoconf automake
-      g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3
-      ccache libpython-dev python3-distutils python3-pip git cmake
-    apt-get-ignore-missing: 'true'
-    cxx: ${{ ( 'clang++-3.8' &amp;&amp; format ( '{0} {1}' , steps.setup-gcc.outputs.cxx ||
-      steps.setup-clang.outputs.cxx || 'clang++-3.8' , '' ) ) || '' }}
-    cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || 'clang-3.8'
-      }}</code></pre>
+    compiler: g++-13</code></pre>
 </div>
 </div>
 </div>
@@ -232,63 +206,53 @@ Both vcpkg and its dependencies are cached.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of packages we should install with vcpkg. (Whitespace-separated).</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>compiler</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Compiler name. If the compiler contains a version, it overrides 'version'.
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>*</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of packages we should install with apt-get. (Whitespace-separated).</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Version range or exact version of GCC to use, using SemVer&#8217;s version range syntax.</p>
+<p class="tableblock">By default, it uses any version available in the environment.
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>*</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">C compiler used by vcpkg.</p>
-<p class="tableblock">Setting the compiler is particularly important in Linux workflows that use `clang`, since `clang` might link
-`libc` or <code>libstdc`, while the default compiler used by vcpkg will usually be GCC linking `libstdc</code>.</p>
-<p class="tableblock">This would cause conflict in workflows that later attempt to use vcpkg dependencies.
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>path</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The compiler executable. We attempt to find the compiler at this path first.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>g++</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Used to specify whether the compiler installation should be cached in case it needs to be downloaded."
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>architecture</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The target architecture (x86, x64). By default, this value is inferred.
 .</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">C compiler used by vcpkg.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-triplet</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The triplet used by vcpkg to install packages.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The directory where vcpkg should be cloned and installed.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-branch</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">vcpkg branch we should use.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>master</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-retries</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Number of times we should retry when apt-get fails.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>1</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-sources</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of sources for apt-get.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-source-keys</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of source keys for apt-get.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-ignore-missing</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Whether apt-get should ignore missing packages.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>check-latest</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">By default, when the compiler is not available, this action will install the minimum version in the version spec.
+This ensures the code respects its contract in terms of what minimum GCC version is supported.</p>
+<p class="tableblock">Set this option if you want the action to check for the latest available version that satisfies the version spec
+instead.
+.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>update-environment</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Set this option if you want the action to update environment variables.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 </tbody>
 </table>
@@ -308,12 +272,36 @@ Both vcpkg and its dependencies are cached.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-toolchain</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">vcpkg toolchain file</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the C compiler executable.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-executable</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">vcpkg toolchain file</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the C++ compiler executable.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the directory containing the executable.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The installed compiler version. Useful when given a version range as input.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-major</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The installed compiler version major. Useful when given a version range as input.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-minor</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The installed compiler version minor. Useful when given a version range as input.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-patch</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The installed compiler version patch. Useful when given a version range as input.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache-hit</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A boolean value to indicate a cache entry was found</p></td>
 </tr>
 </tbody>
 </table>
