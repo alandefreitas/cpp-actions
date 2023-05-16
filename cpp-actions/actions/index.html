@@ -75,6 +75,9 @@
     <a class="nav-link" href="../index.html">Home</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="setup-cpp.html">Setup C++ Action</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="package-install.html">Install dependencies Action</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -94,6 +97,9 @@
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="setup-gcc.html">Setup GCC Action</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="setup-clang.html">Setup Clang Action</a>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contribute</a>
@@ -214,7 +220,7 @@
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Setup C++ Compiler
+- name: Setup C++
   uses: alandefreitas/cpp-actions/setup-cpp@master
   if: ${{ 'true' &amp;&amp; !matrix.install }}
   id: setup-cpp
@@ -284,7 +290,7 @@ instead.
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 </tbody>
 </table>
@@ -361,10 +367,9 @@ Both vcpkg and its dependencies are cached.</p>
   id: package-install
   with:
     vcpkg: fmt
-    cxx: ${{ ( 'g++-13' &amp;&amp; format ( '{0} {1}' , steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx
-      || 'g++-13' , '' ) ) || '' }}
-    cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || 'gcc-13'
-      }}</code></pre>
+    cxx: ${{ ( 'g++-13' &amp;&amp; format ( '{0} {1}' , steps.setup-cpp.outputs.cxx || 'g++-13'
+      , '' ) ) || '' }}
+    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -383,10 +388,9 @@ Both vcpkg and its dependencies are cached.</p>
       g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3
       ccache libpython-dev python3-distutils python3-pip git cmake
     apt-get-ignore-missing: 'true'
-    cxx: ${{ ( 'clang++-3.8' &amp;&amp; format ( '{0} {1}' , steps.setup-gcc.outputs.cxx ||
-      steps.setup-clang.outputs.cxx || 'clang++-3.8' , '' ) ) || '' }}
-    cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || 'clang-3.8'
-      }}</code></pre>
+    cxx: ${{ ( 'clang++-3.8' &amp;&amp; format ( '{0} {1}' , steps.setup-cpp.outputs.cxx ||
+      'clang++-3.8' , '' ) ) || '' }}
+    cc: ${{ steps.setup-cpp.outputs.cc || 'clang-3.8' }}</code></pre>
 </div>
 </div>
 </div>
@@ -577,10 +581,8 @@ annotations for CMake errors at the configure step and build errors emitted from
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
-    cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || 'gcc-13'
-      }}
-    cxx: ${{ steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx || 'g++-13'
-      }}
+    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-13' }}
     extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
     ref-source-dir: .</code></pre>
 </div>
@@ -600,10 +602,8 @@ annotations for CMake errors at the configure step and build errors emitted from
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
-    cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || 'gcc-13'
-      }}
-    cxx: ${{ steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx || 'g++-13'
-      }}
+    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-13' }}
     cxxflags: -fsanitize=undefined
     extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
     ref-source-dir: .</code></pre>
@@ -625,8 +625,8 @@ annotations for CMake errors at the configure step and build errors emitted from
     build-type: Debug
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
-    cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || '' }}
-    cxx: ${{ steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx || '' }}
+    cc: ${{ steps.setup-cpp.outputs.cc || '' }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || '' }}
     extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
     ref-source-dir: .</code></pre>
 </div>
@@ -1406,7 +1406,7 @@ instead.
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 </tbody>
 </table>
@@ -1542,7 +1542,7 @@ instead.
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 </tbody>
 </table>

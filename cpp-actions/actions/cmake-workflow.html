@@ -75,6 +75,9 @@
     <a class="nav-link" href="../index.html">Home</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="setup-cpp.html">Setup C++ Action</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="package-install.html">Install dependencies Action</a>
   </li>
   <li class="nav-item is-current-page" data-depth="1">
@@ -94,6 +97,9 @@
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="setup-gcc.html">Setup GCC Action</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="setup-clang.html">Setup Clang Action</a>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contribute</a>
@@ -250,10 +256,8 @@ annotations for CMake errors at the configure step and build errors emitted from
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
-    cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || 'gcc-13'
-      }}
-    cxx: ${{ steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx || 'g++-13'
-      }}
+    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-13' }}
     extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
     ref-source-dir: .</code></pre>
 </div>
@@ -273,10 +277,8 @@ annotations for CMake errors at the configure step and build errors emitted from
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
-    cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || 'gcc-13'
-      }}
-    cxx: ${{ steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx || 'g++-13'
-      }}
+    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-13' }}
     cxxflags: -fsanitize=undefined
     extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
     ref-source-dir: .</code></pre>
@@ -298,8 +300,8 @@ annotations for CMake errors at the configure step and build errors emitted from
     build-type: Debug
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
-    cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || '' }}
-    cxx: ${{ steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx || '' }}
+    cc: ${{ steps.setup-cpp.outputs.cc || '' }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || '' }}
     extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
     ref-source-dir: .</code></pre>
 </div>

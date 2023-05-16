@@ -74,6 +74,9 @@
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../index.html">Home</a>
   </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="setup-cpp.html">Setup C++ Action</a>
+  </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="package-install.html">Install dependencies Action</a>
   </li>
@@ -94,6 +97,9 @@
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="setup-gcc.html">Setup GCC Action</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="setup-clang.html">Setup Clang Action</a>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contribute</a>
@@ -140,7 +146,7 @@
   <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">C++ Actions</a></li>
-    <li><a href="setup-cpp.html">Setup C++</a></li>
+    <li><a href="setup-cpp.html">Setup C++ Action</a></li>
   </ul>
 </nav>
   <div class="page-versions">
@@ -181,7 +187,7 @@
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Setup C++ Compiler
+- name: Setup C++
   uses: alandefreitas/cpp-actions/setup-cpp@master
   if: ${{ 'true' &amp;&amp; !matrix.install }}
   id: setup-cpp
@@ -253,7 +259,7 @@ instead.
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 </tbody>
 </table>
