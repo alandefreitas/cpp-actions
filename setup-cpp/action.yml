@@ -1,0 +1,174 @@
+name: "Setup C++"
+description: |
+  Set up a C++ compiler and add it to the PATH.
+  
+  This action routes to the appropriate setup-gcc or setup-clang actions.
+  
+  Other compilers are passed through. 
+
+inputs:
+  compiler:
+    description: |
+      Compiler name. If the compiler contains a version, it overrides 'version'.
+
+    required: false
+    default: '*'
+
+  version:
+    description: |
+      Version range or exact version of GCC to use, using SemVer's version range syntax. 
+      
+      By default, it uses any version available in the environment.
+
+    required: false
+    default: '*'
+
+  path:
+    description: 'The compiler executable. We attempt to find the compiler at this path first.'
+    required: false
+    default: 'g++'
+
+  cache:
+    description: |
+      Used to specify whether the compiler installation should be cached in case it needs to be downloaded."
+    required: false
+    default: 'true'
+
+  architecture:
+    description: |
+      The target architecture (x86, x64). By default, this value is inferred.
+    required: false
+    default: ''
+
+  check-latest:
+    description: |
+      By default, when the compiler is not available, this action will install the minimum version in the version spec.
+      This ensures the code respects its contract in terms of what minimum GCC version is supported.
+      
+      Set this option if you want the action to check for the latest available version that satisfies the version spec
+      instead.
+    required: false
+    default: 'false'
+
+  update-environment:
+    description: "Set this option if you want the action to update environment variables."
+    required: false
+    default: 'true'
+
+  trace-commands:
+    description: 'Trace commands executed by the workflow.'
+    required: false
+    default: 'true'
+
+outputs:
+  cc:
+    description: "The absolute path to the C compiler executable."
+    value: ${{ steps.features.outputs.cc }}
+
+  cxx:
+    description: "The absolute path to the C++ compiler executable."
+    value: ${{ steps.features.outputs.cxx }}
+
+  dir:
+    description: "The absolute path to the directory containing the executable."
+    value: ${{ steps.features.outputs.dir }}
+
+  version:
+    description: "The installed compiler version. Useful when given a version range as input."
+    value: ${{ steps.version.outputs.release }}
+
+  version-major:
+    description: "The installed compiler version major. Useful when given a version range as input."
+    value: ${{ steps.version.outputs.major }}
+
+  version-minor:
+    description: "The installed compiler version minor. Useful when given a version range as input."
+    value: ${{ steps.version.outputs.minor }}
+
+  version-patch:
+    description: "The installed compiler version patch. Useful when given a version range as input."
+    value: ${{ steps.version.outputs.patch }}
+
+  cache-hit:
+    description: "A boolean value to indicate a cache entry was found"
+    value: ${{ steps.cache-gcc.outputs.cache-hit }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Split compiler and version
+      id: split-compiler
+      shell: bash
+      run: |
+        # Strip version from input prefixed string
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+  
+        # Split part and version      
+        compiler="${{ inputs.compiler }}"
+        IFS="- " read -ra parts <<< "$compiler"
+        num_parts="${#parts[@]}"
+        if [ "$num_parts" -eq 1 ]; then
+          version="${{ inputs.version }}"
+        else
+          compiler="${parts[0]}"
+          version="${parts[1]}"
+        fi
+  
+        # Normalize compiler name
+        compiler=$(echo "$compiler" | tr '[:upper:]' '[:lower:]')
+        if [[ $compiler == gcc* ]]; then
+          compiler="gcc"
+        elif [[ $compiler == g++* ]]; then
+          compiler="gcc"
+        elif [[ $compiler == clang* ]]; then
+          compiler="clang"
+        fi
+        
+        echo "compiler=$compiler" >> $GITHUB_OUTPUT
+        echo "version=$version" >> $GITHUB_OUTPUT
+
+    - name: Setup GCC
+      if: ${{ steps.split-compiler.outputs.compiler == 'gcc' }}
+      uses: alandefreitas/cpp-actions/setup-gcc@develop
+      id: setup-gcc
+      with:
+        version: ${{ steps.split-compiler.outputs.version }}
+        path: ${{ inputs.path }}
+        cache: ${{ inputs.path }}
+        architecture: ${{ inputs.path }}
+        check-latest: ${{ inputs.path }}
+        update-environment: ${{ inputs.path }}
+        trace-commands: ${{ inputs.path }}
+        
+    - name: Setup Clang
+      if: ${{ steps.split-compiler.outputs.compiler == 'clang' }}
+      uses: alandefreitas/cpp-actions/setup-clang@develop
+      id: setup-clang
+      with:
+        version: ${{ steps.split-compiler.outputs.version }}
+        path: ${{ inputs.path }}
+        cache: ${{ inputs.path }}
+        architecture: ${{ inputs.path }}
+        check-latest: ${{ inputs.path }}
+        update-environment: ${{ inputs.path }}
+        trace-commands: ${{ inputs.path }}
+
+    - name: Setup msvc dev-cmd
+      if: runner.os == 'Windows'
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Outputs
+      shell: bash
+      id: features
+      run: |
+        # Output information about the Clang we setup up
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }} 
+        
+        echo -E "cc=${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc }}"
+        echo -E "cxx=${{ steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx }}"
+        echo -E "dir=${{ steps.setup-gcc.outputs.dir || steps.setup-clang.outputs.dir }}"
+        echo -E "version=${{ steps.setup-gcc.outputs.version || steps.setup-clang.outputs.version }}"
+        echo -E "version-major=${{ steps.setup-gcc.outputs.version-major || steps.setup-clang.outputs.version-major }}"
+        echo -E "version-minor=${{ steps.setup-gcc.outputs.version-minor || steps.setup-clang.outputs.version-minor }}"
+        echo -E "version-patch=${{ steps.setup-gcc.outputs.version-patch || steps.setup-clang.outputs.version-patch }}"
+        echo -E "cache-hit=${{ steps.setup-gcc.outputs.cache-hit || steps.setup-clang.outputs.cache-hit }}"
