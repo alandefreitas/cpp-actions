@@ -80,19 +80,12 @@ jobs:
         uses: actions/checkout@v3
 
       # Set up the compiler before package-install in case one of the packages needs a compiler
-      - name: Setup GCC
-        if: ${{ startsWith(matrix.cxx, 'g++') }}
-        uses: ./setup-gcc
-        id: setup-gcc
+      - name: Setup C++
+        if: ${{ (startsWith(matrix.cxx, 'g++') || startsWith(matrix.cxx, 'clang++')) && !matrix.install}}
+        uses: ./setup-cpp
+        id: setup-cpp
         with:
-          version: ${{ matrix.cxx }}
-
-      - name: Setup Clang
-        if: ${{ startsWith(matrix.cxx, 'clang++') && !matrix.install }}
-        uses: ./setup-clang
-        id: setup-clang
-        with:
-          version: ${{ matrix.cxx }}
+          compiler: ${{ matrix.cxx }}
 
       - name: Install packages
         uses: ./package-install
@@ -101,8 +94,8 @@ jobs:
           vcpkg: fmt
           apt-get: ${{ join(matrix.install, ' ') }} ${{ matrix.container && 'sudo software-properties-common tzdata wget curl apt-transport-https make apt-file unzip libssl-dev build-essential autotools-dev autoconf automake g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3 ccache libpython-dev python3-distutils python3-pip git cmake' }}
           apt-get-ignore-missing: ${{ matrix.container && 'true' }}
-          cxx: ${{ ( matrix.cxx && format('{0} {1}', steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx || matrix.cxx, matrix.cxxflags)) || '' }}
-          cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || matrix.cc }}
+          cxx: ${{ ( matrix.cxx && format('{0} {1}', steps.setup-cpp.outputs.cxx || matrix.cxx, matrix.cxxflags)) || '' }}
+          cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
 
       - name: Clone Boost.Variant2
         uses: ./boost-clone
@@ -138,8 +131,8 @@ jobs:
           run-tests: true
           install-prefix: $GITHUB_WORKSPACE/.local
           cxxstd: ${{ matrix.cxxstd }}
-          cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || matrix.cc }}
-          cxx: ${{ steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx || matrix.cxx }}
+          cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
+          cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
           cxxflags: ${{ matrix.cxxflags }} ${{ matrix.ubsan && '-fsanitize=undefined' }}
           extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
           ref-source-dir: .

@@ -53,8 +53,8 @@ def sort_step(d):
 readme_base = os.path.join('README.base.adoc')
 reference_dir = os.path.join('docs', 'modules', 'ROOT', 'pages', 'actions')
 example_path = os.path.join('.github', 'workflows', 'ci.yml')
-actions = ['package-install', 'cmake-workflow', 'boost-clone', 'b2-workflow', 'create-changelog', 'setup-cmake',
-           'setup-gcc', 'setup-clang']
+actions = ['setup-cpp', 'package-install', 'cmake-workflow', 'boost-clone', 'b2-workflow', 'create-changelog',
+           'setup-cmake', 'setup-gcc', 'setup-clang']
 
 with open(example_path, 'r') as f:
     ci_yml = yaml.load(f, Loader=OrderedLoader)

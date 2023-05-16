@@ -26,18 +26,6 @@ https://github.com/alandefreitas/cpp-actions/tree/develop/setup-gcc[script,windo
 provided in this repository and added to our binary release. 
 
 
-== Example
-
-[source,yml]
-----
-steps:
-- name: Setup GCC
-  uses: alandefreitas/cpp-actions/setup-gcc@master
-  id: setup-gcc
-  with:
-    version: g++-13
-----
-
 == Input Parameters
 
 |===

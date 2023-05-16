@@ -2,6 +2,7 @@
 :reftext: Actions
 :navtitle: All Actions
 
+- <<setup-cpp>>
 - <<package-install>>
 - <<cmake-workflow>>
 - <<boost-clone>>
@@ -11,6 +12,7 @@
 - <<setup-gcc>>
 - <<setup-clang>>
 
+include::setup-cpp.adoc[leveloffset=+1]
 include::package-install.adoc[leveloffset=+1]
 include::cmake-workflow.adoc[leveloffset=+1]
 include::boost-clone.adoc[leveloffset=+1]

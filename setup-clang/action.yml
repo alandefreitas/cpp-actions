@@ -172,7 +172,7 @@ runs:
           regex='[0-9]+\.[0-9]+\.[0-9]+'
           [[ $VERSION_OUTPUT =~ $regex ]]
           CLANG_VERSION="${BASH_REMATCH[0]}"
-  
+        
           if [ "$CLANG_VERSION" != "" ]; then
             echo -E "executable=$(which $CLANG_EXECUTABLE)" >> $GITHUB_OUTPUT
             echo "version=$CLANG_VERSION" >> $GITHUB_OUTPUT
@@ -242,28 +242,39 @@ runs:
 
         # Look for system Clang executables
         CLANG_EXECUTABLES=""
-        DPKG_CLANGS=($(dpkg --list | grep -E ' clang(-[0-9]+){0,1}(\.[0-9]+){0,2} ' | awk '{print $2}'))
-        DPKG_CLANGS=$(echo "${DPKG_CLANGS[@]}")
-        for DPKG_CLANG in ${DPKG_CLANGS// / }
-        do
-            if command -v "$DPKG_CLANG" &> /dev/null; then
-              CLANG_EXECUTABLES+=" $(which $DPKG_CLANG)"
-            elif command -v "/usr/bin/$DPKG_CLANG" &> /dev/null; then
-              CLANG_EXECUTABLES+=" /usr/bin/$DPKG_CLANG"
-            fi
-        done
-
-        CLANG_VERSIONS=""
-        for CLANG_EXECUTABLE in ${CLANG_EXECUTABLES// / }
-        do
-            VERSION_OUTPUT=$("$CLANG_EXECUTABLE" --version)
-            regex='[0-9]+\.[0-9]+\.[0-9]+'
-            [[ $VERSION_OUTPUT =~ $regex ]]
-            CLANG_VERSIONS+=" ${BASH_REMATCH[0]}"
-        done
-
-        echo -E "executables=$CLANG_EXECUTABLES" >> $GITHUB_OUTPUT
-        echo "versions=$CLANG_VERSIONS" >> $GITHUB_OUTPUT
+        DPKG_OUTPUT=$(dpkg --list)
+        if echo "$DPKG_OUTPUT" | grep -q -E ' clang(-[0-9]+){0,1}(\.[0-9]+){0,2} '; then
+          DPKG_CLANGS_OUTPUT=$(echo "$DPKG_OUTPUT" | grep -E ' clang(-[0-9]+){0,1}(\.[0-9]+){0,2} ')
+          DPKG_CLANGS=($(echo "$DPKG_CLANGS_OUTPUT" | awk '{print $2}'))
+        else
+          DPKG_CLANGS_OUTPUT=""
+          DPKG_CLANGS=()
+        fi
+        
+        if [ "$DPKG_CLANGS_OUTPUT" != "" ]; then
+          DPKG_CLANGS=($(echo "$DPKG_CLANGS_OUTPUT" | awk '{print $2}'))
+          DPKG_CLANGS=$(echo "${DPKG_CLANGS[@]}")
+          for DPKG_CLANG in ${DPKG_CLANGS// / }
+          do
+              if command -v "$DPKG_CLANG" &> /dev/null; then
+                CLANG_EXECUTABLES+=" $(which $DPKG_CLANG)"
+              elif command -v "/usr/bin/$DPKG_CLANG" &> /dev/null; then
+                CLANG_EXECUTABLES+=" /usr/bin/$DPKG_CLANG"
+              fi
+          done
+        
+          CLANG_VERSIONS=""
+          for CLANG_EXECUTABLE in ${CLANG_EXECUTABLES// / }
+          do
+              VERSION_OUTPUT=$("$CLANG_EXECUTABLE" --version)
+              regex='[0-9]+\.[0-9]+\.[0-9]+'
+              [[ $VERSION_OUTPUT =~ $regex ]]
+              CLANG_VERSIONS+=" ${BASH_REMATCH[0]}"
+          done
+        
+          echo -E "executables=$CLANG_EXECUTABLES" >> $GITHUB_OUTPUT
+          echo "versions=$CLANG_VERSIONS" >> $GITHUB_OUTPUT
+        fi
 
     - name: Find a Clang system version that satisfies the requirements
       uses: alandefreitas/cpp-actions/semver-utils@develop
@@ -337,9 +348,9 @@ runs:
         minor="${{ (steps.download-version.outputs.satisfied == 'false' && steps.release-versions.outputs.latest) || (inputs.check-latest == 'true' && steps.download-version.outputs.max-minor) || steps.download-version.outputs.min-minor }}"
         patch="${{ (steps.download-version.outputs.satisfied == 'false' && steps.release-versions.outputs.latest) || (inputs.check-latest == 'true' && steps.download-version.outputs.max-patch) || steps.download-version.outputs.min-patch }}"
         
-  
+        
         # Find a URL for the binaries
-        ubuntu_versions=("22.04" "20.04" "16.04" "14.04" "12.04" "10.04")
+        ubuntu_versions=("22.04" "20.04" "18.04" "16.04" "14.04" "12.04" "10.04")
         clang_url_OK=""
         for ubuntu_version in "${ubuntu_versions[@]}"; do
           ubuntu_image="ubuntu-$ubuntu_version"
@@ -421,9 +432,9 @@ runs:
         
         # Download ${{ steps.setup-clang.outputs.clang_url }}
         if command -v curl &> /dev/null; then
-          curl -L -o "clang-libs.tar.xz" "https://github.com/alandefreitas/cpp-actions/releases/download/gcc-binaries/clang-libs.tar.xz"
+          curl -L -o "clang-libs.tar.xz" "https://github.com/alandefreitas/cpp-actions/releases/download/clang-binaries/clang-libs.tar.xz"
         elif command -v wget &> /dev/null; then
-          wget -O "clang-libs.tar.xz" "https://github.com/alandefreitas/cpp-actions/releases/download/gcc-binaries/clang-libs.tar.xz"
+          wget -O "clang-libs.tar.xz" "https://github.com/alandefreitas/cpp-actions/releases/download/clang-binaries/clang-libs.tar.xz"
         else
           false
         fi
@@ -431,6 +442,13 @@ runs:
         # Unzip libs
         ${{ (inputs.trace-commands == 'true' && format('tar -xvf "clang-libs.tar.xz" -C "{0}/lib"', steps.setup-clang.outputs.clang_dest)) || '' }} 
         ${{ (inputs.trace-commands != 'true' && format('tar -xf "clang-libs.tar.xz" -C "{0}/lib"', steps.setup-clang.outputs.clang_dest)) || '' }}
+        
+        set +e
+        ubuntu_version=$(lsb_release -r | awk '{print $2}')
+        if [ "$ubuntu_version" != "16.04" ]; then
+          rm "${{ steps.setup-clang.outputs.clang_dest }}/lib/libstdc++.so.6"
+        fi
+        
 
     - name: Set up LD_LIBRARY_PATH
       if: ${{ steps.setup-clang.outputs.clang_url }}

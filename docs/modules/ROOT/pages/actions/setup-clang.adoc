@@ -17,19 +17,6 @@ This action uses a number of alternatives to find or install Clang:
 - A version of Clang from our own binary releases
 
 
-== Example
-
-[source,yml]
-----
-steps:
-- name: Setup Clang
-  uses: alandefreitas/cpp-actions/setup-clang@master
-  if: ${{ 'false' && !matrix.install }}
-  id: setup-clang
-  with:
-    version: g++-13
-----
-
 == Input Parameters
 
 |===
