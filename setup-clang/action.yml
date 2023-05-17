@@ -145,7 +145,11 @@ runs:
         all_versions+="$version "
         fi
         done
-        echo $all_versions
+
+        sort_arg="${{ (inputs.check-latest == 'true' && '-rV') || '-V' }}"
+        all_versions=$(echo "$all_versions" | tr ' ' '\n' | sort "$sort_arg" | paste -s -d ' ')
+        echo "Clang versions: $all_versions"
+        echo "all-versions=$all_versions" >> $GITHUB_OUTPUT
         
         # Sort the version numbers using the "sort -V" command and pick the latest one
         if [ ${#versions[@]} -gt 0 ]; then
@@ -153,8 +157,6 @@ runs:
         else
         latest_version="16.0.3" # placeholder when the tags fail. Should not happen.
         fi
-        
-        echo "all-versions=$all_versions" >> $GITHUB_OUTPUT
         echo "latest=$latest_version" >> $GITHUB_OUTPUT
 
     - name: System Path Clang Version
@@ -342,38 +344,53 @@ runs:
         # Setup compatible Clang version from LLVM binaries
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         
+        # Stripped version
+        stripped_version="${{ steps.strip-version.outputs.version || steps.release-versions.outputs.latest }}"
+        all_versions="${{ steps.release-versions.outputs.all-versions }}"
+        
         # The version we want to download
         release="${{ (steps.download-version.outputs.satisfied == 'false' && steps.release-versions.outputs.latest) || (inputs.check-latest == 'true' && steps.download-version.outputs.max-release) || steps.download-version.outputs.min-release }}"
         major="${{ (steps.download-version.outputs.satisfied == 'false' && steps.release-versions.outputs.latest) || (inputs.check-latest == 'true' && steps.download-version.outputs.max-major) || steps.download-version.outputs.min-major }}"
         minor="${{ (steps.download-version.outputs.satisfied == 'false' && steps.release-versions.outputs.latest) || (inputs.check-latest == 'true' && steps.download-version.outputs.max-minor) || steps.download-version.outputs.min-minor }}"
         patch="${{ (steps.download-version.outputs.satisfied == 'false' && steps.release-versions.outputs.latest) || (inputs.check-latest == 'true' && steps.download-version.outputs.max-patch) || steps.download-version.outputs.min-patch }}"
         
+        # These are the valid Clang version we consider downloading
+        version_candidates="$release $all_versions"
         
         # Find a URL for the binaries
         ubuntu_versions=("22.04" "20.04" "18.04" "16.04" "14.04" "12.04" "10.04")
         clang_url_OK=""
-        for ubuntu_version in "${ubuntu_versions[@]}"; do
-          ubuntu_image="ubuntu-$ubuntu_version"
-          clang_basename="clang+llvm-$release-x86_64-linux-gnu-$ubuntu_image"
-          clang_filename="$clang_basename.tar.xz"
-          clang_url=https://github.com/llvm/llvm-project/releases/download/llvmorg-$release/$clang_filename
-          clang_url_exists=$(curl --silent --fail --head "$clang_url" >/dev/null && echo "true" || echo "false")
-          if [ "$clang_url_exists" == "true" ]; then
-            clang_url_OK="$clang_url"
-            break
+        for version_candidate in ${version_candidates// / }
+        do
+          if [[ "$version_candidate" != "$release" ]] && [[ $version_candidate != "$stripped_version"* ]]; then
+            continue
           fi
-          clang_url=https://releases.llvm.org/$release/$clang_filename
-          clang_url_exists=$(curl --silent --fail --head "$clang_url" >/dev/null && echo "true" || echo "false")
-          if [ "$clang_url_exists" == "true" ]; then
-            clang_url_OK="$clang_url"
-            break
-          fi
-          clang_basename="clang+llvm-$release-linux-x86_64-ubuntu$ubuntu_version"
-          clang_filename="$clang_basename.tar.xz"
-          clang_url=https://releases.llvm.org/$release/$clang_filename
-          clang_url_exists=$(curl --silent --fail --head "$clang_url" >/dev/null && echo "true" || echo "false")
-          if [ "$clang_url_exists" == "true" ]; then
-            clang_url_OK="$clang_url"
+          for ubuntu_version in "${ubuntu_versions[@]}"; do
+            ubuntu_image="ubuntu-$ubuntu_version"
+            clang_basename="clang+llvm-$version_candidate-x86_64-linux-gnu-$ubuntu_image"
+            clang_filename="$clang_basename.tar.xz"
+            clang_url=https://github.com/llvm/llvm-project/releases/download/llvmorg-$version_candidate/$clang_filename
+            clang_url_exists=$(curl --silent --fail --head "$clang_url" >/dev/null && echo "true" || echo "false")
+            if [ "$clang_url_exists" == "true" ]; then
+              clang_url_OK="$clang_url"
+              break
+            fi
+            clang_url=https://releases.llvm.org/$version_candidate/$clang_filename
+            clang_url_exists=$(curl --silent --fail --head "$clang_url" >/dev/null && echo "true" || echo "false")
+            if [ "$clang_url_exists" == "true" ]; then
+              clang_url_OK="$clang_url"
+              break
+            fi
+            clang_basename="clang+llvm-$version_candidate-linux-x86_64-ubuntu$ubuntu_version"
+            clang_filename="$clang_basename.tar.xz"
+            clang_url=https://releases.llvm.org/$version_candidate/$clang_filename
+            clang_url_exists=$(curl --silent --fail --head "$clang_url" >/dev/null && echo "true" || echo "false")
+            if [ "$clang_url_exists" == "true" ]; then
+              clang_url_OK="$clang_url"
+              break
+            fi
+          done
+          if [ "$clang_url_OK" != "" ]; then
             break
           fi
         done
@@ -383,13 +400,13 @@ runs:
           echo "clang_basename=$clang_basename" >> $GITHUB_OUTPUT
           echo "clang_filename=$clang_filename" >> $GITHUB_OUTPUT
           echo "clang_url=$clang_url" >> $GITHUB_OUTPUT
-          clang_dest="${{runner.tool_cache}}/clang/$release"
+          clang_dest="${{runner.tool_cache}}/clang/$version_candidate"
           echo -E "clang_dest=$clang_dest" >> $GITHUB_OUTPUT
           clang_bin_path="$clang_dest/bin"
           echo -E "bin=$clang_bin_path" >> $GITHUB_OUTPUT
           echo -E "cc=$clang_bin_path/clang" >> $GITHUB_OUTPUT
           echo -E "cxx=$clang_bin_path/clang++" >> $GITHUB_OUTPUT
-          echo "version=$release" >> $GITHUB_OUTPUT
+          echo "version=$version_candidate" >> $GITHUB_OUTPUT
         fi
 
     - name: Clang cache
