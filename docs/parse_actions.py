@@ -51,7 +51,8 @@ def sort_step(d):
 
 
 readme_base = os.path.join('README.base.adoc')
-reference_dir = os.path.join('docs', 'modules', 'ROOT', 'pages', 'actions')
+action_pages_dir = os.path.join('docs', 'modules', 'ROOT', 'pages', 'actions')
+all_actions_page_dir = os.path.join('docs')
 example_path = os.path.join('.github', 'workflows', 'ci.yml')
 actions = ['setup-cpp', 'package-install', 'cmake-workflow', 'boost-clone', 'b2-workflow', 'create-changelog',
            'setup-cmake', 'setup-gcc', 'setup-clang']
@@ -63,8 +64,8 @@ with open(example_path, 'r') as f:
     steps += ci_yml['jobs']['docs']['steps']
 
 # Load the YAML file
-toc_output = ''
-index_output = ''
+all_actions_toc_output = ''
+all_actions_output = ''
 
 
 def gha_tokenize(expression):
@@ -315,7 +316,7 @@ for action in actions:
     output += f':navtitle: {action_name} Action\n'
     output += f'// This {action}.adoc file is automatically generated.\n// Edit parse_actions.py instead.\n\n'
     output += f'{action_description}\n\n'
-    toc_output += f'- <<{action}>>\n'
+    all_actions_toc_output += f'- <<{action}>>\n'
 
     # Look for example templates
     example_templates = []
@@ -402,20 +403,20 @@ for action in actions:
         output += '|===\n'
 
     # Write the output to a file
-    action_readme_path = os.path.join('docs', 'modules', 'ROOT', 'pages', 'actions', f'{action}.adoc')
-    with open(action_readme_path, 'w') as f:
+    action_page_path = os.path.join(action_pages_dir, f'{action}.adoc')
+    with open(action_page_path, 'w') as f:
         f.write(output)
 
     # Update index content
-    index_output += f'include::{os.path.relpath(action_readme_path, reference_dir)}[leveloffset=+1]\n'
+    all_actions_output += f'include::{os.path.relpath(action_page_path, all_actions_page_dir)}[leveloffset=+1]\n'
 
-if not os.path.exists(reference_dir):
-    os.makedirs(reference_dir)
-with open(os.path.join(reference_dir, 'index.adoc'), 'w') as f:
+if not os.path.exists(all_actions_page_dir):
+    os.makedirs(all_actions_page_dir)
+with open(os.path.join(all_actions_page_dir, 'all_actions.adoc'), 'w') as f:
     f.write('= Actions\n:reftext: Actions\n:navtitle: All Actions\n\n')
-    f.write(toc_output)
+    f.write(all_actions_toc_output)
     f.write('\n')
-    f.write(index_output)
+    f.write(all_actions_output)
 
 
 # Render includes in README.adoc so that github can render it

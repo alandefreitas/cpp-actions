@@ -1,0 +1,23 @@
+= Actions
+:reftext: Actions
+:navtitle: All Actions
+
+- <<setup-cpp>>
+- <<package-install>>
+- <<cmake-workflow>>
+- <<boost-clone>>
+- <<b2-workflow>>
+- <<create-changelog>>
+- <<setup-cmake>>
+- <<setup-gcc>>
+- <<setup-clang>>
+
+include::modules/ROOT/pages/actions/setup-cpp.adoc[leveloffset=+1]
+include::modules/ROOT/pages/actions/package-install.adoc[leveloffset=+1]
+include::modules/ROOT/pages/actions/cmake-workflow.adoc[leveloffset=+1]
+include::modules/ROOT/pages/actions/boost-clone.adoc[leveloffset=+1]
+include::modules/ROOT/pages/actions/b2-workflow.adoc[leveloffset=+1]
+include::modules/ROOT/pages/actions/create-changelog.adoc[leveloffset=+1]
+include::modules/ROOT/pages/actions/setup-cmake.adoc[leveloffset=+1]
+include::modules/ROOT/pages/actions/setup-gcc.adoc[leveloffset=+1]
+include::modules/ROOT/pages/actions/setup-clang.adoc[leveloffset=+1]
