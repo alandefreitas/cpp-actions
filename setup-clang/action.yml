@@ -254,7 +254,6 @@ runs:
         fi
         
         if [ "$DPKG_CLANGS_OUTPUT" != "" ]; then
-          DPKG_CLANGS=($(echo "$DPKG_CLANGS_OUTPUT" | awk '{print $2}'))
           DPKG_CLANGS=$(echo "${DPKG_CLANGS[@]}")
           for DPKG_CLANG in ${DPKG_CLANGS// / }
           do

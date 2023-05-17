@@ -10,6 +10,7 @@ description: |
   
   - The GCC path provided to 'path'
   - Any other version of GCC it can find in the system
+  - Any other version of GCC available from APT
   - A version of GCC from our own binary releases
   
   The action will *not* attempt to install GCC from source files, which is the only 
@@ -140,27 +141,35 @@ runs:
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         
         # Download the Git tags from the GCC repository
+        ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
         git_tags=$(git ls-remote --tags git://gcc.gnu.org/git/gcc.git | awk '{print $2}' | cut -d '/' -f 4)
+        ${{ (inputs.trace-commands == 'true' && 'echo "git_tags=$git_tags"  | tr "\n" " "') || '' }}
+        ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
         
         # Extract the version numbers from the Git tags using a regular expression
         regex='^gcc-([0-9]+\.[0-9]+\.[0-9]+)$'
         versions=()
         all_versions=""
+        ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
         for tag in $git_tags
         do
-        if [[ $tag =~ $regex ]]; then
-        version=${BASH_REMATCH[1]}
-        versions+=("$version")
-        all_versions+="$version "
-        fi
+          if [[ $tag =~ $regex ]]; then
+            version=${BASH_REMATCH[1]}
+            versions+=("$version")
+            all_versions+="$version "
+          fi
         done
-        echo $all_versions
+        echo "GCC versions: $all_versions"
+        ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
+        
+        sort_arg="${{ (inputs.check-latest == 'true' && '-rV') || '-V' }}"
+        all_versions=$(echo "$all_versions" | tr ' ' '\n' | sort "$sort_arg" | paste -s -d ' ')
         
         # Sort the version numbers using the "sort -V" command and pick the latest one
         if [ ${#versions[@]} -gt 0 ]; then
-        latest_version=$(printf "%s\n" "${versions[@]}" | sort -V | tail -n1)
+          latest_version=$(printf "%s\n" "${versions[@]}" | sort -V | tail -n1)
         else
-        latest_version="13.1.0" # placeholder when the tags fail. Should not happen.
+          latest_version="13.1.0" # placeholder when the tags fail. Should not happen.
         fi
         
         echo "all-versions=$all_versions" >> $GITHUB_OUTPUT
@@ -176,14 +185,15 @@ runs:
 
         # Look for system GCC executables
         GCC_EXECUTABLE="${{ inputs.path }}"
-        VERSION_OUTPUT=$("$GCC_EXECUTABLE" --version)
-        regex='[0-9]+\.[0-9]+\.[0-9]+'
-        [[ $VERSION_OUTPUT =~ $regex ]]
-        GCC_VERSION="${BASH_REMATCH[0]}"
-
-        if [ "$GCC_VERSION" != "" ]; then
-          echo -E "executable=$(which $GCC_EXECUTABLE)" >> $GITHUB_OUTPUT
-          echo "version=$GCC_VERSION" >> $GITHUB_OUTPUT
+        if command -v "$GCC_EXECUTABLE" &> /dev/null; then
+          VERSION_OUTPUT=$("$GCC_EXECUTABLE" --version)
+          regex='[0-9]+\.[0-9]+\.[0-9]+'
+          [[ $VERSION_OUTPUT =~ $regex ]]
+          GCC_VERSION="${BASH_REMATCH[0]}"
+          if [ "$GCC_VERSION" != "" ]; then
+            echo -E "executable=$(which $GCC_EXECUTABLE)" >> $GITHUB_OUTPUT
+            echo "version=$GCC_VERSION" >> $GITHUB_OUTPUT
+          fi
         fi
 
     - name: Check if path GCC version satisfies the requirements
@@ -249,28 +259,44 @@ runs:
 
         # Look for system GCC executables
         GCC_EXECUTABLES=""
-        DPKG_GCCS=($(dpkg --list | grep g++ | awk '{print $2}'))
-        DPKG_GCCS=$(echo "${DPKG_GCCS[@]}")
-        for DPKG_GCC in ${DPKG_GCCS// / }
-        do
-            if command -v "$DPKG_GCC" &> /dev/null; then
-              GCC_EXECUTABLES+=" $(which $DPKG_GCC)"
-            elif command -v "/usr/bin/$DPKG_GCC" &> /dev/null; then
-              GCC_EXECUTABLES+=" /usr/bin/$DPKG_GCC"
-            fi
-        done
-
-        GCC_VERSIONS=""
-        for GCC_EXECUTABLE in ${GCC_EXECUTABLES// / }
-        do
-            VERSION_OUTPUT=$("$GCC_EXECUTABLE" --version)
-            regex='[0-9]+\.[0-9]+\.[0-9]+'
-            [[ $VERSION_OUTPUT =~ $regex ]]
-            GCC_VERSIONS+=" ${BASH_REMATCH[0]}"
-        done
-
-        echo -E "executables=$GCC_EXECUTABLES" >> $GITHUB_OUTPUT
-        echo "versions=$GCC_VERSIONS" >> $GITHUB_OUTPUT
+        DPKG_OUTPUT=$(dpkg --list)
+        if echo "$DPKG_OUTPUT" | grep -q 'g++'; then
+          DPKG_GCCS_OUTPUT=$(echo "$DPKG_OUTPUT" | grep 'g++')
+          DPKG_GCCS=($(echo "$DPKG_GCCS_OUTPUT" | awk '{print $2}'))
+        else
+          DPKG_GCCS_OUTPUT=""
+          DPKG_GCCS=()
+        fi
+        
+        if [ "$DPKG_GCCS_OUTPUT" != "" ]; then
+          DPKG_GCCS=$(echo "${DPKG_GCCS[@]}")
+          ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
+          for DPKG_GCC in ${DPKG_GCCS// / }
+          do
+              if command -v "$DPKG_GCC" &> /dev/null; then
+                GCC_EXECUTABLES+=" $(which $DPKG_GCC)"
+              elif command -v "/usr/bin/$DPKG_GCC" &> /dev/null; then
+                GCC_EXECUTABLES+=" /usr/bin/$DPKG_GCC"
+              fi
+          done
+          ${{ (inputs.trace-commands == 'true' && 'echo GCC_EXECUTABLES="$GCC_EXECUTABLES"') || '' }}
+          ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
+  
+          GCC_VERSIONS=""
+          ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
+          for GCC_EXECUTABLE in ${GCC_EXECUTABLES// / }
+          do
+              VERSION_OUTPUT=$("$GCC_EXECUTABLE" --version)
+              regex='[0-9]+\.[0-9]+\.[0-9]+'
+              [[ $VERSION_OUTPUT =~ $regex ]]
+              GCC_VERSIONS+=" ${BASH_REMATCH[0]}"
+          done
+          ${{ (inputs.trace-commands == 'true' && 'echo GCC_VERSIONS="$GCC_VERSIONS"') || '' }}
+          ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
+  
+          echo -E "executables=$GCC_EXECUTABLES" >> $GITHUB_OUTPUT
+          echo "versions=$GCC_VERSIONS" >> $GITHUB_OUTPUT
+        fi
 
     - name: Find a GCC system version that satisfies the requirements
       uses: alandefreitas/cpp-actions/semver-utils@v1.1.0
@@ -298,14 +324,17 @@ runs:
         
         # Find the index of the matching version
         index=-1
+        ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
         for ((i=0; i<${#versions_array[@]}; i++))
         do
-        if [[ "${versions_array[i]}" == "$match" ]]
-        then
-        index=$i
-        break
-        fi
+          if [[ "${versions_array[i]}" == "$match" ]]
+          then
+            index=$i
+            break
+          fi
         done
+        ${{ (inputs.trace-commands == 'true' && 'echo index="$index"') || '' }}
+        ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
         
         # Find the executable corresponding to the matching version
         if [[ $index != -1 && $index -lt ${#executables_array[@]} ]]
@@ -321,9 +350,120 @@ runs:
         echo "version=$match" >> $GITHUB_OUTPUT
         fi
 
-    - name: Find a GCC release version that satisfies the requirements
+    - name: Find all GCC APT versions
+      id: apt-versions
+      if: ${{ steps.setup-system-gcc.outputs.cxx == '' && steps.setup-path-gcc.outputs.cxx == '' }}
+      shell: bash
+      run: |
+        # Find all GCC apt-get versions
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+
+        # Look for APT GCC version we can download
+        all_apt_versions=""
+        all_semver_versions=""
+        ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
+        while read -r line; do
+          package_name=$(echo "$line" | awk '{print $1}')
+          versions=$(apt-cache showpkg "$package_name" | awk '/Dependencies/,/Provides/' | awk '{print $1}' | grep -v -E 'Dependencies|Provides')
+          while read -r apt_version; do
+           if [[ $apt_version =~ $semver_regex ]]; then
+             semver_version=$(echo "$apt_version" | cut -d '-' -f 1)
+             apt_versions+=("$apt_version")
+             semver_versions+=("$semver_version")
+             all_apt_versions+="$package_name=$apt_version "
+             all_semver_versions+="$semver_version "
+           fi
+          done <<< "$versions"
+        done < <(apt-cache search '^g\+\+-[0-9.]+$')
+        ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
+        
+        echo "versions=$all_semver_versions"
+        echo "packages=$all_apt_versions"
+        
+        echo "versions=$all_semver_versions" >> $GITHUB_OUTPUT
+        echo "packages=$all_apt_versions" >> $GITHUB_OUTPUT
+
+    - name: Find a GCC APT version that satisfies the requirements
       uses: alandefreitas/cpp-actions/semver-utils@v1.1.0
       if: ${{ steps.setup-system-gcc.outputs.cxx == '' && steps.setup-path-gcc.outputs.cxx == '' }}
+      id: apt-version
+      with:
+        version: ${{ steps.apt-versions.outputs.versions }}
+        satisfies: ${{ steps.strip-version.outputs.version || steps.release-versions.outputs.latest }}
+        lenient: true
+
+    - name: Setup APT GCC
+      if: ${{ steps.apt-version.outputs.satisfies == 'true' }}
+      shell: bash
+      id: setup-apt-gcc
+      run: |
+        # Setup compatible GCC version from the APT versions
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+        
+        versions="${{ steps.apt-versions.outputs.versions }}"
+        packages="${{ steps.apt-versions.outputs.packages }}"
+        match="${{ (inputs.check-latest == 'true' && steps.apt-version.outputs.max-release) || steps.apt-version.outputs.min-release }}"
+        major="${{ (inputs.check-latest == 'true' && steps.apt-version.outputs.max-major) || steps.apt-version.outputs.min-major }}"
+        minor="${{ (inputs.check-latest == 'true' && steps.apt-version.outputs.max-minor) || steps.apt-version.outputs.min-minor }}"
+        
+        ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
+        IFS=" " read -r -a packages_array <<< "$packages"
+        IFS=" " read -r -a versions_array <<< "$versions"
+        
+        # Find the index of the package matching version
+        index=-1
+        for ((i=0; i<${#versions_array[@]}; i++))
+        do
+          if [[ "${versions_array[i]}" == "$match" ]]
+          then
+            index=$i
+            break
+          fi
+        done
+        ${{ (inputs.trace-commands == 'true' && 'echo index="$index"') || '' }}
+        ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
+        
+        # Find the package corresponding to the matching version
+        if [[ $index != -1 && $index -lt ${#packages_array[@]} ]]
+        then
+          package="${packages_array[$index]}"
+        
+          # Determine if apt-get should be called with `sudo`, which is often not the case with containers
+          if which sudo >/dev/null 2>&1; then
+            if [ $? -eq 0 ]
+            then
+              sudo_prefix="sudo "
+            else
+              sudo_prefix=""
+            fi
+          else
+            sudo_prefix=""
+          fi
+          $sudo_prefix apt-get install -y "$package"
+        
+          # find the executable: apt-get should install it as gcc-$major
+          if command -v "g++-$major.$minor" &> /dev/null; then
+            cxx="$(which "g++-$major.$minor")"
+            cc="$(which "gcc-$major.$minor")"
+          elif command -v "g++-$major" &> /dev/null; then
+            cxx="$(which "g++-$major")"
+            cc="$(which "gcc-$major")"
+          elif command -v "g++" &> /dev/null; then
+            cxx="$(which "g++")"
+            cc="$(which "gcc")"
+          fi
+          echo -E "cxx=$cxx" >> $GITHUB_OUTPUT
+          echo -E "cc=$cc" >> $GITHUB_OUTPUT
+          gcc_bin_path="$(dirname $cxx)"
+          echo -E "bin=$gcc_bin_path" >> $GITHUB_OUTPUT
+          gcc_dest="$(dirname $gcc_bin_path)"
+          echo -E "gcc_dest=$gcc_dest" >> $GITHUB_OUTPUT
+          echo "version=$match" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Find a GCC release version that satisfies the requirements
+      uses: alandefreitas/cpp-actions/semver-utils@v1.1.0
+      if: ${{ steps.setup-system-gcc.outputs.cxx == '' && steps.setup-path-gcc.outputs.cxx == '' && steps.setup-apt-gcc.outputs.cxx == '' }}
       id: download-version
       with:
         version: ${{ steps.release-versions.outputs.all-versions }}
@@ -331,7 +471,7 @@ runs:
         lenient: false
 
     - name: Setup GCC
-      if: ${{ steps.setup-system-gcc.outputs.cxx == '' && steps.setup-path-gcc.outputs.cxx == '' }}
+      if: ${{ steps.setup-system-gcc.outputs.cxx == '' && steps.setup-path-gcc.outputs.cxx == '' && steps.setup-apt-gcc.outputs.cxx == '' }}
       shell: bash
       id: setup-gcc
       run: |
@@ -403,41 +543,51 @@ runs:
         # Print installed version
         "${{ steps.setup-gcc.outputs.cxx }}" --version
 
-    - name: Set up LD_LIBRARY_PATH
+    - name: Set up LIBRARY_PATH
       if: ${{ steps.setup-gcc.outputs.gcc_url }}
       shell: bash
       run: |
-        # Set up LD_LIBRARY_PATH
+        # Set up LIBRARY_PATH
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         
-        # Add shared libraries to LD_LIBRARY_PATH
+        # Add shared libraries to LIBRARY_PATH
         gcc_dest="${{ steps.setup-gcc.outputs.gcc_dest }}"
+        ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
+        ${{ (inputs.trace-commands == 'true' && 'echo -E "LIBRARY_PATH=\"$LIBRARY_PATH\""') || '' }}
         while IFS= read -r -d '' dir; do
-        if [[ -d "$dir" ]]; then
-        for file in "$dir"/*.so.[0-9]*; do
-        if [[ -f "$file" ]]; then
-        dir_basename="$(basename "$dir")"
-        if [[ ! "$LD_LIBRARY_PATH" =~ (^|:)"$dir"$ ]]; then
-          if [[ -n "$LD_LIBRARY_PATH" ]]; then
-             LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$dir"
-             export LD_LIBRARY_PATH
-          else
-             LD_LIBRARY_PATH="$dir"
-             export LD_LIBRARY_PATH
+          if [[ -d "$dir" ]]; then
+            for file in "$dir"/*.so.[0-9]*; do
+              if [[ -f "$file" ]]; then
+                if [[ ! "$LIBRARY_PATH" =~ (^|:)"$dir"$ ]]; then
+                  if [[ -n "$LIBRARY_PATH" ]]; then
+                     LIBRARY_PATH="$LIBRARY_PATH:$dir"
+                  else
+                     LIBRARY_PATH="$dir"
+                  fi
+                fi
+                break
+              fi
+            done
           fi
-        fi
-        break
-        fi
-        done
-        fi
         done < <(find "$gcc_dest" -type d -print0)
-        echo -E "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> "$GITHUB_ENV"
+        ${{ (inputs.trace-commands == 'true' && 'echo -E "LIBRARY_PATH=\"$LIBRARY_PATH\""') || '' }}
+        
+        IFS=':' read -ra paths <<< "$LIBRARY_PATH"
+        for path in "${paths[@]}"; do
+          if [[ ! -d "$path" ]]; then
+            echo "💥 Library path does not exist: $path"
+          fi
+        done
 
+        ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
+        export LIBRARY_PATH
+        echo -E "LIBRARY_PATH=\"$LIBRARY_PATH\"" >> "$GITHUB_ENV"
+        
     - name: Parse Final GCC Setup version
       uses: alandefreitas/cpp-actions/semver-utils@v1.1.0
       id: version
       with:
-        version: ${{ steps.setup-gcc.outputs.version || steps.setup-system-gcc.outputs.version || steps.setup-path-gcc.outputs.version }}
+        version: ${{ steps.setup-gcc.outputs.version || steps.setup-apt-gcc.outputs.version || steps.setup-system-gcc.outputs.version || steps.setup-path-gcc.outputs.version }}
         lenient: true
 
     - name: Outputs
@@ -448,20 +598,20 @@ runs:
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }} 
         
         # the GCC version we found or installed
-        release="${{ (inputs.check-latest == 'true' && steps.version.outputs.max-release) || steps.version.outputs.min-release }}"
+        release="${{ steps.version.outputs.release }}"
         echo "release=$release" >> $GITHUB_OUTPUT
-        major="${{ (inputs.check-latest == 'true' && steps.version.outputs.max-major) || steps.version.outputs.min-major }}"
+        major="${{ steps.version.outputs.major }}"
         echo "major=$major" >> $GITHUB_OUTPUT
-        minor="${{ (inputs.check-latest == 'true' && steps.version.outputs.max-minor) || steps.version.outputs.min-minor }}"
+        minor="${{ steps.version.outputs.minor }}"
         echo "minor=$minor" >> $GITHUB_OUTPUT
-        patch="${{ (inputs.check-latest == 'true' && steps.version.outputs.max-patch) || steps.version.outputs.min-patch }}"
+        patch="${{ steps.version.outputs.patch }}"
         echo "patch=$patch" >> $GITHUB_OUTPUT
         
         # g++ path
-        cxx_path="${{ steps.setup-gcc.outputs.cxx || steps.setup-system-gcc.outputs.cxx || steps.setup-path-gcc.outputs.cxx }}"
+        cxx_path="${{ steps.setup-gcc.outputs.cxx || steps.setup-apt-gcc.outputs.cxx || steps.setup-system-gcc.outputs.cxx || steps.setup-path-gcc.outputs.cxx }}"
         echo -E "cxx=$cxx_path" >> $GITHUB_OUTPUT
         
-        cc_path="${{ steps.setup-gcc.outputs.cc || steps.setup-system-gcc.outputs.cc || steps.setup-path-gcc.outputs.cc }}"
+        cc_path="${{ steps.setup-gcc.outputs.cc || steps.setup-apt-gcc.outputs.cc || steps.setup-system-gcc.outputs.cc || steps.setup-path-gcc.outputs.cc }}"
         echo -E "cc=$cc_path" >> $GITHUB_OUTPUT
         
         # bin path

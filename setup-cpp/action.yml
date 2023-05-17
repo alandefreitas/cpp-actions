@@ -138,6 +138,8 @@ runs:
           compiler="gcc"
         elif [[ $compiler == clang* ]]; then
           compiler="clang"
+        elif [[ $compiler == cl* ]]; then
+          compiler="msvc"
         fi
         
         echo "compiler=$compiler" >> $GITHUB_OUTPUT
