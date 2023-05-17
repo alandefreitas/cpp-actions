@@ -117,6 +117,29 @@ if __name__ == "__main__":
         commit_msgs = commit_msgs[:args.limit]
         print(f'Limited to {args.limit}')
 
+
+    def normalize(s):
+        category_mapping = {
+            'doc': 'docs',
+            'documentation': 'docs',
+            'fixes': 'fix',
+            'bugfix': 'fix',
+            'work': 'chore',
+            'chores': 'chore',
+            'maintenance': 'chore',
+            'feature': 'feat',
+            'cleanup': 'refactor',
+            'performance': 'perf',
+            'testing': 'test',
+            'tests': 'test',
+            'version': 'release',
+            'integration': 'ci',
+            'break': 'breaking',
+            'undo': 'revert',
+        }
+        return category_mapping.get(s.lower(), s)
+
+
     # Parse commit messages
     commits = []
     conventional_regex = r'([ \d\w_-]+)(\(([ \d\w_-]+)\))?(!?): ([^\n]*)\n?(.*)'
@@ -125,7 +148,7 @@ if __name__ == "__main__":
         m = re.match(conventional_regex, c)
         if m:
             # conventional commit
-            commit.type = m[1]
+            commit.type = normalize(m[1])
             commit.scope = m[3]
             commit.description = m[5]
             commit.body = m[6]
@@ -181,7 +204,11 @@ if __name__ == "__main__":
             'refactor': 'Refactor',
             'perf': 'Performance',
             'test': 'Tests',
+            'release': 'Release',
             'ci': 'Continuous Integration',
+            'improvement': 'Improvement',
+            'breaking': 'Breaking',
+            'revert': 'Revert',
             'other': 'Other'
         }
         if s in m:
@@ -193,6 +220,7 @@ if __name__ == "__main__":
     def icon_for(s):
         m = {
             'docs': '📖',
+            'fix': '🐛',
             'style': '🎨',
             'chore': '🏗️',
             'build': '📦️',
@@ -202,9 +230,9 @@ if __name__ == "__main__":
             'test': '🧪',
             'release': '🔖',
             'ci': '🚦',
-            'fix': '🐛',
             'improvement': '🛠️',
             'breaking': '🚨',
+            'revert': '🔙',
             'other': '💬',
             None: '💬'
         }
