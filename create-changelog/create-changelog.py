@@ -227,11 +227,11 @@ if __name__ == "__main__":
 
     # Generate output
     output = ''
-    for commit_type in change_type_priority:
-        if commit_type in changes:
-            scope_changes = changes[commit_type]
-            if len(changes) > 1:
-                output += f'\n## {icon_for(commit_type)} {humanize(commit_type)}\n\n'
+    for change_type in change_type_priority:
+        if change_type in changes:
+            scope_changes = changes[change_type]
+            if len(changes) > 1 or (len(changes) > 0 and change_type[0] != 'other'):
+                output += f'\n## {icon_for(change_type)} {humanize(change_type)}\n\n'
             for [scope, commits] in scope_changes.items():
                 pad = ''
                 scope_prefix = ''
