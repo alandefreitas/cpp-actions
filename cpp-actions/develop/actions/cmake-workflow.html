@@ -75,28 +75,55 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="../index.html">Home</a>
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Compilers</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-cpp.html">Setup C++ Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-gcc.html">Setup GCC Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-clang.html">Setup Clang Action</a>
+  </li>
+</ul>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="package-install.html">Install dependencies Action</a>
-  </li>
-  <li class="nav-item is-current-page" data-depth="1">
-    <a class="nav-link" href="cmake-workflow.html">CMake Workflow Action</a>
-  </li>
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
-  </li>
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="b2-workflow.html">B2 Workflow Action</a>
-  </li>
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
-  </li>
-  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Tools</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
   </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="package-install.html">Install Packages Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
+  </li>
+</ul>
+  </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="setup-gcc.html">Setup GCC Action</a>
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Workflows</span>
+<ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="cmake-workflow.html">CMake Workflow Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="b2-workflow.html">B2 Workflow Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Project</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
+  </li>
+</ul>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contribute</a>
@@ -143,6 +170,7 @@
   <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">C++ Actions</a></li>
+    <li>Workflows</li>
     <li><a href="cmake-workflow.html">CMake Workflow Action</a></li>
   </ul>
 </nav>
@@ -245,7 +273,7 @@ annotations for CMake errors at the configure step and build errors emitted from
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake-workflow@master
+  uses: alandefreitas/cpp-actions/cmake-workflow@develop
   with:
     cmake-version: '&gt;=3.20'
     source-dir: tests
@@ -253,10 +281,8 @@ annotations for CMake errors at the configure step and build errors emitted from
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
-    cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || 'gcc-13'
-      }}
-    cxx: ${{ steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx || 'g++-13'
-      }}
+    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-13' }}
     extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
     ref-source-dir: .</code></pre>
 </div>
@@ -268,7 +294,7 @@ annotations for CMake errors at the configure step and build errors emitted from
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake-workflow@master
+  uses: alandefreitas/cpp-actions/cmake-workflow@develop
   with:
     cmake-version: '&gt;=3.20'
     source-dir: tests
@@ -276,10 +302,8 @@ annotations for CMake errors at the configure step and build errors emitted from
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: 17,20
-    cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || 'gcc-13'
-      }}
-    cxx: ${{ steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx || 'g++-13'
-      }}
+    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-13' }}
     cxxflags: -fsanitize=undefined
     extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
     ref-source-dir: .</code></pre>
@@ -292,7 +316,7 @@ annotations for CMake errors at the configure step and build errors emitted from
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake-workflow@master
+  uses: alandefreitas/cpp-actions/cmake-workflow@develop
   with:
     cmake-version: '&gt;=3.20'
     source-dir: tests
@@ -301,8 +325,8 @@ annotations for CMake errors at the configure step and build errors emitted from
     build-type: Debug
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
-    cc: ${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || '' }}
-    cxx: ${{ steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx || '' }}
+    cc: ${{ steps.setup-cpp.outputs.cc || '' }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || '' }}
     extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
     ref-source-dir: .</code></pre>
 </div>
