@@ -14,7 +14,7 @@ The result can be used as the initial body for an automated release, a CHANGELOG
 Each commit is parsed as a loose variant of a https://www.conventionalcommits.org/en/v1.0.0/[conventional commit]
 in the following format:
 
-[source]
+[source,none]
 ----
 <type>[optional scope]: <description>
 
@@ -44,11 +44,11 @@ This parameter can also be used as a limit on the number of commits the action s
 
 == Example
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: Create release notes
-  uses: alandefreitas/cpp-actions/create-changelog@master
+  uses: alandefreitas/cpp-actions/create-changelog@{page-version}
   with:
     output-path: CHANGELOG.md
     trace-commands: 'true'

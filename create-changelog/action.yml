@@ -19,7 +19,7 @@ description: |
   Each commit is parsed as a loose variant of a https://www.conventionalcommits.org/en/v1.0.0/[conventional commit]
   in the following format:
   
-  [source]
+  [source,none]
   ----
   <type>[optional scope]: <description>
   
