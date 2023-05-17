@@ -116,6 +116,17 @@ def gha_evaluate(template: str, context):
                         tokens[i] = f"'{context[var_name]}'"
                 else:
                     tokens[i] = "''"
+            elif tokens[i].startswith('!matrix.'):
+                var_name = tokens[i][len('!matrix.'):]
+                if var_name in context:
+                    if type(context[var_name]) is bool:
+                        tokens[i] = f"'{'false' if context[var_name] else 'true'}'"
+                    elif type(context[var_name]) is str:
+                        tokens[i] = f"'{'false' if context[var_name] != '' else 'true'}'"
+                    elif type(context[var_name]) is not list:
+                        tokens[i] = f"!'{context[var_name]}'"
+                else:
+                    tokens[i] = "'true'"
 
         # Reduce tokens to a single element
         reduced = True
