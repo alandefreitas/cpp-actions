@@ -1,6 +1,6 @@
-= Install dependencies [[package-install]]
-:reftext: Install dependencies
-:navtitle: Install dependencies Action
+= Install Packages [[package-install]]
+:reftext: Install Packages
+:navtitle: Install Packages Action
 // This package-install.adoc file is automatically generated.
 // Edit parse_actions.py instead.
 
@@ -14,26 +14,26 @@ Both vcpkg and its dependencies are cached.
 
 Example 1:
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: Install packages
-  uses: alandefreitas/cpp-actions/package-install@master
+  uses: alandefreitas/cpp-actions/package-install@{page-version}
   id: package-install
   with:
     vcpkg: fmt
-    cxx: ${{ ( 'g++-13' && format ( '{0} {1}' , steps.setup-cpp.outputs.cxx || 'g++-13'
+    cxx: ${{ ( 'g++-13' && format ( '\{0\} \{1\}' , steps.setup-cpp.outputs.cxx || 'g++-13'
       , '' ) ) || '' }}
     cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}
 ----
 
 Example 2 (`apt-get-ignore-missing`, `apt-get`):
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: Install packages
-  uses: alandefreitas/cpp-actions/package-install@master
+  uses: alandefreitas/cpp-actions/package-install@{page-version}
   id: package-install
   with:
     vcpkg: fmt
@@ -42,7 +42,7 @@ steps:
       g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3
       ccache libpython-dev python3-distutils python3-pip git cmake
     apt-get-ignore-missing: 'true'
-    cxx: ${{ ( 'clang++-3.8' && format ( '{0} {1}' , steps.setup-cpp.outputs.cxx ||
+    cxx: ${{ ( 'clang++-3.8' && format ( '\{0\} \{1\}' , steps.setup-cpp.outputs.cxx ||
       'clang++-3.8' , '' ) ) || '' }}
     cc: ${{ steps.setup-cpp.outputs.cc || 'clang-3.8' }}
 ----

@@ -1,4 +1,4 @@
-name: 'Install dependencies'
+name: 'Install Packages'
 description: | 
   This action installs dependencies from multiple package managers for a workflow.
   
