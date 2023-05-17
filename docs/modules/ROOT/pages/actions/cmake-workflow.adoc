@@ -38,11 +38,11 @@ annotations for CMake errors at the configure step and build errors emitted from
 
 Example 1:
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake-workflow@master
+  uses: alandefreitas/cpp-actions/cmake-workflow@{page-version}
   with:
     cmake-version: '>=3.20'
     source-dir: tests
@@ -58,11 +58,11 @@ steps:
 
 Example 2 (`cxxflags`):
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake-workflow@master
+  uses: alandefreitas/cpp-actions/cmake-workflow@{page-version}
   with:
     cmake-version: '>=3.20'
     source-dir: tests
@@ -79,11 +79,11 @@ steps:
 
 Example 3 (`build-type`, `generator`):
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake-workflow@master
+  uses: alandefreitas/cpp-actions/cmake-workflow@{page-version}
   with:
     cmake-version: '>=3.20'
     source-dir: tests

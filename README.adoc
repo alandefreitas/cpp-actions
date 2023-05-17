@@ -43,19 +43,34 @@ NOTE: READ THE DOCS: https://alandefreitas.github.io/cpp-actions/
 
 Set up a C++ compiler and add it to the PATH.
 
-This action routes to the appropriate setup-gcc or setup-clang actions.
+The `compiler` parameter can be used to provide a compiler name or a compiler name with its version, separated
+by whitespace or a `-`. Examples valid names are `gcc`, `pass:[g++]`, `clang`, `gcc-10`, `pass:[g++ 10]`, `clang 9.2`.
 
-Other compilers are passed through. 
+Note that strings like `10` and `9.2` are semver requirements and not semver versions. For instance, `10` represents
+the requirement equivalent to `>=10.0.0 <11.0.0` while `9.2` represents the requirement equivalent to 
+`>=9.2.0 <9.3.0`.  
+
+If the `compiler` parameter does not include a version requirement, the `version` parameter can be used to provide
+a version semver string in the npm format with the compiler requirements.
+
+If the compiler is GCC or Clang, this action routes to the appropriate xref:actions/setup-gcc.adoc[] or 
+xref:actions/setup-clang.adoc[] actions. 
+
+If the compiler is MSVC, this action will setup the developer command prompt for Microsoft Visual C\+\+. 
+
+Any other compilers are passed through.
+
+If the compiler is GCC or Clang, the outputs include the paths to the compilers as well as the compiler
+version ultimately setup by the action.
 
 
 ==== Example
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: Setup C++
   uses: alandefreitas/cpp-actions/setup-cpp@master
-  if: ${{ 'true' && !matrix.install }}
   id: setup-cpp
   with:
     compiler: g++-13
@@ -99,9 +114,9 @@ instead.
 |`version-patch` |The installed compiler version patch. Useful when given a version range as input.
 |`cache-hit` |A boolean value to indicate a cache entry was found
 |===
-=== Install dependencies [[package-install]]
-:reftext: Install dependencies
-:navtitle: Install dependencies Action
+=== Install Packages [[package-install]]
+:reftext: Install Packages
+:navtitle: Install Packages Action
 // This package-install.adoc file is automatically generated.
 // Edit parse_actions.py instead.
 
@@ -115,7 +130,7 @@ Both vcpkg and its dependencies are cached.
 
 Example 1:
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: Install packages
@@ -123,14 +138,14 @@ steps:
   id: package-install
   with:
     vcpkg: fmt
-    cxx: ${{ ( 'g++-13' && format ( '{0} {1}' , steps.setup-cpp.outputs.cxx || 'g++-13'
+    cxx: ${{ ( 'g++-13' && format ( '\{0\} \{1\}' , steps.setup-cpp.outputs.cxx || 'g++-13'
       , '' ) ) || '' }}
     cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}
 ----
 
 Example 2 (`apt-get-ignore-missing`, `apt-get`):
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: Install packages
@@ -143,7 +158,7 @@ steps:
       g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3
       ccache libpython-dev python3-distutils python3-pip git cmake
     apt-get-ignore-missing: 'true'
-    cxx: ${{ ( 'clang++-3.8' && format ( '{0} {1}' , steps.setup-cpp.outputs.cxx ||
+    cxx: ${{ ( 'clang++-3.8' && format ( '\{0\} \{1\}' , steps.setup-cpp.outputs.cxx ||
       'clang++-3.8' , '' ) ) || '' }}
     cc: ${{ steps.setup-cpp.outputs.cc || 'clang-3.8' }}
 ----
@@ -218,7 +233,7 @@ annotations for CMake errors at the configure step and build errors emitted from
 
 Example 1:
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: CMake Workflow
@@ -238,7 +253,7 @@ steps:
 
 Example 2 (`cxxflags`):
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: CMake Workflow
@@ -259,7 +274,7 @@ steps:
 
 Example 3 (`build-type`, `generator`):
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: CMake Workflow
@@ -340,7 +355,7 @@ cache, the scanning scripting saves us about 3 minutes.
 
 ==== Example
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: Clone Boost.Variant2
@@ -382,7 +397,7 @@ This action is particularly useful for Boost library proposals.
 
 Example 1:
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: Test Boost.Variant2
@@ -396,7 +411,7 @@ steps:
 
 Example 2 (`cxx`):
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: Test Boost.Variant2
@@ -411,7 +426,7 @@ steps:
 
 Example 3 (`address-model`):
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: Test Boost.Variant2
@@ -426,7 +441,7 @@ steps:
 
 Example 4 (`ubsan`):
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: Test Boost.Variant2
@@ -441,7 +456,7 @@ steps:
 
 Example 5 (`cxxflags`, `linkflags`):
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: Test Boost.Variant2
@@ -458,7 +473,7 @@ steps:
 
 Example 6 (`gcc-toolchain`):
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: Test Boost.Variant2
@@ -507,7 +522,7 @@ The result can be used as the initial body for an automated release, a CHANGELOG
 Each commit is parsed as a loose variant of a https://www.conventionalcommits.org/en/v1.0.0/[conventional commit]
 in the following format:
 
-[source]
+[source,none]
 ----
 <type>[optional scope]: <description>
 
@@ -537,7 +552,7 @@ This parameter can also be used as a limit on the number of commits the action s
 
 ==== Example
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: Create release notes
@@ -585,7 +600,7 @@ Set up a specific version of a CMake compiler and add it to the PATH.
 
 This action will also set-up any dependencies required by CMake.
 
-In most workflows, this is used as an auxiliary action for the cmake-workflow action. 
+In most workflows, this is used as an auxiliary action for the xref:actions/cmake-workflow.adoc[] action. 
 
 
 ==== Input Parameters

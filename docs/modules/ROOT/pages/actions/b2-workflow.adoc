@@ -16,11 +16,11 @@ This action is particularly useful for Boost library proposals.
 
 Example 1:
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
+  uses: alandefreitas/cpp-actions/b2-workflow@{page-version}
   with:
     source-dir: boost-root
     modules: variant2
@@ -30,11 +30,11 @@ steps:
 
 Example 2 (`cxx`):
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
+  uses: alandefreitas/cpp-actions/b2-workflow@{page-version}
   with:
     source-dir: boost-root
     modules: variant2
@@ -45,11 +45,11 @@ steps:
 
 Example 3 (`address-model`):
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
+  uses: alandefreitas/cpp-actions/b2-workflow@{page-version}
   with:
     source-dir: boost-root
     modules: variant2
@@ -60,11 +60,11 @@ steps:
 
 Example 4 (`ubsan`):
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
+  uses: alandefreitas/cpp-actions/b2-workflow@{page-version}
   with:
     source-dir: boost-root
     modules: variant2
@@ -75,11 +75,11 @@ steps:
 
 Example 5 (`cxxflags`, `linkflags`):
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
+  uses: alandefreitas/cpp-actions/b2-workflow@{page-version}
   with:
     source-dir: boost-root
     modules: variant2
@@ -92,11 +92,11 @@ steps:
 
 Example 6 (`gcc-toolchain`):
 
-[source,yml]
+[source,yml,subs="attributes+"]
 ----
 steps:
 - name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
+  uses: alandefreitas/cpp-actions/b2-workflow@{page-version}
   with:
     source-dir: boost-root
     modules: variant2

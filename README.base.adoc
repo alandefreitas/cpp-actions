@@ -2,7 +2,7 @@ include::docs/modules/ROOT/pages/index.adoc[leveloffset=0]
 
 NOTE: READ THE DOCS: https://alandefreitas.github.io/cpp-actions/
 
-include::docs/modules/ROOT/pages/actions/index.adoc[leveloffset=+1]
+include::docs/all_actions.adoc[leveloffset=+1]
 
 == Contributions
 
