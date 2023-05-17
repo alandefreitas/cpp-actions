@@ -8,7 +8,7 @@ Set up a specific version of a CMake compiler and add it to the PATH.
 
 This action will also set-up any dependencies required by CMake.
 
-In most workflows, this is used as an auxiliary action for the cmake-workflow action. 
+In most workflows, this is used as an auxiliary action for the xref:actions/cmake-workflow.adoc[] action. 
 
 
 == Input Parameters

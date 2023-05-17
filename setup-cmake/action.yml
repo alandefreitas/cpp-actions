@@ -4,7 +4,7 @@ description: |
   
   This action will also set-up any dependencies required by CMake.
   
-  In most workflows, this is used as an auxiliary action for the cmake-workflow action. 
+  In most workflows, this is used as an auxiliary action for the xref:actions/cmake-workflow.adoc[] action. 
 
 inputs:
   version:
@@ -301,7 +301,7 @@ runs:
         fi
         echo -E "path=$cmake_bin_path/cmake" >> $GITHUB_OUTPUT
         echo "version=$release" >> $GITHUB_OUTPUT
-    
+
     - name: CMake cache
       if: ${{ steps.system-version.outputs.satisfies == 'false' }}
       id: cache-cmake
@@ -330,7 +330,7 @@ runs:
         
         # Print installed version
         "${{ steps.setup-cmake.outputs.path }}" --version
-        
+
     - name: Parse Final CMake Setup version
       uses: madhead/semver-utils@v3.1.0
       id: version
