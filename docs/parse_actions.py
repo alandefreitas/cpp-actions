@@ -333,7 +333,7 @@ for action in actions:
     example_templates = []
     for step in steps:
         if 'uses' in step and step['uses'].endswith(action):
-            step['uses'] = f'alandefreitas/cpp-actions/{action}@master'
+            step['uses'] = f'alandefreitas/cpp-actions/{action}@{{page-version}}'
             example_templates.append(sort_step(step))
 
 
@@ -387,7 +387,9 @@ for action in actions:
                 output += ':\n\n'
             mapping = OrderedDict()
             mapping['steps'] = [example]
-            output += f'[source,yml]\n----\n{yaml.dump(mapping, Dumper=OrderedDumper)}----\n\n'
+            yaml_output = yaml.dump(mapping, Dumper=OrderedDumper)
+            yaml_output = re.sub(r'\{(\d+)\}', r'\{\1\}', yaml_output)
+            output += f'[source,yml,subs="attributes+"]\n----\n{yaml_output}----\n\n'
 
     output += f'== Input Parameters\n\n'
     output += f'|===\n|Parameter |Description |Default\n'
@@ -449,7 +451,9 @@ def render_include(fout, path, leveloffset):
                 render_include(fout, os.path.join(os.path.dirname(path), m.group(1)), leveloffset + offset)
                 continue
 
-            fout.write(line)
+            replaced = line.replace('{page-version}', 'master')
+            replaced = re.sub(r'\{(\d+)\}', r'\{\1\}', replaced)
+            fout.write(replaced)
 
 
 readme_base = 'README.base.adoc'
