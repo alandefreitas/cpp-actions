@@ -51,7 +51,6 @@ steps:
   uses: alandefreitas/cpp-actions/create-changelog@{page-version}
   with:
     output-path: CHANGELOG.md
-    trace-commands: 'true'
 ----
 
 == Input Parameters

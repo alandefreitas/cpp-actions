@@ -361,6 +361,8 @@ for action in actions:
                 if 'with' in example:
                     example['with'] = OrderedDict((k, v) for k, v in example['with'].items() if
                                                   not isinstance(v, str) or any(c for c in v if c != ' '))
+                    if 'trace-commands' in example['with']:
+                        del example['with']['trace-commands']
                 if 'if' in example and example['if'] in ['true', 'false']:
                     del example['if']
                 examples.append(example)

@@ -342,7 +342,11 @@ In most cases, the default option should be enough.
 // Edit parse_actions.py instead.
 
 This action clones the Boost source directory, attempting to get it from the cache first. Only the specified
-modules are cloned and cached. 
+modules are cloned and cached.
+
+Cloning boost is useful when one wants the always use the latest version of boost in a library or is writing
+a boost proposal. For other use cases, individual boost modules can be fetched with vcpkg in 
+xref:actions/package-install.adoc[] or directly included in a package manager manifest.
 
 Besides the explicitly specified list of modules, the action can also scan directories for boost dependencies
 to implicitly determine what modules should be cloned. 
@@ -420,7 +424,7 @@ steps:
     source-dir: boost-root
     modules: variant2
     toolset: clang
-    cxx: clang++-12
+    cxx: clang++-16
     cxxstd: 17,20
 ----
 
@@ -559,7 +563,6 @@ steps:
   uses: alandefreitas/cpp-actions/create-changelog@master
   with:
     output-path: CHANGELOG.md
-    trace-commands: 'true'
 ----
 
 ==== Input Parameters
