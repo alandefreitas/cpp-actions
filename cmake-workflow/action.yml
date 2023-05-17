@@ -318,6 +318,10 @@ runs:
             CONFIGURE_ARGS+=(${{ inputs.extra-args }})
             SOURCE_DIR_ARG=${{ (steps.setup-cmake.outputs.supports-path-to-build == 'false' && format('{0}', steps.params.outputs.source_dir)) || '' }}
         
+            which mkdir
+            ls -l $(which mkdir)
+            echo "$PATH"
+        
             mkdir "$std_build_dir" || true
             cd "$std_build_dir"
             set +e

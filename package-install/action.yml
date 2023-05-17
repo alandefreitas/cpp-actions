@@ -26,6 +26,14 @@ inputs:
 
     required: false
     default: ''
+
+  cxxflags:
+    description: |
+      C++ flags used by vcpkg.
+      
+    required: false
+    default: ''
+
   cc:
     description: 'C compiler used by vcpkg'
     required: false
@@ -209,16 +217,42 @@ runs:
         fi
         echo "vcpkg-executable=$vcpkg_executable" >> $GITHUB_OUTPUT
         
+        # include compiler version as part of the cache key, even if location is the same
+        if command -v sha1sum >/dev/null 2>&1; then
+          has_sha1sum=true
+        else
+          has_sha1sum=false
+        fi
+        cxx_cache_hash=""
+        cxx="${{ inputs.cxx }}"
+        cxxflags="${{ inputs.cxxflags }}"
+        cc="${{ inputs.cc }}"
+        if [ "$cxx" != "" ]; then
+          cxx_version_output=$("$cxx" --version || true)
+          if [ "$cxx_version_output" != "" ]; then
+            regex='[0-9]+\.[0-9]+\.[0-9]+'
+            [[ $cxx_version_output =~ $regex ]]
+            cxx_version="${BASH_REMATCH[0]}"
+          fi
+          concatenated_string="cxx:$cxx-flags:$cxxflags-cc:$cc-version:$cxx_version"
+          if [ "$has_sha1sum" == "true" ]; then
+            cxx_cache_hash=$(echo -n "${concatenated_string}" | sha1sum | awk '{print $1}')
+          else
+            cxx_cache_hash=$(echo -n "${concatenated_string}" | shasum -a 1 | awk '{print $1}')
+          fi
+        fi
+        
         # vcpkg cache hash
-        vcpkg_cache_hash="${{ runner.os }}-$vcpkg_hash$triplet_suffix"
-        ${{ (inputs.cxx != '' && format('vcpkg_cache_hash="$vcpkg_cache_hash-{0}"', inputs.cxx)) || '' }}
-        ${{ (inputs.cc != '' && format('vcpkg_cache_hash="$vcpkg_cache_hash-{0}"', inputs.cc)) || '' }}
+        os="$(echo "${{ runner.os }}" | tr '[:upper:]' '[:lower:]')"
+        vcpkg_cache_key="vcpkg-$triplet_suffix-os:$os-cxx:$cxx_cache_hash"
+        
+        # add packages to cache_key
         vcpkg_packages=${{ inputs.vcpkg }}
         for package in ${vcpkg_packages// / }
         do
-            vcpkg_cache_hash=$vcpkg_cache_hash-$package
+            vcpkg_cache_key=$vcpkg_cache_key-$package
         done
-        echo "vcpkg_cache_hash=$vcpkg_cache_hash" >> $GITHUB_OUTPUT
+        echo "vcpkg_cache_key=$vcpkg_cache_key" >> $GITHUB_OUTPUT
 
     # Attempt to get vcpkg with its packages from the cache before cloning it
     # The cache key includes the vcpkg version, os, packages and triplet
@@ -228,7 +262,7 @@ runs:
       uses: actions/cache@v3
       with:
         path: ${{ inputs.vcpkg-dir }}
-        key: ${{ steps.ctx.outputs.vcpkg_cache_hash }}
+        key: ${{ steps.ctx.outputs.vcpkg_cache_key }}
 
     - name: vcpkg install
       if: steps.cache-vcpkg.outputs.cache-hit != 'true' && inputs.vcpkg != ''
@@ -241,6 +275,7 @@ runs:
         cd ${{ inputs.vcpkg-dir }}
         packages=${{ inputs.vcpkg }}
         ${{ (inputs.cxx != '' && format('export CXX="{0}"', inputs.cxx)) || '' }}
+        ${{ (inputs.cxxflags != '' && format('export CXXFLAGS="{0}"', inputs.cxxflags)) || '' }}
         ${{ (inputs.cc != '' && format('export CC="{0}"', inputs.cc)) || '' }}
         for package in ${packages// / }
         do

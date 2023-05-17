@@ -14,6 +14,7 @@ This action uses a number of alternatives to find or install GCC:
 
 - The GCC path provided to 'path'
 - Any other version of GCC it can find in the system
+- Any other version of GCC available from APT
 - A version of GCC from our own binary releases
 
 The action will *not* attempt to install GCC from source files, which is the only 
