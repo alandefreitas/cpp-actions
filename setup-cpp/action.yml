@@ -2,9 +2,25 @@ name: "Setup C++"
 description: |
   Set up a C++ compiler and add it to the PATH.
   
-  This action routes to the appropriate setup-gcc or setup-clang actions.
+  The `compiler` parameter can be used to provide a compiler name or a compiler name with its version, separated
+  by whitespace or a `-`. Examples valid names are `gcc`, `pass:[g++]`, `clang`, `gcc-10`, `pass:[g++ 10]`, `clang 9.2`.
   
-  Other compilers are passed through. 
+  Note that strings like `10` and `9.2` are semver requirements and not semver versions. For instance, `10` represents
+  the requirement equivalent to `>=10.0.0 <11.0.0` while `9.2` represents the requirement equivalent to 
+  `>=9.2.0 <9.3.0`.  
+  
+  If the `compiler` parameter does not include a version requirement, the `version` parameter can be used to provide
+  a version semver string in the npm format with the compiler requirements.
+  
+  If the compiler is GCC or Clang, this action routes to the appropriate xref:actions/setup-gcc.adoc[] or 
+  xref:actions/setup-clang.adoc[] actions. 
+  
+  If the compiler is MSVC, this action will setup the developer command prompt for Microsoft Visual C\+\+. 
+  
+  Any other compilers are passed through.
+  
+  If the compiler is GCC or Clang, the outputs include the paths to the compilers as well as the compiler
+  version ultimately setup by the action.
 
 inputs:
   compiler:
@@ -102,7 +118,7 @@ runs:
       run: |
         # Strip version from input prefixed string
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-  
+        
         # Split part and version      
         compiler="${{ inputs.compiler }}"
         IFS="- " read -ra parts <<< "$compiler"
@@ -113,7 +129,7 @@ runs:
           compiler="${parts[0]}"
           version="${parts[1]}"
         fi
-  
+        
         # Normalize compiler name
         compiler=$(echo "$compiler" | tr '[:upper:]' '[:lower:]')
         if [[ $compiler == gcc* ]]; then
@@ -139,7 +155,7 @@ runs:
         check-latest: ${{ inputs.check-latest }}
         update-environment: ${{ inputs.update-environment }}
         trace-commands: ${{ inputs.trace-commands }}
-        
+
     - name: Setup Clang
       if: ${{ steps.split-compiler.outputs.compiler == 'clang' }}
       uses: alandefreitas/cpp-actions/setup-clang@v1.1.0
