@@ -10,7 +10,11 @@
 name: 'Boost Clone'
 description: |
   This action clones the Boost source directory, attempting to get it from the cache first. Only the specified
-  modules are cloned and cached. 
+  modules are cloned and cached.
+  
+  Cloning boost is useful when one wants the always use the latest version of boost in a library or is writing
+  a boost proposal. For other use cases, individual boost modules can be fetched with vcpkg in 
+  xref:actions/package-install.adoc[] or directly included in a package manager manifest.
   
   Besides the explicitly specified list of modules, the action can also scan directories for boost dependencies
   to implicitly determine what modules should be cloned. 
@@ -66,6 +70,7 @@ runs:
       run: |
         # Scan ${{ inputs.scan-modules-dir }}
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+        
         source_dir="${{ inputs.scan-modules-dir }}"
         if [[ $source_dir != /* ]]; then
           source_dir="$(readlink -f "$source_dir" 2>/dev/null || realpath -e "$source_dir" 2>/dev/null || echo "$(pwd)/$source_dir")"
@@ -107,6 +112,7 @@ runs:
       run: |
         # Determine cache key for boost
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+        
         boost_hash=$(git ls-remote https://github.com/boostorg/boost.git ${{ inputs.branch }} | awk '{ print $1 }')
         echo "boost_hash=$boost_hash" >> $GITHUB_OUTPUT
         
@@ -226,6 +232,8 @@ runs:
       if: steps.cache-boost.outputs.cache-hit != 'true'
       shell: bash
       run: |
+        # Clone Boost Superproject 
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         git clone https://github.com/boostorg/boost.git -b ${{ inputs.branch }} "${{ inputs.boost-dir }}"
 
     # Apply patches if boost not found in cache
@@ -235,6 +243,8 @@ runs:
       working-directory: ${{ inputs.boost-dir }}/libs
       run: |
         # Apply boost patches ${{ inputs.patches }}
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+        
         patches=${{ inputs.patches }}
         for patch in ${patches//,/ }
         do
@@ -245,6 +255,46 @@ runs:
       uses: SimenB/github-actions-cpu-cores@v1
       id: cpu-cores
 
+    - name: Git features
+      if: (steps.cache-boost.outputs.cache-hit != 'true' && steps.ctx.outputs.all_modules == '')
+      working-directory: ${{ inputs.boost-dir }}
+      shell: bash
+      id: features
+      run: |
+        # Identify git features
+        
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+        GIT_EXECUTABLE="git"
+        if command -v "$GIT_EXECUTABLE" &> /dev/null; then
+          # Get git version
+          VERSION_OUTPUT=$("$GIT_EXECUTABLE" --version)
+          regex='([0-9]+)\.([0-9]+)\.([0-9]+)'
+          [[ $VERSION_OUTPUT =~ $regex ]]
+          GIT_VERSION="${BASH_REMATCH[0]}"
+          GIT_MAJOR="${BASH_REMATCH[1]}"
+          GIT_MINOR="${BASH_REMATCH[2]}"
+          GIT_PATCH="${BASH_REMATCH[3]}"
+          if [ "$GIT_VERSION" != "" ]; then
+            echo -E "executable=$(which $GIT_EXECUTABLE)"
+            echo "version=$GIT_VERSION" >> $GITHUB_OUTPUT
+            echo "major=$GIT_MAJOR" >> $GITHUB_OUTPUT
+            echo "minor=$GIT_MINOR" >> $GITHUB_OUTPUT
+            echo "patch=$GIT_PATCH" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check if git supports --jobs option # 2.27.0 is min version for --jobs
+          supports_jobs="false"
+          if [ "$GIT_MAJOR" -gt "2" ]; then
+            supports_jobs="true"
+          elif [ "$GIT_MAJOR" -eq "2" ] && [ "$GIT_MINOR" -ge "27" ]; then
+            supports_jobs="true"
+          fi
+          echo "jobs=$supports_jobs" >> $GITHUB_OUTPUT
+        else
+          echo "::error title:Git not found::boost-clone: cannot find git executable"
+          false
+        fi
+
     # Initialize all submodules if boost not found in cache and no specific modules were specified
     - name: Initialize all submodules
       if: (steps.cache-boost.outputs.cache-hit != 'true' && steps.ctx.outputs.all_modules == '')
@@ -252,7 +302,10 @@ runs:
       shell: bash
       run: |
         # Update all boost submodules
-        git submodule update --depth 1 --jobs ${{ steps.cpu-cores.outputs.count }}--init --recursive
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+        
+        GIT_ARGS=(${{ (steps.features.outputs.jobs == 'true' && format('"--jobs" "{0}"', steps.cpu-cores.outputs.count)) || '' }})
+        git submodule update --depth 1 "${GIT_ARGS[@]}" --init --recursive
 
     # Initialize specified submodules if boost not found in cache and submodules were specified
     - name: Initialize specified submodules
@@ -263,17 +316,21 @@ runs:
         # Scan transitive dependencies and update submodules
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         git submodule update --depth 1 -q --init tools/boostdep    
-        # Run boostdep for required modules: ${{ steps.ctx.outputs.all_modules }}
         
+        # Run boostdep for required modules: ${{ steps.ctx.outputs.all_modules }}
         # Initialize each explicitly specified module 
         modules="${{ steps.ctx.outputs.all_modules }}"
         for module in ${modules// / }
         do
             echo "Initialize submodule $module"
             set -x
-            git submodule update --depth 1 --jobs ${{ steps.cpu-cores.outputs.count }} -q --init libs/$module || true
+            git submodule update --depth 1 -q --init libs/$module || true
             ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
         done
+        
+        # Git arguments for other modules
+        GIT_ARGS="${{ (steps.features.outputs.jobs == 'true' && format('--jobs {0} ', steps.cpu-cores.outputs.count)) || '' }}"
+        GIT_ARGS+="--depth 1"
         
         # Initialize dependencies of each explicitly specified module
         python_path="${{ steps.setup-python.outputs.python-path }}"
@@ -281,9 +338,8 @@ runs:
         for module in ${modules// / }
         do
             echo "Run boostdep for required module $module"
-            set +e
-            set -x
-            $python_path tools/boostdep/depinst/depinst.py --include benchmark --include example --include examples --include tools --include source --git_args "--jobs ${{ steps.cpu-cores.outputs.count }} --depth 1" $module
+            # Check if git supports --jobs option # 2.27.0 is min version for --jobs
+            $python_path tools/boostdep/depinst/depinst.py --include benchmark --include example --include examples --include tools --include source --git_args "$GIT_ARGS" $module
             python_exit_code=$?
             ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
             set -e
@@ -295,5 +351,5 @@ runs:
         
         if [ $python_exit_code -ne 0 ]; then
           echo "Boostdep failed. Initializing all modules..."
-          git submodule update --depth 1 --jobs ${{ steps.cpu-cores.outputs.count }}--init --recursive
+          git submodule update "$GIT_ARGS" --init --recursive
         fi
