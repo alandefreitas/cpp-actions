@@ -361,6 +361,7 @@ runs:
         # Look for APT GCC version we can download
         all_apt_versions=""
         all_semver_versions=""
+        semver_regex='[0-9]+\.[0-9]+\.[0-9]+'
         ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
         while read -r line; do
           package_name=$(echo "$line" | awk '{print $1}')
