@@ -192,6 +192,21 @@ def gha_evaluate(template: str, context):
                     reduced = True
                     break
 
+            for i in range(len(tokens)):
+                if tokens[i] == '!=':
+                    lhs = tokens[i - 1]
+                    rhs = tokens[i + 1]
+                    if not lhs.startswith("'"):
+                        continue
+                    if not rhs.startswith("'"):
+                        continue
+                    if lhs != rhs:
+                        tokens = tokens[:i - 1] + ["'true'"] + tokens[i + 2:]
+                    else:
+                        tokens = tokens[:i - 1] + ["'false'"] + tokens[i + 2:]
+                    reduced = True
+                    break
+
             # startsWith
             for i in range(len(tokens)):
                 if tokens[i] == 'startsWith':

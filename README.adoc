@@ -138,8 +138,7 @@ steps:
   id: package-install
   with:
     vcpkg: fmt
-    cxx: ${{ ( 'g++-13' && format ( '\{0\} \{1\}' , steps.setup-cpp.outputs.cxx || 'g++-13'
-      , '' ) ) || '' }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-13' }}
     cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}
 ----
 
@@ -153,14 +152,29 @@ steps:
   id: package-install
   with:
     vcpkg: fmt
-    apt-get: clang-3.8 sudo software-properties-common tzdata wget curl apt-transport-https
-      make apt-file unzip libssl-dev build-essential autotools-dev autoconf automake
-      g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3
-      ccache libpython-dev python3-distutils python3-pip git cmake
+    apt-get: sudo software-properties-common wget curl apt-transport-https make apt-file
+      unzip libssl-dev build-essential autotools-dev autoconf automake g++ libc++-helpers
+      python ruby cpio gcc-multilib g++-multilib pkgconf python3 ccache libpython-dev
+      python3-distutils python3-pip git cmake
     apt-get-ignore-missing: 'true'
-    cxx: ${{ ( 'clang++-3.8' && format ( '\{0\} \{1\}' , steps.setup-cpp.outputs.cxx ||
-      'clang++-3.8' , '' ) ) || '' }}
-    cc: ${{ steps.setup-cpp.outputs.cc || 'clang-3.8' }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-4.8' }}
+    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-4.8' }}
+----
+
+Example 3 (`cxxflags`):
+
+[source,yml,subs="attributes+"]
+----
+steps:
+- name: Install packages
+  uses: alandefreitas/cpp-actions/package-install@master
+  id: package-install
+  with:
+    vcpkg: fmt
+    apt-get: clang-12 libc++-12-dev libc++abi-12-dev
+    cxx: ${{ steps.setup-cpp.outputs.cxx || 'clang++-12' }}
+    cxxflags: -stdlib=libc++
+    cc: ${{ steps.setup-cpp.outputs.cc || 'clang-12' }}
 ----
 
 ==== Input Parameters
@@ -175,6 +189,8 @@ Setting the compiler is particularly important in Linux workflows that use `clan
 `libc++` or `libstdc++`, while the default compiler used by vcpkg will usually be GCC linking `libstdc++`.
 
 This would cause conflict in workflows that later attempt to use vcpkg dependencies.
+. |
+|`cxxflags` |C++ flags used by vcpkg.
 . |
 |`cc` |C compiler used by vcpkg. |
 |`vcpkg-triplet` |The triplet used by vcpkg to install packages. |
@@ -378,6 +394,8 @@ steps:
 |`branch` |Branch of the super-project. |`master`
 |`patches` |Libraries used to patch the boost installation. |
 |`modules` |The boost submodules we need to clone. |
+|`modules-scan-paths` |Additional modules subdirectory to scan; can be repeated. |
+|`modules-exclude-paths` |Additional modules subdirectory to scan; can be repeated. |`test`
 |`scan-modules-dir` |An independent directory we should scan for boost dependencies to clone. |
 |`scan-modules-ignore` |List of modules that should be ignored in scan-modules. |
 |`trace-commands` |Trace commands executed by the workflow. |`false`
@@ -667,6 +685,7 @@ This action uses a number of alternatives to find or install GCC:
 
 - The GCC path provided to 'path'
 - Any other version of GCC it can find in the system
+- Any other version of GCC available from APT
 - A version of GCC from our own binary releases
 
 The action will *not* attempt to install GCC from source files, which is the only 
