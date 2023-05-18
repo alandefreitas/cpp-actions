@@ -254,6 +254,19 @@ if __name__ == "__main__":
 
     good_icon.count = 0
 
+
+    def capitalize_sentences(text: str):
+        sentences = text.split('. ')
+        r = ''
+        for sentence in sentences:
+            sentence = sentence[0].upper() + sentence[1:]
+            sentence = sentence.strip()
+            r += sentence
+            if not sentence.endswith('.'):
+                r += '. '
+        return r
+
+
     # Generate output
     output = ''
     footnotes_output = ''
@@ -285,11 +298,11 @@ if __name__ == "__main__":
                     if c.body:
                         comment_suffix = f"[^{footnotes_count}]"
                         footnote = c.body.replace("\n", "").strip()
-                        footnotes_output += f'[^{footnotes_count}]: {footnote}\n'
+                        footnotes_output += f'[^{footnotes_count}]: {capitalize_sentences(footnote)}\n'
                         footnotes_count += 1
                     else:
                         comment_suffix = ""
-                    output += f'{pad}- {feat_icon}{scope_prefix}{c.description}{breaking_suffix}{comment_suffix}\n'
+                    output += f'{pad}- {feat_icon}{scope_prefix}{capitalize_sentences(c.description)}{breaking_suffix}{comment_suffix}\n'
 
     if delimiter_commit_id in tagged_commit_ids and delimiter_commit_id in commit_tags:
         parent_tag = commit_tags[delimiter_commit_id]
