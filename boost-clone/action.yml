@@ -57,11 +57,62 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Ensure python is available for find-python action in containers
+      if: inputs.modules != '' || inputs.scan-modules-dir != ''
+      uses: alandefreitas/cpp-actions/package-install@v1.1.0
+      with:
+        apt-get: python3
+
+    - name: Find python
+      if: inputs.modules != '' || inputs.scan-modules-dir != ''
+      id: find-python
+      shell: bash
+      run: |
+        # Find Python
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+        
+        executables=("python3" "python")
+        for executable in "${executables[@]}"; do        
+          if command -v "$executable" &> /dev/null; then
+            # Get git version
+            version_output=$("$executable" --version)
+            regex='([0-9]+)\.([0-9]+)\.([0-9]+)'
+            [[ "$version_output" =~ $regex ]] || true
+            version="${BASH_REMATCH[0]}"
+            major="${BASH_REMATCH[1]}"
+            minor="${BASH_REMATCH[2]}"
+            patch="${BASH_REMATCH[3]}"
+            if [ "$version" != "" ]; then
+              echo -E "path=$(which $executable)" >> $GITHUB_OUTPUT
+              echo "version=$version" >> $GITHUB_OUTPUT
+              echo "major=$major" >> $GITHUB_OUTPUT
+              echo "minor=$minor" >> $GITHUB_OUTPUT
+              echo "patch=$patch" >> $GITHUB_OUTPUT
+            fi
+          
+            # Check if git supports --jobs option # 2.27.0 is min version for --jobs
+            supports_scan_scripts="false"
+            if [[ "$major" -gt "3" ]]; then
+              supports_scan_scripts="true"
+            elif [[ "$major" -eq "3" ]] && [[ "$minor" -ge "5" ]]; then
+              supports_scan_scripts="true"
+            fi
+            echo "supports_scan_scripts=$supports_scan_scripts" >> $GITHUB_OUTPUT
+            break
+          fi        
+        done
+
+    - name: Ensure libssl is available for setup-python action
+      if: (inputs.modules != '' || inputs.scan-modules-dir != '') && steps.find-python.outputs.supports_scan_scripts != 'true'
+      uses: alandefreitas/cpp-actions/package-install@v1.1.0
+      with:
+        apt-get: libssl-dev
+
     - uses: actions/setup-python@v4
-      if: (inputs.modules != '' || inputs.scan-modules-dir != '') && !steps.find-python.outputs.python_path
+      if: (inputs.modules != '' || inputs.scan-modules-dir != '') && steps.find-python.outputs.supports_scan_scripts != 'true'
       id: setup-python
       with:
-        python-version: '>= 3.5'
+        python-version: '3.5'
 
     - name: Scan Required Boost Modules
       if: inputs.scan-modules-dir != ''
@@ -70,12 +121,13 @@ runs:
       run: |
         # Scan ${{ inputs.scan-modules-dir }}
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+        
         source_dir="${{ inputs.scan-modules-dir }}"
         if [[ $source_dir != /* ]]; then
           source_dir="$(readlink -f "$source_dir" 2>/dev/null || realpath -e "$source_dir" 2>/dev/null || echo "$(pwd)/$source_dir")"
         fi
         
-        python_path="${{ steps.setup-python.outputs.python-path }}"
+        python_path="${{ steps.setup-python.outputs.python-path || steps.find-python.outputs.path }}"
         
         # Go to action path to find the script and aux files
         # https://github.com/actions/runner/issues/716
@@ -111,6 +163,7 @@ runs:
       run: |
         # Determine cache key for boost
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+        
         boost_hash=$(git ls-remote https://github.com/boostorg/boost.git ${{ inputs.branch }} | awk '{ print $1 }')
         echo "boost_hash=$boost_hash" >> $GITHUB_OUTPUT
         
@@ -230,6 +283,8 @@ runs:
       if: steps.cache-boost.outputs.cache-hit != 'true'
       shell: bash
       run: |
+        # Clone Boost Superproject 
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         git clone https://github.com/boostorg/boost.git -b ${{ inputs.branch }} "${{ inputs.boost-dir }}"
 
     # Apply patches if boost not found in cache
@@ -239,6 +294,8 @@ runs:
       working-directory: ${{ inputs.boost-dir }}/libs
       run: |
         # Apply boost patches ${{ inputs.patches }}
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+        
         patches=${{ inputs.patches }}
         for patch in ${patches//,/ }
         do
@@ -337,7 +394,7 @@ runs:
         git submodule update "${GIT_ARGS[@]}" --init tools/cmake || true
         
         # Initialize dependencies of each explicitly specified module
-        python_path="${{ steps.setup-python.outputs.python-path }}"
+        python_path="${{ steps.setup-python.outputs.python-path || steps.find-python.outputs.path }}"
         python_exit_code=0
         for module in ${modules// / }
         do
