@@ -8,15 +8,69 @@ import argparse
 import os
 import subprocess
 import re
+import json
 
 
 class Commit:
     def __init__(self):
+        self.hash = None
+        self.author = None
+        self.date = None
+        self.subject = None
         self.type = None
         self.scope = None
         self.description = None
-        self.body = None
+        self.body = ''
+        self.footers = []
         self.breaking = False
+
+
+def normalize_type(s):
+    # - The units of information that make up Conventional Commits MUST NOT be treated as case sensitive
+    # by implementors, with the exception of BREAKING CHANGE which MUST be uppercase.
+    # - BREAKING-CHANGE MUST be synonymous with BREAKING CHANGE
+    category_mapping = {
+        'doc': 'docs',
+        'documentation': 'docs',
+        'fixes': 'fix',
+        'bugfix': 'fix',
+        'work': 'chore',
+        'chores': 'chore',
+        'maintenance': 'chore',
+        'feature': 'feat',
+        'cleanup': 'refactor',
+        'performance': 'perf',
+        'testing': 'test',
+        'tests': 'test',
+        'version': 'release',
+        'integration': 'ci',
+        'break': 'breaking',
+        'undo': 'revert',
+    }
+    return category_mapping.get(s.lower(), s)
+
+
+def humanize(s):
+    m = {
+        'docs': 'Documentation',
+        'fix': 'Fixes',
+        'style': 'Style',
+        'chore': 'Chores',
+        'build': 'Build',
+        'feat': 'Features',
+        'refactor': 'Refactor',
+        'perf': 'Performance',
+        'test': 'Tests',
+        'release': 'Release',
+        'ci': 'Continuous Integration',
+        'improvement': 'Improvement',
+        'breaking': 'Breaking',
+        'revert': 'Revert',
+        'other': 'Other'
+    }
+    if s in m:
+        return m[s]
+    return s
 
 
 if __name__ == "__main__":
@@ -37,12 +91,8 @@ if __name__ == "__main__":
     tag_pattern = re.compile(args.tag_pattern, flags=re.IGNORECASE)
     output_path = args.output
 
-    # Get commit log
-    result = subprocess.run(['git', '--no-pager', 'log'], stdout=subprocess.PIPE, cwd=project_path)
-    commit_log_output = result.stdout.decode('utf-8').splitlines()
-
     # Get tagged commits
-    tagged_commit_ids = set()
+    tagged_commit_hashes = set()
     commit_tags = {}
     tags_result = subprocess.run(['git', 'tag', '-l'], stdout=subprocess.PIPE, cwd=project_path)
     tags_output = tags_result.stdout.decode('utf-8').splitlines()
@@ -52,7 +102,7 @@ if __name__ == "__main__":
             commit_result = subprocess.run(['git', 'rev-list', '-n', '1', tag], stdout=subprocess.PIPE,
                                            cwd=project_path)
             commit_id = commit_result.stdout.decode('utf-8').strip()
-            tagged_commit_ids.add(commit_id)
+            tagged_commit_hashes.add(commit_id)
             commit_tags[commit_id] = tag
     ls_remote_result = subprocess.run(['git', 'ls-remote', '--tags'], stdout=subprocess.PIPE, cwd=project_path)
     ls_remote_output = ls_remote_result.stdout.decode('utf-8').splitlines()
@@ -63,116 +113,93 @@ if __name__ == "__main__":
             tag = parts[1].split('/')[-1]
             matches = re.findall(tag_pattern, tag)
             if matches:
-                tagged_commit_ids.add(commit_id)
+                tagged_commit_hashes.add(commit_id)
                 commit_tags[commit_id] = tag
-    print(f'{len(tagged_commit_ids)} tagged commits')
+    print(f'{len(tagged_commit_hashes)} tagged commits')
 
-    state = 'init'
-    commit_msgs = []
+    # Parse commit log
+    result = subprocess.run(['git', '--no-pager', 'log'], stdout=subprocess.PIPE, cwd=project_path)
+    commit_log_output = result.stdout.decode('utf-8').splitlines()
+    commits = []
+    commit = Commit()
     delimiter_commit_id = ''
     msg = ''
     for line in commit_log_output:
-        if state == 'init' and line.startswith('commit ') and ' ' not in line[7:]:
-            # expect author now
-            if msg != '':
-                commit_msgs.append(msg)
-            msg = ''
-            delimiter_commit_id = line[7:]
-            if commit_msgs and delimiter_commit_id in tagged_commit_ids:
+        if line == '':
+            continue
+        if line.startswith('commit ') and ' ' not in line[7:]:
+            if commit.hash:
+                commits.append(commit)
+                commit = Commit()
+            commit.hash = line[len('commit '):]
+            if commits and commit.hash in tagged_commit_hashes:
+                delimiter_commit_id = commit.hash
                 break
-            state = 'author'
+        if commit.hash and not commit.author and line.startswith('Author: '):
+            commit.author = line[len('Author: '):]
             continue
-        if state == 'author' and line.startswith('Author:'):
-            # expect date now
-            state = 'date'
+        if commit.author and not commit.date and line.startswith('Date: '):
+            commit.date = line[len('Date: '):]
             continue
-        if state == 'date' and line.startswith('Date:'):
-            # expect empty line
-            state = 'empty after date'
-            continue
-        if state == 'empty after date' and line == '':
-            # expect commit message now
-            state = 'message'
-            continue
-        if state == 'message' and line.startswith('    '):
-            # expect empty line and other commit or empty line and comments
-            msg += line[4:]
-            if commit_msgs:
-                # don't match if commit_msgs is still empty
-                matches = re.findall(version_pattern, msg)
-                if matches:
-                    break
-            state = 'init'
-            continue
-        if state == 'init' and line == '':
-            continue
-        if state == 'init' and line.startswith('    '):
-            msg += "\n\n" + line[4:]
-            continue
-    if msg != '':
-        commit_msgs.append(msg)
-    print(f'{len(commit_msgs)} commit messages')
+        if commit.date and line.startswith('    '):
+            msg = line[4:]
+            if not commit.subject:
+                # Is subject
+                commit.subject = msg
+                if commits:
+                    matches = re.findall(version_pattern, commit.subject)
+                    if matches:
+                        break
+                m = re.match(r'([ \d\w_-]+)(\(([ \d\w_-]+)\))?(!?): ([^\n]*)\n?(.*)', msg)
+                if m:
+                    commit.type = normalize_type(m[1])
+                    commit.scope = m[3]
+                    commit.description = m[5]
+                    commit.breaking = m[4] == '!'
+                else:
+                    # regular commit
+                    commit.description = commit.subject
+                    commit.type = 'other'
+                    commit.scope = None
+                    commit.breaking = commit.subject.find('BREAKING') != -1
+            else:
+                # Is body or footer
+                m = re.match(r'(([^ ]): )|(([^ ]) #)|(BREAKING CHANGE)', msg)
+                if m:
+                    # is footer
+                    if m[1]:
+                        commit.footers.append((m[2], msg[len(m[2]) + 2:].strip()))
+                    elif m[3]:
+                        commit.footers.append((m[4], msg[len(m[4]) + 1:].strip()))
+                    elif m[5]:
+                        commit.footers.append((m[5], msg[len(m[5]) + 1:].strip()))
+                    if commit.footers[-1][0].lower().startswith('breaking'):
+                        commit.breaking = True
+                else:
+                    # if body
+                    if not commit.body:
+                        commit.body += msg
+                    else:
+                        commit.body += '\n' + msg
+    if commit.hash and commit.subject:
+        commits.append(commit)
+    print(f'{len(commits)} commits')
 
     if args.limit:
-        commit_msgs = commit_msgs[:args.limit]
+        commits = commits[:args.limit]
         print(f'Limited to {args.limit}')
 
-
-    def normalize(s):
-        category_mapping = {
-            'doc': 'docs',
-            'documentation': 'docs',
-            'fixes': 'fix',
-            'bugfix': 'fix',
-            'work': 'chore',
-            'chores': 'chore',
-            'maintenance': 'chore',
-            'feature': 'feat',
-            'cleanup': 'refactor',
-            'performance': 'perf',
-            'testing': 'test',
-            'tests': 'test',
-            'version': 'release',
-            'integration': 'ci',
-            'break': 'breaking',
-            'undo': 'revert',
-        }
-        return category_mapping.get(s.lower(), s)
-
-
-    # Parse commit messages
-    commits = []
-    conventional_regex = r'([ \d\w_-]+)(\(([ \d\w_-]+)\))?(!?): ([^\n]*)\n?(.*)'
-    commit = Commit()
-    for c in commit_msgs:
-        m = re.match(conventional_regex, c)
-        if m:
-            # conventional commit
-            commit.type = normalize(m[1])
-            commit.scope = m[3]
-            commit.description = m[5]
-            parts = c.split('\n', 1)
-            commit.body = '' if len(parts) < 2 else parts[1].strip()
-            commit.breaking = m[4] == '!' or commit.body.find('BREAKING CHANGE') != -1
-            commits.append(commit)
-            commit = Commit()
-            continue
-
-        # regular commit
-        description = c
-        body = ''
-        description_end = description.find('\n')
-        if description_end != -1:
-            body = description[description_end:]
-            description = description[:description_end]
-
-        commit.type = 'other'
-        commit.scope = None
-        commit.description = description
-        commit.body = body
-        commit.breaking = c.find('BREAKING') != -1
-        commits.append(commit)
-        commit = Commit()
+    # Footer tokens (differentiating from body):
+    # - One or more footers MAY be provided one blank line after the body. Each footer MUST consist of a
+    # word token, followed by either a :<space> or <space># separator, followed by a string value
+    # (this is inspired by the git trailer convention).
+    # - A footer’s token MUST use - in place of whitespace characters, e.g., Acked-by
+    # (this helps differentiate the footer section from a multi-paragraph body). An exception is made
+    # for BREAKING CHANGE, which MAY also be used as a token.
+    # - A footer’s value MAY contain spaces and newlines, and parsing MUST terminate when the next valid
+    # footer token/separator pair is observed.
+    # - The footer keywords recognized by github:
+    # https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue
 
     # Create dictionary of changes by type and scope
     changes = {}
@@ -192,29 +219,6 @@ if __name__ == "__main__":
             change_type_priority.append(type)
     if 'other' not in change_type_priority:
         change_type_priority.append('other')
-
-
-    def humanize(s):
-        m = {
-            'docs': 'Documentation',
-            'fix': 'Fixes',
-            'style': 'Style',
-            'chore': 'Chores',
-            'build': 'Build',
-            'feat': 'Features',
-            'refactor': 'Refactor',
-            'perf': 'Performance',
-            'test': 'Tests',
-            'release': 'Release',
-            'ci': 'Continuous Integration',
-            'improvement': 'Improvement',
-            'breaking': 'Breaking',
-            'revert': 'Revert',
-            'other': 'Other'
-        }
-        if s in m:
-            return m[s]
-        return s
 
 
     # https://github.com/favoloso/conventional-changelog-emoji#available-emojis
@@ -264,7 +268,7 @@ if __name__ == "__main__":
             r += sentence
             if not sentence.endswith('.'):
                 r += '. '
-        return r
+        return r.strip()
 
 
     # Generate output
@@ -275,55 +279,61 @@ if __name__ == "__main__":
         if change_type in changes:
             scope_changes = changes[change_type]
             if len(changes) > 1 or (len(changes) > 0 and change_type[0] != 'other'):
-                output += f'\n## {icon_for(change_type)} {humanize(change_type)}\n\n'
+                if output:
+                    output += '\n'
+                output += f'## {icon_for(change_type)} {humanize(change_type)}\n\n'
             for [scope, commits] in scope_changes.items():
-                pad = ''
                 scope_prefix = ''
-                if scope is not None:
-                    if len(commits) > 1:
-                        output += f'- {scope}:\n'
-                        pad = '    '
-                    else:
-                        scope_prefix = f'{scope}: '
-
-                for c in commits:
-                    if c.type == "feat":
-                        feat_icon = good_icon() + " "
-                    else:
-                        feat_icon = ''
-                    if c.breaking:
-                        breaking_suffix = " (" + icon_for("breaking") + " BREAKING)"
-                    else:
-                        breaking_suffix = ''
-                    if c.body:
-                        comment_suffix = f"[^{footnotes_count}]"
-                        footnote = c.body.replace("\n", "").strip()
+                multiline = scope is not None and len(commits) > 1
+                if multiline:
+                    output += f'- {scope}:\n'
+                for commit in commits:
+                    # Padding
+                    if multiline:
+                        output += '    '
+                    output += '- '
+                    # Feat icon
+                    if commit.type == 'feat':
+                        output += f'{good_icon()} '
+                    # Scope prefix
+                    if scope is not None and not multiline:
+                        output += f'{scope}: '
+                    # Description
+                    output += f'{capitalize_sentences(commit.description)}'
+                    # Breaking
+                    if commit.breaking:
+                        output += f' ({icon_for("breaking")} BREAKING)'
+                    # Body Footnote Link
+                    if commit.body:
+                        output += f"[^{footnotes_count}]"
+                        footnote = commit.body.replace("\n", "").strip()
                         footnotes_output += f'[^{footnotes_count}]: {capitalize_sentences(footnote)}\n'
                         footnotes_count += 1
-                    else:
-                        comment_suffix = ""
-                    output += f'{pad}- {feat_icon}{scope_prefix}{capitalize_sentences(c.description)}{breaking_suffix}{comment_suffix}\n'
+                    # Commit id
+                    output += f' {commit.hash}'
+                    output += '\n'
 
-    if delimiter_commit_id in tagged_commit_ids and delimiter_commit_id in commit_tags:
+    # Output parent release
+    if delimiter_commit_id in tagged_commit_hashes and delimiter_commit_id in commit_tags:
         parent_tag = commit_tags[delimiter_commit_id]
-        parent_id = delimiter_commit_id[:7]
         cmd = ['git', 'config', '--get', 'remote.origin.url']
         result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-        output += '\n\n'
+        output += '\n'
         if result.returncode == 0:
             # Decode output and remove any trailing whitespace
             repo_url = result.stdout.strip()
             if repo_url.endswith('.git'):
                 repo_url = repo_url[:-len('.git')]
-            output += f'> Parent release: [{parent_tag}]({repo_url}/releases/tag/{parent_tag}) (commit [{parent_id}]({repo_url}/tree/{parent_tag}))\n'
+            output += f'> Parent release: [{parent_tag}]({repo_url}/releases/tag/{parent_tag}) {delimiter_commit_id}\n'
         else:
-            output += f'> Parent release: {parent_tag} (commit {parent_id})\n'
+            output += f'> Parent release: {parent_tag} {delimiter_commit_id}\n'
 
+    # Output footnotes
     if footnotes_output:
-        output += '\n\n'
+        output += '\n'
         output += footnotes_output
 
-    print(f'CHANGELOG Contents:', output)
+    print(f'CHANGELOG Contents:\n', output)
 
     output_path = os.path.abspath(output_path)
     print(f'Generating CHANGELOG: {output_path}')
