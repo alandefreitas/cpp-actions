@@ -31,7 +31,7 @@ inputs:
     description: |
       Used to specify whether the Clang installation should be cached in the case Clang needs to be downloaded."
     required: false
-    default: 'true'
+    default: 'false'
 
   architecture:
     description: |

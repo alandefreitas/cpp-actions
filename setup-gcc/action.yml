@@ -41,7 +41,7 @@ inputs:
     description: |
       Used to specify whether the GCC installation should be cached in the case GCC needs to be downloaded."
     required: false
-    default: 'true'
+    default: 'false'
 
   architecture:
     description: |

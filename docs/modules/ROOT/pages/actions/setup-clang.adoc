@@ -27,7 +27,7 @@ By default, it uses any version available in the environment.
 . |`*`
 |`path` |The clang or clang++ executable. We attempt to find Clang at this path first. |`clang++`
 |`cache` |Used to specify whether the Clang installation should be cached in the case Clang needs to be downloaded."
-. |`true`
+. |`false`
 |`architecture` |The target architecture (x86, x64). By default, this value is inferred.
 . |
 |`check-latest` |By default, when Clang is not available, this action will install the minimum version in the version spec.

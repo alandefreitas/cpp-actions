@@ -51,7 +51,7 @@ By default, it uses any version available in the environment.
 . |`*`
 |`path` |The compiler executable. We attempt to find the compiler at this path first. |`g++`
 |`cache` |Used to specify whether the compiler installation should be cached in case it needs to be downloaded."
-. |`true`
+. |`false`
 |`architecture` |The target architecture (x86, x64). By default, this value is inferred.
 . |
 |`check-latest` |By default, when the compiler is not available, this action will install the minimum version in the version spec.

@@ -48,7 +48,7 @@ inputs:
     description: |
       Used to specify whether the compiler installation should be cached in case it needs to be downloaded."
     required: false
-    default: 'true'
+    default: 'false'
 
   architecture:
     description: |
