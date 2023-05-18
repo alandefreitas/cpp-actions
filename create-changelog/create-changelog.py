@@ -151,7 +151,8 @@ if __name__ == "__main__":
             commit.type = normalize(m[1])
             commit.scope = m[3]
             commit.description = m[5]
-            commit.body = m[6]
+            parts = c.split('\n', 1)
+            commit.body = '' if len(parts) < 2 else parts[1].strip()
             commit.breaking = m[4] == '!' or commit.body.find('BREAKING CHANGE') != -1
             commits.append(commit)
             commit = Commit()
@@ -255,6 +256,8 @@ if __name__ == "__main__":
 
     # Generate output
     output = ''
+    footnotes_output = ''
+    footnotes_count = 1
     for change_type in change_type_priority:
         if change_type in changes:
             scope_changes = changes[change_type]
@@ -280,7 +283,10 @@ if __name__ == "__main__":
                     else:
                         breaking_suffix = ''
                     if c.body:
-                        comment_suffix = " (" + c.body.replace('\n', '').strip() + ")"
+                        comment_suffix = f"[^{footnotes_count}]"
+                        footnote = c.body.replace("\n", "").strip()
+                        footnotes_output += f'[^{footnotes_count}]: {footnote}\n'
+                        footnotes_count += 1
                     else:
                         comment_suffix = ""
                     output += f'{pad}- {feat_icon}{scope_prefix}{c.description}{breaking_suffix}{comment_suffix}\n'
@@ -299,6 +305,10 @@ if __name__ == "__main__":
             output += f'> Parent release: [{parent_tag}]({repo_url}/releases/tag/{parent_tag}) (commit [{parent_id}]({repo_url}/tree/{parent_tag}))\n'
         else:
             output += f'> Parent release: {parent_tag} (commit {parent_id})\n'
+
+    if footnotes_output:
+        output += '\n\n'
+        output += footnotes_output
 
     print(f'CHANGELOG Contents:', output)
 
