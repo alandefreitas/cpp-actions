@@ -41,6 +41,8 @@ steps:
 |`branch` |Branch of the super-project. |`master`
 |`patches` |Libraries used to patch the boost installation. |
 |`modules` |The boost submodules we need to clone. |
+|`modules-scan-paths` |Additional modules subdirectory to scan; can be repeated. |
+|`modules-exclude-paths` |Additional modules subdirectory to scan; can be repeated. |`test`
 |`scan-modules-dir` |An independent directory we should scan for boost dependencies to clone. |
 |`scan-modules-ignore` |List of modules that should be ignored in scan-modules. |
 |`trace-commands` |Trace commands executed by the workflow. |`false`

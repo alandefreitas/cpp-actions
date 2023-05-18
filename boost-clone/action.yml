@@ -41,6 +41,14 @@ inputs:
     description: 'The boost submodules we need to clone'
     required: false
     default: ''
+  modules-scan-paths:
+    description: 'Additional modules subdirectory to scan; can be repeated'
+    required: false
+    default: ''
+  modules-exclude-paths:
+    description: 'Additional modules subdirectory to scan; can be repeated'
+    required: false
+    default: 'test'
   scan-modules-dir:
     description: 'An independent directory we should scan for boost dependencies to clone'
     required: false
