@@ -163,8 +163,7 @@ if __name__ == "__main__":
                     commit.scope = None
                     commit.breaking = commit.subject.find('BREAKING') != -1
             else:
-                # Is body or footer
-                m = re.match(r'(([^ ]): )|(([^ ]) #)|(BREAKING CHANGE)', msg)
+                m = re.match(r'(([^ ]+): )|(([^ ]+) #)|((BREAKING CHANGE): )', msg)
                 if m:
                     # is footer
                     if m[1]:
@@ -172,9 +171,13 @@ if __name__ == "__main__":
                     elif m[3]:
                         commit.footers.append((m[4], msg[len(m[4]) + 1:].strip()))
                     elif m[5]:
-                        commit.footers.append((m[5], msg[len(m[5]) + 1:].strip()))
+                        commit.footers.append((m[6], msg[len(m[6]) + 2:].strip()))
                     if commit.footers[-1][0].lower().startswith('breaking'):
                         commit.breaking = True
+                elif msg.lower() in ['breaking', 'breaking-change', 'breaking change']:
+                    # footer with no key and value
+                    # the whole message is breaking change footer
+                    commit.breaking = True
                 else:
                     # if body
                     if not commit.body:
@@ -309,6 +312,20 @@ if __name__ == "__main__":
                         footnote = commit.body.replace("\n", "").strip()
                         footnotes_output += f'[^{footnotes_count}]: {capitalize_sentences(footnote)}\n'
                         footnotes_count += 1
+                    # Footer keys
+                    if commit.footers:
+                        output += ' ('
+                        first = True
+                        for [key, value] in commit.footers:
+                            if first:
+                                first = False
+                            else:
+                                output += ', '
+                            if value.startswith('#'):
+                                output += f'{key} {value}'
+                            else:
+                                output += f'{key}: {value}'
+                        output += ')'
                     # Commit id
                     output += f' {commit.hash}'
                     output += '\n'
