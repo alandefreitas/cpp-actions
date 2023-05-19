@@ -259,6 +259,7 @@ runs:
 
         # Look for system GCC executables
         GCC_EXECUTABLES=""
+        ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
         DPKG_OUTPUT=$(dpkg --list)
         if echo "$DPKG_OUTPUT" | grep -q 'g++'; then
           DPKG_GCCS_OUTPUT=$(echo "$DPKG_OUTPUT" | grep 'g++')
@@ -267,6 +268,7 @@ runs:
           DPKG_GCCS_OUTPUT=""
           DPKG_GCCS=()
         fi
+        ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
         
         if [ "$DPKG_GCCS_OUTPUT" != "" ]; then
           DPKG_GCCS=$(echo "${DPKG_GCCS[@]}")
