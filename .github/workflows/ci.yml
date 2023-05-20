@@ -31,8 +31,8 @@ jobs:
       matrix:
         include:
           # Latest
-          - { name: 'GCC 13 (Latest): C++17-20', toolset: gcc-13, cxx: g++-13, cc: gcc-13, cxxstd: "17,20", os: ubuntu-22.04 }
-          - { name: 'Clang 16 (Latest): C++17-20', toolset: clang, cxx: clang++-16, cc: clang-16, cxxstd: "17,20", os: ubuntu-22.04 }
+          - { name: 'GCC 13 (Latest): C++17-20',    toolset: gcc-13,    cxx: g++-13,     cc: gcc-13,   cxxstd: "17,20", os: ubuntu-22.04 }
+          - { name: 'Clang 16 (Latest): C++17-20',  toolset: clang,     cxx: clang++-16, cc: clang-16, cxxstd: "17,20", os: ubuntu-22.04 }
           - { name: 'MSVC 14.3 (Latest): C++17-20', toolset: msvc-14.3, cxxstd: "17,20", address-model: '32,64', os: windows-2022 }
           - { name: 'AppleClang: C++14-17',         toolset: clang,     cxxstd: "14,17", os: macos-11 }
 
@@ -43,20 +43,20 @@ jobs:
 
           # Special
           - { name: 'UBSan (GCC 13: C++17-20)', toolset: gcc-13, cxx: g++-13, cc: gcc-13, cxxstd: "17,20", ubsan: true, os: ubuntu-22.04 }
-          - { name: 'Shared (GCC)', generator: 'Unix Makefiles', os: ubuntu-22.04, build_shared: true, build-type: Debug, cmake: true }
-          - { name: 'Shared (VS 2019)', toolset: msvc-14.2, generator: 'Visual Studio 16 2019', address-model: '32,64', cxxstd: "17,20", os: windows-2019, build_shared: true, build-type: Debug }
-          - { name: 'Shared (VS 2022)', toolset: msvc-14.3, generator: 'Visual Studio 17 2022', address-model: '32,64', cxxstd: "17,20", os: windows-2022, build_shared: true, build-type: Debug }
-          - { name: 'Clang 12 + libc++: C++17-20', toolset: clang, cxx: clang++-12, cc: clang-12, cxxstd: "17,20", cxxflags: -stdlib=libc++, linkflags: -stdlib=libc++, os: ubuntu-20.04, install: [ clang-12, libc++-12-dev, libc++abi-12-dev ] }
+          - { name: 'Shared (VS 2019)',         toolset: msvc-14.2, generator: 'Visual Studio 16 2019', address-model: '32,64', cxxstd: "17,20", os: windows-2019, build_shared: true, build-type: Debug }
+          - { name: 'Shared (VS 2022)',         toolset: msvc-14.3, generator: 'Visual Studio 17 2022', address-model: '32,64', cxxstd: "17,20", os: windows-2022, build_shared: true, build-type: Debug }
+          - { name: 'Shared (GCC)',             generator: 'Unix Makefiles', os: ubuntu-22.04, build_shared: true, build-type: Debug, cmake: true }
 
           # GCC
           - { name: 'GCC 12: C++17-20', toolset: gcc-12, cxx: g++-12, cc: gcc-12, cxxstd: "17,20", os: ubuntu-22.04 }
           - { name: 'GCC 11: C++17-20', toolset: gcc-11, cxx: g++-11, cc: gcc-11, cxxstd: "17,20", os: ubuntu-22.04 }
-          - { name: 'GCC 10: C++17', toolset: gcc-10, cxx: g++-10, cc: gcc-10, cxxstd: "17", os: ubuntu-22.04 }
-          - { name: 'GCC 9: C++17', toolset: gcc-9, cxx: g++-9, cc: gcc-9, cxxstd: "17", os: ubuntu-22.04 }
-          - { name: 'GCC 8: C++17', toolset: gcc-8, cxx: g++-8, cc: gcc-8, cxxstd: "17", os: ubuntu-20.04 }
-          - { name: 'GCC 7: C++14-17', toolset: gcc-7, cxx: g++-7, cc: gcc-7, cxxstd: "14,17", os: ubuntu-20.04 }
-          - { name: 'GCC 6: C++11-14', toolset: gcc-6, cxx: g++-6, cc: gcc-6, cxxstd: "11,14", os: ubuntu-22.04, container: 'ubuntu:18.04' }
-          - { name: 'GCC 5: C++11-14', toolset: gcc-5, cxx: g++-5, cc: gcc-5, cxxstd: "11,14", os: ubuntu-22.04, container: 'ubuntu:18.04' }
+          - { name: 'GCC 10.2: C++14-17', toolset: gcc-10.2, cxx: g++-10.2, cc: gcc-10.2, cxxstd: "17", os: ubuntu-20.04 }
+          - { name: 'GCC 10: C++14-17', toolset: gcc-10, cxx: g++-10, cc: gcc-10, cxxstd: "17",    os: ubuntu-22.04 }
+          - { name: 'GCC 9: C++14-17',  toolset: gcc-9,  cxx: g++-9,  cc: gcc-9,  cxxstd: "17",    os: ubuntu-22.04 }
+          - { name: 'GCC 8: C++14-17',  toolset: gcc-8,  cxx: g++-8,  cc: gcc-8,  cxxstd: "17",    os: ubuntu-20.04 }
+          - { name: 'GCC 7: C++14-17',  toolset: gcc-7,  cxx: g++-7,  cc: gcc-7,  cxxstd: "14,17", os: ubuntu-20.04 }
+          - { name: 'GCC 6: C++11-14',  toolset: gcc-6,  cxx: g++-6,  cc: gcc-6,  cxxstd: "11,14", os: ubuntu-22.04, container: 'ubuntu:18.04' }
+          - { name: 'GCC 5: C++11-14',  toolset: gcc-5,  cxx: g++-5,  cc: gcc-5,  cxxstd: "11,14", os: ubuntu-22.04, container: 'ubuntu:18.04' }
 
           # Clang
           - { name: 'Clang 15: C++17-20',  toolset: clang, cxx: clang++-15,  cc: clang-15,  cxxstd: "17,20", os: ubuntu-22.04 }

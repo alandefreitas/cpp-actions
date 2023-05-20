@@ -36,7 +36,7 @@ steps:
   uses: alandefreitas/cpp-actions/setup-cpp@{page-version}
   id: setup-cpp
   with:
-    compiler: g++-13
+    compiler: g++-10.2
 ----
 
 == Input Parameters
@@ -49,7 +49,7 @@ steps:
 
 By default, it uses any version available in the environment.
 . |`*`
-|`path` |The compiler executable. We attempt to find the compiler at this path first. |`g++`
+|`path` |The compiler executable. We attempt to find the compiler at this path first. |
 |`cache` |Used to specify whether the compiler installation should be cached in case it needs to be downloaded."
 . |`false`
 |`architecture` |The target architecture (x86, x64). By default, this value is inferred.

@@ -12,9 +12,7 @@ compiling `b2` if needed and generating a proper `user-config.jam` file.
 This action is particularly useful for Boost library proposals.
 
 
-== Examples
-
-Example 1:
+== Example
 
 [source,yml,subs="attributes+"]
 ----
@@ -24,86 +22,8 @@ steps:
   with:
     source-dir: boost-root
     modules: variant2
-    toolset: gcc-13
-    cxxstd: 17,20
-----
-
-Example 2 (`cxx`):
-
-[source,yml,subs="attributes+"]
-----
-steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@{page-version}
-  with:
-    source-dir: boost-root
-    modules: variant2
-    toolset: clang
-    cxx: clang++-16
-    cxxstd: 17,20
-----
-
-Example 3 (`address-model`):
-
-[source,yml,subs="attributes+"]
-----
-steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@{page-version}
-  with:
-    source-dir: boost-root
-    modules: variant2
-    toolset: msvc-14.3
-    cxxstd: 17,20
-    address-model: 32,64
-----
-
-Example 4 (`ubsan`):
-
-[source,yml,subs="attributes+"]
-----
-steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@{page-version}
-  with:
-    source-dir: boost-root
-    modules: variant2
-    toolset: gcc-13
-    cxxstd: 17,20
-    ubsan: 'true'
-----
-
-Example 5 (`cxxflags`, `linkflags`):
-
-[source,yml,subs="attributes+"]
-----
-steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@{page-version}
-  with:
-    source-dir: boost-root
-    modules: variant2
-    toolset: clang
-    cxx: clang++-12
-    cxxstd: 17,20
-    cxxflags: -stdlib=libc++
-    linkflags: -stdlib=libc++
-----
-
-Example 6 (`gcc-toolchain`):
-
-[source,yml,subs="attributes+"]
-----
-steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@{page-version}
-  with:
-    source-dir: boost-root
-    modules: variant2
-    toolset: clang
-    cxx: clang++-8
+    toolset: gcc-10.2
     cxxstd: '17'
-    gcc-toolchain: '7'
 ----
 
 == Input Parameters

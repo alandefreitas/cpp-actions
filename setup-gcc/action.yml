@@ -190,6 +190,7 @@ runs:
           regex='[0-9]+\.[0-9]+\.[0-9]+'
           [[ $VERSION_OUTPUT =~ $regex ]]
           GCC_VERSION="${BASH_REMATCH[0]}"
+        
           if [ "$GCC_VERSION" != "" ]; then
             echo -E "executable=$(which $GCC_EXECUTABLE)" >> $GITHUB_OUTPUT
             echo "version=$GCC_VERSION" >> $GITHUB_OUTPUT
@@ -341,17 +342,30 @@ runs:
         # Find the executable corresponding to the matching version
         if [[ $index != -1 && $index -lt ${#executables_array[@]} ]]
         then
-        executable="${executables_array[$index]}"
-        # Construct paths with the gcc destination
-        gcc_bin_path="$(dirname $executable)"
-        echo -E "bin=$gcc_bin_path" >> $GITHUB_OUTPUT
-        gcc_dest="$(dirname $gcc_bin_path)"
-        echo -E "gcc_dest=$gcc_dest" >> $GITHUB_OUTPUT
-        echo -E "cc=$gcc_bin_path/gcc" >> $GITHUB_OUTPUT
-        echo -E "cxx=$gcc_bin_path/g++" >> $GITHUB_OUTPUT
-        echo "version=$match" >> $GITHUB_OUTPUT
+          executable="${executables_array[$index]}"
+          filename=$(basename "$executable")
+          dirname=$(dirname "$executable")
+        
+          if [[ "$filename" == g++* ]]; then
+            cc_filename="gcc${filename#g++}"  # Replace g++ with gcc
+            cxx_filename="$filename"
+          elif [[ "$filename" == gcc* ]]; then
+            cc_filename="$filename"
+            cxx_filename="g++${filename#gcc}"  # Replace gcc with g++
+          fi
+          cc="$dirname/$cc_filename"
+          cxx="$dirname/$cxx_filename"
+          echo -E "cc=$cc" >> $GITHUB_OUTPUT
+          echo -E "cxx=$cxx" >> $GITHUB_OUTPUT
+        
+          # Construct paths with the gcc destination
+          echo -E "bin=$dirname" >> $GITHUB_OUTPUT
+          gcc_dest="$(dirname $dirname)"
+          echo -E "gcc_dest=$gcc_dest" >> $GITHUB_OUTPUT
+        
+          echo "version=$match" >> $GITHUB_OUTPUT
         fi
-
+        
     - name: Find all GCC APT versions
       id: apt-versions
       if: ${{ steps.setup-system-gcc.outputs.cxx == '' && steps.setup-path-gcc.outputs.cxx == '' }}
@@ -481,29 +495,151 @@ runs:
         # Setup compatible GCC version from our binaries
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         
+        # Stripped version
+        all_versions="${{ steps.release-versions.outputs.all-versions }}"
+        
         # The version we want to download
         release="${{ (steps.download-version.outputs.satisfied == 'false' && steps.release-versions.outputs.latest) || (inputs.check-latest == 'true' && steps.download-version.outputs.max-release) || steps.download-version.outputs.min-release }}"
         major="${{ (steps.download-version.outputs.satisfied == 'false' && steps.release-versions.outputs.latest) || (inputs.check-latest == 'true' && steps.download-version.outputs.max-major) || steps.download-version.outputs.min-major }}"
         minor="${{ (steps.download-version.outputs.satisfied == 'false' && steps.release-versions.outputs.latest) || (inputs.check-latest == 'true' && steps.download-version.outputs.max-minor) || steps.download-version.outputs.min-minor }}"
         patch="${{ (steps.download-version.outputs.satisfied == 'false' && steps.release-versions.outputs.latest) || (inputs.check-latest == 'true' && steps.download-version.outputs.max-patch) || steps.download-version.outputs.min-patch }}"
         
+        # These are the valid GCC versions we consider downloading
+        version_candidates="$release"
+        semver_regex='([0-9]+)\.([0-9]+)\.([0-9]+)'
+        ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
+        # Include patched versions if main version is unavailable
+        for version in ${all_versions// / }
+        do
+            [[ $version =~ $semver_regex ]]
+            other_major="${BASH_REMATCH[1]}"
+            other_minor="${BASH_REMATCH[2]}"
+            other_patch="${BASH_REMATCH[3]}"
+            if [[ $major -eq $other_major ]] && [[ $minor -eq $other_minor ]] && [[ $patch -ne $other_patch ]]; then
+                version_candidates+=" $version"
+            fi
+        done
+        # Include other minor versions if patched version is unavailable
+        for version in ${all_versions// / }
+        do
+            [[ $version =~ $semver_regex ]]
+            other_major="${BASH_REMATCH[1]}"
+            other_minor="${BASH_REMATCH[2]}"
+            other_patch="${BASH_REMATCH[3]}"
+            if [[ $major -eq $other_major ]] && [[ $minor -ne $other_minor ]]; then
+                version_candidates+=" $version"
+            fi
+        done
+        ${{ (inputs.trace-commands == 'true' && 'echo version_candidates="$version_candidates"') || '' }}
+        ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
+        
+        # Find ubuntu version
+        set +e
+        if [ "$ubuntu_version" == "" ]; then
+            # Extract Ubuntu version from lsb_release -rs
+            ubuntu_version=$(lsb_release -rs)
+        fi
+        
+        if [ "$ubuntu_version" == "" ]; then
+            # Extract Ubuntu version from /etc/os-release
+            os_release=$(cat /etc/os-release)
+            version_regex='VERSION_ID="([^"]+)"'
+            if [[ $os_release =~ $version_regex ]]; then
+                ubuntu_version=${BASH_REMATCH[1]}
+            else
+                ubuntu_version="Unknown"
+            fi
+        fi
+        
+        if [ "$ubuntu_version" == "" ]; then
+            # Extract Ubuntu version from /etc/lsb-release
+            lsb_release=$(cat /etc/lsb-release)
+            version_regex='DISTRIB_RELEASE=([^ ]+)$'
+            if [[ $lsb_release =~ $version_regex ]]; then
+                ubuntu_version=${BASH_REMATCH[1]}
+            fi
+        fi
+        
+        if [ "$ubuntu_version" == "" ]; then
+            # Extract Ubuntu version from uname -a
+            uname_output=$(uname -a)
+            version_regex='~([0-9]+\.[0-9]+)'
+            if [[ $uname_output =~ $version_regex ]]; then
+                ubuntu_version=${BASH_REMATCH[1]}
+            fi
+        fi
+        set -e
+        echo "ubuntu_version=$ubuntu_version" >> $GITHUB_OUTPUT
+        
+        if [ "$ubuntu_version" == "" ]; then
+            false
+        fi
+        
+        # Sort ubuntu version binaries according to current ubuntu version
+        if [ "$ubuntu_version" == "20.04" ]; then 
+          ubuntu_versions=("20.04" "22.04" "18.04" "16.04" "14.04" "12.04" "10.04")
+        elif [ "$ubuntu_version" == "18.04" ]; then 
+          ubuntu_versions=("18.04" "20.04" "16.04" "22.04" "14.04" "12.04" "10.04")
+        elif [ "$ubuntu_version" == "16.04" ]; then 
+          ubuntu_versions=("16.04" "18.04" "14.04" "20.04" "12.04" "22.04" "10.04")
+        elif [ "$ubuntu_version" == "12.04" ]; then 
+          ubuntu_versions=("12.04" "14.04" "10.04" "16.04" "18.04" "20.04" "22.04")
+        elif [ "$ubuntu_version" == "10.04" ]; then 
+          ubuntu_versions=("10.04" "12.04" "14.04" "16.04" "18.04" "20.04" "22.04")
+        else
+          ubuntu_versions=("22.04" "20.04" "18.04" "16.04" "14.04" "12.04" "10.04")
+        fi
+        
+        # Find a URL for the binaries (considering ubuntu version)
+        gcc_url_OK=""
+        for ubuntu_version in "${ubuntu_versions[@]}"; do
+          for version_candidate in ${version_candidates// / }; do
+            ubuntu_image="ubuntu-$ubuntu_version"
+            gcc_basename="gcc-$version_candidate-x86_64-linux-gnu-$ubuntu_image"
+            gcc_filename="$gcc_basename.tar.gz"
+            gcc_url="https://github.com/alandefreitas/cpp-actions/releases/download/gcc-binaries/$gcc_filename"
+            gcc_url_exists=$(curl --silent --fail --head "$gcc_url" >/dev/null && echo "true" || echo "false")
+            if [ "$gcc_url_exists" == "true" ]; then
+              gcc_url_OK="$gcc_url"
+              break
+            fi
+          done
+          if [ "$gcc_url_OK" != "" ]; then
+            break
+          fi
+        done
+        
+        # Find a URL for binaries (no ubuntu version)
+        if [ "$gcc_url_OK" == "" ]; then
+          for version_candidate in ${version_candidates// / }; do
+            gcc_basename="gcc-$version_candidate-Linux-x86_64"
+            gcc_filename="$gcc_basename.tar.gz"
+            gcc_url="https://github.com/alandefreitas/cpp-actions/releases/download/gcc-binaries/$gcc_filename"
+            gcc_url_exists=$(curl --silent --fail --head "$gcc_url" >/dev/null && echo "true" || echo "false")
+            if [ "$gcc_url_exists" == "true" ]; then
+              gcc_url_OK="$gcc_url"
+              break
+            fi
+          done
+          if [ "$gcc_url_OK" != "" ]; then
+            break
+          fi
+        fi
+        
         # The URL is always tar.gz and only x86_64 is supported.
-        gcc_basename="gcc-$release-Linux-x86_64"
-        echo "gcc_basename=$gcc_basename" >> $GITHUB_OUTPUT
-        gcc_filename="$gcc_basename.tar.gz"
-        echo "gcc_filename=$gcc_filename" >> $GITHUB_OUTPUT
-        gcc_url="https://github.com/alandefreitas/cpp-actions/releases/download/gcc-binaries/$gcc_filename"
-        echo "gcc_url=$gcc_url" >> $GITHUB_OUTPUT
-        
-        # Construct paths with the gcc destination
-        gcc_dest="${{runner.tool_cache}}/gcc/$release"
-        echo -E "gcc_dest=$gcc_dest" >> $GITHUB_OUTPUT
-        
-        gcc_bin_path="$gcc_dest/bin"
-        echo -E "bin=$gcc_bin_path" >> $GITHUB_OUTPUT
-        echo -E "cc=$gcc_bin_path/gcc" >> $GITHUB_OUTPUT
-        echo -E "cxx=$gcc_bin_path/g++" >> $GITHUB_OUTPUT
-        echo "version=$release" >> $GITHUB_OUTPUT
+        if [ "$gcc_url_OK" != "" ]; then
+          echo "gcc_basename=$gcc_basename" >> $GITHUB_OUTPUT
+          echo "gcc_filename=$gcc_filename" >> $GITHUB_OUTPUT
+          echo "gcc_url=$gcc_url" >> $GITHUB_OUTPUT
+          gcc_dest="${{runner.tool_cache}}/gcc/$version_candidate"
+          echo -E "gcc_dest=$gcc_dest" >> $GITHUB_OUTPUT
+          gcc_bin_path="$gcc_dest/bin"
+          echo -E "bin=$gcc_bin_path" >> $GITHUB_OUTPUT
+          echo -E "cc=$gcc_bin_path/gcc" >> $GITHUB_OUTPUT
+          echo -E "cxx=$gcc_bin_path/g++" >> $GITHUB_OUTPUT
+          echo "version=$version_candidate" >> $GITHUB_OUTPUT
+        fi
+
 
     - name: GCC cache
       if: steps.setup-gcc.outputs.gcc_url
