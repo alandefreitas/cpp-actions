@@ -749,7 +749,7 @@ runs:
         
         ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
         export LD_LIBRARY_PATH
-        echo -E "LD_LIBRARY_PATH=\"$LD_LIBRARY_PATH\"" >> "$GITHUB_ENV"
+        echo -E "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> "$GITHUB_ENV"
 
     - name: Parse Final Clang Setup version
       uses: alandefreitas/cpp-actions/semver-utils@v1.2.0
