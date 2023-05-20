@@ -796,3 +796,32 @@ runs:
           export PATH
           echo -E "$bindir" >> $GITHUB_PATH
         fi
+        
+        ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
+        
+        source="Unknown"
+        if [ "$cxx_path" == "${{ steps.setup-clang.outputs.cxx }}" ]; then
+            source="Action-Provided Binaries"
+        elif [ "$cxx_path" == "${{ steps.setup-apt-clang.outputs.cxx }}" ]; then
+            source="APT"
+        elif [ "$cxx_path" == "${{ steps.setup-system-clang.outputs.cxx }}" ]; then
+            source="System Packages"
+        elif [ "$cxx_path" == "${{ steps.setup-path-clang.outputs.cxx }}" ]; then
+            source="Default Path"
+        fi
+        
+        echo "===================================== "
+        echo "Clang Setup from $source"
+        echo "===================================== "
+        echo "Paths:"
+        echo "- cxx_path:    $cxx_path"
+        echo "- cc_path:     $cc_path"
+        echo "- install dir: $dir"
+        echo "- bin dir:     $bindir"
+        echo "Version:"
+        echo "- release:     $release"
+        echo "- major:       $major"
+        echo "- minor:       $minor"
+        echo "- patch:       $patch"
+        echo "===================================== "
+
