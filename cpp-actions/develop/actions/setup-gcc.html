@@ -152,6 +152,9 @@
           <a href="../index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../../v1.2.1/index.html">v1.2.1</a>
+        </li>
+        <li class="version">
           <a href="../../v1.2.0/index.html">v1.2.0</a>
         </li>
         <li class="version">
@@ -183,6 +186,7 @@
   <div class="version-menu">
     <a class="version" href="../../actions/setup-gcc.html">master</a>
     <a class="version is-current" href="setup-gcc.html">develop</a>
+    <a class="version" href="../../v1.2.1/actions/setup-gcc.html">v1.2.1</a>
     <a class="version" href="../../v1.2.0/actions/setup-gcc.html">v1.2.0</a>
     <a class="version" href="../../v1.1.0/actions/setup-gcc.html">v1.1.0</a>
     <a class="version is-missing" href="../../v1.0.0/index.html">v1.0.0</a>
@@ -291,6 +295,18 @@ instead.
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>update-environment</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Set this option if you want the action to update environment variables.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>update-ld-library-path</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Set this option if you want the action to update LD_LIBRARY_PATH.</p>
+<p class="tableblock">Updating LD_LIBRARY_PATH might cause conflicts with system libraries and
+is usually unnecessary because the binaries are built on equivalent
+containers.</p>
+<p class="tableblock">However, this is necessary on some custom containers and you can set
+this option to let the action automatically add GCC library paths to
+LD_LIBRARY_PATH.
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
