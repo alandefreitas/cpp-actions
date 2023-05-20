@@ -431,7 +431,7 @@ runs:
         
             # Build step
             set +e
-            jobs_args=${{ (steps.setup-cmake.outputs.supports-parallel-build == 'false' && '""') || format('"-j {0}"', steps.cpu-cores.outputs.count) }}
+            jobs_args=${{ (steps.setup-cmake.outputs.supports-parallel-build == 'false' && '""') || format('"--parallel {0}"', steps.cpu-cores.outputs.count) }}
             if [[ "${{ steps.setup-cmake.outputs.supports-build-multiple-targets }}" == "true" || "${{ inputs.build-target }}" != *" "* ]]; then
               set -x
               "${{ steps.params.outputs.cmake_path }}" --build "$std_build_dir" --config "${{ inputs.build-type || 'Release' }}" $jobs_args ${{ (inputs.build-target != '' && format('--target {0}', inputs.build-target)) || '' }} 2>&1 | tee -a "$std_build_dir/cmake-build-output.txt"
