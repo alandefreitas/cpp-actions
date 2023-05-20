@@ -61,6 +61,16 @@ Set this option if you want the action to check for the latest available version
 instead.
 . |`false`
 |`update-environment` |Set this option if you want the action to update environment variables. |`true`
+|`update-ld-library-path` |Set this option if you want the action to update LD_LIBRARY_PATH.
+
+Updating LD_LIBRARY_PATH might cause conflicts with system libraries and
+is usually unnecessary because the binaries are built on equivalent 
+containers. 
+
+However, this is necessary on some custom containers and you can set
+this option to let the action automatically add GCC library paths to 
+LD_LIBRARY_PATH.
+. |`false`
 |`trace-commands` |Trace commands executed by the workflow. |`false`
 |===
 

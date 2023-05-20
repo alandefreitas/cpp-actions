@@ -64,6 +64,21 @@ inputs:
     required: false
     default: 'true'
 
+  update-ld-library-path:
+    description: | 
+        Set this option if you want the action to update LD_LIBRARY_PATH.
+      
+        Updating LD_LIBRARY_PATH might cause conflicts with system libraries and
+        is usually unnecessary because the binaries are built on equivalent 
+        containers. 
+      
+        However, this is necessary on some custom containers and you can set
+        this option to let the action automatically add GCC library paths to 
+        LD_LIBRARY_PATH.
+
+    required: false
+    default: 'false'
+
   trace-commands:
     description: 'Trace commands executed by the workflow.'
     required: false
@@ -721,6 +736,10 @@ runs:
         ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
         export LIBRARY_PATH
         echo -E "LIBRARY_PATH=$LIBRARY_PATH" >> "$GITHUB_ENV"
+        
+        if [ "${{ inputs.update-ld-library-path }}" == "true" ]; then
+            echo -E "LD_LIBRARY_PATH=$LIBRARY_PATH" >> "$GITHUB_ENV"
+        fi
         
     - name: Parse Final GCC Setup version
       uses: alandefreitas/cpp-actions/semver-utils@v1.1.0
