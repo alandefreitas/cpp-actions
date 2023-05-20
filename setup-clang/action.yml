@@ -10,6 +10,7 @@ description: |
   
   - The Clang path provided to 'path'
   - Any other version of Clang it can find in the system
+  - Any other version of Clang available from APT
   - A version of Clang from our own binary releases
 
 inputs:
@@ -131,31 +132,36 @@ runs:
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         
         # Download the Git tags from the Clang repository
+        ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
         git_tags=$(git ls-remote --tags https://github.com/llvm/llvm-project | awk '{print $2}' | cut -d '/' -f 3)
+        ${{ (inputs.trace-commands == 'true' && 'echo "git_tags=$git_tags"  | tr "\n" " "') || '' }}
+        ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
         
         # Extract the version numbers from the Git tags using a regular expression
         regex='^llvmorg-([0-9]+\.[0-9]+\.[0-9]+)$'
         versions=()
         all_versions=""
+        ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
         for tag in $git_tags
         do
-        if [[ $tag =~ $regex ]]; then
-        version=${BASH_REMATCH[1]}
-        versions+=("$version")
-        all_versions+="$version "
-        fi
+          if [[ $tag =~ $regex ]]; then
+            version=${BASH_REMATCH[1]}
+            versions+=("$version")
+            all_versions+="$version "
+          fi
         done
 
         sort_arg="${{ (inputs.check-latest == 'true' && '-rV') || '-V' }}"
         all_versions=$(echo "$all_versions" | tr ' ' '\n' | sort "$sort_arg" | paste -s -d ' ')
         echo "Clang versions: $all_versions"
         echo "all-versions=$all_versions" >> $GITHUB_OUTPUT
+        ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
         
         # Sort the version numbers using the "sort -V" command and pick the latest one
         if [ ${#versions[@]} -gt 0 ]; then
-        latest_version=$(printf "%s\n" "${versions[@]}" | sort -V | tail -n1)
+          latest_version=$(printf "%s\n" "${versions[@]}" | sort -V | tail -n1)
         else
-        latest_version="16.0.3" # placeholder when the tags fail. Should not happen.
+          latest_version="16.0.3" # placeholder when the tags fail. Should not happen.
         fi
         echo "latest=$latest_version" >> $GITHUB_OUTPUT
 
@@ -168,8 +174,8 @@ runs:
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
 
         # Look for system Clang executables
-        CLANG_EXECUTABLE=$(command -v "${{ inputs.path }}")
-        if [[ -f "$CLANG_EXECUTABLE" ]]; then
+        CLANG_EXECUTABLE="${{ inputs.path }}"
+        if command -v "$CLANG_EXECUTABLE" &> /dev/null; then
           VERSION_OUTPUT=$("$CLANG_EXECUTABLE" --version)
           regex='[0-9]+\.[0-9]+\.[0-9]+'
           [[ $VERSION_OUTPUT =~ $regex ]]
@@ -182,13 +188,14 @@ runs:
         fi
 
     - name: Check if path Clang version satisfies the requirements
-      uses: alandefreitas/cpp-actions/semver-utils@v1.1.0
+      uses: alandefreitas/cpp-actions/semver-utils@develop
       if: ${{ steps.find-path-version.outputs.version != '' }}
       id: path-version
       with:
         version: ${{ steps.find-path-version.outputs.version }}
         satisfies: ${{ steps.strip-version.outputs.version || steps.release-versions.outputs.latest }}
         lenient: true
+        trace-commands: ${{ inputs.trace-commands }}
 
     - name: Setup System Clang
       if: ${{ steps.path-version.outputs.satisfies == 'true' }}
@@ -244,17 +251,22 @@ runs:
 
         # Look for system Clang executables
         CLANG_EXECUTABLES=""
+        ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
         DPKG_OUTPUT=$(dpkg --list)
-        if echo "$DPKG_OUTPUT" | grep -q -E ' clang(-[0-9]+){0,1}(\.[0-9]+){0,2} '; then
-          DPKG_CLANGS_OUTPUT=$(echo "$DPKG_OUTPUT" | grep -E ' clang(-[0-9]+){0,1}(\.[0-9]+){0,2} ')
+        set +e
+        DPKG_CLANGS_OUTPUT=$(echo "$DPKG_OUTPUT" | grep -E ' clang(-[0-9]+){0,1}(\.[0-9]+){0,2} ')
+        set -e
+        if [ -n "$DPKG_CLANGS_OUTPUT" ]; then
           DPKG_CLANGS=($(echo "$DPKG_CLANGS_OUTPUT" | awk '{print $2}'))
         else
           DPKG_CLANGS_OUTPUT=""
           DPKG_CLANGS=()
         fi
+        ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
         
         if [ "$DPKG_CLANGS_OUTPUT" != "" ]; then
           DPKG_CLANGS=$(echo "${DPKG_CLANGS[@]}")
+          ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
           for DPKG_CLANG in ${DPKG_CLANGS// / }
           do
               if command -v "$DPKG_CLANG" &> /dev/null; then
@@ -263,8 +275,11 @@ runs:
                 CLANG_EXECUTABLES+=" /usr/bin/$DPKG_CLANG"
               fi
           done
+          ${{ (inputs.trace-commands == 'true' && 'echo CLANG_EXECUTABLES="$CLANG_EXECUTABLES"') || '' }}
+          ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
         
           CLANG_VERSIONS=""
+          ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
           for CLANG_EXECUTABLE in ${CLANG_EXECUTABLES// / }
           do
               VERSION_OUTPUT=$("$CLANG_EXECUTABLE" --version)
@@ -272,19 +287,22 @@ runs:
               [[ $VERSION_OUTPUT =~ $regex ]]
               CLANG_VERSIONS+=" ${BASH_REMATCH[0]}"
           done
+          ${{ (inputs.trace-commands == 'true' && 'echo CLANG_VERSIONS="$CLANG_VERSIONS"') || '' }}
+          ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
         
           echo -E "executables=$CLANG_EXECUTABLES" >> $GITHUB_OUTPUT
           echo "versions=$CLANG_VERSIONS" >> $GITHUB_OUTPUT
         fi
 
     - name: Find a Clang system version that satisfies the requirements
-      uses: alandefreitas/cpp-actions/semver-utils@v1.1.0
+      uses: alandefreitas/cpp-actions/semver-utils@develop
       if: ${{ steps.system-versions.outputs.versions != '' }}
       id: system-version
       with:
         version: ${{ steps.system-versions.outputs.versions }}
         satisfies: ${{ steps.strip-version.outputs.version || steps.release-versions.outputs.latest }}
         lenient: true
+        trace-commands: ${{ inputs.trace-commands }}
 
     - name: Setup System Clang
       if: ${{ steps.system-version.outputs.satisfies == 'true' }}
@@ -305,38 +323,184 @@ runs:
         index=-1
         for ((i=0; i<${#versions_array[@]}; i++))
         do
-        if [[ "${versions_array[i]}" == "$match" ]]
-        then
-        index=$i
-        break
-        fi
+          if [[ "${versions_array[i]}" == "$match" ]]
+          then
+            index=$i
+            break
+          fi
         done
         
         # Find the executable corresponding to the matching version
         if [[ $index != -1 && $index -lt ${#executables_array[@]} ]]
         then
-        executable="${executables_array[$index]}"
-        # Construct paths with the clang destination
-        clang_bin_path="$(dirname $executable)"
-        echo -E "bin=$clang_bin_path" >> $GITHUB_OUTPUT
-        clang_dest="$(dirname $clang_bin_path)"
-        echo -E "clang_dest=$clang_dest" >> $GITHUB_OUTPUT
-        echo -E "cc=$clang_bin_path/clang" >> $GITHUB_OUTPUT
-        echo -E "cxx=$clang_bin_path/clang++" >> $GITHUB_OUTPUT
-        echo "version=$match" >> $GITHUB_OUTPUT
+          executable="${executables_array[$index]}"
+          filename=$(basename "$executable")
+          dirname=$(dirname "$executable")
+        
+          if [[ "$filename" == clang++* ]]; then
+            cc_filename="clang${filename#clang++}"  # Replace clang++ with clang
+            cxx_filename="$filename"
+          elif [[ "$filename" == clang* ]]; then
+            cc_filename="$filename"
+            cxx_filename="clang++${filename#clang}"  # Replace clang with clang++
+          fi
+          cc="$dirname/$cc_filename"
+          cxx="$dirname/$cxx_filename"
+          echo -E "cc=$cc" >> $GITHUB_OUTPUT
+          echo -E "cxx=$cxx" >> $GITHUB_OUTPUT
+        
+          # Construct paths with the clang destination
+          echo -E "bin=$dirname" >> $GITHUB_OUTPUT
+          clang_dest="$(dirname $dirname)"
+          echo -E "clang_dest=$clang_dest" >> $GITHUB_OUTPUT
+        
+          echo "version=$match" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Find all Clang APT versions
+      id: apt-versions
+      if: ${{ steps.setup-system-clang.outputs.cxx == '' && steps.setup-path-clang.outputs.cxx == '' }}
+      shell: bash
+      run: |
+        # Find all Clang apt-get versions
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+
+        # Look for APT Clang version we can download
+        all_apt_versions=""
+        all_semver_versions=""
+        clang_range_regex1='[0-9]+:([0-9]+)-[0-9]+'
+        clang_range_regex2='[0-9]+:([0-9]+\.[0-9]+)-[0-9]+'
+        semver_regex='[0-9]+\.[0-9]+\.[0-9]+'
+        
+        ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
+        while read -r line; do
+          package_name=$(echo "$line" | awk '{print $1}')
+          echo "package_name=$package_name"
+          versions=$(apt-cache showpkg "$package_name" | awk '/Dependencies/,/Provides/' | awk '{print $1}' | grep -v -E 'Dependencies|Provides')
+          echo "versions=$versions"
+          while read -r apt_version; do
+            if [[ "$apt_version" =~ $clang_range_regex1 ]]; then
+              semver_version="${BASH_REMATCH[1]}.0.0"
+              apt_versions+=("$apt_version")
+              semver_versions+=("$semver_version")
+              all_apt_versions+="$package_name=$apt_version "
+              all_semver_versions+="$semver_version "
+            elif [[ "$apt_version" =~ $clang_range_regex2 ]]; then
+              semver_version="${BASH_REMATCH[1]}.0"
+              apt_versions+=("$apt_version")
+              semver_versions+=("$semver_version")
+              all_apt_versions+="$package_name=$apt_version "
+              all_semver_versions+="$semver_version "
+            elif [[ $apt_version =~ $semver_regex ]]; then
+              semver_version="${BASH_REMATCH[0]}"
+              apt_versions+=("$apt_version")
+              semver_versions+=("$semver_version")
+              all_apt_versions+="$package_name=$apt_version "
+              all_semver_versions+="$semver_version "
+            else
+              echo "Package $package_name - version $apt_version doesn't match a semver version" 
+            fi
+          done <<< "$versions"
+        done < <(apt-cache search '^clang-[0-9.]+$')
+        ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
+        
+        echo "versions=$all_semver_versions"
+        echo "packages=$all_apt_versions"
+        
+        echo "versions=$all_semver_versions" >> $GITHUB_OUTPUT
+        echo "packages=$all_apt_versions" >> $GITHUB_OUTPUT
+
+    - name: Find a Clang APT version that satisfies the requirements
+      uses: alandefreitas/cpp-actions/semver-utils@develop
+      if: ${{ steps.setup-system-clang.outputs.cxx == '' && steps.setup-path-clang.outputs.cxx == '' }}
+      id: apt-version
+      with:
+        version: ${{ steps.apt-versions.outputs.versions }}
+        satisfies: ${{ steps.strip-version.outputs.version || steps.release-versions.outputs.latest }}
+        lenient: true
+        trace-commands: ${{ inputs.trace-commands }}
+
+    - name: Setup APT Clang
+      if: ${{ steps.apt-version.outputs.satisfies == 'true' }}
+      shell: bash
+      id: setup-apt-clang
+      run: |
+        # Setup compatible Clang version from the APT versions
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+        
+        versions="${{ steps.apt-versions.outputs.versions }}"
+        packages="${{ steps.apt-versions.outputs.packages }}"
+        match="${{ (inputs.check-latest == 'true' && steps.apt-version.outputs.max-release) || steps.apt-version.outputs.min-release }}"
+        major="${{ (inputs.check-latest == 'true' && steps.apt-version.outputs.max-major) || steps.apt-version.outputs.min-major }}"
+        minor="${{ (inputs.check-latest == 'true' && steps.apt-version.outputs.max-minor) || steps.apt-version.outputs.min-minor }}"
+        
+        ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
+        IFS=" " read -r -a packages_array <<< "$packages"
+        IFS=" " read -r -a versions_array <<< "$versions"
+        
+        # Find the index of the package matching version
+        index=-1
+        for ((i=0; i<${#versions_array[@]}; i++))
+        do
+          if [[ "${versions_array[i]}" == "$match" ]]
+          then
+            index=$i
+            break
+          fi
+        done
+        ${{ (inputs.trace-commands == 'true' && 'echo index="$index"') || '' }}
+        ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
+        
+        # Find the package corresponding to the matching version
+        if [[ $index != -1 && $index -lt ${#packages_array[@]} ]]
+        then
+          package="${packages_array[$index]}"
+        
+          # Determine if apt-get should be called with `sudo`, which is often not the case with containers
+          if which sudo >/dev/null 2>&1; then
+            if [ $? -eq 0 ]
+            then
+              sudo_prefix="sudo "
+            else
+              sudo_prefix=""
+            fi
+          else
+            sudo_prefix=""
+          fi
+          $sudo_prefix apt-get install -y "$package"
+        
+          # find the executable: apt-get should install it as clang-$major
+          if command -v "clang++-$major.$minor" &> /dev/null; then
+            cxx="$(which "clang++-$major.$minor")"
+            cc="$(which "clang-$major.$minor")"
+          elif command -v "clang++-$major" &> /dev/null; then
+            cxx="$(which "clang++-$major")"
+            cc="$(which "clang-$major")"
+          elif command -v "clang++" &> /dev/null; then
+            cxx="$(which "clang++")"
+            cc="$(which "clang")"
+          fi
+          echo -E "cxx=$cxx" >> $GITHUB_OUTPUT
+          echo -E "cc=$cc" >> $GITHUB_OUTPUT
+          clang_bin_path="$(dirname $cxx)"
+          echo -E "bin=$clang_bin_path" >> $GITHUB_OUTPUT
+          clang_dest="$(dirname $clang_bin_path)"
+          echo -E "clang_dest=$clang_dest" >> $GITHUB_OUTPUT
+          echo "version=$match" >> $GITHUB_OUTPUT
         fi
 
     - name: Find a Clang release version that satisfies the requirements
-      uses: alandefreitas/cpp-actions/semver-utils@v1.1.0
-      if: ${{ steps.setup-system-clang.outputs.cxx == '' && steps.setup-path-clang.outputs.cxx == '' }}
+      uses: alandefreitas/cpp-actions/semver-utils@develop
+      if: ${{ steps.setup-system-clang.outputs.cxx == '' && steps.setup-path-clang.outputs.cxx == '' && steps.setup-apt-clang.outputs.cxx == '' }}
       id: download-version
       with:
         version: ${{ steps.release-versions.outputs.all-versions }}
         satisfies: ${{ steps.strip-version.outputs.version || steps.release-versions.outputs.latest }}
         lenient: false
+        trace-commands: ${{ inputs.trace-commands }}
 
     - name: Setup Clang
-      if: ${{ steps.setup-system-clang.outputs.cxx == '' && steps.setup-path-clang.outputs.cxx == '' }}
+      if: ${{ steps.setup-system-clang.outputs.cxx == '' && steps.setup-path-clang.outputs.cxx == '' && steps.setup-apt-clang.outputs.cxx == '' }}
       shell: bash
       id: setup-clang
       run: |
@@ -409,7 +573,7 @@ runs:
         fi
 
     - name: Clang cache
-      if: steps.setup-clang.outputs.clang_url
+      if: inputs.cache == 'true' && steps.setup-clang.outputs.clang_url
       id: cache-clang
       uses: actions/cache@v3
       with:
@@ -475,24 +639,25 @@ runs:
         
         # Add shared libraries to LD_LIBRARY_PATH
         clang_dest="${{ steps.setup-clang.outputs.clang_dest }}"
+        ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
+        ${{ (inputs.trace-commands == 'true' && 'echo -E "LD_LIBRARY_PATH=\"$LD_LIBRARY_PATH\""') || '' }}
         while IFS= read -r -d '' dir; do
-        if [[ -d "$dir" ]]; then
-        for file in "$dir"/*.so.[0-9]*; do
-        if [[ -f "$file" ]]; then
-        dir_basename="$(basename "$dir")"
-        if [[ ! "$LD_LIBRARY_PATH" =~ (^|:)"$dir"$ ]]; then
-          if [[ -n "$LD_LIBRARY_PATH" ]]; then
-             LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$dir"
-             export LD_LIBRARY_PATH
-          else
-             LD_LIBRARY_PATH="$dir"
-             export LD_LIBRARY_PATH
+          if [[ -d "$dir" ]]; then
+            for file in "$dir"/*.so.[0-9]*; do
+              if [[ -f "$file" ]]; then
+                if [[ ! "$LD_LIBRARY_PATH" =~ (^|:)"$dir"$ ]]; then
+                  if [[ -n "$LD_LIBRARY_PATH" ]]; then
+                     LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$dir"
+                     export LD_LIBRARY_PATH
+                  else
+                     LD_LIBRARY_PATH="$dir"
+                     export LD_LIBRARY_PATH
+                  fi
+              fi
+              break
+              fi
+            done
           fi
-        fi
-        break
-        fi
-        done
-        fi
         done < <(find "$clang_dest" -type d -print0)
         echo -E "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> "$GITHUB_ENV"
         
@@ -501,11 +666,12 @@ runs:
 
 
     - name: Parse Final Clang Setup version
-      uses: alandefreitas/cpp-actions/semver-utils@v1.1.0
+      uses: alandefreitas/cpp-actions/semver-utils@develop
       id: version
       with:
-        version: ${{ steps.setup-clang.outputs.version || steps.setup-system-clang.outputs.version || steps.setup-path-clang.outputs.version }}
+        version: ${{ steps.setup-clang.outputs.version || steps.setup-apt-clang.outputs.version || steps.setup-system-clang.outputs.version || steps.setup-path-clang.outputs.version }}
         lenient: true
+        trace-commands: ${{ inputs.trace-commands }}
 
     - name: Outputs
       shell: bash
@@ -515,20 +681,20 @@ runs:
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }} 
         
         # the Clang version we found or installed
-        release="${{ (inputs.check-latest == 'true' && steps.version.outputs.max-release) || steps.version.outputs.min-release }}"
+        release="${{ steps.version.outputs.release }}"
         echo "release=$release" >> $GITHUB_OUTPUT
-        major="${{ (inputs.check-latest == 'true' && steps.version.outputs.max-major) || steps.version.outputs.min-major }}"
+        major="${{ steps.version.outputs.major }}"
         echo "major=$major" >> $GITHUB_OUTPUT
-        minor="${{ (inputs.check-latest == 'true' && steps.version.outputs.max-minor) || steps.version.outputs.min-minor }}"
+        minor="${{ steps.version.outputs.minor }}"
         echo "minor=$minor" >> $GITHUB_OUTPUT
-        patch="${{ (inputs.check-latest == 'true' && steps.version.outputs.max-patch) || steps.version.outputs.min-patch }}"
+        patch="${{ steps.version.outputs.patch }}"
         echo "patch=$patch" >> $GITHUB_OUTPUT
         
         # clang++ path
-        cxx_path="${{ steps.setup-clang.outputs.cxx || steps.setup-system-clang.outputs.cxx || steps.setup-path-clang.outputs.cxx }}"
+        cxx_path="${{ steps.setup-clang.outputs.cxx || steps.setup-apt-clang.outputs.cxx || steps.setup-system-clang.outputs.cxx || steps.setup-path-clang.outputs.cxx }}"
         echo -E "cxx=$cxx_path" >> $GITHUB_OUTPUT
         
-        cc_path="${{ steps.setup-clang.outputs.cc || steps.setup-system-clang.outputs.cc || steps.setup-path-clang.outputs.cc }}"
+        cc_path="${{ steps.setup-clang.outputs.cc || steps.setup-apt-clang.outputs.cc || steps.setup-system-clang.outputs.cc || steps.setup-path-clang.outputs.cc }}"
         echo -E "cc=$cc_path" >> $GITHUB_OUTPUT
         
         # bin path

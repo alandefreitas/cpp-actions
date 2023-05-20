@@ -14,6 +14,7 @@ This action uses a number of alternatives to find or install Clang:
 
 - The Clang path provided to 'path'
 - Any other version of Clang it can find in the system
+- Any other version of Clang available from APT
 - A version of Clang from our own binary releases
 
 
