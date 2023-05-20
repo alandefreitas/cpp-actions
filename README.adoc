@@ -73,7 +73,7 @@ steps:
   uses: alandefreitas/cpp-actions/setup-cpp@master
   id: setup-cpp
   with:
-    compiler: g++-10.2
+    compiler: g++-13
 ----
 
 ==== Input Parameters
@@ -126,7 +126,9 @@ If vcpkg dependencies are required and vcpkg is not available, it will be instal
 Both vcpkg and its dependencies are cached.
 
 
-==== Example
+==== Examples
+
+Example 1:
 
 [source,yml,subs="attributes+"]
 ----
@@ -136,8 +138,27 @@ steps:
   id: package-install
   with:
     vcpkg: fmt
-    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-10.2' }}
-    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-10.2' }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-13' }}
+    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}
+----
+
+Example 2 (`apt-get-ignore-missing`, `apt-get`):
+
+[source,yml,subs="attributes+"]
+----
+steps:
+- name: Install packages
+  uses: alandefreitas/cpp-actions/package-install@master
+  id: package-install
+  with:
+    vcpkg: fmt
+    apt-get: sudo software-properties-common wget curl apt-transport-https make apt-file
+      unzip libssl-dev build-essential autotools-dev autoconf automake g++ libc++-helpers
+      python ruby cpio gcc-multilib g++-multilib pkgconf python3 ccache libpython-dev
+      python3-distutils python3-pip git cmake
+    apt-get-ignore-missing: 'true'
+    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-4.8' }}
+    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-4.8' }}
 ----
 
 ==== Input Parameters
@@ -208,7 +229,9 @@ The action also creates GitHub annotations when warnings or errors are emitted a
 annotations for CMake errors at the configure step and build errors emitted from the compiler at the build step.
 
 
-==== Example
+==== Examples
+
+Example 1:
 
 [source,yml,subs="attributes+"]
 ----
@@ -221,9 +244,52 @@ steps:
     toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     run-tests: 'true'
     install-prefix: $GITHUB_WORKSPACE/.local
-    cxxstd: '17'
-    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-10.2' }}
-    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-10.2' }}
+    cxxstd: 17,20
+    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-13' }}
+    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
+    ref-source-dir: .
+----
+
+Example 2 (`cxxflags`):
+
+[source,yml,subs="attributes+"]
+----
+steps:
+- name: CMake Workflow
+  uses: alandefreitas/cpp-actions/cmake-workflow@master
+  with:
+    cmake-version: '>=3.20'
+    source-dir: tests
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
+    run-tests: 'true'
+    install-prefix: $GITHUB_WORKSPACE/.local
+    cxxstd: 17,20
+    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-13' }}
+    cxxflags: -fsanitize=undefined
+    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
+    ref-source-dir: .
+----
+
+Example 3 (`build-type`, `generator`):
+
+[source,yml,subs="attributes+"]
+----
+steps:
+- name: CMake Workflow
+  uses: alandefreitas/cpp-actions/cmake-workflow@master
+  with:
+    cmake-version: '>=3.20'
+    source-dir: tests
+    generator: Visual Studio 16 2019
+    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
+    build-type: Debug
+    run-tests: 'true'
+    install-prefix: $GITHUB_WORKSPACE/.local
+    cxxstd: 17,20
+    cc: ${{ steps.setup-cpp.outputs.cc || '' }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || '' }}
     extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
     ref-source-dir: .
 ----
@@ -334,7 +400,9 @@ compiling `b2` if needed and generating a proper `user-config.jam` file.
 This action is particularly useful for Boost library proposals.
 
 
-==== Example
+==== Examples
+
+Example 1:
 
 [source,yml,subs="attributes+"]
 ----
@@ -344,8 +412,53 @@ steps:
   with:
     source-dir: boost-root
     modules: variant2
-    toolset: gcc-10.2
-    cxxstd: '17'
+    toolset: gcc-13
+    cxxstd: 17,20
+----
+
+Example 2 (`cxx`):
+
+[source,yml,subs="attributes+"]
+----
+steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2-workflow@master
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: clang
+    cxx: clang++-16
+    cxxstd: 17,20
+----
+
+Example 3 (`address-model`):
+
+[source,yml,subs="attributes+"]
+----
+steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2-workflow@master
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: msvc-14.3
+    cxxstd: 17,20
+    address-model: 32,64
+----
+
+Example 4 (`ubsan`):
+
+[source,yml,subs="attributes+"]
+----
+steps:
+- name: Test Boost.Variant2
+  uses: alandefreitas/cpp-actions/b2-workflow@master
+  with:
+    source-dir: boost-root
+    modules: variant2
+    toolset: gcc-13
+    cxxstd: 17,20
+    ubsan: 'true'
 ----
 
 ==== Input Parameters

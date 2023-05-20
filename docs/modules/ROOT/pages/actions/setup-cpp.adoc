@@ -36,7 +36,7 @@ steps:
   uses: alandefreitas/cpp-actions/setup-cpp@{page-version}
   id: setup-cpp
   with:
-    compiler: g++-10.2
+    compiler: g++-13
 ----
 
 == Input Parameters
