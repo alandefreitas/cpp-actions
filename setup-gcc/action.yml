@@ -720,7 +720,7 @@ runs:
 
         ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
         export LIBRARY_PATH
-        echo -E "LIBRARY_PATH=\"$LIBRARY_PATH\"" >> "$GITHUB_ENV"
+        echo -E "LIBRARY_PATH=$LIBRARY_PATH" >> "$GITHUB_ENV"
         
     - name: Parse Final GCC Setup version
       uses: alandefreitas/cpp-actions/semver-utils@v1.1.0
