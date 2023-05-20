@@ -72,34 +72,55 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="../index.html">Home</a>
-  </li>
-  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Compilers</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="setup-cpp.html">Setup C++ Action</a>
   </li>
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="package-install.html">Install dependencies Action</a>
-  </li>
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="cmake-workflow.html">CMake Workflow Action</a>
-  </li>
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
-  </li>
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="b2-workflow.html">B2 Workflow Action</a>
-  </li>
-  <li class="nav-item is-current-page" data-depth="1">
-    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
-  </li>
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
-  </li>
-  <li class="nav-item" data-depth="1">
+  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="setup-gcc.html">Setup GCC Action</a>
   </li>
-  <li class="nav-item" data-depth="1">
+  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="setup-clang.html">Setup Clang Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Tools</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="package-install.html">Install Packages Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Workflows</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="cmake-workflow.html">CMake Workflow Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="b2-workflow.html">B2 Workflow Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Project</span>
+<ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
+  </li>
+</ul>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contribute</a>
@@ -128,6 +149,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.2.0/index.html">v1.2.0</a>
+        </li>
+        <li class="version">
           <a href="../v1.1.0/index.html">v1.1.0</a>
         </li>
         <li class="version">
@@ -146,6 +170,7 @@
   <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">C++ Actions</a></li>
+    <li>Project</li>
     <li><a href="create-changelog.html">Create Changelog Action</a></li>
   </ul>
 </nav>
@@ -155,6 +180,7 @@
   <div class="version-menu">
     <a class="version is-current" href="create-changelog.html">master</a>
     <a class="version" href="../develop/actions/create-changelog.html">develop</a>
+    <a class="version" href="../v1.2.0/actions/create-changelog.html">v1.2.0</a>
     <a class="version" href="../v1.1.0/actions/create-changelog.html">v1.1.0</a>
     <a class="version" href="../v1.0.0/actions/create-changelog.html">v1.0.0</a>
   </div>
@@ -186,7 +212,7 @@ in the following format:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-asciidoc hljs" data-lang="asciidoc">&lt;type&gt;[optional scope]: &lt;description&gt;
+<pre class="highlightjs highlight"><code class="language-none hljs" data-lang="none">&lt;type&gt;[optional scope]: &lt;description&gt;
 
 [optional body]
 
@@ -235,8 +261,7 @@ perform a shallow clone and the Changelog will only include the latest commit.</
 - name: Create release notes
   uses: alandefreitas/cpp-actions/create-changelog@master
   with:
-    output-path: CHANGELOG.md
-    trace-commands: 'true'</code></pre>
+    output-path: CHANGELOG.md</code></pre>
 </div>
 </div>
 </div>

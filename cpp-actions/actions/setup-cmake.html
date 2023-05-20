@@ -72,34 +72,55 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="../index.html">Home</a>
-  </li>
-  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Compilers</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="setup-cpp.html">Setup C++ Action</a>
   </li>
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="package-install.html">Install dependencies Action</a>
-  </li>
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="cmake-workflow.html">CMake Workflow Action</a>
-  </li>
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
-  </li>
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="b2-workflow.html">B2 Workflow Action</a>
-  </li>
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
-  </li>
-  <li class="nav-item is-current-page" data-depth="1">
-    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
-  </li>
-  <li class="nav-item" data-depth="1">
+  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="setup-gcc.html">Setup GCC Action</a>
   </li>
-  <li class="nav-item" data-depth="1">
+  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="setup-clang.html">Setup Clang Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Tools</span>
+<ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="package-install.html">Install Packages Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Workflows</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="cmake-workflow.html">CMake Workflow Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="b2-workflow.html">B2 Workflow Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Project</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
+  </li>
+</ul>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contribute</a>
@@ -128,6 +149,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.2.0/index.html">v1.2.0</a>
+        </li>
+        <li class="version">
           <a href="../v1.1.0/index.html">v1.1.0</a>
         </li>
         <li class="version">
@@ -146,6 +170,7 @@
   <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">C++ Actions</a></li>
+    <li>Tools</li>
     <li><a href="setup-cmake.html">Setup CMake Action</a></li>
   </ul>
 </nav>
@@ -155,6 +180,7 @@
   <div class="version-menu">
     <a class="version is-current" href="setup-cmake.html">master</a>
     <a class="version" href="../develop/actions/setup-cmake.html">develop</a>
+    <a class="version" href="../v1.2.0/actions/setup-cmake.html">v1.2.0</a>
     <a class="version" href="../v1.1.0/actions/setup-cmake.html">v1.1.0</a>
     <a class="version is-missing" href="../v1.0.0/index.html">v1.0.0</a>
   </div>
@@ -177,7 +203,7 @@
 <p>This action will also set-up any dependencies required by CMake.</p>
 </div>
 <div class="paragraph">
-<p>In most workflows, this is used as an auxiliary action for the cmake-workflow action.</p>
+<p>In most workflows, this is used as an auxiliary action for the <a href="cmake-workflow.html" class="xref page">CMake Workflow</a> action.</p>
 </div>
 </div>
 </div>

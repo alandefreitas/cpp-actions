@@ -152,6 +152,9 @@
           <a href="../index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../../v1.2.0/index.html">v1.2.0</a>
+        </li>
+        <li class="version">
           <a href="../../v1.1.0/index.html">v1.1.0</a>
         </li>
         <li class="version">
@@ -180,6 +183,7 @@
   <div class="version-menu">
     <a class="version" href="../../actions/b2-workflow.html">master</a>
     <a class="version is-current" href="b2-workflow.html">develop</a>
+    <a class="version" href="../../v1.2.0/actions/b2-workflow.html">v1.2.0</a>
     <a class="version" href="../../v1.1.0/actions/b2-workflow.html">v1.1.0</a>
     <a class="version" href="../../v1.0.0/actions/b2-workflow.html">v1.0.0</a>
   </div>
@@ -271,41 +275,6 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
     toolset: gcc-13
     cxxstd: 17,20
     ubsan: 'true'</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 5 (<code>cxxflags</code>, <code>linkflags</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@develop
-  with:
-    source-dir: boost-root
-    modules: variant2
-    toolset: clang
-    cxx: clang++-12
-    cxxstd: 17,20
-    cxxflags: -stdlib=libc++
-    linkflags: -stdlib=libc++</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 6 (<code>gcc-toolchain</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@develop
-  with:
-    source-dir: boost-root
-    modules: variant2
-    toolset: clang
-    cxx: clang++-8
-    cxxstd: '17'
-    gcc-toolchain: '7'</code></pre>
 </div>
 </div>
 </div>

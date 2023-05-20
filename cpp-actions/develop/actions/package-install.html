@@ -152,6 +152,9 @@
           <a href="../index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../../v1.2.0/index.html">v1.2.0</a>
+        </li>
+        <li class="version">
           <a href="../../v1.1.0/index.html">v1.1.0</a>
         </li>
         <li class="version">
@@ -180,6 +183,7 @@
   <div class="version-menu">
     <a class="version" href="../../actions/package-install.html">master</a>
     <a class="version is-current" href="package-install.html">develop</a>
+    <a class="version" href="../../v1.2.0/actions/package-install.html">v1.2.0</a>
     <a class="version" href="../../v1.1.0/actions/package-install.html">v1.1.0</a>
     <a class="version" href="../../v1.0.0/actions/package-install.html">v1.0.0</a>
   </div>
@@ -218,8 +222,7 @@ Both vcpkg and its dependencies are cached.</p>
   id: package-install
   with:
     vcpkg: fmt
-    cxx: ${{ ( 'g++-13' &amp;&amp; format ( '{0} {1}' , steps.setup-cpp.outputs.cxx || 'g++-13'
-      , '' ) ) || '' }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-13' }}
     cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}</code></pre>
 </div>
 </div>
@@ -234,14 +237,13 @@ Both vcpkg and its dependencies are cached.</p>
   id: package-install
   with:
     vcpkg: fmt
-    apt-get: clang-3.8 sudo software-properties-common tzdata wget curl apt-transport-https
-      make apt-file unzip libssl-dev build-essential autotools-dev autoconf automake
-      g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3
-      ccache libpython-dev python3-distutils python3-pip git cmake
+    apt-get: sudo software-properties-common wget curl apt-transport-https make apt-file
+      unzip libssl-dev build-essential autotools-dev autoconf automake g++ libc++-helpers
+      python ruby cpio gcc-multilib g++-multilib pkgconf python3 ccache libpython-dev
+      python3-distutils python3-pip git cmake
     apt-get-ignore-missing: 'true'
-    cxx: ${{ ( 'clang++-3.8' &amp;&amp; format ( '{0} {1}' , steps.setup-cpp.outputs.cxx ||
-      'clang++-3.8' , '' ) ) || '' }}
-    cc: ${{ steps.setup-cpp.outputs.cc || 'clang-3.8' }}</code></pre>
+    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-4.8' }}
+    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-4.8' }}</code></pre>
 </div>
 </div>
 </div>
@@ -277,6 +279,12 @@ Both vcpkg and its dependencies are cached.</p>
 <p class="tableblock">Setting the compiler is particularly important in Linux workflows that use `clang`, since `clang` might link
 `libc` or <code>libstdc`, while the default compiler used by vcpkg will usually be GCC linking `libstdc</code>.</p>
 <p class="tableblock">This would cause conflict in workflows that later attempt to use vcpkg dependencies.
+.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">C++ flags used by vcpkg.
 .</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
