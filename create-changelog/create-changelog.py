@@ -150,6 +150,9 @@ if __name__ == "__main__":
                     matches = re.findall(version_pattern, commit.subject)
                     if matches:
                         break
+                    matches = re.findall(version_pattern, commit.description)
+                    if matches:
+                        break
                 m = re.match(r'([ \d\w_-]+)(\(([ \d\w_-]+)\))?(!?): ([^\n]*)\n?(.*)', msg)
                 if m:
                     commit.type = normalize_type(m[1])
