@@ -383,7 +383,7 @@ runs:
                   if [[ $lines =~ $cmake_regex ]]; then
                     filename=${BASH_REMATCH[3]}
                     if [ "$filename" != "" ]; then
-                      ${{ runner.os != 'macOS' && 'filename="$(realpath -m --relative-to="${{ steps.params.outputs.ref_source_dir }}" "${{ steps.params.outputs.source_dir }}/$filename")"' }}
+                      ${{ runner.os != 'macOS' && format('filename="$(realpath -m --relative-to="{0}" "{1}/$filename")"', steps.params.outputs.ref_source_dir, steps.params.outputs.source_dir ) }}
                     fi
                     line_number=${BASH_REMATCH[4]}
                     error_type=${BASH_REMATCH[1]}
@@ -480,7 +480,7 @@ runs:
                   ${{ (inputs.trace-commands == 'true' && 'echo "$line"') || '' }}
                   if [[ "$line" =~ $gcc_clang_regex ]]; then
                     filename=${BASH_REMATCH[1]}
-                    ${{ runner.os != 'macOS' && 'filename="$(realpath -m --relative-to="${{ steps.params.outputs.ref_source_dir }}" "$filename")"' }}
+                    ${{ runner.os != 'macOS' && format('filename="$(realpath -m --relative-to="{0}" "$filename")"', steps.params.outputs.ref_source_dir ) }}
                     if [[ $filename == ../* ]]; then
                       continue
                     fi
@@ -509,7 +509,7 @@ runs:
                     echo "::$error_type file=$filename,line=$line_number,col:$column,title:$title::$msg"
                   elif [[ "$line" =~ $msvc_regex ]]; then
                     filename=${BASH_REMATCH[1]}
-                    ${{ runner.os != 'macOS' && 'filename="$(realpath -m --relative-to="${{ steps.params.outputs.ref_source_dir }}" "$filename")"' }}
+                    ${{ runner.os != 'macOS' && format('filename="$(realpath -m --relative-to="{0}" "$filename")"', steps.params.outputs.ref_source_dir ) }}
                     if [[ $filename == ../* ]]; then
                       continue
                     fi
@@ -587,15 +587,15 @@ runs:
                   if [[ "$line" =~ $boost_test_regex ]]; then
                     filename=${BASH_REMATCH[1]}
                     if [ -e "${{ steps.params.outputs.ref_source_dir }}/$filename" ]; then
-                      ${{ runner.os != 'macOS' && 'filename="$(realpath -m --relative-to="${{ steps.params.outputs.ref_source_dir }}" "${{ steps.params.outputs.ref_source_dir }}/$filename")"' }}
+                      ${{ runner.os != 'macOS' && format('filename="$(realpath -m --relative-to="{0}" "{1}/$filename")"', steps.params.outputs.ref_source_dir, steps.params.outputs.ref_source_dir ) }}
                     else
                       test_filename=$(find "${{ steps.params.outputs.ref_source_dir }}/test" -name "$filename" | head -n 1 | xargs)
                       if [ "$test_filename" != "" ]; then
-                        ${{ runner.os != 'macOS' && 'filename="$(realpath -m --relative-to="${{ steps.params.outputs.ref_source_dir }}" "$test_filename")"' }}
+                        ${{ runner.os != 'macOS' && format('filename="$(realpath -m --relative-to="{0}" "$test_filename")"', steps.params.outputs.ref_source_dir ) }}
                       else
                         ref_filename=$(find "${{ steps.params.outputs.ref_source_dir }}" -name "$filename" | head -n 1 | xargs)
                         if [ "$ref_filename" == "" ]; then
-                          ${{ runner.os != 'macOS' && 'filename="$(realpath -m --relative-to="${{ steps.params.outputs.ref_source_dir }}" "$ref_filename")"' }}
+                          ${{ runner.os != 'macOS' && format('filename="$(realpath -m --relative-to="{0}" "$ref_filename")"', steps.params.outputs.ref_source_dir ) }}
                         fi
                       fi
                     fi
