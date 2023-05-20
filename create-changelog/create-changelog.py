@@ -155,6 +155,9 @@ if __name__ == "__main__":
                     commit.type = normalize_type(m[1])
                     commit.scope = m[3]
                     commit.description = m[5]
+                    matches = re.findall(version_pattern, commit.description)
+                    if matches:
+                        break
                     commit.breaking = m[4] == '!'
                 else:
                     # regular commit
