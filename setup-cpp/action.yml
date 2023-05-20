@@ -42,7 +42,7 @@ inputs:
   path:
     description: 'The compiler executable. We attempt to find the compiler at this path first.'
     required: false
-    default: 'g++'
+    default: ''
 
   cache:
     description: |
@@ -151,7 +151,7 @@ runs:
       id: setup-gcc
       with:
         version: ${{ steps.split-compiler.outputs.version }}
-        path: ${{ inputs.path }}
+        path: g++
         cache: ${{ inputs.cache }}
         architecture: ${{ inputs.architecture }}
         check-latest: ${{ inputs.check-latest }}
@@ -164,7 +164,7 @@ runs:
       id: setup-clang
       with:
         version: ${{ steps.split-compiler.outputs.version }}
-        path: ${{ inputs.path }}
+        path: clang++
         cache: ${{ inputs.cache }}
         architecture: ${{ inputs.architecture }}
         check-latest: ${{ inputs.check-latest }}
