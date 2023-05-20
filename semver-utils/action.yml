@@ -21,6 +21,10 @@ inputs:
     required: false
     description: Do not fail on incorrect input
     default: 'true'
+  trace-commands:
+    required: false
+    description: Verbose mode
+    default: 'false'
 outputs:
   release:
     description: Version's release (major.minor.patch)

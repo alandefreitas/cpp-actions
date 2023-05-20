@@ -102,16 +102,26 @@ function diff(version) {
         core.setOutput('diff-result', (0, semver_1.diff)(version, diffTo));
     }
 }
-function satisfies(version) {
+function satisfies(version, trace_commands) {
     const satisfiesRangeInput = core.getInput('satisfies');
     if (satisfiesRangeInput) {
         core.setOutput('satisfies', (0, semver_1.satisfies)(version, satisfiesRangeInput));
+        if (trace_commands) {
+            console.log(`Version ${version.version} satisfies the requirement ${satisfiesRangeInput}`);
+        }
+    }
+    else {
+        if (trace_commands) {
+            console.log(`Version ${version.version} does NOT satisfy the requirement ${satisfiesRangeInput}`);
+        }
     }
 }
 function run() {
     try {
         const lenient = core.getInput('lenient').toLowerCase() !== 'false';
         const versionInput = core.getInput('version', { required: true });
+        const traceCommandsStr = core.getInput('trace-commands');
+        const trace_commands = traceCommandsStr !== '' && traceCommandsStr.toLowerCase() !== 'false';
         const versions = versionInput.split(/[\s,]+/).map(version => (0, semver_1.parse)(version, { loose: true }));
         let version = null;
         let min_version = null;
@@ -120,8 +130,14 @@ function run() {
             version = versions[0];
             min_version = versions[0];
             max_version = versions[0];
+            if (trace_commands) {
+                console.log(`Version provided: ${versionInput}`);
+            }
         }
         else {
+            if (trace_commands) {
+                console.log(`${versions.length} versions provided in ${versionInput}`);
+            }
             const satisfiesRangeInput = core.getInput('satisfies');
             min_version = null;
             max_version = null;
@@ -139,6 +155,14 @@ function run() {
                     break;
                 }
             }
+            if (trace_commands) {
+                console.log(`Min version in range is ${min_version}`);
+                console.log(`Max version in range is ${max_version}`);
+                console.log(`First version in range is ${max_version}`);
+                if (version === null) {
+                    console.log(`Failed to find a version in ${versionInput} satisfying the requirements ${satisfiesRangeInput}`);
+                }
+            }
         }
         if (version === null || min_version === null || max_version === null) {
             if (!lenient) {
@@ -154,7 +178,7 @@ function run() {
         prerelease(version);
         compare(version);
         diff(version);
-        satisfies(version);
+        satisfies(version, trace_commands);
     }
     catch (error) {
         if (error instanceof Error) {

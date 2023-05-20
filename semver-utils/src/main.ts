@@ -82,11 +82,18 @@ function diff(version: SemVer): void {
   }
 }
 
-function satisfies(version: SemVer): void {
+function satisfies(version: SemVer, trace_commands: boolean): void {
   const satisfiesRangeInput: string = core.getInput('satisfies')
 
   if (satisfiesRangeInput) {
     core.setOutput('satisfies', semVerSatisfies(version, satisfiesRangeInput))
+    if (trace_commands) {
+      console.log(`Version ${version.version} satisfies the requirement ${satisfiesRangeInput}`)
+    }
+  } else {
+    if (trace_commands) {
+      console.log(`Version ${version.version} does NOT satisfy the requirement ${satisfiesRangeInput}`)
+    }
   }
 }
 
@@ -94,6 +101,8 @@ function run(): void {
   try {
     const lenient = core.getInput('lenient').toLowerCase() !== 'false'
     const versionInput = core.getInput('version', { required: true })
+    const traceCommandsStr = core.getInput('trace-commands')
+    const trace_commands: boolean = traceCommandsStr !== '' && traceCommandsStr.toLowerCase() !== 'false'
     const versions: (SemVer | null)[] = versionInput.split(/[\s,]+/).map(version => parse(version, { loose: true }))
     let version: SemVer | null = null
     let min_version: SemVer | null = null
@@ -102,7 +111,13 @@ function run(): void {
       version = versions[0]
       min_version = versions[0]
       max_version = versions[0]
+      if (trace_commands) {
+        console.log(`Version provided: ${versionInput}`)
+      }
     } else {
+      if (trace_commands) {
+        console.log(`${versions.length} versions provided in ${versionInput}`)
+      }
       const satisfiesRangeInput: string = core.getInput('satisfies')
       min_version = null
       max_version = null
@@ -118,6 +133,14 @@ function run(): void {
             min_version = v
           }
           break
+        }
+      }
+      if (trace_commands) {
+        console.log(`Min version in range is ${min_version}`)
+        console.log(`Max version in range is ${max_version}`)
+        console.log(`First version in range is ${max_version}`)
+        if (version === null) {
+          console.log(`Failed to find a version in ${versionInput} satisfying the requirements ${satisfiesRangeInput}`)
         }
       }
     }
@@ -137,7 +160,7 @@ function run(): void {
     prerelease(version)
     compare(version)
     diff(version)
-    satisfies(version)
+    satisfies(version, trace_commands)
   } catch (error) {
     if (error instanceof Error) {
       core.setFailed(error.message)
