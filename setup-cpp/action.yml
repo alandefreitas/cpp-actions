@@ -179,7 +179,7 @@ runs:
       shell: bash
       id: features
       run: |
-        # Output information about the Clang we setup up
+        # Output information about the compiler we setup up
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }} 
         
         echo -E "cc=${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc }}" >> $GITHUB_OUTPUT
