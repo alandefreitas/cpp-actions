@@ -508,7 +508,6 @@ runs:
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         
         # Stripped version
-        stripped_version="${{ steps.strip-version.outputs.version || steps.release-versions.outputs.latest }}"
         all_versions="${{ steps.release-versions.outputs.all-versions }}"
         
         # The version we want to download
@@ -517,33 +516,114 @@ runs:
         minor="${{ (steps.download-version.outputs.satisfied == 'false' && steps.release-versions.outputs.latest) || (inputs.check-latest == 'true' && steps.download-version.outputs.max-minor) || steps.download-version.outputs.min-minor }}"
         patch="${{ (steps.download-version.outputs.satisfied == 'false' && steps.release-versions.outputs.latest) || (inputs.check-latest == 'true' && steps.download-version.outputs.max-patch) || steps.download-version.outputs.min-patch }}"
         
-        # These are the valid Clang version we consider downloading
-        version_candidates="$release $all_versions"
+        # These are the valid Clang versions we consider downloading
+        version_candidates="$release"
+        semver_regex='([0-9]+)\.([0-9]+)\.([0-9]+)'
+        ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
+        # Include patched versions if main version is unavailable
+        for version in ${all_versions// / }
+        do
+            [[ $version =~ $semver_regex ]]
+            other_major="${BASH_REMATCH[1]}"
+            other_minor="${BASH_REMATCH[2]}"
+            other_patch="${BASH_REMATCH[3]}"
+            if [[ $major -eq $other_major ]] && [[ $minor -eq $other_minor ]] && [[ $patch -ne $other_patch ]]; then
+                version_candidates+=" $version"
+            fi
+        done
+        # Include other minor versions if patched version is unavailable
+        for version in ${all_versions// / }
+        do
+            [[ $version =~ $semver_regex ]]
+            other_major="${BASH_REMATCH[1]}"
+            other_minor="${BASH_REMATCH[2]}"
+            other_patch="${BASH_REMATCH[3]}"
+            if [[ $major -eq $other_major ]] && [[ $minor -ne $other_minor ]]; then
+                version_candidates+=" $version"
+            fi
+        done
+        ${{ (inputs.trace-commands == 'true' && 'echo version_candidates="$version_candidates"') || '' }}
+        ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
+        
+        # Find ubuntu version
+        set +e
+        if [ "$ubuntu_version" == "" ]; then
+            # Extract Ubuntu version from lsb_release -rs
+            ubuntu_version=$(lsb_release -rs)
+        fi
+        
+        if [ "$ubuntu_version" == "" ]; then
+            # Extract Ubuntu version from /etc/os-release
+            os_release=$(cat /etc/os-release)
+            version_regex='VERSION_ID="([^"]+)"'
+            if [[ $os_release =~ $version_regex ]]; then
+                ubuntu_version=${BASH_REMATCH[1]}
+            else
+                ubuntu_version="Unknown"
+            fi
+        fi
+        
+        if [ "$ubuntu_version" == "" ]; then
+            # Extract Ubuntu version from /etc/lsb-release
+            lsb_release=$(cat /etc/lsb-release)
+            version_regex='DISTRIB_RELEASE=([^ ]+)$'
+            if [[ $lsb_release =~ $version_regex ]]; then
+                ubuntu_version=${BASH_REMATCH[1]}
+            fi
+        fi
+        
+        if [ "$ubuntu_version" == "" ]; then
+            # Extract Ubuntu version from uname -a
+            uname_output=$(uname -a)
+            version_regex='~([0-9]+\.[0-9]+)'
+            if [[ $uname_output =~ $version_regex ]]; then
+                ubuntu_version=${BASH_REMATCH[1]}
+            fi
+        fi
+        set -e
+        echo "ubuntu_version=$ubuntu_version" >> $GITHUB_OUTPUT
+        
+        if [ "$ubuntu_version" == "" ]; then
+            false
+        fi
+
+        # Sort ubuntu version binaries according to current ubuntu version
+        if [ "$ubuntu_version" == "20.04" ]; then 
+          ubuntu_versions=("20.04" "22.04" "18.04" "16.04" "14.04" "12.04" "10.04")
+        elif [ "$ubuntu_version" == "18.04" ]; then 
+          ubuntu_versions=("18.04" "20.04" "16.04" "22.04" "14.04" "12.04" "10.04")
+        elif [ "$ubuntu_version" == "16.04" ]; then 
+          ubuntu_versions=("16.04" "18.04" "14.04" "20.04" "12.04" "22.04" "10.04")
+        elif [ "$ubuntu_version" == "12.04" ]; then 
+          ubuntu_versions=("12.04" "14.04" "10.04" "16.04" "18.04" "20.04" "22.04")
+        elif [ "$ubuntu_version" == "10.04" ]; then 
+          ubuntu_versions=("10.04" "12.04" "14.04" "16.04" "18.04" "20.04" "22.04")
+        else
+          ubuntu_versions=("22.04" "20.04" "18.04" "16.04" "14.04" "12.04" "10.04")
+        fi
         
         # Find a URL for the binaries
-        ubuntu_versions=("22.04" "20.04" "18.04" "16.04" "14.04" "12.04" "10.04")
         clang_url_OK=""
-        for version_candidate in ${version_candidates// / }
-        do
-          if [[ "$version_candidate" != "$release" ]] && [[ $version_candidate != "$stripped_version"* ]]; then
-            continue
-          fi
-          for ubuntu_version in "${ubuntu_versions[@]}"; do
+        for ubuntu_version in "${ubuntu_versions[@]}"; do
+          for version_candidate in ${version_candidates// / }; do
             ubuntu_image="ubuntu-$ubuntu_version"
             clang_basename="clang+llvm-$version_candidate-x86_64-linux-gnu-$ubuntu_image"
             clang_filename="$clang_basename.tar.xz"
+        
             clang_url=https://github.com/llvm/llvm-project/releases/download/llvmorg-$version_candidate/$clang_filename
             clang_url_exists=$(curl --silent --fail --head "$clang_url" >/dev/null && echo "true" || echo "false")
             if [ "$clang_url_exists" == "true" ]; then
               clang_url_OK="$clang_url"
               break
             fi
+        
             clang_url=https://releases.llvm.org/$version_candidate/$clang_filename
             clang_url_exists=$(curl --silent --fail --head "$clang_url" >/dev/null && echo "true" || echo "false")
             if [ "$clang_url_exists" == "true" ]; then
               clang_url_OK="$clang_url"
               break
             fi
+        
             clang_basename="clang+llvm-$version_candidate-linux-x86_64-ubuntu$ubuntu_version"
             clang_filename="$clang_basename.tar.xz"
             clang_url=https://releases.llvm.org/$version_candidate/$clang_filename
@@ -624,11 +704,10 @@ runs:
         ${{ (inputs.trace-commands != 'true' && format('tar -xf "clang-libs.tar.xz" -C "{0}/lib"', steps.setup-clang.outputs.clang_dest)) || '' }}
         
         set +e
-        ubuntu_version=$(lsb_release -r | awk '{print $2}')
-        if [ "$ubuntu_version" != "16.04" ]; then
+        if [ "${{ steps.setup-clang.outputs.ubuntu_version }}" != "16.04" ]; then
           rm "${{ steps.setup-clang.outputs.clang_dest }}/lib/libstdc++.so.6"
         fi
-        
+
 
     - name: Set up LD_LIBRARY_PATH
       if: ${{ steps.setup-clang.outputs.clang_url }}
@@ -659,11 +738,18 @@ runs:
             done
           fi
         done < <(find "$clang_dest" -type d -print0)
-        echo -E "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> "$GITHUB_ENV"
+        ${{ (inputs.trace-commands == 'true' && 'echo -E "LD_LIBRARY_PATH=\"$LD_LIBRARY_PATH\""') || '' }}
         
-        # Print installed version
-        "${{ steps.setup-clang.outputs.cxx }}" --version
-
+        IFS=':' read -ra paths <<< "$LD_LIBRARY_PATH"
+        for path in "${paths[@]}"; do
+          if [[ ! -d "$path" ]]; then
+            echo "💥 Library path does not exist: $path"
+          fi
+        done
+        
+        ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
+        export LD_LIBRARY_PATH
+        echo -E "LD_LIBRARY_PATH=\"$LD_LIBRARY_PATH\"" >> "$GITHUB_ENV"
 
     - name: Parse Final Clang Setup version
       uses: alandefreitas/cpp-actions/semver-utils@develop
