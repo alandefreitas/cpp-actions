@@ -1,15 +1,18 @@
 # This is a helper script that attempts to build all versions of GCC for GitHub actions.
-# It attempts to create portable compilers that can be reused regardless of the
+# It attempts to create somewhat portable compilers that can be reused regardless of the
 # linux container being used.
 #
-# Although this screipt script attempts to build all versions of GCC, your platform is likely to be able to build
-# a range of versions. In most cases, you will need to set up docker containers to build some other ranges of compilers.
+# Although this script attempts to build all versions of GCC, your platform is likely
+# to be able to build only a range of versions. In most cases, you will need to set up
+# docker containers to build some other ranges of compilers.
 #
-# We always attempt to fetch GCC for those releases, as everything else is very unstable
-# and relying on the few versions available from apt-get doesn't scale well.
+# In the actions, we always attempt to fetch GCC for those releases, as everything
+# else is very unstable and relying on the few versions available from apt-get
+# doesn't scale well. Nonetheless, workflows should prefer versions from apt-get
+# as they are more representative of the versions users are likely to have installed.
 #
-# The releases use /opt/hostedtoolcache as the install directory to minimize conflicts
-# when these binaries are used in github actions.
+# The releases created in this script use /opt/hostedtoolcache as the install directory
+# to minimize conflicts when these binaries are used in github actions.
 #
 # Many versions will fail to build and that's fine. The intention of this script to
 # build as many variants as possible in the host machine. In some cases, you need
@@ -19,22 +22,30 @@
 # compile with GCC version Y when Y is very distant from X or even
 # slightly more recent than X.
 #
-# To maximize our success rate, we download and use the specified versions of the
-# dependencies instead of attempting to use the ones from the system. Also,
-# GCC versions are compiled from highest to lowest, so that the previously
-# compiled GCC version is used to compile next version.
+# For this reason, the script has two modes of operation: a recursive mode and
+# a "platform" GCC mode. When the recursive mode is "false", the script will use
+# the default GCC version provided by build-essential to attempt to build
+# all versions of GCC. The filename includes the ubuntu version used to build
+# the binaries. The action will attempt to use these binaries when they are
+# available.
 #
-# If the complete process fails, running it again might work for compilers
-# that couldn't build in the first run. The reason is that the script
-# also looks for the highest version of GCC that is still lower than
-# the version being built. For instance, GCC 9.2 might fail compiling
+# In "recursive mode", GCC versions are compiled from highest to lowest, so
+# that the previously compiled GCC version is used to compile next/previous
+# version. The libraries are also bundled with the installation and the
+# filenames do not include the ubuntu version.
+#
+# If the complete process fails in "recursive mode", running it again might
+# work for compilers that couldn't build in the first run. The reason is that
+# the script also looks for the highest version of GCC that is still lower
+# than the version being built. For instance, GCC 9.2 might fail compiling
 # with GCC 9.4 because GCC 9.4 can find problems didn't exist when
 # GCC 9.2 was released. But in a second run GCC 8.4 might be
 # available, which would be preferred over GCC 9.4 and it's
 # usually possible to build GCC 9.2 with GCC 8.4.
 #
-# If you're trying to build some older versions of GCC here and it fails, you
-# might need to do it in a docker container.
+# In both modes, to maximize our success rate, we download and use the
+# specified versions of the GCC dependencies instead of relying on the
+# ones from the system.
 #
 
 if [ $EUID -eq 0 ]; then
@@ -51,8 +62,11 @@ elif [ $# -eq 1 ]; then
   # from the host, build everything and copy results back to the host.
   # The user of this script would only provide the container name as an argument.
   # In practice, we have a problem to access the container in detached
-  # mode so that this only serves as reference of command to run
+  # mode so that this only serves as reference of commands to run
   # the script in a container and copy the files back.
+  #
+  # The comments include the commands one needs to run from the guest and the host
+  # to build everything in a container and copy the results back.
   exit
   # About images:
   # - ubuntu:22.04 can usually build GCC >= 9.3
@@ -60,28 +74,47 @@ elif [ $# -eq 1 ]; then
   # - ubuntu:18.04 can usually build GCC >=6.5 <= 9.2
   # - ubuntu:16.04 can usually build GCC >=4.7 < 7.1
   # - ubuntu:14.04 can usually build GCC >=4.5 < 5.5
-  image_name="$1" # image_name="ubuntu:14.04"
+  # image_name="ubuntu:22.04"
+  image_name="$1"
   image_base_name=$(basename "${image_name}")
   timestamp=$(date +%s)
+  # container_name="ubuntu-22.04-gcc"
   container_name="${image_base_name}_${timestamp}"
   container_name=${container_name//[^a-zA-Z0-9_.-]/_}            # Replace non-alphanumeric characters with underscores
   container_name=$(echo "$container_name" | sed 's/^_//;s/_$//') # Remove leading/trailing underscores
   # Set up container and user
-  docker run -d --name "$container_name" "$image_name" # docker run -it --name "$container_name" "$image_name"
-  docker start "$container_name"                       # This is where it fails in detached mode. Investigate this.
+  # docker run -it --name "$container_name" "$image_name"
+  docker run -d --name "$container_name" "$image_name"
+  docker start "$container_name" # This is where it fails in detached mode. Investigate this.
   docker ps
-  docker exec -u 0 "$container_name" apt-get update && apt-get install -y sudo
-  # This might fail, so we might need to just log in and execute it ourselves.
+  # apt-get update
+  # apt-get install -y sudo
+  # apt-get install -y lsb-release
+  docker exec -u 0 "$container_name" apt-get update
+  docker exec -u 0 "$container_name" apt-get install -y sudo
+  docker exec -u 0 "$container_name" apt-get install -y lsb-release
+  # This step might fail in detached mode because the container won't be running,
+  # so we might need to just log in and execute it ourselves.
   # $ docker exec -it "$container_name" bash
-  docker exec useradd -m "$USER"       # useradd -m "$USER"
-  docker exec passwd "$USER"           # passwd "$USER"
-  docker exec usermod -aG sudo "$USER" # usermod -aG sudo "$USER"
-  docker exec su "$USER"               # su "$USER" && cd "/home/$USER"
-  # Copy script to container
-  docker cp "$0" "$container_name:/home/$USER/" # docker cp "./build_all_gcc.sh" "$container_name:/home/$USER/"
+  # bash
+  # USER=any_user_name # (this would reuse the host user name in the docker exec version)
+  # useradd -m "$USER"
+  docker exec useradd -m "$USER"
+  # passwd "$USER"
+  docker exec passwd "$USER"
+  # usermod -aG sudo "$USER"
+  docker exec usermod -aG sudo "$USER"
+  # su "$USER"
+  # cd "/home/$USER"
+  # bash
+  docker exec su "$USER"
+  # Copy script to container (run from host)
+  # docker cp "./build_all_gcc.sh" "$container_name:/home/$USER/"
+  docker cp "$0" "$container_name:/home/$USER/"
   # Run script in container
-  docker exec -w "/home/$USER/" "$container_name" bash "./$0" # bash ./build_all_gcc.sh
-  # Check results
+  # bash ./build_all_gcc.sh
+  docker exec -w "/home/$USER/" "$container_name" bash "./$0"
+  # Check results (everything after this point from host)
   docker exec -w "/home/$USER/" "$container_name" ls
   # Copy tar.gz files from container back to host
   file_list=($(docker exec "$container_name" ls /home/$USER))
@@ -238,6 +271,50 @@ function test_gcc_with_cxx() {
 
 LD_LIBRARY_PATH_INIT="$LD_LIBRARY_PATH"
 
+# Extract Ubuntu version: try some methods that might be available on containers
+if [ "$ubuntu_version" == "" ]; then
+  # Extract Ubuntu version from lsb_release -rs
+  ubuntu_version=$(lsb_release -rs)
+fi
+
+if [ "$ubuntu_version" == "" ]; then
+  # Extract Ubuntu version from /etc/os-release
+  os_release=$(cat /etc/os-release)
+  version_regex='VERSION_ID="([^"]+)"'
+  if [[ $os_release =~ $version_regex ]]; then
+    ubuntu_version=${BASH_REMATCH[1]}
+  else
+    ubuntu_version="Unknown"
+  fi
+fi
+
+if [ "$ubuntu_version" == "" ]; then
+  # Extract Ubuntu version from /etc/lsb-release
+  lsb_release=$(cat /etc/lsb-release)
+  version_regex='DISTRIB_RELEASE=([^ ]+)$'
+  if [[ $lsb_release =~ $version_regex ]]; then
+    ubuntu_version=${BASH_REMATCH[1]}
+  fi
+fi
+
+if [ "$ubuntu_version" == "" ]; then
+  # Extract Ubuntu version from uname -a
+  uname_output=$(uname -a)
+  version_regex='~([0-9]+\.[0-9]+)'
+  if [[ $uname_output =~ $version_regex ]]; then
+    ubuntu_version=${BASH_REMATCH[1]}
+  fi
+fi
+
+if [ "$ubuntu_version" == "" ]; then
+  echo "Please set and export \"ubuntu_version\""
+  exit
+fi
+
+echo "Ubuntu Version: $ubuntu_version"
+
+recursive_mode=false
+
 set +e
 for version_str in "${versions[@]}"; do
   echo "============= Process GCC $version_str"
@@ -260,7 +337,7 @@ for version_str in "${versions[@]}"; do
   # Construct filename and directories to download GCC binaries
   gcc_basename="gcc-$release"
   gcc_dest="$RUNNER_TOOL_CACHE/gcc/$major.$minor.$patch"
-  dist_dirname="$gcc_basename-Linux-$ARCH"
+  dist_dirname="$gcc_basename-$ARCH-linux-gnu-ubuntu-$ubuntu_version"
   binaries_filename="$dist_dirname.tar.gz"
 
   # Check skip list
@@ -285,13 +362,15 @@ for version_str in "${versions[@]}"; do
     fi
     if [ -e "$gcc_dest/bin/gcc" ] || [ -e "$gcc_dest/bin/g++" ]; then
       packaged_versions+=("$release")
-      if test_gcc_with_cxx "$release"; then
-        CC="$gcc_dest/bin/gcc"
-        export CC
-        CXX="$gcc_dest/bin/g++"
-        export CXX
-        LD_LIBRARY_PATH="/opt/hostedtoolcache/gcc/$TEST_VERSION/lib64/:/opt/hostedtoolcache/gcc/$TEST_VERSION/lib/x86_64-linux-gnu/:/opt/hostedtoolcache/gcc/$TEST_VERSION/lib/x86_64-unknown-gnu/$LD_LIBRARY_PATH_INIT"
-        export LD_LIBRARY_PATH
+      if [ "$recursive_mode" == "true" ]; then
+        if test_gcc_with_cxx "$release"; then
+          CC="$gcc_dest/bin/gcc"
+          export CC
+          CXX="$gcc_dest/bin/g++"
+          export CXX
+          LD_LIBRARY_PATH="/opt/hostedtoolcache/gcc/$TEST_VERSION/lib64/:/opt/hostedtoolcache/gcc/$TEST_VERSION/lib/x86_64-linux-gnu/:/opt/hostedtoolcache/gcc/$TEST_VERSION/lib/x86_64-unknown-gnu/$LD_LIBRARY_PATH_INIT"
+          export LD_LIBRARY_PATH
+        fi
       fi
     else
       # Remove if empty
@@ -317,25 +396,27 @@ for version_str in "${versions[@]}"; do
   echo "============= Find a compiler for GCC $version_str"
 
   # Find most appropriate compiler to build it (closest previous version)
-  gcc_gcc_version=""
-  for version_str_b in "${versionsUP[@]}"; do
-    if semver_lt "$version_str_b" "$version_str" || [ "$gcc_gcc_version" = "" ]; then
-      # version_str_b is lower or no version set yet
-      gcc_dest_b="$RUNNER_TOOL_CACHE/gcc/$version_str_b"
-      if [ -e "$gcc_dest_b/bin/g++" ]; then
-        # and the compiler exists
-        if test_gcc_with_cxx "$version_str_b"; then
-          # and it works
-          CC="$gcc_dest_b/bin/gcc"
-          export CC
-          CXX="$gcc_dest_b/bin/g++"
-          export CXX
-          CXX_VERSION="$version_str_b"
-          gcc_gcc_version="$version_str_b"
+  if [ "$recursive_mode" == "true" ]; then
+    gcc_gcc_version=""
+    for version_str_b in "${versionsUP[@]}"; do
+      if semver_lt "$version_str_b" "$version_str" || [ "$gcc_gcc_version" = "" ]; then
+        # version_str_b is lower or no version set yet
+        gcc_dest_b="$RUNNER_TOOL_CACHE/gcc/$version_str_b"
+        if [ -e "$gcc_dest_b/bin/g++" ]; then
+          # and the compiler exists
+          if test_gcc_with_cxx "$version_str_b"; then
+            # and it works
+            CC="$gcc_dest_b/bin/gcc"
+            export CC
+            CXX="$gcc_dest_b/bin/g++"
+            export CXX
+            CXX_VERSION="$version_str_b"
+            gcc_gcc_version="$version_str_b"
+          fi
         fi
       fi
-    fi
-  done
+    done
+  fi
 
   echo "============= Building GCC $version_str with GCC $CXX_VERSION"
 
@@ -368,6 +449,12 @@ for version_str in "${versions[@]}"; do
   if [ ! -d "$gcc_dest" ]; then
     # Build
     make -j "$N_JOBS" -s
+    make_exit_code=$?
+    if [ $make_exit_code -ne 0 ]; then
+      echo "Error: Cannot build GCC $version_str"
+      cd ../..
+      continue
+    fi
 
     # Install
     make install
@@ -382,21 +469,23 @@ for version_str in "${versions[@]}"; do
   fi
 
   # Patch dependencies
-  dependencies=$(list_gcc_dependencies "$gcc_dest")
-  while IFS= read -r line; do
-    dep_path=${line#*=> }
-    dep_path=$(echo "$dep_path" | tr -d '[:space:]')
-    if [[ -n "$line" ]] && [[ "$dep_path" != linux-vdso* ]]; then
-      if [[ -e "$dep_path" ]]; then
-        dep_dest="${gcc_dest%/}/${dep_path#/}"
-        echo "Bundling $dep_path into $dep_dest"
-        mkdir -p "$(dirname "$dep_dest")"
-        cp -L "$dep_path" "$dep_dest"
-      else
-        echo "dependency $dep_path cannot be found"
+  if [ "$recursive_mode" == "true" ]; then
+    dependencies=$(list_gcc_dependencies "$gcc_dest")
+    while IFS= read -r line; do
+      dep_path=${line#*=> }
+      dep_path=$(echo "$dep_path" | tr -d '[:space:]')
+      if [[ -n "$line" ]] && [[ "$dep_path" != linux-vdso* ]]; then
+        if [[ -e "$dep_path" ]]; then
+          dep_dest="${gcc_dest%/}/${dep_path#/}"
+          echo "Bundling $dep_path into $dep_dest"
+          mkdir -p "$(dirname "$dep_dest")"
+          cp -L "$dep_path" "$dep_dest"
+        else
+          echo "dependency $dep_path cannot be found"
+        fi
       fi
-    fi
-  done <<<"$dependencies"
+    done <<<"$dependencies"
+  fi
 
   # Create symlinks
   for file in "$gcc_dest/bin"/*; do
@@ -446,10 +535,12 @@ for version_str in "${versions[@]}"; do
 
   # Use this version of GCC to build the previous version of GCC
   # GCC cannot usually be built with a compiler that's much more recent than itself
-  export CC="$gcc_dest/bin/gcc"
-  export CXX="$gcc_dest/bin/g++"
-  LD_LIBRARY_PATH="/opt/hostedtoolcache/gcc/$TEST_VERSION/lib64/:/opt/hostedtoolcache/gcc/$TEST_VERSION/lib/x86_64-linux-gnu/:/opt/hostedtoolcache/gcc/$TEST_VERSION/lib/x86_64-unknown-gnu/$LD_LIBRARY_PATH_INIT"
-  export LD_LIBRARY_PATH
+  if [ "$recursive_mode" == "true" ]; then
+    export CC="$gcc_dest/bin/gcc"
+    export CXX="$gcc_dest/bin/g++"
+    LD_LIBRARY_PATH="/opt/hostedtoolcache/gcc/$TEST_VERSION/lib64/:/opt/hostedtoolcache/gcc/$TEST_VERSION/lib/x86_64-linux-gnu/:/opt/hostedtoolcache/gcc/$TEST_VERSION/lib/x86_64-unknown-gnu/$LD_LIBRARY_PATH_INIT"
+    export LD_LIBRARY_PATH
+  fi
 done
 
 echo "============= Packaged GCC versions"
