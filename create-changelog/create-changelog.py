@@ -133,6 +133,7 @@ if __name__ == "__main__":
                 commit = Commit()
             commit.hash = line[len('commit '):]
             if commits and commit.hash in tagged_commit_hashes:
+                print(f'Stopping at commit id {commit.hash[:8]} (tag {commit_tags[commit.hash]})')
                 delimiter_commit_id = commit.hash
                 break
         if commit.hash and not commit.author and line.startswith('Author: '):
@@ -149,6 +150,7 @@ if __name__ == "__main__":
                 if commits:
                     matches = re.findall(version_pattern, commit.subject)
                     if matches:
+                        print(f'Stopping at commit id {commit.hash[:8]} (subject: {commit.subject})')
                         break
                 m = re.match(r'([ \d\w_-]+)(\(([ \d\w_-]+)\))?(!?): ([^\n]*)\n?(.*)', msg)
                 if m:
@@ -157,6 +159,7 @@ if __name__ == "__main__":
                     commit.description = m[5]
                     matches = re.findall(version_pattern, commit.description)
                     if matches:
+                        print(f'Stopping at commit id {commit.hash[:8]} (description: {commit.description})')
                         break
                     commit.breaking = m[4] == '!'
                 else:
