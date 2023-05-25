@@ -233,8 +233,8 @@ cache, the scanning scripting saves us about 3 minutes.</p>
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Clone Boost.Variant2
   uses: alandefreitas/cpp-actions/boost-clone@develop
+  id: boost-clone
   with:
-    boost-dir: boost-root
     branch: master
     modules: variant2</code></pre>
 </div>
@@ -259,7 +259,7 @@ cache, the scanning scripting saves us about 3 minutes.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>boost-dir</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The boost directory. The default value assumes boost is in-source.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>boost</code></p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>branch</code></p></td>
@@ -300,6 +300,27 @@ cache, the scanning scripting saves us about 3 minutes.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_outputs"><a class="anchor" href="#_outputs"></a>Outputs</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Output</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>boost-dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the boost source files.</p></td>
 </tr>
 </tbody>
 </table>

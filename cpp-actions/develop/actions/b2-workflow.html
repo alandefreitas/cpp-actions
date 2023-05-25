@@ -227,7 +227,7 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 - name: Test Boost.Variant2
   uses: alandefreitas/cpp-actions/b2-workflow@develop
   with:
-    source-dir: boost-root
+    source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
     modules: variant2
     toolset: gcc-13
     cxxstd: 17,20</code></pre>
@@ -242,7 +242,7 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 - name: Test Boost.Variant2
   uses: alandefreitas/cpp-actions/b2-workflow@develop
   with:
-    source-dir: boost-root
+    source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
     modules: variant2
     toolset: clang
     cxx: clang++-16
@@ -258,7 +258,7 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 - name: Test Boost.Variant2
   uses: alandefreitas/cpp-actions/b2-workflow@develop
   with:
-    source-dir: boost-root
+    source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
     modules: variant2
     toolset: msvc-14.3
     cxxstd: 17,20
@@ -274,7 +274,7 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 - name: Test Boost.Variant2
   uses: alandefreitas/cpp-actions/b2-workflow@develop
   with:
-    source-dir: boost-root
+    source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
     modules: variant2
     toolset: gcc-13
     cxxstd: 17,20
