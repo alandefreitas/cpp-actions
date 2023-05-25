@@ -22,7 +22,7 @@ steps:
 - name: Test Boost.Variant2
   uses: alandefreitas/cpp-actions/b2-workflow@{page-version}
   with:
-    source-dir: boost-root
+    source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
     modules: variant2
     toolset: gcc-13
     cxxstd: 17,20
@@ -36,7 +36,7 @@ steps:
 - name: Test Boost.Variant2
   uses: alandefreitas/cpp-actions/b2-workflow@{page-version}
   with:
-    source-dir: boost-root
+    source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
     modules: variant2
     toolset: clang
     cxx: clang++-16
@@ -51,7 +51,7 @@ steps:
 - name: Test Boost.Variant2
   uses: alandefreitas/cpp-actions/b2-workflow@{page-version}
   with:
-    source-dir: boost-root
+    source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
     modules: variant2
     toolset: msvc-14.3
     cxxstd: 17,20
@@ -66,7 +66,7 @@ steps:
 - name: Test Boost.Variant2
   uses: alandefreitas/cpp-actions/b2-workflow@{page-version}
   with:
-    source-dir: boost-root
+    source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
     modules: variant2
     toolset: gcc-13
     cxxstd: 17,20

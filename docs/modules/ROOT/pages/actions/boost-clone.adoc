@@ -27,8 +27,8 @@ cache, the scanning scripting saves us about 3 minutes.
 steps:
 - name: Clone Boost.Variant2
   uses: alandefreitas/cpp-actions/boost-clone@{page-version}
+  id: boost-clone
   with:
-    boost-dir: boost-root
     branch: master
     modules: variant2
 ----
@@ -37,7 +37,7 @@ steps:
 
 |===
 |Parameter |Description |Default
-|`boost-dir` |The boost directory. The default value assumes boost is in-source. |`boost`
+|`boost-dir` |The boost directory. The default value assumes boost is in-source. |
 |`branch` |Branch of the super-project. |`master`
 |`patches` |Libraries used to patch the boost installation. |
 |`modules` |The boost submodules we need to clone. |
@@ -48,3 +48,9 @@ steps:
 |`trace-commands` |Trace commands executed by the workflow. |`false`
 |===
 
+== Outputs
+
+|===
+|Output |Description
+|`boost-dir` |The absolute path to the boost source files.
+|===

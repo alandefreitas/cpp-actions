@@ -52,7 +52,7 @@ steps:
     cxxstd: 17,20
     cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}
     cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-13' }}
-    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
+    extra-args: -D BOOST_SRC_DIR="${{ steps.boost-clone.outputs.boost-dir }}"
     ref-source-dir: .
 ----
 
@@ -73,7 +73,7 @@ steps:
     cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}
     cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-13' }}
     cxxflags: -fsanitize=undefined
-    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
+    extra-args: -D BOOST_SRC_DIR="${{ steps.boost-clone.outputs.boost-dir }}"
     ref-source-dir: .
 ----
 
@@ -95,7 +95,7 @@ steps:
     cxxstd: 17,20
     cc: ${{ steps.setup-cpp.outputs.cc || '' }}
     cxx: ${{ steps.setup-cpp.outputs.cxx || '' }}
-    extra-args: -D BOOST_SRC_DIR=$GITHUB_WORKSPACE/boost-root
+    extra-args: -D BOOST_SRC_DIR="${{ steps.boost-clone.outputs.boost-dir }}"
     ref-source-dir: .
 ----
 

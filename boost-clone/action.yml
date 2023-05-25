@@ -28,7 +28,7 @@ inputs:
   boost-dir:
     description: 'The boost directory. The default value assumes boost is in-source.'
     required: false
-    default: 'boost'
+    default: ''
   branch:
     description: 'Branch of the super-project'
     required: false
@@ -61,6 +61,10 @@ inputs:
     description: 'Trace commands executed by the workflow.'
     required: false
     default: 'false'
+outputs:
+  boost-dir:
+    description: "The absolute path to the boost source files."
+    value: ${{ steps.ctx.outputs.boost_dir }}
 
 runs:
   using: "composite"
@@ -97,7 +101,7 @@ runs:
               echo "minor=$minor" >> $GITHUB_OUTPUT
               echo "patch=$patch" >> $GITHUB_OUTPUT
             fi
-          
+        
             # Check if git supports --jobs option # 2.27.0 is min version for --jobs
             supports_scan_scripts="false"
             if [[ "$major" -gt "3" ]]; then
@@ -273,10 +277,14 @@ runs:
         # absolute cache directory
         working_dir="$(pwd)"
         boost_dir="${{ inputs.boost-dir }}"
-        if [[ $boost_dir != /* ]]; then
+        if [ "$boost_dir" == "" ]; then
+          boost_dir="$RUNNER_TOOL_CACHE/boost/${{inputs.branch}}"
+        elif [[ $boost_dir != /* ]]; then
           boost_dir="$(readlink -f "$boost_dir" 2>/dev/null || realpath -e "$boost_dir" 2>/dev/null || echo "$working_dir/$boost_dir")"
         fi
-        echo "boost_dir=$boost_dir" >> $GITHUB_OUTPUT
+        mkdir -p "$boost_dir"
+        ls "$boost_dir"
+        echo -E "boost_dir=$boost_dir" >> $GITHUB_OUTPUT
 
     # Attempt to get boost with the specified modules from the cache before cloning it
     - name: boost cache
@@ -293,13 +301,13 @@ runs:
       run: |
         # Clone Boost Superproject 
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        git clone https://github.com/boostorg/boost.git -b ${{ inputs.branch }} "${{ inputs.boost-dir }}"
+        git clone https://github.com/boostorg/boost.git -b ${{ inputs.branch }} "${{ steps.ctx.outputs.boost_dir }}"
 
     # Apply patches if boost not found in cache
     - name: boost patches
       if: steps.cache-boost.outputs.cache-hit != 'true' && inputs.patches != ''
       shell: bash
-      working-directory: ${{ inputs.boost-dir }}/libs
+      working-directory: ${{ steps.ctx.outputs.boost_dir }}/libs
       run: |
         # Apply boost patches ${{ inputs.patches }}
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
@@ -316,7 +324,7 @@ runs:
 
     - name: Git features
       if: steps.cache-boost.outputs.cache-hit != 'true'
-      working-directory: ${{ inputs.boost-dir }}
+      working-directory: ${{ steps.ctx.outputs.boost_dir }}
       shell: bash
       id: features
       run: |
@@ -340,7 +348,7 @@ runs:
             echo "minor=$GIT_MINOR" >> $GITHUB_OUTPUT
             echo "patch=$GIT_PATCH" >> $GITHUB_OUTPUT
           fi
-          
+        
           # Check if git supports --jobs option: 2.27.0 is min version for --jobs
           supports_jobs="false"
           if [ "$GIT_MAJOR" -gt "2" ]; then
@@ -366,7 +374,7 @@ runs:
     # Initialize all submodules if boost not found in cache and no specific modules were specified
     - name: Initialize all submodules
       if: (steps.cache-boost.outputs.cache-hit != 'true' && steps.ctx.outputs.all_modules == '')
-      working-directory: ${{ inputs.boost-dir }}
+      working-directory: ${{ steps.ctx.outputs.boost_dir }}
       shell: bash
       run: |
         # Update all boost submodules
@@ -379,7 +387,7 @@ runs:
     # Initialize specified submodules if boost not found in cache and submodules were specified
     - name: Initialize specified submodules
       if: (steps.cache-boost.outputs.cache-hit != 'true' && steps.ctx.outputs.all_modules != '')
-      working-directory: ${{ inputs.boost-dir }}
+      working-directory: ${{ steps.ctx.outputs.boost_dir }}
       shell: bash
       run: |
         # Scan transitive dependencies and update submodules

@@ -107,8 +107,8 @@ jobs:
 
       - name: Clone Boost.Variant2
         uses: ./boost-clone
+        id: boost-clone
         with:
-          boost-dir: boost-root
           branch: master
           modules: variant2
           modules-scan-paths: ${{ ((matrix.cxx == 'g++-12') && 'test') && '' }}
@@ -119,7 +119,7 @@ jobs:
         if: ${{ matrix.cxx == 'g++-12' }}
         uses: ./b2-workflow
         with:
-          source-dir: boost-root
+          source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
           modules: variant2
           toolset: ${{ matrix.toolset }}
           # Only clang needs this input. Other jobs get it from the toolset.
@@ -144,8 +144,8 @@ jobs:
           cxxstd: ${{ matrix.cxxstd }}
           cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
           cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
-          cxxflags: ${{ matrix.cxxflags }} ${{ matrix.ubsan && '-fsanitize=undefined' }}
-          extra-args: -D BOOST_SRC_DIR="$GITHUB_WORKSPACE/boost-root"
+          cxxflags: ${{ matrix.cxxflags }}${{ matrix.ubsan && ' -fsanitize=undefined' }}
+          extra-args: -D BOOST_SRC_DIR="${{ steps.boost-clone.outputs.boost-dir }}"
           ref-source-dir: .
           trace-commands: true
 
