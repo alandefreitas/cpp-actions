@@ -315,7 +315,6 @@ runs:
             CONFIGURE_ARGS+=(${{ (inputs.cxx && format('"-D" "CMAKE_CXX_COMPILER={0}"', steps.params.outputs.cxx)) || '' }})
             CONFIGURE_ARGS+=(${{ (inputs.cxxflags && format('"-D" "CMAKE_CXX_FLAGS={0}"', inputs.cxxflags)) || '' }})
             CONFIGURE_ARGS+=($( [ "$cxxstd" == "defaultcxx" ] && echo "" || echo "-D CMAKE_CXX_STANDARD=$cxxstd" ))
-            CONFIGURE_ARGS+=(${{ inputs.extra-args }})
             SOURCE_DIR_ARG=${{ (steps.setup-cmake.outputs.supports-path-to-build == 'false' && format('{0}', steps.params.outputs.source_dir)) || '' }}
         
             which mkdir
@@ -326,7 +325,7 @@ runs:
             cd "$std_build_dir"
             set +e
             set -x
-            "${{ steps.params.outputs.cmake_path }}" "${CONFIGURE_ARGS[@]}" $SOURCE_DIR_ARG 2>&1 | tee -a "$std_build_dir/cmake-configure-output.txt"
+            "${{ steps.params.outputs.cmake_path }}" "${CONFIGURE_ARGS[@]}" ${{ inputs.extra-args }} $SOURCE_DIR_ARG 2>&1 | tee -a "$std_build_dir/cmake-configure-output.txt"
             exit_code=$?
             if [[ $exit_code -ne 0 ]]; then
               break
