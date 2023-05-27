@@ -276,26 +276,26 @@ and create your workflow as usual with the parameters from the matrix:</p>
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">jobs:
   cpp-matrix:
     runs-on: ubuntu-latest
+    name: Generate Test Matrix
     outputs:
-      matrix: $\{{ steps.cpp-matrix.outputs.matrix }}
+      matrix: ${{ steps.cpp-matrix.outputs.matrix }}
     steps:
       - name: Generate Test Matrix
         uses: alandefreitas/cpp-actions/cpp-matrix@develop
         id: cpp-matrix
         with:
           standards: '&gt;=11'
-          # any other custom inputs
   build:
     needs: cpp-matrix
     strategy:
       fail-fast: false
       matrix:
         include: fromJSON(needs.cpp-matrix.outputs.matrix)
-    # use matrix entries from this point
-    runs-on: ubuntu-latest
-    name: $\{{ matrix.name }}
-    runs-on: $\{{ matrix.runs-on }}
-    container: $\{{ matrix.container }}
+
+    # use matrix entries
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runs-on }}
+    container: ${{ matrix.container }}
 
     steps:
       - name: Clone library
@@ -305,10 +305,33 @@ and create your workflow as usual with the parameters from the matrix:</p>
         uses: alandefreitas/cpp-actions/setup-cpp@develop
         id: setup-cpp
         with:
-          compiler: $\{{ matrix.compiler }}
-          version: $\{{ matrix.version }}
+          compiler: ${{ matrix.compiler }}
+          version: ${{ matrix.version }}
 
-      # Continue</code></pre>
+      - name: CMake Workflow
+        uses: ./cmake-workflow
+        with:
+          cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
+          cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
+          cxxstd: ${{ matrix.cxxstd }}
+          cxxflags: ${{ matrix.cxxstd }}
+
+      # And you've safely tested your C++ library just like that...</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_example"><a class="anchor" href="#_example"></a>Example</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Generate Test Matrix
+  uses: alandefreitas/cpp-actions/cpp-matrix@develop
+  id: cpp-matrix
+  with:
+    standards: '&gt;=11'</code></pre>
 </div>
 </div>
 </div>
@@ -363,7 +386,10 @@ requirements, the standards 20,23 will be tested by this compiler.
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>latest-factors</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The factors to be tested with the latest versions of each compiler. For each factor in this list, the
 entry with the latest version of a compiler will be duplicated with an entry that sets this factor to true.</p>
-<p class="tableblock">Other entries will also include this factor as false.
+<p class="tableblock">Other entries will also include this factor as false.</p>
+<p class="tableblock">The following factors are considered special: 'asan', 'ubsan', 'msan', 'tsan', and 'coverage'.
+When these factors are defined in an entry, its 'ccflags', 'cxxflags', and 'linkflags' value are
+also modified to include the suggested flags for factor.
 .</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc Coverage TSan UBSan</code></p></td>
 </tr>
@@ -375,7 +401,8 @@ will be duplicated with this factor if there are no entries left to inject the f
 <p class="tableblock">Other entries will also include this factor as false.
 .</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc Asan Shared</code></p>
-<p class="tableblock"><code>msvc Shared x86</code></p></td>
+<p class="tableblock"><code>msvc Shared x86</code></p>
+<p class="tableblock"><code>clang Time-Trace</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>

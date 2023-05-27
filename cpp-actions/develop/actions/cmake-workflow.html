@@ -295,10 +295,9 @@ annotations for CMake errors at the configure step and build errors emitted from
     install-prefix: $GITHUB_WORKSPACE/.local
     cxxstd: ${{ matrix.cxxstd }}
     cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
+    ccflags: ${{ matrix.ccflags }}
     cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
-    cxxflags: ${{ (matrix.ubsan &amp;&amp; ' -fsanitize=undefined') || '' }}${{ (matrix.asan
-      &amp;&amp; ' -fsanitize=address') || '' }}${{ (matrix.tsan &amp;&amp; ' -fsanitize=thread')
-      || '' }}
+    cxxflags: ${{ matrix.cxxflags }}
     extra-args: -D BOOST_SRC_DIR="${{ steps.boost-clone.outputs.boost-dir }}"
     ref-source-dir: .</code></pre>
 </div>
@@ -350,6 +349,11 @@ the min CMake version that satisfies it.</p>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ccflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Flags to be used with the C compiler.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Path to C++ compiler.</p></td>
 <td class="tableblock halign-left valign-top"></td>
@@ -361,7 +365,7 @@ the min CMake version that satisfies it.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Force flags to be used with the C++ compiler.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Flags to be used with the C++ compiler.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>

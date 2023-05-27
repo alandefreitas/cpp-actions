@@ -249,8 +249,6 @@ version ultimately setup by the action.</p>
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Setup C++
   uses: alandefreitas/cpp-actions/setup-cpp@develop
-  if: ${{ (startsWith(matrix.cxx, 'g++') || startsWith(matrix.cxx, 'clang++')) &amp;&amp;
-    !matrix.install}}
   id: setup-cpp
   with:
     compiler: ${{ matrix.compiler }}

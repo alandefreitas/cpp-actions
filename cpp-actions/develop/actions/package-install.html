@@ -235,9 +235,10 @@ Both vcpkg and its dependencies are cached.</p>
       g++-multilib pkgconf python3 ccache libpython-dev python3-distutils python3-pip
       git cmake' }}
     apt-get-ignore-missing: ${{ matrix.container &amp;&amp; 'true' }}
+    cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
+    ccflags: ${{ matrix.ccflags }}
     cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
-    cxxflags: ${{ matrix.cxxflags }}
-    cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}</code></pre>
+    cxxflags: ${{ matrix.cxxflags }}</code></pre>
 </div>
 </div>
 </div>
@@ -285,6 +286,12 @@ Both vcpkg and its dependencies are cached.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">C compiler used by vcpkg.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ccflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">C flags used by vcpkg.
+.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>

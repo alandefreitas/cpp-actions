@@ -229,15 +229,13 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Test Boost.Variant2
   uses: alandefreitas/cpp-actions/b2-workflow@develop
-  if: ${{ matrix.cxx == 'g++-12' }}
   with:
     source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
     modules: variant2
     toolset: ${{ matrix.b2-toolset }}
-    cxx: ${{ (startsWith(matrix.cxx, 'clang') &amp;&amp; matrix.cxx) || '' }}
     cxxstd: ${{ matrix.cxxstd }}
-    cxxflags: ${{ matrix.cxxflags }}
-    linkflags: ${{ matrix.linkflags }}
+    cxx: ${{ (startsWith(matrix.cxx, 'clang') &amp;&amp; (steps.setup-cpp.outputs.cxx || matrix.cxx))
+      || '' }}
     address-model: ${{ (matrix.x86 &amp;&amp; '32') || '64' }}
     ubsan: ${{ matrix.ubsan }}</code></pre>
 </div>
