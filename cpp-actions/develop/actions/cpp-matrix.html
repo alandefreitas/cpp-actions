@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Setup C++ | C++ Actions</title>    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/setup-cpp.html">
+<title>C++ Matrix | C++ Actions</title>    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/develop/actions/cpp-matrix.html">
     <meta name="generator" content="Antora 3.1.3">
 <link rel="stylesheet" href="../../../_/stylesheets/vendor/libs.css">
 <link rel="stylesheet" href="../../../_/stylesheets/site.css">
@@ -22,7 +22,7 @@
 
         <div id="topbar-nav" class="navbar-menu">
             <div class="navbar-item is-hoverable">
-                <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions: Setup C++</a>
+                <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions: C++ Matrix</a>
             </div>
             <div class="navbar-item is-hoverable">
                 <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions" target="_blank">GitHub</a>
@@ -77,14 +77,14 @@
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../index.html">Home</a>
   </li>
-  <li class="nav-item" data-depth="1">
+  <li class="nav-item is-current-page" data-depth="1">
     <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
   </li>
   <li class="nav-item" data-depth="1">
     <button class="nav-item-toggle"></button>
     <span class="nav-text">Compilers</span>
 <ul class="nav-list">
-  <li class="nav-item is-current-page" data-depth="2">
+  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="setup-cpp.html">Setup C++ Action</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -182,19 +182,18 @@
   <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">C++ Actions</a></li>
-    <li>Compilers</li>
-    <li><a href="setup-cpp.html">Setup C++ Action</a></li>
+    <li><a href="cpp-matrix.html">C++ Matrix Action</a></li>
   </ul>
 </nav>
   <div class="page-versions">
   <button class="version-menu-toggle"
     title="Show other versions of page">develop</button>
   <div class="version-menu">
-    <a class="version" href="../../actions/setup-cpp.html">master</a>
-    <a class="version is-current" href="setup-cpp.html">develop</a>
-    <a class="version" href="../../v1.2.1/actions/setup-cpp.html">v1.2.1</a>
-    <a class="version" href="../../v1.2.0/actions/setup-cpp.html">v1.2.0</a>
-    <a class="version" href="../../v1.1.0/actions/setup-cpp.html">v1.1.0</a>
+    <a class="version is-missing" href="../../index.html">master</a>
+    <a class="version is-current" href="cpp-matrix.html">develop</a>
+    <a class="version is-missing" href="../../v1.2.1/index.html">v1.2.1</a>
+    <a class="version is-missing" href="../../v1.2.0/index.html">v1.2.0</a>
+    <a class="version is-missing" href="../../v1.1.0/index.html">v1.1.0</a>
     <a class="version is-missing" href="../../v1.0.0/index.html">v1.0.0</a>
   </div>
 </div>
@@ -206,55 +205,110 @@
 </div>
   <div class="content">
 <article class="doc">
-<h1 class="page">Setup C++</h1>
+<h1 class="page">C++ Matrix</h1>
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>Set up a C++ compiler and add it to the PATH.</p>
+<p>Testing C libraries can be a challenging and time-consuming task, especially when considering the
+various compiler versions, error behaviors, and platform dependencies. A library that works flawlessly
+with one compiler might encounter issues when compiled with a different version or on a different
+platform. This is where the C Library Test Matrix GitHub Action comes to the rescue.</p>
 </div>
 <div class="paragraph">
-<p>The <code>compiler</code> parameter can be used to provide a compiler name or a compiler name with its version, separated
-by whitespace or a <code>-</code>. Examples valid names are <code>gcc</code>, <code>g++</code>, <code>clang</code>, <code>gcc-10</code>, <code>g++ 10</code>, <code>clang 9.2</code>.</p>
+<p>The C Library Test Matrix GitHub Action is designed to automate the generation of a comprehensive
+test matrix for your C libraries given their requirements. It simplifies the process of testing your
+libraries across multiple compiler versions and platforms, reducing the manual effort and potential
+for human error.</p>
 </div>
 <div class="paragraph">
-<p>Note that strings like <code>10</code> and <code>9.2</code> are semver requirements and not semver versions. For instance, <code>10</code> represents
-the requirement equivalent to <code>&gt;=10.0.0 &lt;11.0.0</code> while <code>9.2</code> represents the requirement equivalent to
-<code>&gt;=9.2.0 &lt;9.3.0</code>.</p>
+<p>With this action, you can define a set of compiler versions, target platforms, standard requirements,
+and factors that you want to test your C++ library against. The action then automatically generates
+a test matrix by combining the specified compilers and platforms into a fractional factorial design,
+enabling you to run tests in a systematic and efficient manner.</p>
 </div>
 <div class="paragraph">
-<p>If the <code>compiler</code> parameter does not include a version requirement, the <code>version</code> parameter can be used to provide
-a version semver string in the npm format with the compiler requirements.</p>
+<p>This action can ensure that your C++ library is thoroughly tested across a wide range of compiler
+versions and platforms. This approach significantly increases the chances of catching compatibility
+issues early on and helps in delivering a robust and reliable library that works across different
+environments.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Automated test matrix generation: Define a list of compiler versions and platforms, and let the action handle
+the creation of the test matrix.</p>
+</li>
+<li>
+<p>Easy integration: Simply include the C++ Library Test Matrix GitHub Action in your workflow configuration to
+start generating the test matrix.</p>
+</li>
+<li>
+<p>Customization options: Fine-tune the test matrix generation process by specifying additional compiler flags,
+build configurations, or test suites.</p>
+</li>
+<li>
+<p>Comprehensive test coverage: Ensure your C++ library is thoroughly tested across multiple compiler versions
+and platforms to identify and address compatibility issues.</p>
+</li>
+</ul>
 </div>
 <div class="paragraph">
-<p>If the compiler is GCC or Clang, this action routes to the appropriate <a href="setup-gcc.html" class="xref page">Setup GCC</a> or
-<a href="setup-clang.html" class="xref page">Setup Clang</a> actions.</p>
-</div>
-<div class="paragraph">
-<p>If the compiler is MSVC, this action will setup the developer command prompt for Microsoft Visual C\\.</p>
-</div>
-<div class="paragraph">
-<p>Any other compilers are passed through.</p>
-</div>
-<div class="paragraph">
-<p>If the compiler is GCC or Clang, the outputs include the paths to the compilers as well as the compiler
-version ultimately setup by the action.</p>
+<p>Get started with the C Library Test Matrix GitHub Action today and streamline your C library testing
+process. Say goodbye to manual matrix creation and embrace automated, systematic testing to deliver
+high-quality C++ libraries that work seamlessly across different compilers and platforms.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_example"><a class="anchor" href="#_example"></a>Example</h2>
+<h2 id="_usage"><a class="anchor" href="#_usage"></a>Usage</h2>
 <div class="sectionbody">
+<div class="paragraph">
+<p>The action should be run as extra initial &#8220;setup&#8221; job in your workflow. The job will run the action and
+output <code>matrix</code>, which is a JSON string containing the whole matrix. This matrix should be output of your
+first <code>setup</code> job.</p>
+</div>
+<div class="paragraph">
+<p>In your second <code>build</code> job, you can attribute the entire matrix to the <code>strategy.matrix.include</code> parameter
+and create your workflow as usual with the parameters from the matrix:</p>
+</div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Setup C++
-  uses: alandefreitas/cpp-actions/setup-cpp@develop
-  if: ${{ (startsWith(matrix.cxx, 'g++') || startsWith(matrix.cxx, 'clang++')) &amp;&amp;
-    !matrix.install}}
-  id: setup-cpp
-  with:
-    compiler: ${{ matrix.compiler }}
-    version: ${{ matrix.version }}</code></pre>
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">jobs:
+  cpp-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: $\{{ steps.cpp-matrix.outputs.matrix }}
+    steps:
+      - name: Generate Test Matrix
+        uses: alandefreitas/cpp-actions/cpp-matrix@develop
+        id: cpp-matrix
+        with:
+          standards: '&gt;=11'
+          # any other custom inputs
+  build:
+    needs: cpp-matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        include: fromJSON(needs.cpp-matrix.outputs.matrix)
+    # use matrix entries from this point
+    runs-on: ubuntu-latest
+    name: $\{{ matrix.name }}
+    runs-on: $\{{ matrix.runs-on }}
+    container: $\{{ matrix.container }}
+
+    steps:
+      - name: Clone library
+        uses: actions/checkout@v3
+
+      - name: Setup C++ Compiler
+        uses: alandefreitas/cpp-actions/setup-cpp@develop
+        id: setup-cpp
+        with:
+          compiler: $\{{ matrix.compiler }}
+          version: $\{{ matrix.version }}
+
+      # Continue</code></pre>
 </div>
 </div>
 </div>
@@ -275,64 +329,57 @@ version ultimately setup by the action.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>compiler</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Compiler name. If the compiler contains a version, it overrides 'version'.
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>compilers</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A list of compilers to be tested. Each compiler can be complemented with its semver version requirements
+to be tested.</p>
+<p class="tableblock">When the compiler version requirements are provided, the action will break the requirements into
+subsets of major versions to be tested. When no version is provided, the '*' semver requirement
+is assumed. The action can identifies subsets of compiler versions for GCC, Clang, and MSVC.
+For any other compilers, the version requirements will passthrough to the output.
 .</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>*</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc &gt;=4.8</code></p>
+<p class="tableblock"><code>clang &gt;=3.8</code></p>
+<p class="tableblock"><code>msvc &gt;=14.2</code></p>
+<p class="tableblock"><code>apple-clang *</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Version range or exact version of GCC to use, using SemVer&#8217;s version range syntax.</p>
-<p class="tableblock">By default, it uses any version available in the environment.
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>standards</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A semver range describing what C standards should be tested.</p>
+<p class="tableblock">The compiler ranges are adjusted to only include compilers that support any subrange of these requirements.</p>
+<p class="tableblock">These requirements can include C standards as 2 or 4 digits versions, such as 11, 2011, 98, or 1998.
+2 digit versions are normalized into the 4 digits form so that 11 &gt; 98 (2011 &gt; 1998).
 .</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>*</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>&gt;=11</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>path</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The compiler executable. We attempt to find the compiler at this path first.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Used to specify whether the compiler installation should be cached in case it needs to be downloaded."
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>max-standards</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The maximum number of standards to be tested with each compiler.</p>
+<p class="tableblock">For instance, if 'max-standards' is 2 and the compiler supports '11,14,17,20,23' given the in the standard
+requirements, the standards 20,23 will be tested by this compiler.
 .</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>2</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>architecture</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The target architecture (x86, x64). By default, this value is inferred.
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>latest-factors</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The factors to be tested with the latest versions of each compiler. For each factor in this list, the
+entry with the latest version of a compiler will be duplicated with an entry that sets this factor to true.</p>
+<p class="tableblock">Other entries will also include this factor as false.
 .</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc Coverage TSan UBSan</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>check-latest</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">By default, when the compiler is not available, this action will install the minimum version in the version spec.
-This ensures the code respects its contract in terms of what minimum GCC version is supported.</p>
-<p class="tableblock">Set this option if you want the action to check for the latest available version that satisfies the version spec
-instead.
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>factors</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The factors to be tested with other versions of each compiler. Each factor in this list will be injected
+into a version of the compiler that is not the latest version. An entry with the latest version of the compiler
+will be duplicated with this factor if there are no entries left to inject the factor.</p>
+<p class="tableblock">Other entries will also include this factor as false.
 .</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>update-environment</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Set this option if you want the action to update environment variables.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>update-ld-library-path</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Set this option if you want the action to update LD_LIBRARY_PATH.</p>
-<p class="tableblock">Updating LD_LIBRARY_PATH might cause conflicts with system libraries and
-is usually unnecessary because the binaries are built on equivalent
-containers.</p>
-<p class="tableblock">However, this is necessary on some custom containers and you can set
-this option to let the action automatically add GCC library paths to
-LD_LIBRARY_PATH.
-.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc Asan Shared</code></p>
+<p class="tableblock"><code>msvc Shared x86</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the action.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 </tbody>
@@ -353,36 +400,20 @@ LD_LIBRARY_PATH.
 <td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the C compiler executable.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the C++ compiler executable.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the directory containing the executable.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The installed compiler version. Useful when given a version range as input.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-major</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The installed compiler version major. Useful when given a version range as input.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-minor</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The installed compiler version minor. Useful when given a version range as input.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-patch</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The installed compiler version patch. Useful when given a version range as input.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache-hit</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A boolean value to indicate a cache entry was found</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>matrix</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The test matrix is an array of dictionaries, where each entry represents a combination of compiler version
+and factors to be tested.</p>
+<p class="tableblock">Each entry in the test matrix dictionary contains the following key-value pairs:</p>
+<p class="tableblock">- <code>name</code>: A suggested name for the job testing this entry</p>
+<p class="tableblock">- <code>runs-on</code>: A suggested github runner image name for the job testing this entry</p>
+<p class="tableblock">- <code>container</code>: A suggested docker container for the job testing this entry</p>
+<p class="tableblock">- <code>compiler</code>: Specifies the name of the compiler to be used for the test configuration.</p>
+<p class="tableblock">- <code>version</code>: Specifies the version requirements of the compiler to be used for the test configuration.</p>
+<p class="tableblock">- <code>is_latest</code>: Specifies whether this version requirement is the latest version among the test configurations.</p>
+<p class="tableblock">- <code>cxxstd</code>: A list of standards that should be tested with this compiler version</p>
+<p class="tableblock">- <code>&lt;factors&gt;&#8230;&#8203;</code>: Provides additional factors or attributes associated with the test configuration as defined by
+  the factors and latest-factors inputs. These usually include variant build configurations spread among the
+  entries, such as asan, coverage, and shared libraries.</p></td>
 </tr>
 </tbody>
 </table>
