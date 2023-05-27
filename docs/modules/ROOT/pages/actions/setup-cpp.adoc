@@ -36,7 +36,8 @@ steps:
   uses: alandefreitas/cpp-actions/setup-cpp@{page-version}
   id: setup-cpp
   with:
-    compiler: g++-13
+    compiler: ${{ matrix.compiler }}
+    version: ${{ matrix.version }}
 ----
 
 == Input Parameters

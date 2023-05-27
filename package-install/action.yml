@@ -39,6 +39,13 @@ inputs:
     required: false
     default: ''
 
+  ccflags:
+    description: |
+      C flags used by vcpkg.
+
+    required: false
+    default: ''
+
   vcpkg-triplet:
     description: 'The triplet used by vcpkg to install packages.'
     required: false
@@ -227,6 +234,7 @@ runs:
         cxx="${{ inputs.cxx }}"
         cxxflags="${{ inputs.cxxflags }}"
         cc="${{ inputs.cc }}"
+        ccflags="${{ inputs.ccflags }}"
         if [ "$cxx" != "" ]; then
           cxx_version_output=$("$cxx" --version || true)
           if [ "$cxx_version_output" != "" ]; then
@@ -234,7 +242,7 @@ runs:
             [[ $cxx_version_output =~ $regex ]]
             cxx_version="${BASH_REMATCH[0]}"
           fi
-          concatenated_string="cxx:$cxx-flags:$cxxflags-cc:$cc-version:$cxx_version"
+          concatenated_string="cxx:$cxx-flags:$ccflags-cc:$cc-version:$cxx_version"
           if [ "$has_sha1sum" == "true" ]; then
             cxx_cache_hash=$(echo -n "${concatenated_string}" | sha1sum | awk '{print $1}')
           else

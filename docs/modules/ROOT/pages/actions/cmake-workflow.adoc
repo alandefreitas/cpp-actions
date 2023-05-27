@@ -34,9 +34,7 @@ The action also creates GitHub annotations when warnings or errors are emitted a
 annotations for CMake errors at the configure step and build errors emitted from the compiler at the build step.
 
 
-== Examples
-
-Example 1:
+== Example
 
 [source,yml,subs="attributes+"]
 ----
@@ -46,55 +44,16 @@ steps:
   with:
     cmake-version: '>=3.20'
     source-dir: tests
+    generator: ${{ matrix.generator }}
     toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
-    run-tests: 'true'
+    build-type: ${{ matrix.build-type }}
+    run-tests: true
     install-prefix: $GITHUB_WORKSPACE/.local
-    cxxstd: 17,20
-    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}
-    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-13' }}
-    extra-args: -D BOOST_SRC_DIR="${{ steps.boost-clone.outputs.boost-dir }}"
-    ref-source-dir: .
-----
-
-Example 2 (`cxxflags`):
-
-[source,yml,subs="attributes+"]
-----
-steps:
-- name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake-workflow@{page-version}
-  with:
-    cmake-version: '>=3.20'
-    source-dir: tests
-    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
-    run-tests: 'true'
-    install-prefix: $GITHUB_WORKSPACE/.local
-    cxxstd: 17,20
-    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}
-    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-13' }}
-    cxxflags: -fsanitize=undefined
-    extra-args: -D BOOST_SRC_DIR="${{ steps.boost-clone.outputs.boost-dir }}"
-    ref-source-dir: .
-----
-
-Example 3 (`build-type`, `generator`):
-
-[source,yml,subs="attributes+"]
-----
-steps:
-- name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake-workflow@{page-version}
-  with:
-    cmake-version: '>=3.20'
-    source-dir: tests
-    generator: Visual Studio 16 2019
-    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
-    build-type: Debug
-    run-tests: 'true'
-    install-prefix: $GITHUB_WORKSPACE/.local
-    cxxstd: 17,20
-    cc: ${{ steps.setup-cpp.outputs.cc || '' }}
-    cxx: ${{ steps.setup-cpp.outputs.cxx || '' }}
+    cxxstd: ${{ matrix.cxxstd }}
+    cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
+    ccflags: ${{ matrix.ccflags }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
+    cxxflags: ${{ matrix.cxxflags }}
     extra-args: -D BOOST_SRC_DIR="${{ steps.boost-clone.outputs.boost-dir }}"
     ref-source-dir: .
 ----
@@ -114,9 +73,10 @@ This should usually match the `cmake_minimum_required` defined in your CMakeList
 |`source-dir` |Directory for the source files. |`.`
 |`build-dir` |Directory for the binaries relative to the source directory. |`build`
 |`cc` |Path to C compiler. |
+|`ccflags` |Flags to be used with the C compiler. |
 |`cxx` |Path to C++ compiler. |
 |`cxxstd` |List of standards with which cmake will build and test the program. |
-|`cxxflags` |Force flags to be used with the C++ compiler. |
+|`cxxflags` |Flags to be used with the C++ compiler. |
 |`toolchain` |Path to toolchain. |
 |`generator` |Generator name. |
 |`build-type` |Build type. |`Release`

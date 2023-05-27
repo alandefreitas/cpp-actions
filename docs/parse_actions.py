@@ -54,7 +54,8 @@ readme_base = os.path.join('README.base.adoc')
 action_pages_dir = os.path.join('docs', 'modules', 'ROOT', 'pages', 'actions')
 all_actions_page_dir = os.path.join('docs')
 example_path = os.path.join('.github', 'workflows', 'ci.yml')
-actions = ['setup-cpp', 'package-install', 'cmake-workflow', 'boost-clone', 'b2-workflow', 'create-changelog',
+actions = ['cpp-matrix', 'setup-cpp', 'package-install', 'cmake-workflow', 'boost-clone', 'b2-workflow',
+           'create-changelog',
            'setup-cmake', 'setup-gcc', 'setup-clang']
 
 with open(example_path, 'r') as f:
@@ -62,6 +63,7 @@ with open(example_path, 'r') as f:
     matrix = ci_yml['jobs']['build']['strategy']['matrix']['include']
     steps = ci_yml['jobs']['build']['steps']
     steps += ci_yml['jobs']['docs']['steps']
+    steps += ci_yml['jobs']['cpp-matrix']['steps']
 
 # Load the YAML file
 all_actions_toc_output = ''
@@ -334,6 +336,7 @@ for action in actions:
     # Extract the data from the YAML file
     action_name = data['name']
     action_description = data['description']
+    action_description = action_description.replace('$\\{{', '${{')
     inputs = data['inputs']
     outputs = data['outputs'] if 'outputs' in data else []
 
@@ -368,7 +371,9 @@ for action in actions:
     for example_template in example_templates:
         covered_keys = set()
         for matrix_entry in matrix:
-            example = replace_inputs(example_template, matrix_entry)
+            # No need to replace inputs because the library is using the matrix
+            # example = replace_inputs(example_template, matrix_entry)
+            example = example_template
             non_empty_key_set = non_empty_keys(example)
             if non_empty_key_set.difference(covered_keys):
                 example = OrderedDict(
@@ -378,8 +383,14 @@ for action in actions:
                                                   not isinstance(v, str) or any(c for c in v if c != ' '))
                     if 'trace-commands' in example['with']:
                         del example['with']['trace-commands']
-                if 'if' in example and example['if'] in ['true', 'false']:
+                    if 'modules-scan-paths' in example['with']:
+                        del example['with']['modules-scan-paths']
+                    if 'modules-exclude-paths' in example['with']:
+                        del example['with']['modules-exclude-paths']
+                if 'if' in example:
                     del example['if']
+                if 'continue-on-error' in example:
+                    del example['continue-on-error']
                 examples.append(example)
                 covered_keys.update(non_empty_key_set)
 
@@ -419,7 +430,10 @@ for action in actions:
             description += ' ⚠️ This parameter is required.'
         description = description.replace("|", "\\|")
         default = details['default']
-        default = '' if not default else f'`{default}`'
+        if type(default) == str:
+            default = '\n\n'.join(['' if not line else f'`{line}`' for line in default.splitlines()])
+        else:
+            default = '' if not default else f'`{default}`'
         default = default.replace("|", "\\|")
         output += f'|`{parameter}` |{description} |{default}\n'
     output += '|===\n\n'

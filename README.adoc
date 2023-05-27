@@ -25,6 +25,7 @@ NOTE: READ THE DOCS: https://alandefreitas.github.io/cpp-actions/
 :reftext: Actions
 :navtitle: All Actions
 
+- <<cpp-matrix>>
 - <<setup-cpp>>
 - <<package-install>>
 - <<cmake-workflow>>
@@ -35,6 +36,195 @@ NOTE: READ THE DOCS: https://alandefreitas.github.io/cpp-actions/
 - <<setup-gcc>>
 - <<setup-clang>>
 
+=== C++ Matrix [[cpp-matrix]]
+:reftext: C++ Matrix
+:navtitle: C++ Matrix Action
+// This cpp-matrix.adoc file is automatically generated.
+// Edit parse_actions.py instead.
+
+Testing C++ libraries can be a challenging and time-consuming task, especially when considering the
+various compiler versions, error behaviors, and platform dependencies. A library that works flawlessly 
+with one compiler might encounter issues when compiled with a different version or on a different
+platform. This is where the C++ Library Test Matrix GitHub Action comes to the rescue.
+
+The C++ Library Test Matrix GitHub Action is designed to automate the generation of a comprehensive 
+test matrix for your C++ libraries given their requirements. It simplifies the process of testing your
+libraries across multiple compiler versions and platforms, reducing the manual effort and potential 
+for human error.
+
+With this action, you can define a set of compiler versions, target platforms, standard requirements,
+and factors that you want to test your C++ library against. The action then automatically generates 
+a test matrix by combining the specified compilers and platforms into a fractional factorial design, 
+enabling you to run tests in a systematic and efficient manner.
+
+This action can ensure that your C++ library is thoroughly tested across a wide range of compiler
+versions and platforms. This approach significantly increases the chances of catching compatibility 
+issues early on and helps in delivering a robust and reliable library that works across different
+environments.
+
+- Automated test matrix generation: Define a list of compiler versions and platforms, and let the action handle 
+  the creation of the test matrix.
+- Easy integration: Simply include the C++ Library Test Matrix GitHub Action in your workflow configuration to 
+  start generating the test matrix.
+- Customization options: Fine-tune the test matrix generation process by specifying additional compiler flags, 
+  build configurations, or test suites.
+- Comprehensive test coverage: Ensure your C++ library is thoroughly tested across multiple compiler versions 
+  and platforms to identify and address compatibility issues.
+
+Get started with the C++ Library Test Matrix GitHub Action today and streamline your C++ library testing 
+process. Say goodbye to manual matrix creation and embrace automated, systematic testing to deliver 
+high-quality C++ libraries that work seamlessly across different compilers and platforms.
+
+==== Usage
+
+The action should be run as extra initial "`setup`" job in your workflow. The job will run the action and 
+output `matrix`, which is a JSON string containing the whole matrix. This matrix should be output of your 
+first `setup` job.
+
+In your second `build` job, you can attribute the entire matrix to the `strategy.matrix.include` parameter
+and create your workflow as usual with the parameters from the matrix:
+
+[source,yml,subs="attributes+"]
+----
+jobs:
+  cpp-matrix:
+    runs-on: ubuntu-latest
+    name: Generate Test Matrix
+    outputs:
+      matrix: ${{ steps.cpp-matrix.outputs.matrix }}
+    steps:
+      - name: Generate Test Matrix
+        uses: alandefreitas/cpp-actions/cpp-matrix@master
+        id: cpp-matrix
+        with:
+          standards: '>=11'
+  build:
+    needs: cpp-matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        include: fromJSON(needs.cpp-matrix.outputs.matrix)
+    
+    # use matrix entries 
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runs-on }}
+    container: ${{ matrix.container }}
+
+    steps:
+      - name: Clone library
+        uses: actions/checkout@v3
+
+      - name: Setup C++ Compiler
+        uses: alandefreitas/cpp-actions/setup-cpp@master
+        id: setup-cpp
+        with:
+          compiler: ${{ matrix.compiler }}
+          version: ${{ matrix.version }}
+
+      - name: CMake Workflow
+        uses: ./cmake-workflow
+        with:
+          cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
+          cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
+          cxxstd: ${{ matrix.cxxstd }}
+          cxxflags: ${{ matrix.cxxstd }}
+
+      # And you've safely tested your C++ library just like that...
+----
+
+
+==== Example
+
+[source,yml,subs="attributes+"]
+----
+steps:
+- name: Generate Test Matrix
+  uses: alandefreitas/cpp-actions/cpp-matrix@master
+  id: cpp-matrix
+  with:
+    standards: '>=11'
+----
+
+==== Input Parameters
+
+|===
+|Parameter |Description |Default
+|`compilers` |A list of compilers to be tested. Each compiler can be complemented with its semver version requirements
+to be tested. 
+
+When the compiler version requirements are provided, the action will break the requirements into 
+subsets of major versions to be tested. When no version is provided, the '*' semver requirement
+is assumed. The action can identifies subsets of compiler versions for GCC, Clang, and MSVC.
+For any other compilers, the version requirements will passthrough to the output.
+. |`gcc >=4.8`
+
+`clang >=3.8`
+
+`msvc >=14.2`
+
+`apple-clang *`
+|`standards` |A semver range describing what C++ standards should be tested.
+
+The compiler ranges are adjusted to only include compilers that support any subrange of these requirements.
+
+These requirements can include C++ standards as 2 or 4 digits versions, such as 11, 2011, 98, or 1998.
+2 digit versions are normalized into the 4 digits form so that 11 > 98 (2011 > 1998).
+. |`>=11`
+|`max-standards` |The maximum number of standards to be tested with each compiler.
+
+For instance, if 'max-standards' is 2 and the compiler supports '11,14,17,20,23' given the in the standard
+requirements, the standards 20,23 will be tested by this compiler. 
+. |`2`
+|`latest-factors` |The factors to be tested with the latest versions of each compiler. For each factor in this list, the
+entry with the latest version of a compiler will be duplicated with an entry that sets this factor to true.
+
+Other entries will also include this factor as false.
+
+The following factors are considered special: 'asan', 'ubsan', 'msan', 'tsan', and 'coverage'.
+When these factors are defined in an entry, its 'ccflags', 'cxxflags', and 'linkflags' value are
+also modified to include the suggested flags for factor.
+. |`gcc Coverage TSan UBSan`
+|`factors` |The factors to be tested with other versions of each compiler. Each factor in this list will be injected
+into a version of the compiler that is not the latest version. An entry with the latest version of the compiler
+will be duplicated with this factor if there are no entries left to inject the factor.
+
+Other entries will also include this factor as false.
+. |`gcc Asan Shared`
+
+`msvc Shared x86`
+
+`clang Time-Trace`
+|`trace-commands` |Trace commands executed by the action. |`false`
+|===
+
+==== Outputs
+
+|===
+|Output |Description
+|`matrix` |The test matrix is an array of dictionaries, where each entry represents a combination of compiler version
+and factors to be tested. 
+
+Each entry in the test matrix dictionary contains the following key-value pairs:
+
+- `name`: A suggested name for the job testing this entry
+
+- `runs-on`: A suggested github runner image name for the job testing this entry
+
+- `container`: A suggested docker container for the job testing this entry
+
+- `compiler`: Specifies the name of the compiler to be used for the test configuration.
+
+- `version`: Specifies the version requirements of the compiler to be used for the test configuration.
+
+- `is_latest`: Specifies whether this version requirement is the latest version among the test configurations.
+
+- `cxxstd`: A list of standards that should be tested with this compiler version
+
+- `<factors>...`: Provides additional factors or attributes associated with the test configuration as defined by
+  the factors and latest-factors inputs. These usually include variant build configurations spread among the
+  entries, such as asan, coverage, and shared libraries.
+
+|===
 === Setup C++ [[setup-cpp]]
 :reftext: Setup C++
 :navtitle: Setup C++ Action
@@ -73,7 +263,8 @@ steps:
   uses: alandefreitas/cpp-actions/setup-cpp@master
   id: setup-cpp
   with:
-    compiler: g++-13
+    compiler: ${{ matrix.compiler }}
+    version: ${{ matrix.version }}
 ----
 
 ==== Input Parameters
@@ -136,9 +327,7 @@ If vcpkg dependencies are required and vcpkg is not available, it will be instal
 Both vcpkg and its dependencies are cached.
 
 
-==== Examples
-
-Example 1:
+==== Example
 
 [source,yml,subs="attributes+"]
 ----
@@ -148,27 +337,16 @@ steps:
   id: package-install
   with:
     vcpkg: fmt
-    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-13' }}
-    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}
-----
-
-Example 2 (`apt-get-ignore-missing`, `apt-get`):
-
-[source,yml,subs="attributes+"]
-----
-steps:
-- name: Install packages
-  uses: alandefreitas/cpp-actions/package-install@master
-  id: package-install
-  with:
-    vcpkg: fmt
-    apt-get: sudo software-properties-common wget curl apt-transport-https make apt-file
-      unzip libssl-dev build-essential autotools-dev autoconf automake g++ libc++-helpers
-      python ruby cpio gcc-multilib g++-multilib pkgconf python3 ccache libpython-dev
-      python3-distutils python3-pip git cmake
-    apt-get-ignore-missing: 'true'
-    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-4.8' }}
-    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-4.8' }}
+    apt-get: ${{ join(matrix.install, ' ') }} ${{ matrix.container && 'sudo software-properties-common
+      wget curl apt-transport-https make apt-file unzip libssl-dev build-essential
+      autotools-dev autoconf automake g++ libc++-helpers python ruby cpio gcc-multilib
+      g++-multilib pkgconf python3 ccache libpython-dev python3-distutils python3-pip
+      git cmake' }}
+    apt-get-ignore-missing: ${{ matrix.container && 'true' }}
+    cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
+    ccflags: ${{ matrix.ccflags }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
+    cxxflags: ${{ matrix.cxxflags }}
 ----
 
 ==== Input Parameters
@@ -187,6 +365,8 @@ This would cause conflict in workflows that later attempt to use vcpkg dependenc
 |`cxxflags` |C++ flags used by vcpkg.
 . |
 |`cc` |C compiler used by vcpkg. |
+|`ccflags` |C flags used by vcpkg.
+. |
 |`vcpkg-triplet` |The triplet used by vcpkg to install packages. |
 |`vcpkg-dir` |The directory where vcpkg should be cloned and installed. |`vcpkg`
 |`vcpkg-branch` |vcpkg branch we should use. |`master`
@@ -239,9 +419,7 @@ The action also creates GitHub annotations when warnings or errors are emitted a
 annotations for CMake errors at the configure step and build errors emitted from the compiler at the build step.
 
 
-==== Examples
-
-Example 1:
+==== Example
 
 [source,yml,subs="attributes+"]
 ----
@@ -251,55 +429,16 @@ steps:
   with:
     cmake-version: '>=3.20'
     source-dir: tests
+    generator: ${{ matrix.generator }}
     toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
-    run-tests: 'true'
+    build-type: ${{ matrix.build-type }}
+    run-tests: true
     install-prefix: $GITHUB_WORKSPACE/.local
-    cxxstd: 17,20
-    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}
-    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-13' }}
-    extra-args: -D BOOST_SRC_DIR="${{ steps.boost-clone.outputs.boost-dir }}"
-    ref-source-dir: .
-----
-
-Example 2 (`cxxflags`):
-
-[source,yml,subs="attributes+"]
-----
-steps:
-- name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake-workflow@master
-  with:
-    cmake-version: '>=3.20'
-    source-dir: tests
-    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
-    run-tests: 'true'
-    install-prefix: $GITHUB_WORKSPACE/.local
-    cxxstd: 17,20
-    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}
-    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-13' }}
-    cxxflags: -fsanitize=undefined
-    extra-args: -D BOOST_SRC_DIR="${{ steps.boost-clone.outputs.boost-dir }}"
-    ref-source-dir: .
-----
-
-Example 3 (`build-type`, `generator`):
-
-[source,yml,subs="attributes+"]
-----
-steps:
-- name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake-workflow@master
-  with:
-    cmake-version: '>=3.20'
-    source-dir: tests
-    generator: Visual Studio 16 2019
-    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
-    build-type: Debug
-    run-tests: 'true'
-    install-prefix: $GITHUB_WORKSPACE/.local
-    cxxstd: 17,20
-    cc: ${{ steps.setup-cpp.outputs.cc || '' }}
-    cxx: ${{ steps.setup-cpp.outputs.cxx || '' }}
+    cxxstd: ${{ matrix.cxxstd }}
+    cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
+    ccflags: ${{ matrix.ccflags }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
+    cxxflags: ${{ matrix.cxxflags }}
     extra-args: -D BOOST_SRC_DIR="${{ steps.boost-clone.outputs.boost-dir }}"
     ref-source-dir: .
 ----
@@ -319,9 +458,10 @@ This should usually match the `cmake_minimum_required` defined in your CMakeList
 |`source-dir` |Directory for the source files. |`.`
 |`build-dir` |Directory for the binaries relative to the source directory. |`build`
 |`cc` |Path to C compiler. |
+|`ccflags` |Flags to be used with the C compiler. |
 |`cxx` |Path to C++ compiler. |
 |`cxxstd` |List of standards with which cmake will build and test the program. |
-|`cxxflags` |Force flags to be used with the C++ compiler. |
+|`cxxflags` |Flags to be used with the C++ compiler. |
 |`toolchain` |Path to toolchain. |
 |`generator` |Generator name. |
 |`build-type` |Build type. |`Release`
@@ -416,9 +556,7 @@ compiling `b2` if needed and generating a proper `user-config.jam` file.
 This action is particularly useful for Boost library proposals.
 
 
-==== Examples
-
-Example 1:
+==== Example
 
 [source,yml,subs="attributes+"]
 ----
@@ -428,53 +566,12 @@ steps:
   with:
     source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
     modules: variant2
-    toolset: gcc-13
-    cxxstd: 17,20
-----
-
-Example 2 (`cxx`):
-
-[source,yml,subs="attributes+"]
-----
-steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
-  with:
-    source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
-    modules: variant2
-    toolset: clang
-    cxx: clang++-16
-    cxxstd: 17,20
-----
-
-Example 3 (`address-model`):
-
-[source,yml,subs="attributes+"]
-----
-steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
-  with:
-    source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
-    modules: variant2
-    toolset: msvc-14.3
-    cxxstd: 17,20
-    address-model: 32,64
-----
-
-Example 4 (`ubsan`):
-
-[source,yml,subs="attributes+"]
-----
-steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
-  with:
-    source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
-    modules: variant2
-    toolset: gcc-13
-    cxxstd: 17,20
-    ubsan: 'true'
+    toolset: ${{ matrix.b2-toolset }}
+    cxxstd: ${{ matrix.cxxstd }}
+    cxx: ${{ (startsWith(matrix.cxx, 'clang') && (steps.setup-cpp.outputs.cxx || matrix.cxx))
+      || '' }}
+    address-model: ${{ (matrix.x86 && '32') || '64' }}
+    ubsan: ${{ matrix.ubsan }}
 ----
 
 ==== Input Parameters

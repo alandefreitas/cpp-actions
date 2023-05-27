@@ -2,6 +2,7 @@
 :reftext: Actions
 :navtitle: All Actions
 
+- <<cpp-matrix>>
 - <<setup-cpp>>
 - <<package-install>>
 - <<cmake-workflow>>
@@ -12,6 +13,7 @@
 - <<setup-gcc>>
 - <<setup-clang>>
 
+include::modules/ROOT/pages/actions/cpp-matrix.adoc[leveloffset=+1]
 include::modules/ROOT/pages/actions/setup-cpp.adoc[leveloffset=+1]
 include::modules/ROOT/pages/actions/package-install.adoc[leveloffset=+1]
 include::modules/ROOT/pages/actions/cmake-workflow.adoc[leveloffset=+1]

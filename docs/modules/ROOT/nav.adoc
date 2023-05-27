@@ -1,3 +1,5 @@
+* xref:index.adoc[]
+* xref:actions/cpp-matrix.adoc[]
 * Compilers
 ** xref:actions/setup-cpp.adoc[]
 ** xref:actions/setup-gcc.adoc[]
