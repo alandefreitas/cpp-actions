@@ -75,6 +75,12 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Home</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="#actions/cpp-matrix.adoc">actions/cpp-matrix.adoc</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <button class="nav-item-toggle"></button>
     <span class="nav-text">Compilers</span>
 <ul class="nav-list">
@@ -272,11 +278,8 @@ annotations for CMake errors at the configure step and build errors emitted from
 </div>
 </div>
 <div class="sect1">
-<h2 id="_examples"><a class="anchor" href="#_examples"></a>Examples</h2>
+<h2 id="_example"><a class="anchor" href="#_example"></a>Example</h2>
 <div class="sectionbody">
-<div class="paragraph">
-<p>Example 1:</p>
-</div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
@@ -285,57 +288,17 @@ annotations for CMake errors at the configure step and build errors emitted from
   with:
     cmake-version: '&gt;=3.20'
     source-dir: tests
+    generator: ${{ matrix.generator }}
     toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
-    run-tests: 'true'
+    build-type: ${{ matrix.build-type }}
+    run-tests: true
     install-prefix: $GITHUB_WORKSPACE/.local
-    cxxstd: 17,20
-    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}
-    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-13' }}
-    extra-args: -D BOOST_SRC_DIR="${{ steps.boost-clone.outputs.boost-dir }}"
-    ref-source-dir: .</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 2 (<code>cxxflags</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake-workflow@develop
-  with:
-    cmake-version: '&gt;=3.20'
-    source-dir: tests
-    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
-    run-tests: 'true'
-    install-prefix: $GITHUB_WORKSPACE/.local
-    cxxstd: 17,20
-    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}
-    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-13' }}
-    cxxflags: -fsanitize=undefined
-    extra-args: -D BOOST_SRC_DIR="${{ steps.boost-clone.outputs.boost-dir }}"
-    ref-source-dir: .</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 3 (<code>build-type</code>, <code>generator</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: CMake Workflow
-  uses: alandefreitas/cpp-actions/cmake-workflow@develop
-  with:
-    cmake-version: '&gt;=3.20'
-    source-dir: tests
-    generator: Visual Studio 16 2019
-    toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
-    build-type: Debug
-    run-tests: 'true'
-    install-prefix: $GITHUB_WORKSPACE/.local
-    cxxstd: 17,20
-    cc: ${{ steps.setup-cpp.outputs.cc || '' }}
-    cxx: ${{ steps.setup-cpp.outputs.cxx || '' }}
+    cxxstd: ${{ matrix.cxxstd }}
+    cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
+    cxxflags: ${{ (matrix.ubsan &amp;&amp; ' -fsanitize=undefined') || '' }}${{ (matrix.asan
+      &amp;&amp; ' -fsanitize=address') || '' }}${{ (matrix.tsan &amp;&amp; ' -fsanitize=thread')
+      || '' }}
     extra-args: -D BOOST_SRC_DIR="${{ steps.boost-clone.outputs.boost-dir }}"
     ref-source-dir: .</code></pre>
 </div>

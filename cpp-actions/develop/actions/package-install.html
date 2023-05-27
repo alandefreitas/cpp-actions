@@ -75,6 +75,12 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Home</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="#actions/cpp-matrix.adoc">actions/cpp-matrix.adoc</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <button class="nav-item-toggle"></button>
     <span class="nav-text">Compilers</span>
 <ul class="nav-list">
@@ -213,11 +219,8 @@ Both vcpkg and its dependencies are cached.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_examples"><a class="anchor" href="#_examples"></a>Examples</h2>
+<h2 id="_example"><a class="anchor" href="#_example"></a>Example</h2>
 <div class="sectionbody">
-<div class="paragraph">
-<p>Example 1:</p>
-</div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
@@ -226,28 +229,15 @@ Both vcpkg and its dependencies are cached.</p>
   id: package-install
   with:
     vcpkg: fmt
-    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-13' }}
-    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 2 (<code>apt-get-ignore-missing</code>, <code>apt-get</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Install packages
-  uses: alandefreitas/cpp-actions/package-install@develop
-  id: package-install
-  with:
-    vcpkg: fmt
-    apt-get: sudo software-properties-common wget curl apt-transport-https make apt-file
-      unzip libssl-dev build-essential autotools-dev autoconf automake g++ libc++-helpers
-      python ruby cpio gcc-multilib g++-multilib pkgconf python3 ccache libpython-dev
-      python3-distutils python3-pip git cmake
-    apt-get-ignore-missing: 'true'
-    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-4.8' }}
-    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-4.8' }}</code></pre>
+    apt-get: ${{ join(matrix.install, ' ') }} ${{ matrix.container &amp;&amp; 'sudo software-properties-common
+      wget curl apt-transport-https make apt-file unzip libssl-dev build-essential
+      autotools-dev autoconf automake g++ libc++-helpers python ruby cpio gcc-multilib
+      g++-multilib pkgconf python3 ccache libpython-dev python3-distutils python3-pip
+      git cmake' }}
+    apt-get-ignore-missing: ${{ matrix.container &amp;&amp; 'true' }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
+    cxxflags: ${{ matrix.cxxflags }}
+    cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}</code></pre>
 </div>
 </div>
 </div>

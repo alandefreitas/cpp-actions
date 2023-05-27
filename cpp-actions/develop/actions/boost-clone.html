@@ -75,6 +75,12 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Home</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="#actions/cpp-matrix.adoc">actions/cpp-matrix.adoc</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <button class="nav-item-toggle"></button>
     <span class="nav-text">Compilers</span>
 <ul class="nav-list">
@@ -236,7 +242,9 @@ cache, the scanning scripting saves us about 3 minutes.</p>
   id: boost-clone
   with:
     branch: master
-    modules: variant2</code></pre>
+    modules: variant2
+    modules-scan-paths: ${{ ((matrix.cxx == 'g++-12') &amp;&amp; 'test') &amp;&amp; '' }}
+    modules-exclude-paths: ${{ ((matrix.cxx != 'g++-12') &amp;&amp; 'test') &amp;&amp; '' }}</code></pre>
 </div>
 </div>
 </div>
