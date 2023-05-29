@@ -80,6 +80,7 @@ jobs:
           ccflags: ${{ matrix.ccflags }}
           cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
           cxxflags: ${{ matrix.cxxflags }}
+          trace-commands: true
 
       - name: Clone Boost.Variant2
         uses: ./boost-clone

@@ -1,5 +1,5 @@
 name: 'Install Packages'
-description: | 
+description: |
   This action installs dependencies from multiple package managers for a workflow.
   
   If vcpkg dependencies are required and vcpkg is not available, it will be installed.
@@ -30,7 +30,7 @@ inputs:
   cxxflags:
     description: |
       C++ flags used by vcpkg.
-      
+
     required: false
     default: ''
 
@@ -76,6 +76,11 @@ inputs:
     required: false
     default: 'false'
 
+  trace-commands:
+    description: 'Trace commands executed by the action.'
+    required: false
+    default: 'false'
+
 outputs:
   vcpkg-toolchain:
     description: "vcpkg toolchain file"
@@ -93,8 +98,8 @@ runs:
       shell: bash
       if: ${{ runner.os == 'Linux' && inputs.apt-get }}
       run: |
-        # apt-get ${{ inputs.apt-get }}
-        set -xe
+        # Install apt-get packages
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         
         # Determine if apt-get should be called with `sudo`, which is often not the case with containers
         if which sudo >/dev/null 2>&1; then
@@ -169,13 +174,14 @@ runs:
         else
             $sudo_prefix apt-get -o Acquire::Retries=${{ inputs.apt-get-retries }} install -y ${{ inputs.apt-get }} 
         fi
-        
+
     - name: vcpkg environment
       id: ctx
       if: ${{ inputs.vcpkg }}
       shell: bash
       run: |
-        set -xe
+        # Vcpkg Context
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         
         ${{ (inputs.cxx != '' && format('export CXX="{0}"', inputs.cxx)) || '' }}
         ${{ (inputs.cc != '' && format('export CC="{0}"', inputs.cc)) || '' }}
@@ -277,7 +283,8 @@ runs:
       shell: bash
       run: |
         # Vcpkg bootstrap and install packages 
-        set -x
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+        
         git clone https://github.com/microsoft/vcpkg.git -b ${{ inputs.vcpkg-branch }} ${{ inputs.vcpkg-dir }}
         ${{ steps.ctx.outputs.vcpkg_bs_exe }}
         cd ${{ inputs.vcpkg-dir }}

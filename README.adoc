@@ -374,6 +374,7 @@ This would cause conflict in workflows that later attempt to use vcpkg dependenc
 |`apt-get-sources` |List of sources for apt-get. |
 |`apt-get-source-keys` |List of source keys for apt-get. |
 |`apt-get-ignore-missing` |Whether apt-get should ignore missing packages. |`false`
+|`trace-commands` |Trace commands executed by the action. |`false`
 |===
 
 ==== Outputs
