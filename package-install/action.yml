@@ -206,25 +206,28 @@ runs:
         fi
         echo "triplet_suffix=$triplet_suffix" >> $GITHUB_OUTPUT
         
-        # vcpkg executable
-        vcpkg_target_dir=${{ inputs.vcpkg-dir }}
-        if [[ $vcpkg_target_dir == /* ]]; then
-            vcpkg_exec_path=$vcpkg_target_dir
+        # vcpkg
+        vcpkg_dir=${{ inputs.vcpkg-dir }}
+        if [[ $vcpkg_dir == /* ]]; then
+            vcpkg_dir=$vcpkg_dir
         else
-            vcpkg_exec_path=./$vcpkg_target_dir
+            vcpkg_dir="$(readlink -f "$vcpkg_dir" 2>/dev/null || realpath -e "$vcpkg_dir" 2>/dev/null || echo "$(pwd)/$vcpkg_dir")"
         fi
-        vcpkg_bs_exe="${{ (runner.os == 'Windows' && '$vcpkg_exec_path/bootstrap-vcpkg.bat') || '$vcpkg_exec_path/bootstrap-vcpkg.sh' }}"
+        echo -E "vcpkg_dir=$vcpkg_dir" >> $GITHUB_OUTPUT
+        
+        # vcpkg bootstrap script
+        vcpkg_bs_exe="${{ (runner.os == 'Windows' && '$vcpkg_dir/bootstrap-vcpkg.bat') || '$vcpkg_dir/bootstrap-vcpkg.sh' }}"
         echo "vcpkg_bs_exe=$vcpkg_bs_exe" >> $GITHUB_OUTPUT
         
         # vcpkg toolchain
-        vcpkg_toolchain=$vcpkg_exec_path/scripts/buildsystems/vcpkg.cmake
+        vcpkg_toolchain=$vcpkg_dir/scripts/buildsystems/vcpkg.cmake
         if [[ $vcpkg_toolchain != /* ]]; then
           vcpkg_toolchain="$(readlink -f "$vcpkg_toolchain" 2>/dev/null || realpath -e "$vcpkg_toolchain" 2>/dev/null || echo "$(pwd)/$vcpkg_toolchain")"
         fi
         echo "vcpkg-toolchain=$vcpkg_toolchain" >> $GITHUB_OUTPUT
         
         # vcpkg executable
-        vcpkg_executable=$vcpkg_exec_path/vcpkg
+        vcpkg_executable=$vcpkg_dir/vcpkg
         if [[ $vcpkg_executable != /* ]]; then
           vcpkg_executable="$(readlink -f "$vcpkg_executable" 2>/dev/null || realpath -e "$vcpkg_executable" 2>/dev/null || echo "$(pwd)/$vcpkg_executable")"
         fi
@@ -275,19 +278,19 @@ runs:
       id: cache-vcpkg
       uses: actions/cache@v3
       with:
-        path: ${{ inputs.vcpkg-dir }}
+        path: ${{ steps.ctx.outputs.vcpkg_dir }}
         key: ${{ steps.ctx.outputs.vcpkg_cache_key }}
 
     - name: vcpkg install
       if: steps.cache-vcpkg.outputs.cache-hit != 'true' && inputs.vcpkg != ''
       shell: bash
       run: |
-        # Vcpkg bootstrap and install packages 
+        # Vcpkg bootstrap and install packages
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         
-        git clone https://github.com/microsoft/vcpkg.git -b ${{ inputs.vcpkg-branch }} ${{ inputs.vcpkg-dir }}
+        git clone https://github.com/microsoft/vcpkg.git -b ${{ inputs.vcpkg-branch }} ${{ steps.ctx.outputs.vcpkg_dir }}
         ${{ steps.ctx.outputs.vcpkg_bs_exe }}
-        cd ${{ inputs.vcpkg-dir }}
+        cd ${{ steps.ctx.outputs.vcpkg_dir }}
         packages=${{ inputs.vcpkg }}
         ${{ (inputs.cxx != '' && format('export CXX="{0}"', inputs.cxx)) || '' }}
         ${{ (inputs.cxxflags != '' && format('export CXXFLAGS="{0}"', inputs.cxxflags)) || '' }}
@@ -296,14 +299,42 @@ runs:
         do
           set +e
           ${{ steps.ctx.outputs.vcpkg-executable }} install $package${{ steps.ctx.outputs.triplet_suffix }}
+          exit_code=$?
           set -e
-          if [ -f /home/runner/work/cpp-actions/cpp-actions/vcpkg/buildtrees/detect_compiler/config-x64-linux-rel-CMakeCache.txt.log ]; then
-            cat /home/runner/work/cpp-actions/cpp-actions/vcpkg/buildtrees/detect_compiler/config-x64-linux-rel-CMakeCache.txt.log
-          fi
-          if [ -f /home/runner/work/cpp-actions/cpp-actions/vcpkg/buildtrees/detect_compiler/config-x64-linux-rel-out.log ]; then
-            cat /home/runner/work/cpp-actions/cpp-actions/vcpkg/buildtrees/detect_compiler/config-x64-linux-rel-out.log
-          fi
-          if [ -f /home/runner/work/cpp-actions/cpp-actions/vcpkg/buildtrees/detect_compiler/config-x64-linux-rel-err.log ]; then
-            cat /home/runner/work/cpp-actions/cpp-actions/vcpkg/buildtrees/detect_compiler/config-x64-linux-rel-err.log
+          if [ $exit_code -ne 0 ]; then
+              ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
+              build_types=("rel" "dbg")
+              steps=("config" "build" "install")
+              suffixes=("CMakeCache.txt" "out" "err")
+              prefixes=("detect_compiler" "$package")
+              for prefix in "${prefixes[@]}"; do
+                for build_type in "${build_types[@]}"; do
+                  for step in "${steps[@]}"; do
+                    for suffix in "${suffixes[@]}"; do
+                      log_basename="$step-${{ steps.ctx.outputs.triplet }}-$build_type-$suffix.log"
+                      log_path="${{ steps.ctx.outputs.vcpkg_dir }}/buildtrees/$prefix/$log_basename"
+                      if [ -f "$log_path" ]; then
+                        echo "======================> $log_basename"
+                        cat "$log_path"
+                      fi
+                    done
+                  done
+                  log_basename="${{ steps.ctx.outputs.triplet }}-$build_type/CMakeFiles/CMakeOutput.log"
+                  log_path="${{ steps.ctx.outputs.vcpkg_dir }}/buildtrees/$prefix/$log_basename"
+                  if [ -f "$log_path" ]; then
+                    echo "======================> $log_basename"
+                    cat "$log_path"
+                  fi
+                  log_basename="${{ steps.ctx.outputs.triplet }}-$build_type/CMakeFiles/CMakeError.log"
+                  log_path="${{ steps.ctx.outputs.vcpkg_dir }}/buildtrees/$prefix/$log_basename"
+                  if [ -f "$log_path" ]; then
+                    echo "======================> $log_basename"
+                    cat "$log_path"
+                  fi
+                done
+              done
+              ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
+              echo "Error: vcpkg failed to install $package"
+              false
           fi
         done
