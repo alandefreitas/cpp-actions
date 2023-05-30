@@ -51,9 +51,13 @@ inputs:
     required: false
     default: ''
   vcpkg-dir:
-    description: 'The directory where vcpkg should be cloned and installed.'
+    description: |
+      The directory where vcpkg should be cloned and installed.
+      
+      If the directory is unspecified, the runner tool cache is used.
+
     required: false
-    default: 'vcpkg'
+    default: ''
   vcpkg-branch:
     description: 'vcpkg branch we should use'
     required: false
@@ -207,31 +211,28 @@ runs:
         echo "triplet_suffix=$triplet_suffix" >> $GITHUB_OUTPUT
         
         # vcpkg
-        vcpkg_dir=${{ inputs.vcpkg-dir }}
-        if [[ $vcpkg_dir == /* ]]; then
+        vcpkg_dir="${{ inputs.vcpkg-dir }}"
+        if [ "$vcpkg_dir" == "" ]; then
+            vcpkg_dir="$RUNNER_TOOL_CACHE/vcpkg/${{ inputs.vcpkg-branch }}"
+        elif [[ $vcpkg_dir == /* ]]; then
             vcpkg_dir=$vcpkg_dir
         else
             vcpkg_dir="$(readlink -f "$vcpkg_dir" 2>/dev/null || realpath -e "$vcpkg_dir" 2>/dev/null || echo "$(pwd)/$vcpkg_dir")"
         fi
+        vcpkg_dir=$(echo "$vcpkg_dir" | sed 's/\\/\//g')
         echo -E "vcpkg_dir=$vcpkg_dir" >> $GITHUB_OUTPUT
         
         # vcpkg bootstrap script
         vcpkg_bs_exe="${{ (runner.os == 'Windows' && '$vcpkg_dir/bootstrap-vcpkg.bat') || '$vcpkg_dir/bootstrap-vcpkg.sh' }}"
-        echo "vcpkg_bs_exe=$vcpkg_bs_exe" >> $GITHUB_OUTPUT
+        echo -E "vcpkg_bs_exe=$vcpkg_bs_exe" >> $GITHUB_OUTPUT
         
         # vcpkg toolchain
         vcpkg_toolchain=$vcpkg_dir/scripts/buildsystems/vcpkg.cmake
-        if [[ $vcpkg_toolchain != /* ]]; then
-          vcpkg_toolchain="$(readlink -f "$vcpkg_toolchain" 2>/dev/null || realpath -e "$vcpkg_toolchain" 2>/dev/null || echo "$(pwd)/$vcpkg_toolchain")"
-        fi
-        echo "vcpkg-toolchain=$vcpkg_toolchain" >> $GITHUB_OUTPUT
+        echo -E "vcpkg-toolchain=$vcpkg_toolchain" >> $GITHUB_OUTPUT
         
         # vcpkg executable
         vcpkg_executable=$vcpkg_dir/vcpkg
-        if [[ $vcpkg_executable != /* ]]; then
-          vcpkg_executable="$(readlink -f "$vcpkg_executable" 2>/dev/null || realpath -e "$vcpkg_executable" 2>/dev/null || echo "$(pwd)/$vcpkg_executable")"
-        fi
-        echo "vcpkg-executable=$vcpkg_executable" >> $GITHUB_OUTPUT
+        echo -E "vcpkg-executable=$vcpkg_executable" >> $GITHUB_OUTPUT
         
         # include compiler version as part of the cache key, even if location is the same
         if command -v sha1sum >/dev/null 2>&1; then
