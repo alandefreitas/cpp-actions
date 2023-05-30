@@ -162,7 +162,7 @@ runs:
 
     - name: Setup GCC
       if: ${{ steps.split-compiler.outputs.compiler == 'gcc' }}
-      uses: alandefreitas/cpp-actions/setup-gcc@v1.2.1
+      uses: alandefreitas/cpp-actions/setup-gcc@develop
       id: setup-gcc
       with:
         version: ${{ steps.split-compiler.outputs.version }}
@@ -176,7 +176,7 @@ runs:
 
     - name: Setup Clang
       if: ${{ steps.split-compiler.outputs.compiler == 'clang' }}
-      uses: alandefreitas/cpp-actions/setup-clang@v1.2.1
+      uses: alandefreitas/cpp-actions/setup-clang@develop
       id: setup-clang
       with:
         version: ${{ steps.split-compiler.outputs.version }}
