@@ -105,14 +105,20 @@ function diff(version) {
 function satisfies(version, trace_commands) {
     const satisfiesRangeInput = core.getInput('satisfies');
     if (satisfiesRangeInput) {
-        core.setOutput('satisfies', (0, semver_1.satisfies)(version, satisfiesRangeInput));
+        const result = (0, semver_1.satisfies)(version, satisfiesRangeInput);
+        core.setOutput('satisfies', result);
         if (trace_commands) {
-            console.log(`Version ${version.version} satisfies the requirement ${satisfiesRangeInput}`);
+            if (result) {
+                console.log(`Version ${version.version} satisfies the requirement ${satisfiesRangeInput}`);
+            }
+            else {
+                console.log(`Version ${version.version} does NOT satisfy the requirement ${satisfiesRangeInput}`);
+            }
         }
     }
     else {
         if (trace_commands) {
-            console.log(`Version ${version.version} does NOT satisfy the requirement ${satisfiesRangeInput}`);
+            console.log(`No 'satisfies' input`);
         }
     }
 }

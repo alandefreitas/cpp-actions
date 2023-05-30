@@ -86,13 +86,18 @@ function satisfies(version: SemVer, trace_commands: boolean): void {
   const satisfiesRangeInput: string = core.getInput('satisfies')
 
   if (satisfiesRangeInput) {
-    core.setOutput('satisfies', semVerSatisfies(version, satisfiesRangeInput))
+    const result = semVerSatisfies(version, satisfiesRangeInput)
+    core.setOutput('satisfies', result)
     if (trace_commands) {
-      console.log(`Version ${version.version} satisfies the requirement ${satisfiesRangeInput}`)
+      if (result) {
+        console.log(`Version ${version.version} satisfies the requirement ${satisfiesRangeInput}`)
+      } else {
+        console.log(`Version ${version.version} does NOT satisfy the requirement ${satisfiesRangeInput}`)
+      }
     }
   } else {
     if (trace_commands) {
-      console.log(`Version ${version.version} does NOT satisfy the requirement ${satisfiesRangeInput}`)
+      console.log(`No 'satisfies' input`)
     }
   }
 }
