@@ -51,7 +51,10 @@ This would cause conflict in workflows that later attempt to use vcpkg dependenc
 |`ccflags` |C flags used by vcpkg.
 . |
 |`vcpkg-triplet` |The triplet used by vcpkg to install packages. |
-|`vcpkg-dir` |The directory where vcpkg should be cloned and installed. |`vcpkg`
+|`vcpkg-dir` |The directory where vcpkg should be cloned and installed.
+
+If the directory is unspecified, the runner tool cache is used.
+. |
 |`vcpkg-branch` |vcpkg branch we should use. |`master`
 |`apt-get-retries` |Number of times we should retry when apt-get fails. |`1`
 |`apt-get-sources` |List of sources for apt-get. |

@@ -636,6 +636,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
 
             // Latest flag
             entry['is-latest'] = i === subranges.length - 1
+            entry['is-main'] = i === subranges.length - 1
 
             // Earliest flag
             entry['is-earliest'] = i === 0
@@ -663,6 +664,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
         if (compiler in latest_factors) {
             for (const factor of latest_factors[compiler]) {
                 let latest_copy = {...matrix[latestIdx]};
+                latest_copy['is-main'] = false
                 latest_copy[factor.toLowerCase()] = true
                 latest_copy['name'] += ` (${factor})`
                 matrix.push(latest_copy)
@@ -689,6 +691,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                     variantIdx--
                 } else {
                     let latest_copy = {...matrix[latestIdx]};
+                    latest_copy['is-main'] = false
                     latest_copy[factor.toLowerCase()] = true
                     latest_copy['name'] += ` (${factor})`
                     matrix.push(latest_copy)

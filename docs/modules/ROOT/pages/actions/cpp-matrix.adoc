@@ -180,9 +180,12 @@ Each entry in the test matrix dictionary contains the following key-value pairs:
 - `version`: Specifies the version requirements of the compiler to be used for the test configuration. This can
   be used as input to the setup-cpp action.
 
-- `is-latest`: Specifies whether this version requirement is the latest version among the test configurations.
+- `is-latest`: Specifies whether the entry version requirement is the latest version among the test configurations.
 
-- `is-earliest`: Specifies whether this version requirement is the earliest version among the test configurations.
+- `is-main`: Specifies whether the entry version requirement is the latest version among the test configurations
+  without any factors applied.
+
+- `is-earliest`: Specifies whether the entry version requirement is the earliest version among the test configurations.
 
 - `cxx`: The usual name of the C++ compiler executable. If using the `setup-cpp` action, its output should be used 
   instead. 
