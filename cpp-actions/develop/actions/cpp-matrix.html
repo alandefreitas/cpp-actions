@@ -434,10 +434,26 @@ and factors to be tested.</p>
 <p class="tableblock">- <code>name</code>: A suggested name for the job testing this entry</p>
 <p class="tableblock">- <code>runs-on</code>: A suggested github runner image name for the job testing this entry</p>
 <p class="tableblock">- <code>container</code>: A suggested docker container for the job testing this entry</p>
-<p class="tableblock">- <code>compiler</code>: Specifies the name of the compiler to be used for the test configuration.</p>
-<p class="tableblock">- <code>version</code>: Specifies the version requirements of the compiler to be used for the test configuration.</p>
-<p class="tableblock">- <code>is_latest</code>: Specifies whether this version requirement is the latest version among the test configurations.</p>
-<p class="tableblock">- <code>cxxstd</code>: A list of standards that should be tested with this compiler version</p>
+<p class="tableblock">- <code>compiler</code>: Specifies the name of the compiler to be used for the test configuration. This can be used as
+  input to the setup-cpp action.</p>
+<p class="tableblock">- <code>version</code>: Specifies the version requirements of the compiler to be used for the test configuration. This can
+  be used as input to the setup-cpp action.</p>
+<p class="tableblock">- <code>is-latest</code>: Specifies whether this version requirement is the latest version among the test configurations.</p>
+<p class="tableblock">- <code>is-earliest</code>: Specifies whether this version requirement is the earliest version among the test configurations.</p>
+<p class="tableblock">- <code>cxx</code>: The usual name of the C compiler executable. If using the `setup-cpp` action, its output should be used
+  instead.</p>
+<p class="tableblock">- `cc`: The usual name of the C compiler executable. If using the `setup-cpp` action, its output should be used
+  instead.</p>
+<p class="tableblock">- `cxxstd`: A list of standards that should be tested with this compiler version. This option considers
+  the `max-standards` latest standards supported by each compiler in its subrange of `standards`.</p>
+<p class="tableblock">- `b2-toolset`: The usual name of the toolset to be used in a b2 workflow.</p>
+<p class="tableblock">- `generator`: A CMake generator recommended to run the CMake workflow.</p>
+<p class="tableblock">- `build-type`: A build type recommended to test this entry. This is usually `Release`, unless some special
+  factor that requires `Debug` is defined.</p>
+<p class="tableblock">- `ccflags`: The recommended C flags to be used by this entry. It reflects the values of special factors, such
+   as sanitizers, coverage, and time-trace.</p>
+<p class="tableblock">- `cxxflags`: The recommended C flags to be used by this entry. It reflects the values of special factors, such
+   as sanitizers, coverage, and time-trace.</p>
 <p class="tableblock">- <code>&lt;factors&gt;&#8230;&#8203;</code>: Provides additional factors or attributes associated with the test configuration as defined by
   the factors and latest-factors inputs. These usually include variant build configurations spread among the
   entries, such as asan, coverage, and shared libraries.</p></td>
