@@ -17,6 +17,9 @@ description: |
   
   If the compiler is MSVC, this action will setup the developer command prompt for Microsoft Visual C\+\+. 
   
+  If the compiler is MinGW, this action will look for g++ and gcc in the directories listed in the PATH environment
+  variable. 
+  
   Any other compilers are passed through.
   
   If the compiler is GCC or Clang, the outputs include the paths to the compilers as well as the compiler
@@ -156,6 +159,12 @@ runs:
           compiler="gcc"
         elif [[ $compiler == clang* ]]; then
           compiler="clang"
+        elif [[ $compiler == apple-clang* ]]; then
+          compiler="clang"
+        elif [[ $compiler == appleclang* ]]; then
+          compiler="clang"
+        elif [[ $compiler == msvc* ]]; then
+          compiler="msvc"
         elif [[ $compiler == cl* ]]; then
           compiler="msvc"
         fi
@@ -164,7 +173,7 @@ runs:
         echo "version=$version" >> $GITHUB_OUTPUT
 
     - name: Setup GCC
-      if: ${{ steps.split-compiler.outputs.compiler == 'gcc' }}
+      if: ${{ steps.split-compiler.outputs.compiler == 'gcc' && runner.os == 'Linux' }}
       uses: alandefreitas/cpp-actions/setup-gcc@develop
       id: setup-gcc
       with:
@@ -178,7 +187,7 @@ runs:
         trace-commands: ${{ inputs.trace-commands }}
 
     - name: Setup Clang
-      if: ${{ steps.split-compiler.outputs.compiler == 'clang' }}
+      if: ${{ steps.split-compiler.outputs.compiler == 'clang' && runner.os == 'Linux' }}
       uses: alandefreitas/cpp-actions/setup-clang@develop
       id: setup-clang
       with:
@@ -190,9 +199,53 @@ runs:
         update-environment: ${{ inputs.update-environment }}
         trace-commands: ${{ inputs.trace-commands }}
 
-    - name: Setup msvc dev-cmd
-      if: runner.os == 'Windows'
+    - name: Setup MSVC
+      if: ${{ steps.split-compiler.outputs.compiler == 'msvc' && runner.os == 'Windows' }}
       uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Setup MinGW
+      shell: bash
+      if: ${{ (steps.split-compiler.outputs.compiler == 'gcc' || steps.split-compiler.outputs.compiler == 'mingw') && runner.os == 'Windows' }}
+      id: setup-mingw
+      run: |
+        # Output information about the compiler we setup up
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+        
+        gcc_path=""
+        gpp_path=""
+        output=$(where gcc)
+        
+        while IFS= read -r line; do
+          line=${line%$'\r'}
+          gcc_path="$line"
+          gpp_path="${line/gcc/g++}"
+          if [[ -f "$gpp_path" ]]; then
+            # Corresponding g++ executable found: $gpp_path
+            break
+          fi
+        done <<< "$output"
+        if [ "$gcc_path" != "" ] && [ "$gpp_path" != "" ]; then 
+          echo -E "cc=$gcc_path" >> $GITHUB_OUTPUT
+          echo -E "cxx=$gpp_path" >> $GITHUB_OUTPUT
+          VERSION_OUTPUT=$("$gpp_path" --version)
+          regex='([0-9]+)\.([0-9]+)\.([0-9]+)'
+          set +e
+          [[ $VERSION_OUTPUT =~ $regex ]]
+          version="${BASH_REMATCH[0]}"
+          major="${BASH_REMATCH[1]}"
+          minor="${BASH_REMATCH[2]}"
+          patch="${BASH_REMATCH[3]}"
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "major=$major" >> $GITHUB_OUTPUT
+          echo "minor=$minor" >> $GITHUB_OUTPUT
+          echo "patch=$patch" >> $GITHUB_OUTPUT
+          bindir=$(dirname "$gpp_path")
+          echo -E "dir=$bindir" >> $GITHUB_OUTPUT
+          set -e
+        else
+          echo "::error title:Setup C++::Setup C++: Cannot find g++ and gcc in PATH."
+          false
+        fi
 
     - name: Outputs
       shell: bash
@@ -201,11 +254,11 @@ runs:
         # Output information about the compiler we setup up
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }} 
         
-        echo -E "cc=${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc }}" >> $GITHUB_OUTPUT
-        echo -E "cxx=${{ steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx }}" >> $GITHUB_OUTPUT
-        echo -E "dir=${{ steps.setup-gcc.outputs.dir || steps.setup-clang.outputs.dir }}" >> $GITHUB_OUTPUT
-        echo -E "version=${{ steps.setup-gcc.outputs.version || steps.setup-clang.outputs.version }}" >> $GITHUB_OUTPUT
-        echo -E "version-major=${{ steps.setup-gcc.outputs.version-major || steps.setup-clang.outputs.version-major }}" >> $GITHUB_OUTPUT
-        echo -E "version-minor=${{ steps.setup-gcc.outputs.version-minor || steps.setup-clang.outputs.version-minor }}" >> $GITHUB_OUTPUT
-        echo -E "version-patch=${{ steps.setup-gcc.outputs.version-patch || steps.setup-clang.outputs.version-patch }}" >> $GITHUB_OUTPUT
+        echo -E "cc=${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || steps.setup-mingw.outputs.cc }}" >> $GITHUB_OUTPUT
+        echo -E "cxx=${{ steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx || steps.setup-mingw.outputs.cxx }}" >> $GITHUB_OUTPUT
+        echo -E "dir=${{ steps.setup-gcc.outputs.dir || steps.setup-clang.outputs.dir || steps.setup-mingw.outputs.dir }}" >> $GITHUB_OUTPUT
+        echo -E "version=${{ steps.setup-gcc.outputs.version || steps.setup-clang.outputs.version || steps.setup-mingw.outputs.version }}" >> $GITHUB_OUTPUT
+        echo -E "version-major=${{ steps.setup-gcc.outputs.version-major || steps.setup-clang.outputs.version-major || steps.setup-mingw.outputs.version-major }}" >> $GITHUB_OUTPUT
+        echo -E "version-minor=${{ steps.setup-gcc.outputs.version-minor || steps.setup-clang.outputs.version-minor || steps.setup-mingw.outputs.version-minor }}" >> $GITHUB_OUTPUT
+        echo -E "version-patch=${{ steps.setup-gcc.outputs.version-patch || steps.setup-clang.outputs.version-patch || steps.setup-mingw.outputs.version-patch }}" >> $GITHUB_OUTPUT
         echo -E "cache-hit=${{ steps.setup-gcc.outputs.cache-hit || steps.setup-clang.outputs.cache-hit }}" >> $GITHUB_OUTPUT

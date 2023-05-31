@@ -136,14 +136,14 @@ runs:
         
         # Remove "gcc-" or "g++-" prefix
         if [[ "$version" == gcc-* ]] || [[ "$version" == g++-* ]]; then
-        version="${version#gcc-}"
-        version="${version#g++-}"
+          version="${version#gcc-}"
+          version="${version#g++-}"
         fi
         
         # Remove "gcc " or "g++ " prefix
         if [[ "$version" == gcc\ * ]] || [[ "$version" == g++\ * ]]; then
-        version="${version#gcc }"
-        version="${version#g++ }"
+          version="${version#gcc }"
+          version="${version#g++ }"
         fi
         
         echo "version=$version" >> $GITHUB_OUTPUT
