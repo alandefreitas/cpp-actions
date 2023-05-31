@@ -149,7 +149,7 @@ runs:
         echo "version=$version" >> $GITHUB_OUTPUT
 
     - name: Ensure git is available
-      uses: alandefreitas/cpp-actions/package-install@develop
+      uses: alandefreitas/cpp-actions/package-install@v1.3.0
       with:
         apt-get: git
 
@@ -218,7 +218,7 @@ runs:
         fi
 
     - name: Check if path GCC version satisfies the requirements
-      uses: alandefreitas/cpp-actions/semver-utils@develop
+      uses: alandefreitas/cpp-actions/semver-utils@v1.3.0
       if: ${{ steps.find-path-version.outputs.version != '' }}
       id: path-version
       with:
@@ -322,7 +322,7 @@ runs:
         fi
 
     - name: Find a GCC system version that satisfies the requirements
-      uses: alandefreitas/cpp-actions/semver-utils@develop
+      uses: alandefreitas/cpp-actions/semver-utils@v1.3.0
       if: ${{ steps.system-versions.outputs.versions != '' }}
       id: system-version
       with:
@@ -421,7 +421,7 @@ runs:
         echo "packages=$all_apt_versions" >> $GITHUB_OUTPUT
 
     - name: Find a GCC APT version that satisfies the requirements
-      uses: alandefreitas/cpp-actions/semver-utils@develop
+      uses: alandefreitas/cpp-actions/semver-utils@v1.3.0
       if: ${{ steps.setup-system-gcc.outputs.cxx == '' && steps.setup-path-gcc.outputs.cxx == '' }}
       id: apt-version
       with:
@@ -499,7 +499,7 @@ runs:
         fi
 
     - name: Find a GCC release version that satisfies the requirements
-      uses: alandefreitas/cpp-actions/semver-utils@develop
+      uses: alandefreitas/cpp-actions/semver-utils@v1.3.0
       if: ${{ steps.setup-system-gcc.outputs.cxx == '' && steps.setup-path-gcc.outputs.cxx == '' && steps.setup-apt-gcc.outputs.cxx == '' }}
       id: download-version
       with:
@@ -671,7 +671,7 @@ runs:
 
     - name: Ensure curl is available
       if: ${{ steps.cache-gcc.outputs.cache-hit != 'true' && steps.setup-gcc.outputs.gcc_url }}
-      uses: alandefreitas/cpp-actions/package-install@develop
+      uses: alandefreitas/cpp-actions/package-install@v1.3.0
       with:
         apt-get: curl
 
@@ -747,7 +747,7 @@ runs:
         fi
         
     - name: Parse Final GCC Setup version
-      uses: alandefreitas/cpp-actions/semver-utils@develop
+      uses: alandefreitas/cpp-actions/semver-utils@v1.3.0
       id: version
       with:
         version: ${{ steps.setup-gcc.outputs.version || steps.setup-apt-gcc.outputs.version || steps.setup-system-gcc.outputs.version || steps.setup-path-gcc.outputs.version }}
