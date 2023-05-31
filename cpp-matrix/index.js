@@ -106,6 +106,8 @@ function normalizeCompilerName(name) {
         return 'clang';
     } else if (lowerCaseName.startsWith('msvc') || lowerCaseName.startsWith('cl') || lowerCaseName.startsWith('visual studio') || lowerCaseName.startsWith('vc')) {
         return 'msvc';
+    } else if (lowerCaseName.startsWith('min-gw') || lowerCaseName.startsWith('mingw')) {
+        return 'mingw';
     }
 
     // Return the original name if no normalization rule matches
@@ -494,9 +496,6 @@ function compilerSupportsStd(compiler, version, cxxstd) {
             (cxxstd <= 2011 && semver.satisfies(version, '>=4')) ||
             cxxstd <= 2003
     }
-    if (compiler === 'apple-clang') {
-        return false
-    }
     if (compiler === 'clang') {
         return (cxxstd <= 2020 && semver.satisfies(version, '>=12')) ||
             (cxxstd <= 2017 && semver.satisfies(version, '>=6')) ||
@@ -582,6 +581,9 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
             } else if (compiler === 'apple-clang') {
                 entry['cxx'] = `clang++`
                 entry['cc'] = `clang`
+            } else if (compiler === 'mingw') {
+                entry['cxx'] = `g++`
+                entry['cc'] = `gcc`
             }
 
             // runs-on / container
@@ -614,6 +616,8 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                 }
             } else if (compiler === 'apple-clang') {
                 entry['runs-on'] = 'macos-11'
+            } else if (compiler === 'mingw') {
+                entry['runs-on'] = 'windows-2022'
             }
 
             // Recommended b2-toolset
@@ -627,6 +631,8 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                 entry['b2-toolset'] = `clang`
             } else if (compiler === 'msvc') {
                 entry['b2-toolset'] = `msvc`
+            } else if (compiler === 'mingw') {
+                entry['b2-toolset'] = `gcc`
             }
 
             // Recommended cmake generator
