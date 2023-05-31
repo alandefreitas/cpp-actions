@@ -97,7 +97,7 @@ if __name__ == "__main__":
     tags_result = subprocess.run(['git', 'tag', '-l'], stdout=subprocess.PIPE, cwd=project_path)
     tags_output = tags_result.stdout.decode('utf-8').splitlines()
     for tag in tags_output:
-        matches = re.findall(tag_pattern, tag)
+        matches = re.search(tag_pattern, tag)
         if matches:
             commit_result = subprocess.run(['git', 'rev-list', '-n', '1', tag], stdout=subprocess.PIPE,
                                            cwd=project_path)
@@ -111,7 +111,7 @@ if __name__ == "__main__":
         if len(parts) == 2 and parts[1].startswith("refs/tags/"):
             commit_id = parts[0]
             tag = parts[1].split('/')[-1]
-            matches = re.findall(tag_pattern, tag)
+            matches = re.search(tag_pattern, tag)
             if matches:
                 tagged_commit_hashes.add(commit_id)
                 commit_tags[commit_id] = tag
@@ -148,7 +148,7 @@ if __name__ == "__main__":
                 # Is subject
                 commit.subject = msg
                 if commits:
-                    matches = re.findall(version_pattern, commit.subject)
+                    matches = re.search(version_pattern, commit.subject)
                     if matches:
                         print(f'Stopping at commit id {commit.hash[:8]} (subject: {commit.subject})')
                         break
@@ -157,10 +157,11 @@ if __name__ == "__main__":
                     commit.type = normalize_type(m[1])
                     commit.scope = m[3]
                     commit.description = m[5]
-                    matches = re.findall(version_pattern, commit.description)
-                    if matches:
-                        print(f'Stopping at commit id {commit.hash[:8]} (description: {commit.description})')
-                        break
+                    if commits:
+                        matches = re.search(version_pattern, commit.description)
+                        if matches:
+                            print(f'Stopping at commit id {commit.hash[:8]} (description: {commit.description})')
+                            break
                     commit.breaking = m[4] == '!'
                 else:
                     # regular commit
