@@ -72,6 +72,12 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Home</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <button class="nav-item-toggle"></button>
     <span class="nav-text">Compilers</span>
 <ul class="nav-list">
@@ -149,6 +155,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.3.0/index.html">v1.3.0</a>
+        </li>
+        <li class="version">
           <a href="../v1.2.1/index.html">v1.2.1</a>
         </li>
         <li class="version">
@@ -183,6 +192,7 @@
   <div class="version-menu">
     <a class="version is-current" href="package-install.html">master</a>
     <a class="version" href="../develop/actions/package-install.html">develop</a>
+    <a class="version" href="../v1.3.0/actions/package-install.html">v1.3.0</a>
     <a class="version" href="../v1.2.1/actions/package-install.html">v1.2.1</a>
     <a class="version" href="../v1.2.0/actions/package-install.html">v1.2.0</a>
     <a class="version" href="../v1.1.0/actions/package-install.html">v1.1.0</a>
@@ -210,11 +220,8 @@ Both vcpkg and its dependencies are cached.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_examples"><a class="anchor" href="#_examples"></a>Examples</h2>
+<h2 id="_example"><a class="anchor" href="#_example"></a>Example</h2>
 <div class="sectionbody">
-<div class="paragraph">
-<p>Example 1:</p>
-</div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
@@ -223,28 +230,16 @@ Both vcpkg and its dependencies are cached.</p>
   id: package-install
   with:
     vcpkg: fmt
-    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-13' }}
-    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-13' }}</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 2 (<code>apt-get-ignore-missing</code>, <code>apt-get</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Install packages
-  uses: alandefreitas/cpp-actions/package-install@master
-  id: package-install
-  with:
-    vcpkg: fmt
-    apt-get: sudo software-properties-common wget curl apt-transport-https make apt-file
-      unzip libssl-dev build-essential autotools-dev autoconf automake g++ libc++-helpers
-      python ruby cpio gcc-multilib g++-multilib pkgconf python3 ccache libpython-dev
-      python3-distutils python3-pip git cmake
-    apt-get-ignore-missing: 'true'
-    cxx: ${{ steps.setup-cpp.outputs.cxx || 'g++-4.8' }}
-    cc: ${{ steps.setup-cpp.outputs.cc || 'gcc-4.8' }}</code></pre>
+    apt-get: ${{ join(matrix.install, ' ') }} ${{ matrix.container &amp;&amp; 'sudo software-properties-common
+      wget curl apt-transport-https make apt-file unzip libssl-dev build-essential
+      autotools-dev autoconf automake g++ libc++-helpers python ruby cpio gcc-multilib
+      g++-multilib pkgconf python3 ccache libpython-dev python3-distutils python3-pip
+      git cmake' }}
+    apt-get-ignore-missing: ${{ matrix.container &amp;&amp; 'true' }}
+    cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
+    ccflags: ${{ matrix.ccflags }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
+    cxxflags: ${{ matrix.cxxflags }}</code></pre>
 </div>
 </div>
 </div>
@@ -295,14 +290,22 @@ Both vcpkg and its dependencies are cached.</p>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ccflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">C flags used by vcpkg.
+.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-triplet</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The triplet used by vcpkg to install packages.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The directory where vcpkg should be cloned and installed.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The directory where vcpkg should be cloned and installed.</p>
+<p class="tableblock">If the directory is unspecified, the runner tool cache is used.
+.</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-branch</code></p></td>
@@ -327,6 +330,11 @@ Both vcpkg and its dependencies are cached.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-ignore-missing</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Whether apt-get should ignore missing packages.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the action.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 </tbody>

@@ -72,6 +72,12 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Home</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <button class="nav-item-toggle"></button>
     <span class="nav-text">Compilers</span>
 <ul class="nav-list">
@@ -149,6 +155,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.3.0/index.html">v1.3.0</a>
+        </li>
+        <li class="version">
           <a href="../v1.2.1/index.html">v1.2.1</a>
         </li>
         <li class="version">
@@ -183,6 +192,7 @@
   <div class="version-menu">
     <a class="version is-current" href="setup-cpp.html">master</a>
     <a class="version" href="../develop/actions/setup-cpp.html">develop</a>
+    <a class="version" href="../v1.3.0/actions/setup-cpp.html">v1.3.0</a>
     <a class="version" href="../v1.2.1/actions/setup-cpp.html">v1.2.1</a>
     <a class="version" href="../v1.2.0/actions/setup-cpp.html">v1.2.0</a>
     <a class="version" href="../v1.1.0/actions/setup-cpp.html">v1.1.0</a>
@@ -224,6 +234,10 @@ a version semver string in the npm format with the compiler requirements.</p>
 <p>If the compiler is MSVC, this action will setup the developer command prompt for Microsoft Visual C\\.</p>
 </div>
 <div class="paragraph">
+<p>If the compiler is MinGW, this action will look for g++ and gcc in the directories listed in the PATH environment
+variable.</p>
+</div>
+<div class="paragraph">
 <p>Any other compilers are passed through.</p>
 </div>
 <div class="paragraph">
@@ -242,7 +256,8 @@ version ultimately setup by the action.</p>
   uses: alandefreitas/cpp-actions/setup-cpp@master
   id: setup-cpp
   with:
-    compiler: g++-13</code></pre>
+    compiler: ${{ matrix.compiler }}
+    version: ${{ matrix.version }}</code></pre>
 </div>
 </div>
 </div>

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Create Changelog | C++ Actions</title>    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/create-changelog.html">
+    <meta name="generator" content="Antora 3.1.3">
+<link rel="stylesheet" href="../../../_/stylesheets/vendor/libs.css">
+<link rel="stylesheet" href="../../../_/stylesheets/site.css">
+<link id="highlight-style-lnk" rel="stylesheet" href="../../../_/stylesheets/vendor/highlight-light.css">
+<link rel="stylesheet" href="../../../_/css/vendor/tabs.css"><link rel="icon" href="../../../_/img/favicon.svg" type="image/x-icon">  </head>
+  <body class="article">
+<script src="../../../_/js/header-site.js"></script>
+<header class="header">
+    <nav class="navbar  ">
+        <div class="navbar-brand">
+            <a class="navbar-item" href="https://alandefreitas.github.io/cpp-actions">C++ Actions</a>
+            <div class="navbar-item-nonProduction">
+                <p>v1.3.0</p>
+            </div>
+        </div>
+
+        <div id="topbar-nav" class="navbar-menu">
+            <div class="navbar-item is-hoverable">
+                <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions: Create Changelog</a>
+            </div>
+            <div class="navbar-item is-hoverable">
+                <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions" target="_blank">GitHub</a>
+            </div>
+            <div class="navbar-item is-hoverable">
+                <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions/releases" target="_blank">Releases</a>
+            </div>
+        </div>
+
+        <div class="navbar-end" id="search-container">
+            <div class="navbar-item search hide-for-print">
+                <div id="search-field" class="field has-filter">
+                    <input id="search-input" type="text" placeholder="Search the docs">
+                </div>
+            </div>
+
+
+            <div class="theme-switch-wrapper">
+                <input type="checkbox" class="checkbox" onclick="toggleDarkThemeMode(this)" id="check">
+                <div class="toggle-content">
+                    <label class="label" for="check">
+                        <span>🌚</span>
+                        <span>😎</span>
+                        <div class="ball"></div>
+                    </label>
+                </div>
+            </div>
+
+            <button class="navbar-burger" data-target="topbar-nav-mobile">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <nav id="topbar-nav-mobile" class="navbar-menu-mobile">
+        <div class="navbar-item is-hoverable">
+            <a class="navbar-link" href="/cpp-actions/index.html">C++ Actions</a>
+        </div>
+    </nav>
+</header><div class="body">
+<div class="nav-container" data-component="cpp-actions" data-version="v1.3.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../index.html">C++ Actions</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Home</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Compilers</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-cpp.html">Setup C++ Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-gcc.html">Setup GCC Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-clang.html">Setup Clang Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Tools</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="package-install.html">Install Packages Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Workflows</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="cmake-workflow.html">CMake Workflow Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="b2-workflow.html">B2 Workflow Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Project</span>
+<ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../contribute.html">Contribute</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../license.html">License</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">C++ Actions</span>
+    <span class="version">v1.3.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <span class="title">C++ Actions</span>
+      <ul class="versions">
+        <li class="version is-latest">
+          <a href="../../index.html">master</a>
+        </li>
+        <li class="version">
+          <a href="../../develop/index.html">develop</a>
+        </li>
+        <li class="version is-current">
+          <a href="../index.html">v1.3.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.2.1/index.html">v1.2.1</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.2.0/index.html">v1.2.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.1.0/index.html">v1.1.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.0.0/index.html">v1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar toolbar-wrap">
+  <div class="toolbar" role="navigation">
+  <button class="nav-toggle"></button>  <a href="../../index.html" class="home-link"></a>
+  <nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">C++ Actions</a></li>
+    <li>Project</li>
+    <li><a href="create-changelog.html">Create Changelog Action</a></li>
+  </ul>
+</nav>
+  <div class="page-versions">
+  <button class="version-menu-toggle"
+    title="Show other versions of page">v1.3.0</button>
+  <div class="version-menu">
+    <a class="version" href="../../actions/create-changelog.html">master</a>
+    <a class="version" href="../../develop/actions/create-changelog.html">develop</a>
+    <a class="version is-current" href="create-changelog.html">v1.3.0</a>
+    <a class="version" href="../../v1.2.1/actions/create-changelog.html">v1.2.1</a>
+    <a class="version" href="../../v1.2.0/actions/create-changelog.html">v1.2.0</a>
+    <a class="version" href="../../v1.1.0/actions/create-changelog.html">v1.1.0</a>
+    <a class="version" href="../../v1.0.0/actions/create-changelog.html">v1.0.0</a>
+  </div>
+</div>
+  </div>
+
+
+
+
+</div>
+  <div class="content">
+<article class="doc">
+<h1 class="page">Create Changelog</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>This action creates an initial Changelog from the commit history.</p>
+</div>
+<div class="paragraph">
+<p>The commits considered go from the latest commit up to a commit containing a version
+commit pattern specified by version-pattern.</p>
+</div>
+<div class="paragraph">
+<p>The result can be used as the initial body for an automated release, a CHANGELOG.md file, or a job summary.</p>
+</div>
+<div class="paragraph">
+<p>Each commit is parsed as a loose variant of a <a href="https://www.conventionalcommits.org/en/v1.0.0/">conventional commit</a>
+in the following format:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs" data-lang="none">&lt;type&gt;[optional scope]: &lt;description&gt;
+
+[optional body]
+
+[optional footer(s)]</code></pre>
+</div>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The body and footer are always ignored.</p>
+</li>
+<li>
+<p>If no type is indicated, the description goes to an initial "other" category in the message.</p>
+</li>
+<li>
+<p>If no scope is indicated, the description goes to an initial "general" scope in the type messages.</p>
+</li>
+<li>
+<p>Breaking changes are indicated.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>This action uses the local commit history to generate the notes. Ensure the <code>fetch-depth</code> option
+is set when cloning your repository in CI. If this option is unset, the checkout action will
+perform a shallow clone and the Changelog will only include the latest commit.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">- uses: actions/checkout@v3
+  with:
+    fetch-depth: 100</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This parameter can also be used as a limit on the number of commits the action should consider.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_example"><a class="anchor" href="#_example"></a>Example</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Create release notes
+  uses: alandefreitas/cpp-actions/create-changelog@v1.3.0
+  with:
+    output-path: CHANGELOG.md</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_input_parameters"><a class="anchor" href="#_input_parameters"></a>Input Parameters</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Parameter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>source-dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The source directory from whose commits will be analyzed
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-pattern</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A regex pattern used to identify if a commit is a version delimiter.</p>
+<p class="tableblock">When a commit has a message that matches this pattern, the list of
+commits considered in the notes is complete.</p>
+<p class="tableblock">This constraint does not apply to the current and latest commit.
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>(Bump|Set)\s+version</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>tag-pattern</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A regex pattern used to identify if a commit is a tagged delimiter.</p>
+<p class="tableblock">When a commit has the same hash has the commit associated with a
+tag whose name matches this pattern, the list of commits considered
+in the notes is complete.</p>
+<p class="tableblock">This constraint does not apply to the current and latest commit.
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>v.<strong>\..</strong>\..*</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>output-path</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The path where the changelog will be stored
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>CHANGELOG.md</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>limit</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The limit on the number of commits considered in the Changelog
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>0</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</article>
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+  </div>
+</main>
+</div>
+<footer>
+    <div class="footer-body">
+        <div class="footer-footer">
+            <p>
+                C++ Actions:
+                <a href="https://alandefreitas.github.io/cpp-actions">https://alandefreitas.github.io/cpp-actions</a>
+                - <a href="https://github.com/alandefreitas/cpp-actions" target="_blank">https://github.com/alandefreitas/cpp-actions</a>
+                - 2023
+            </p>
+            <p>
+                Bonita Theme:
+                <a href="https://github.com/bonitasoft/bonita-documentation-theme" target="_blank">
+                    https://github.com/bonitasoft/bonita-documentation-theme
+                </a>
+            </p>
+        </div>
+    </div>
+    <script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+</footer><script>window.uiRootPath = '../../../_'</script>
+<script src="../../../_/js/vendor/highlight.min.js"></script>
+<script async src="../../../_/js/vendor/tabs.js"></script>
+<script src="../../../_/js/vendor/libs.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<script src="../../../_/js/site.js"></script>
+
+<script>
+    let asciinemaPlayers = document.querySelectorAll('asciinema-player');
+    asciinemaPlayers.forEach(htmlPlayer => {
+        let options = {fit: false};
+        htmlPlayer.getAttributeNames().forEach(key => options[key] = htmlPlayer.getAttribute(key));
+        AsciinemaPlayer.create(htmlPlayer.getAttribute('src'), htmlPlayer, options);
+    });
+</script>
+
+<script>
+    // init toggle state
+    const isDarkThemeEnable = localStorage.getItem('theme') === 'dark';
+    initializeThemeToggleIfAvailable('check', isDarkThemeEnable);
+    initializeThemeToggleIfAvailable('check-mobile', isDarkThemeEnable);
+
+    function initializeThemeToggleIfAvailable(elementId, checked) {
+        const checkElement = document.getElementById(elementId);
+        if(checkElement) {
+            checkElement.checked = checked;
+        }
+    }
+</script>
+  </body>
+</html>

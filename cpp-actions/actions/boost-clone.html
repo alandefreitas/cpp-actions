@@ -72,6 +72,12 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Home</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <button class="nav-item-toggle"></button>
     <span class="nav-text">Compilers</span>
 <ul class="nav-list">
@@ -149,6 +155,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.3.0/index.html">v1.3.0</a>
+        </li>
+        <li class="version">
           <a href="../v1.2.1/index.html">v1.2.1</a>
         </li>
         <li class="version">
@@ -183,6 +192,7 @@
   <div class="version-menu">
     <a class="version is-current" href="boost-clone.html">master</a>
     <a class="version" href="../develop/actions/boost-clone.html">develop</a>
+    <a class="version" href="../v1.3.0/actions/boost-clone.html">v1.3.0</a>
     <a class="version" href="../v1.2.1/actions/boost-clone.html">v1.2.1</a>
     <a class="version" href="../v1.2.0/actions/boost-clone.html">v1.2.0</a>
     <a class="version" href="../v1.1.0/actions/boost-clone.html">v1.1.0</a>
@@ -230,8 +240,8 @@ cache, the scanning scripting saves us about 3 minutes.</p>
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Clone Boost.Variant2
   uses: alandefreitas/cpp-actions/boost-clone@master
+  id: boost-clone
   with:
-    boost-dir: boost-root
     branch: master
     modules: variant2</code></pre>
 </div>
@@ -256,7 +266,7 @@ cache, the scanning scripting saves us about 3 minutes.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>boost-dir</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The boost directory. The default value assumes boost is in-source.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>boost</code></p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>branch</code></p></td>
@@ -297,6 +307,27 @@ cache, the scanning scripting saves us about 3 minutes.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_outputs"><a class="anchor" href="#_outputs"></a>Outputs</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Output</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>boost-dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the boost source files.</p></td>
 </tr>
 </tbody>
 </table>

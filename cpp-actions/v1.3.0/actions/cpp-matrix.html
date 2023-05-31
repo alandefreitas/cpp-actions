@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C++ Matrix | C++ Actions</title>    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/cpp-matrix.html">
+    <meta name="generator" content="Antora 3.1.3">
+<link rel="stylesheet" href="../../../_/stylesheets/vendor/libs.css">
+<link rel="stylesheet" href="../../../_/stylesheets/site.css">
+<link id="highlight-style-lnk" rel="stylesheet" href="../../../_/stylesheets/vendor/highlight-light.css">
+<link rel="stylesheet" href="../../../_/css/vendor/tabs.css"><link rel="icon" href="../../../_/img/favicon.svg" type="image/x-icon">  </head>
+  <body class="article">
+<script src="../../../_/js/header-site.js"></script>
+<header class="header">
+    <nav class="navbar  ">
+        <div class="navbar-brand">
+            <a class="navbar-item" href="https://alandefreitas.github.io/cpp-actions">C++ Actions</a>
+            <div class="navbar-item-nonProduction">
+                <p>v1.3.0</p>
+            </div>
+        </div>
+
+        <div id="topbar-nav" class="navbar-menu">
+            <div class="navbar-item is-hoverable">
+                <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions: C++ Matrix</a>
+            </div>
+            <div class="navbar-item is-hoverable">
+                <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions" target="_blank">GitHub</a>
+            </div>
+            <div class="navbar-item is-hoverable">
+                <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions/releases" target="_blank">Releases</a>
+            </div>
+        </div>
+
+        <div class="navbar-end" id="search-container">
+            <div class="navbar-item search hide-for-print">
+                <div id="search-field" class="field has-filter">
+                    <input id="search-input" type="text" placeholder="Search the docs">
+                </div>
+            </div>
+
+
+            <div class="theme-switch-wrapper">
+                <input type="checkbox" class="checkbox" onclick="toggleDarkThemeMode(this)" id="check">
+                <div class="toggle-content">
+                    <label class="label" for="check">
+                        <span>🌚</span>
+                        <span>😎</span>
+                        <div class="ball"></div>
+                    </label>
+                </div>
+            </div>
+
+            <button class="navbar-burger" data-target="topbar-nav-mobile">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <nav id="topbar-nav-mobile" class="navbar-menu-mobile">
+        <div class="navbar-item is-hoverable">
+            <a class="navbar-link" href="/cpp-actions/index.html">C++ Actions</a>
+        </div>
+    </nav>
+</header><div class="body">
+<div class="nav-container" data-component="cpp-actions" data-version="v1.3.0">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../index.html">C++ Actions</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Home</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Compilers</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-cpp.html">Setup C++ Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-gcc.html">Setup GCC Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-clang.html">Setup Clang Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Tools</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="package-install.html">Install Packages Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Workflows</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="cmake-workflow.html">CMake Workflow Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="b2-workflow.html">B2 Workflow Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Project</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../contribute.html">Contribute</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../license.html">License</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">C++ Actions</span>
+    <span class="version">v1.3.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <span class="title">C++ Actions</span>
+      <ul class="versions">
+        <li class="version is-latest">
+          <a href="../../index.html">master</a>
+        </li>
+        <li class="version">
+          <a href="../../develop/index.html">develop</a>
+        </li>
+        <li class="version is-current">
+          <a href="../index.html">v1.3.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.2.1/index.html">v1.2.1</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.2.0/index.html">v1.2.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.1.0/index.html">v1.1.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.0.0/index.html">v1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar toolbar-wrap">
+  <div class="toolbar" role="navigation">
+  <button class="nav-toggle"></button>  <a href="../../index.html" class="home-link"></a>
+  <nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">C++ Actions</a></li>
+    <li><a href="cpp-matrix.html">C++ Matrix Action</a></li>
+  </ul>
+</nav>
+  <div class="page-versions">
+  <button class="version-menu-toggle"
+    title="Show other versions of page">v1.3.0</button>
+  <div class="version-menu">
+    <a class="version" href="../../actions/cpp-matrix.html">master</a>
+    <a class="version" href="../../develop/actions/cpp-matrix.html">develop</a>
+    <a class="version is-current" href="cpp-matrix.html">v1.3.0</a>
+    <a class="version is-missing" href="../../v1.2.1/index.html">v1.2.1</a>
+    <a class="version is-missing" href="../../v1.2.0/index.html">v1.2.0</a>
+    <a class="version is-missing" href="../../v1.1.0/index.html">v1.1.0</a>
+    <a class="version is-missing" href="../../v1.0.0/index.html">v1.0.0</a>
+  </div>
+</div>
+  </div>
+
+
+
+
+</div>
+  <div class="content">
+<article class="doc">
+<h1 class="page">C++ Matrix</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>Testing C libraries can be a challenging and time-consuming task, especially when considering the
+various compiler versions, error behaviors, and platform dependencies. A library that works flawlessly
+with one compiler might encounter issues when compiled with a different version or on a different
+platform. This is where the C Library Test Matrix GitHub Action comes to the rescue.</p>
+</div>
+<div class="paragraph">
+<p>The C Library Test Matrix GitHub Action is designed to automate the generation of a comprehensive
+test matrix for your C libraries given their requirements. It simplifies the process of testing your
+libraries across multiple compiler versions and platforms, reducing the manual effort and potential
+for human error.</p>
+</div>
+<div class="paragraph">
+<p>With this action, you can define a set of compiler versions, target platforms, standard requirements,
+and factors that you want to test your C++ library against. The action then automatically generates
+a test matrix by combining the specified compilers and platforms into a fractional factorial design,
+enabling you to run tests in a systematic and efficient manner.</p>
+</div>
+<div class="paragraph">
+<p>This action can ensure that your C++ library is thoroughly tested across a wide range of compiler
+versions and platforms. This approach significantly increases the chances of catching compatibility
+issues early on and helps in delivering a robust and reliable library that works across different
+environments.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Automated test matrix generation: Define a list of compiler versions and platforms, and let the action handle
+the creation of the test matrix.</p>
+</li>
+<li>
+<p>Easy integration: Simply include the C++ Library Test Matrix GitHub Action in your workflow configuration to
+start generating the test matrix.</p>
+</li>
+<li>
+<p>Customization options: Fine-tune the test matrix generation process by specifying additional compiler flags,
+build configurations, or test suites.</p>
+</li>
+<li>
+<p>Comprehensive test coverage: Ensure your C++ library is thoroughly tested across multiple compiler versions
+and platforms to identify and address compatibility issues.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Get started with the C Library Test Matrix GitHub Action today and streamline your C library testing
+process. Say goodbye to manual matrix creation and embrace automated, systematic testing to deliver
+high-quality C++ libraries that work seamlessly across different compilers and platforms.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_usage"><a class="anchor" href="#_usage"></a>Usage</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The action should be run as extra initial &#8220;setup&#8221; job in your workflow. The job will run the action and
+output <code>matrix</code>, which is a JSON string containing the whole matrix. This matrix should be output of your
+first <code>setup</code> job.</p>
+</div>
+<div class="paragraph">
+<p>In your second <code>build</code> job, you can attribute the entire matrix to the <code>strategy.matrix.include</code> parameter
+and create your workflow as usual with the parameters from the matrix:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">jobs:
+  cpp-matrix:
+    runs-on: ubuntu-latest
+    name: Generate Test Matrix
+    outputs:
+      matrix: ${{ steps.cpp-matrix.outputs.matrix }}
+    steps:
+      - name: Generate Test Matrix
+        uses: alandefreitas/cpp-actions/cpp-matrix@v1.3.0
+        id: cpp-matrix
+        with:
+          standards: '&gt;=11'
+  build:
+    needs: cpp-matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        include: fromJSON(needs.cpp-matrix.outputs.matrix)
+
+    # use matrix entries
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runs-on }}
+    container: ${{ matrix.container }}
+
+    steps:
+      - name: Clone library
+        uses: actions/checkout@v3
+
+      - name: Setup C++ Compiler
+        uses: alandefreitas/cpp-actions/setup-cpp@v1.3.0
+        id: setup-cpp
+        with:
+          compiler: ${{ matrix.compiler }}
+          version: ${{ matrix.version }}
+
+      - name: CMake Workflow
+        uses: ./cmake-workflow
+        with:
+          cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
+          cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
+          cxxstd: ${{ matrix.cxxstd }}
+          cxxflags: ${{ matrix.cxxstd }}
+
+      # And you've safely tested your C++ library just like that...</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_example"><a class="anchor" href="#_example"></a>Example</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Generate Test Matrix
+  uses: alandefreitas/cpp-actions/cpp-matrix@v1.3.0
+  id: cpp-matrix
+  with:
+    standards: '&gt;=11'</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_input_parameters"><a class="anchor" href="#_input_parameters"></a>Input Parameters</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Parameter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>compilers</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A list of compilers to be tested. Each compiler can be complemented with its semver version requirements
+to be tested.</p>
+<p class="tableblock">When the compiler version requirements are provided, the action will break the requirements into
+subsets of major versions to be tested. When no version is provided, the '*' semver requirement
+is assumed. The action can identifies subsets of compiler versions for GCC, Clang, and MSVC.
+For any other compilers, the version requirements will passthrough to the output.
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc &gt;=4.8</code></p>
+<p class="tableblock"><code>clang &gt;=3.8</code></p>
+<p class="tableblock"><code>msvc &gt;=14.2</code></p>
+<p class="tableblock"><code>apple-clang *</code></p>
+<p class="tableblock"><code>mingw *</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>standards</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A semver range describing what C standards should be tested.</p>
+<p class="tableblock">The compiler ranges are adjusted to only include compilers that support any subrange of these requirements.</p>
+<p class="tableblock">These requirements can include C standards as 2 or 4 digits versions, such as 11, 2011, 98, or 1998.
+2 digit versions are normalized into the 4 digits form so that 11 &gt; 98 (2011 &gt; 1998).
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>&gt;=11</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>max-standards</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The maximum number of standards to be tested with each compiler.</p>
+<p class="tableblock">For instance, if 'max-standards' is 2 and the compiler supports '11,14,17,20,23' given the in the standard
+requirements, the standards 20,23 will be tested by this compiler.
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>2</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>latest-factors</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The factors to be tested with the latest versions of each compiler. For each factor in this list, the
+entry with the latest version of a compiler will be duplicated with an entry that sets this factor to true.</p>
+<p class="tableblock">Other entries will also include this factor as false.</p>
+<p class="tableblock">The following factors are considered special: 'asan', 'ubsan', 'msan', 'tsan', and 'coverage'.
+When these factors are defined in an entry, its 'ccflags', 'cxxflags', and 'linkflags' value are
+also modified to include the suggested flags for factor.
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc Coverage TSan UBSan</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>factors</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The factors to be tested with other versions of each compiler. Each factor in this list will be injected
+into a version of the compiler that is not the latest version. An entry with the latest version of the compiler
+will be duplicated with this factor if there are no entries left to inject the factor.</p>
+<p class="tableblock">Other entries will also include this factor as false.
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc Asan Shared</code></p>
+<p class="tableblock"><code>msvc Shared x86</code></p>
+<p class="tableblock"><code>clang Time-Trace</code></p>
+<p class="tableblock"><code>mingw Shared</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the action.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_outputs"><a class="anchor" href="#_outputs"></a>Outputs</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Output</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>matrix</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The test matrix is an array of dictionaries, where each entry represents a combination of compiler version
+and factors to be tested.</p>
+<p class="tableblock">Each entry in the test matrix dictionary contains the following key-value pairs:</p>
+<p class="tableblock">- <code>name</code>: A suggested name for the job testing this entry</p>
+<p class="tableblock">- <code>runs-on</code>: A suggested github runner image name for the job testing this entry</p>
+<p class="tableblock">- <code>container</code>: A suggested docker container for the job testing this entry</p>
+<p class="tableblock">- <code>compiler</code>: Specifies the name of the compiler to be used for the test configuration. This can be used as
+  input to the setup-cpp action.</p>
+<p class="tableblock">- <code>version</code>: Specifies the version requirements of the compiler to be used for the test configuration. This can
+  be used as input to the setup-cpp action.</p>
+<p class="tableblock">- <code>is-latest</code>: Specifies whether the entry version requirement is the latest version among the test configurations.</p>
+<p class="tableblock">- <code>is-main</code>: Specifies whether the entry version requirement is the latest version among the test configurations
+  without any factors applied.</p>
+<p class="tableblock">- <code>is-earliest</code>: Specifies whether the entry version requirement is the earliest version among the test configurations.</p>
+<p class="tableblock">- <code>cxx</code>: The usual name of the C compiler executable. If using the `setup-cpp` action, its output should be used
+  instead.</p>
+<p class="tableblock">- `cc`: The usual name of the C compiler executable. If using the `setup-cpp` action, its output should be used
+  instead.</p>
+<p class="tableblock">- `cxxstd`: A list of standards that should be tested with this compiler version. This option considers
+  the `max-standards` latest standards supported by each compiler in its subrange of `standards`.</p>
+<p class="tableblock">- `b2-toolset`: The usual name of the toolset to be used in a b2 workflow.</p>
+<p class="tableblock">- `generator`: A CMake generator recommended to run the CMake workflow.</p>
+<p class="tableblock">- `build-type`: A build type recommended to test this entry. This is usually `Release`, unless some special
+  factor that requires `Debug` is defined.</p>
+<p class="tableblock">- `ccflags`: The recommended C flags to be used by this entry. It reflects the values of special factors, such
+   as sanitizers, coverage, and time-trace.</p>
+<p class="tableblock">- `cxxflags`: The recommended C flags to be used by this entry. It reflects the values of special factors, such
+   as sanitizers, coverage, and time-trace.</p>
+<p class="tableblock">- <code>&lt;factors&gt;&#8230;&#8203;</code>: Provides additional factors or attributes associated with the test configuration as defined by
+  the factors and latest-factors inputs. These usually include variant build configurations spread among the
+  entries, such as asan, coverage, and shared libraries.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</article>
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+  </div>
+</main>
+</div>
+<footer>
+    <div class="footer-body">
+        <div class="footer-footer">
+            <p>
+                C++ Actions:
+                <a href="https://alandefreitas.github.io/cpp-actions">https://alandefreitas.github.io/cpp-actions</a>
+                - <a href="https://github.com/alandefreitas/cpp-actions" target="_blank">https://github.com/alandefreitas/cpp-actions</a>
+                - 2023
+            </p>
+            <p>
+                Bonita Theme:
+                <a href="https://github.com/bonitasoft/bonita-documentation-theme" target="_blank">
+                    https://github.com/bonitasoft/bonita-documentation-theme
+                </a>
+            </p>
+        </div>
+    </div>
+    <script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+</footer><script>window.uiRootPath = '../../../_'</script>
+<script src="../../../_/js/vendor/highlight.min.js"></script>
+<script async src="../../../_/js/vendor/tabs.js"></script>
+<script src="../../../_/js/vendor/libs.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<script src="../../../_/js/site.js"></script>
+
+<script>
+    let asciinemaPlayers = document.querySelectorAll('asciinema-player');
+    asciinemaPlayers.forEach(htmlPlayer => {
+        let options = {fit: false};
+        htmlPlayer.getAttributeNames().forEach(key => options[key] = htmlPlayer.getAttribute(key));
+        AsciinemaPlayer.create(htmlPlayer.getAttribute('src'), htmlPlayer, options);
+    });
+</script>
+
+<script>
+    // init toggle state
+    const isDarkThemeEnable = localStorage.getItem('theme') === 'dark';
+    initializeThemeToggleIfAvailable('check', isDarkThemeEnable);
+    initializeThemeToggleIfAvailable('check-mobile', isDarkThemeEnable);
+
+    function initializeThemeToggleIfAvailable(elementId, checked) {
+        const checkElement = document.getElementById(elementId);
+        if(checkElement) {
+            checkElement.checked = checked;
+        }
+    }
+</script>
+  </body>
+</html>

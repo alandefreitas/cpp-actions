@@ -72,6 +72,12 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Home</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <button class="nav-item-toggle"></button>
     <span class="nav-text">Compilers</span>
 <ul class="nav-list">
@@ -149,6 +155,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.3.0/index.html">v1.3.0</a>
+        </li>
+        <li class="version">
           <a href="../v1.2.1/index.html">v1.2.1</a>
         </li>
         <li class="version">
@@ -183,6 +192,7 @@
   <div class="version-menu">
     <a class="version is-current" href="b2-workflow.html">master</a>
     <a class="version" href="../develop/actions/b2-workflow.html">develop</a>
+    <a class="version" href="../v1.3.0/actions/b2-workflow.html">v1.3.0</a>
     <a class="version" href="../v1.2.1/actions/b2-workflow.html">v1.2.1</a>
     <a class="version" href="../v1.2.0/actions/b2-workflow.html">v1.2.0</a>
     <a class="version" href="../v1.1.0/actions/b2-workflow.html">v1.1.0</a>
@@ -213,69 +223,22 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 </div>
 </div>
 <div class="sect1">
-<h2 id="_examples"><a class="anchor" href="#_examples"></a>Examples</h2>
+<h2 id="_example"><a class="anchor" href="#_example"></a>Example</h2>
 <div class="sectionbody">
-<div class="paragraph">
-<p>Example 1:</p>
-</div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
 - name: Test Boost.Variant2
   uses: alandefreitas/cpp-actions/b2-workflow@master
   with:
-    source-dir: boost-root
+    source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
     modules: variant2
-    toolset: gcc-13
-    cxxstd: 17,20</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 2 (<code>cxx</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
-  with:
-    source-dir: boost-root
-    modules: variant2
-    toolset: clang
-    cxx: clang++-16
-    cxxstd: 17,20</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 3 (<code>address-model</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
-  with:
-    source-dir: boost-root
-    modules: variant2
-    toolset: msvc-14.3
-    cxxstd: 17,20
-    address-model: 32,64</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Example 4 (<code>ubsan</code>):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Test Boost.Variant2
-  uses: alandefreitas/cpp-actions/b2-workflow@master
-  with:
-    source-dir: boost-root
-    modules: variant2
-    toolset: gcc-13
-    cxxstd: 17,20
-    ubsan: 'true'</code></pre>
+    toolset: ${{ matrix.b2-toolset }}
+    cxxstd: ${{ matrix.cxxstd }}
+    cxx: ${{ (startsWith(matrix.cxx, 'clang') &amp;&amp; (steps.setup-cpp.outputs.cxx || matrix.cxx))
+      || '' }}
+    address-model: ${{ (matrix.x86 &amp;&amp; '32') || '64' }}
+    ubsan: ${{ matrix.ubsan }}</code></pre>
 </div>
 </div>
 </div>
