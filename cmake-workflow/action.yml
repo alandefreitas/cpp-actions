@@ -327,10 +327,6 @@ runs:
             CONFIGURE_ARGS+=($( [ "$cxxstd" == "defaultcxx" ] && echo "" || echo "-D CMAKE_CXX_STANDARD=$cxxstd" ))
             SOURCE_DIR_ARG=${{ (steps.setup-cmake.outputs.supports-path-to-build == 'false' && format('{0}', steps.params.outputs.source_dir)) || '' }}
         
-            which mkdir
-            ls -l $(which mkdir)
-            echo "$PATH"
-        
             mkdir "$std_build_dir" || true
             cd "$std_build_dir"
             set +e
@@ -444,9 +440,9 @@ runs:
             if [[ "${{ steps.setup-cmake.outputs.supports-build-multiple-targets }}" == "true" || "${{ inputs.build-target }}" != *" "* ]]; then
               set -x
               "${{ steps.params.outputs.cmake_path }}" --build "$std_build_dir" --config "${{ inputs.build-type || 'Release' }}" $jobs_args ${{ (inputs.build-target != '' && format('--target {0}', inputs.build-target)) || '' }} 2>&1 | tee -a "$std_build_dir/cmake-build-output.txt"
-              cmake_build_exit_code=$?
-              if [[ $cmake_build_exit_code -ne 0 ]]; then
-                cmake_exit_code="$cmake_build_exit_code"
+              exit_code=$?
+              if [[ $exit_code -ne 0 ]]; then
+                break
               fi
               ${{ (inputs.trace-commands != 'true' && 'set +x') || '' }}
             else
