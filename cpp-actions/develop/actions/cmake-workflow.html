@@ -302,6 +302,7 @@ annotations for CMake errors at the configure step and build errors emitted from
     ccflags: ${{ matrix.ccflags }}
     cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
     cxxflags: ${{ matrix.cxxflags }}
+    shared: ${{ matrix.shared }}
     extra-args: -D BOOST_SRC_DIR="${{ steps.boost-clone.outputs.boost-dir }}"
     ref-source-dir: .</code></pre>
 </div>
@@ -371,6 +372,11 @@ the min CMake version that satisfies it.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Flags to be used with the C++ compiler.</p></td>
 <td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>shared</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Determines if add_library should create shared libraries (<code>BUILD_SHARED_LIBS</code>).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>toolchain</code></p></td>
