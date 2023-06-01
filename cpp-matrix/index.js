@@ -548,6 +548,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
             // The standards we should test with this compiler
             let compiler_cxxs = []
             const minSubrangeVersion = semver.parse(semver.minSatisfying(versions, subrange))
+            const maxSubrangeVersion = semver.parse(semver.maxSatisfying(versions, subrange))
             if (versions.length !== 0) {
                 for (const cxxstd of cxxstds) {
                     if (compilerSupportsStd(compiler, minSubrangeVersion, cxxstd)) {
@@ -609,7 +610,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                     entry['container'] = 'ubuntu:16.04'
                 }
             } else if (compiler === 'msvc') {
-                if (semver.satisfies(minSubrangeVersion, '>=12')) {
+                if (semver.satisfies(minSubrangeVersion, '>=14.30')) {
                     entry['runs-on'] = 'windows-2022'
                 } else {
                     entry['runs-on'] = 'windows-2019'
@@ -637,7 +638,28 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
 
             // Recommended cmake generator
             if (compiler === 'msvc') {
-                matrix['generator'] = `Visual Studio ${getVisualCppYear}`
+                const year = getVisualCppYear(minSubrangeVersion)
+                if (minSubrangeVersion === maxSubrangeVersion || year === getVisualCppYear(maxSubrangeVersion)) {
+                    if (year === '2022') {
+                        entry['generator'] = `Visual Studio 17 ${year}`
+                    } else if (year === '2019') {
+                        entry['generator'] = `Visual Studio 16 ${year}`
+                    } else if (year === '2017') {
+                        entry['generator'] = `Visual Studio 15 ${year}`
+                    } else if (year === '2015') {
+                        entry['generator'] = `Visual Studio 14 ${year}`
+                    } else if (year === '2013') {
+                        entry['generator'] = `Visual Studio 12 ${year}`
+                    } else if (year === '2012') {
+                        entry['generator'] = `Visual Studio 11 ${year}`
+                    } else if (year === '2010') {
+                        entry['generator'] = `Visual Studio 10 ${year}`
+                    } else if (year === '2008') {
+                        entry['generator'] = `Visual Studio 9 ${year}`
+                    } else if (year === '2005') {
+                        entry['generator'] = `Visual Studio 8 ${year}`
+                    }
+                }
             }
 
             // Latest flag
