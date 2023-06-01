@@ -54,6 +54,7 @@ steps:
     ccflags: ${{ matrix.ccflags }}
     cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
     cxxflags: ${{ matrix.cxxflags }}
+    shared: ${{ matrix.shared }}
     extra-args: -D BOOST_SRC_DIR="${{ steps.boost-clone.outputs.boost-dir }}"
     ref-source-dir: .
 ----
@@ -77,6 +78,7 @@ This should usually match the `cmake_minimum_required` defined in your CMakeList
 |`cxx` |Path to C++ compiler. |
 |`cxxstd` |List of standards with which cmake will build and test the program. |
 |`cxxflags` |Flags to be used with the C++ compiler. |
+|`shared` |Determines if add_library should create shared libraries (`BUILD_SHARED_LIBS`). |`false`
 |`toolchain` |Path to toolchain. |
 |`generator` |Generator name. |
 |`build-type` |Build type. |`Release`

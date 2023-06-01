@@ -77,6 +77,10 @@ inputs:
     description: 'Flags to be used with the C++ compiler.'
     required: false
     default: ''
+  shared:
+    description: 'Determines if add_library should create shared libraries (`BUILD_SHARED_LIBS`).'
+    required: false
+    default: 'false'
   toolchain:
     description: 'Path to toolchain.'
     required: false
@@ -315,6 +319,7 @@ runs:
             CONFIGURE_ARGS+=(${{ (inputs.toolchain && format('"-D" "CMAKE_TOOLCHAIN_FILE={0}"', inputs.toolchain)) || '' }})
             CONFIGURE_ARGS+=(${{ (inputs.install-prefix && format('"-D" "CMAKE_INSTALL_PREFIX={0}"', inputs.install-prefix)) || '' }})
             CONFIGURE_ARGS+=(${{ (inputs.run-tests && '"-D" "BUILD_TESTING=ON"') || '' }})
+            CONFIGURE_ARGS+=(${{ (inputs.shared && '"-D" "BUILD_SHARED_LIBS=ON"') || '' }})
             CONFIGURE_ARGS+=(${{ (inputs.cc && format('"-D" "CMAKE_C_COMPILER={0}"', steps.params.outputs.cc)) || '' }})
             CONFIGURE_ARGS+=(${{ (inputs.cxx && format('"-D" "CMAKE_CXX_COMPILER={0}"', steps.params.outputs.cxx)) || '' }})
             CONFIGURE_ARGS+=(${{ (inputs.ccflags && format('"-D" "CMAKE_C_FLAGS={0}"', inputs.ccflags)) || '' }})
