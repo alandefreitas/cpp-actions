@@ -198,6 +198,7 @@ Other entries will also include this factor as false.
 `clang Time-Trace`
 
 `mingw Shared`
+|`generate-summary` |Generate summary with the complete matrix. |`true`
 |`trace-commands` |Trace commands executed by the action. |`false`
 |===
 

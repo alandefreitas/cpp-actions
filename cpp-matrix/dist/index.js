@@ -496,42 +496,43 @@ function splitRanges(range, versions, policy = SubrangePolicies.DEFAULT) {
 
 function compilerSupportsStd(compiler, version, cxxstd) {
     if (compiler === 'gcc') {
-        return (cxxstd <= 2020 && semver.satisfies(version, '>=11')) ||
-            (cxxstd <= 2017 && semver.satisfies(version, '>=7')) ||
-            (cxxstd <= 2014 && semver.satisfies(version, '>=6')) ||
-            (cxxstd <= 2011 && semver.satisfies(version, '>=4')) ||
-            cxxstd <= 2003
+        return (cxxstd <= 2020 && semver.satisfies(version, '>=11')) || (cxxstd <= 2017 && semver.satisfies(version, '>=7')) || (cxxstd <= 2014 && semver.satisfies(version, '>=6')) || (cxxstd <= 2011 && semver.satisfies(version, '>=4')) || cxxstd <= 2003
     }
     if (compiler === 'clang') {
-        return (cxxstd <= 2020 && semver.satisfies(version, '>=12')) ||
-            (cxxstd <= 2017 && semver.satisfies(version, '>=6')) ||
-            (cxxstd <= 2014 && semver.satisfies(version, '>=4')) ||
-            (cxxstd <= 2011 && semver.satisfies(version, '>=3')) ||
-            cxxstd <= 2003
+        return (cxxstd <= 2020 && semver.satisfies(version, '>=12')) || (cxxstd <= 2017 && semver.satisfies(version, '>=6')) || (cxxstd <= 2014 && semver.satisfies(version, '>=4')) || (cxxstd <= 2011 && semver.satisfies(version, '>=3')) || cxxstd <= 2003
     }
     if (compiler === 'msvc') {
-        return (cxxstd <= 2020 && semver.satisfies(version, '>=14.30')) ||
-            (cxxstd <= 2017 && semver.satisfies(version, '>=14.20')) ||
-            (cxxstd <= 2014 && semver.satisfies(version, '>=14.11')) ||
-            (cxxstd <= 2011 && semver.satisfies(version, '>=14')) ||
-            (cxxstd <= 2011 && semver.satisfies(version, '>=14.1')) ||
-            cxxstd <= 2003
+        return (cxxstd <= 2020 && semver.satisfies(version, '>=14.30')) || (cxxstd <= 2017 && semver.satisfies(version, '>=14.20')) || (cxxstd <= 2014 && semver.satisfies(version, '>=14.11')) || (cxxstd <= 2011 && semver.satisfies(version, '>=14')) || (cxxstd <= 2011 && semver.satisfies(version, '>=14.1')) || cxxstd <= 2003
     }
     return false
 }
 
 function humanizeCompilerName(compiler) {
-    human_compiler_names = {
+    const human_compiler_names = {
         'gcc': 'GCC',
         'clang': 'Clang',
         'apple-clang': 'Apple-Clang',
         'msvc': 'MSVC',
-        'mingw': 'MinGW',
-    }
+        'mingw': 'MinGW'
+    };
     if (compiler in human_compiler_names) {
         return human_compiler_names[compiler]
     }
     return compiler
+}
+
+function compilerEmoji(compiler, with_emoji = false) {
+    const compiler_emojis = {
+        'gcc': '🐧',
+        'clang': '🔧',
+        'apple-clang': '🍏',
+        'msvc': '🪟',
+        'mingw': '🪓'
+    };
+    if (compiler in compiler_emojis) {
+        return compiler_emojis[compiler]
+    }
+    return '🛠️'
 }
 
 function generateMatrix(compilerVersions, standards, max_standards, latest_factors, factors) {
@@ -754,35 +755,35 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
 
     // Patch with recommended flags for special factors
     for (let entry of matrix) {
-        matrix['build-type'] = 'Release'
+        entry['build-type'] = 'Release'
         entry['cxxflags'] = ''
         entry['ccflags'] = ''
         if ('asan' in entry && entry['asan'] === true) {
             if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
                 entry['cxxflags'] += ' -fsanitize=address'
                 entry['ccflags'] += ' -fsanitize=address'
-                matrix['build-type'] = 'Debug'
+                entry['build-type'] = 'Debug'
             }
         }
         if ('ubsan' in entry && entry['ubsan'] === true) {
             if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
                 entry['cxxflags'] += ' -fsanitize=undefined'
                 entry['ccflags'] += ' -fsanitize=undefined'
-                matrix['build-type'] = 'Debug'
+                entry['build-type'] = 'Debug'
             }
         }
         if ('msan' in entry && entry['msan'] === true) {
             if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
                 entry['cxxflags'] += ' -fsanitize=memory'
                 entry['ccflags'] += ' -fsanitize=memory'
-                matrix['build-type'] = 'Debug'
+                entry['build-type'] = 'Debug'
             }
         }
         if ('tsan' in entry && entry['tsan'] === true) {
             if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
                 entry['cxxflags'] += ' -fsanitize=thread'
                 entry['ccflags'] += ' -fsanitize=thread'
-                matrix['build-type'] = 'Debug'
+                entry['build-type'] = 'Debug'
             }
         }
         if ('coverage' in entry && entry['coverage'] === true) {
@@ -793,7 +794,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                 entry['cxxflags'] += ' -fprofile-instr-generate -fcoverage-mapping'
                 entry['ccflags'] += ' -fprofile-instr-generate -fcoverage-mapping'
             }
-            matrix['build-type'] = 'Debug'
+            entry['build-type'] = 'Debug'
         }
         if ('time-trace' in entry && entry['time-trace'] === true) {
             if (entry['compiler'] === 'clang') {
@@ -805,6 +806,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
             }
         }
         entry['cxxflags'] = entry['cxxflags'].trim()
+        entry['ccflags'] = entry['ccflags'].trim()
     }
 
     // Sort matrix
@@ -895,6 +897,193 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
     return matrix
 }
 
+function factorEmoji(factor) {
+    const factor_emojis = {
+        'x86': '💻',
+        'shared': '📚',
+        'ubsan': '🔬',
+        'tsan': '🕵️‍♂️',
+        'coverage': '📊',
+        'asan': '🛡️',
+        'time-trace': '⏱️'
+    };
+    if (factor in factor_emojis) {
+        return factor_emojis[factor]
+    }
+    return '🔢'
+}
+
+function buildTypeEmoji(build_type) {
+    const build_type_emojis = {
+        'debug': '🐞',
+        'release': '🚀',
+        'relwithdebinfo': '🔍',
+        'minsizerel': '💡'
+    };
+    lc_build_type = build_type.toLowerCase()
+    if (lc_build_type in build_type_emojis) {
+        return build_type_emojis[lc_build_type]
+    }
+    return '🏗️'
+}
+
+function osEmoji(os) {
+    const os_emojis = {
+        'windows': '🪟',
+        'macos': '🍎',
+        'linux': '🐧',
+        'ubuntu': '🐧',
+        'android': '🤖',
+        'ios': '📱'
+    };
+    lc_os = os.toLowerCase()
+    for (const [key, value] of Object.entries(os_emojis)) {
+        if (lc_os.startsWith(key)) {
+            return value;
+        }
+    }
+    return '🖥️'
+}
+
+function generateTable(matrix, latest_factors, factors) {
+    if (matrix.length === 0) {
+        return [];
+    }
+
+    let allFactors = []
+    Object.values(latest_factors).forEach(factors => {
+        allFactors.push(...factors);
+    });
+    Object.values(factors).forEach(factors => {
+        allFactors.push(...factors);
+    });
+    allFactors = [...new Set(allFactors)];
+
+    const allFactorKeys = allFactors.map(v => v.toLowerCase())
+
+    const headerEmojis = ['📋', '🖥️', '🔧', '📚', '🏗️', '🔢', '🔨', '🛠️'];
+    const headerNames = ['Name', 'Environment', 'Compiler', 'C++ Standard', 'Build Type', 'Factors', 'Generator', 'Toolset'];
+    const headerWithEmojis = headerNames.map((element, index) => `${headerEmojis[index]} ${element}`);
+    const headerRow = headerWithEmojis.map(key => ({data: key, header: true}))
+
+    let table = [headerRow];
+
+    function transformStdString(inputString) {
+        if (inputString === undefined || inputString === null || inputString === '') {
+            return "System Default"
+        }
+        const versions = inputString.split(',');
+        const transformedString = versions.map((version, index) => {
+            if (index === versions.length - 1) {
+                return `C++${version}`;
+            } else {
+                return `C++${version},`;
+            }
+        }).join(' ');
+        const lastIndex = transformedString.lastIndexOf(',');
+        if (lastIndex !== -1) {
+            const finalString = transformedString.substring(0, lastIndex) + ' and' + transformedString.substring(lastIndex + 1);
+            return finalString;
+        }
+        return transformedString;
+    }
+
+
+    for (const entry of matrix) {
+        let row = []
+        // Name
+        row.push(`${entry['name']}`)
+        // Environment
+        if ('container' in entry) {
+            row.push(`${osEmoji(entry['container'])} <code>${entry['container']}</code> on <code>${entry['runs-on']}</code>`)
+        } else {
+            row.push(`${osEmoji(entry['runs-on'])} <code>${entry['runs-on']}</code>`)
+        }
+        // Compiler
+        row.push(`${compilerEmoji(entry['compiler'])} ${humanizeCompilerName(entry['compiler'])} ${entry['version']}`)
+        let nameEmojis = [compilerEmoji(entry['compiler'])]
+        // Standards
+        row.push(`${transformStdString(entry['cxxstd'])}`)
+
+        // Build type
+        if ('build-type' in entry) {
+            row.push(`${buildTypeEmoji(entry['build-type'])} ${entry['build-type']}`)
+        } else {
+            row.push('')
+        }
+        // Factors
+        let cxxflags = ''
+        if (entry['cxxflags'] === entry['ccflags']) {
+            if (entry['cxxflags'].length !== 0) {
+                cxxflags = `<code>${entry['cxxflags']}</code>`
+            } else {
+                cxxflags = ''
+            }
+        } else {
+            if (entry['cxxflags'].length !== 0 || entry['ccflags'].length !== 0) {
+                cxxflags = `C++: <code>${entry['cxxflags']}</code>, C: <code>${entry['ccflags']}</code>`
+            } else {
+                cxxflags = ''
+            }
+        }
+
+        if (entry['is-main'] === true) {
+            if (entry['is-earliest'] === true) {
+                if (entry['version'] == '*') {
+                    row.push(`💻 System ${humanizeCompilerName(entry['compiler'])} version`)
+                } else {
+                    row.push(`💻 Unique ${humanizeCompilerName(entry['compiler'])} version`)
+                }
+                nameEmojis.push('💻')
+            } else {
+                row.push(`🆕 Latest ${humanizeCompilerName(entry['compiler'])} version`)
+                nameEmojis.push('🆕')
+            }
+        } else if (entry['is-earliest'] === true) {
+            row.push(`🕒 Earliest ${humanizeCompilerName(entry['compiler'])} version`)
+            nameEmojis.push('🕒')
+        } else {
+            let factors = []
+            for (let i = 0; i < allFactors.length && i < allFactorKeys.length; i++) {
+                const fact = allFactors[i];
+                const key = allFactorKeys[i];
+                if (entry[key] === true) {
+                    factors.push(`${factorEmoji(key)} ${fact}`)
+                    nameEmojis.push(factorEmoji(key))
+                }
+            }
+            let factors_str = factors.join(', ')
+            if (factors_str === '') {
+                factors_str = '-'
+            }
+            if (cxxflags === '') {
+                row.push(factors_str)
+            } else {
+                row.push(`${factors_str} 🚩 ${cxxflags}`)
+            }
+        }
+        // Generator
+        if ('generator' in entry) {
+            row.push(entry['generator'])
+        } else {
+            row.push('System Default')
+        }
+        // Toolset
+        if ('b2-toolset' in entry) {
+            row.push(entry['b2-toolset'])
+        } else {
+            row.push('')
+        }
+
+        // Apply emojis to name
+        row[0] = `${nameEmojis.join('')} ${row[0]}`
+
+        table.push(row)
+    }
+
+    return table;
+}
+
 function run() {
     try {
         trace_commands = isTruthy(core.getInput('trace-commands'));
@@ -917,6 +1106,16 @@ function run() {
 
         const matrix = generateMatrix(compiler_versions, standards, max_standards, latest_factors, factors)
         core.setOutput("matrix", matrix);
+
+        const generate_summary = isTruthy(core.getInput('generate-summary'));
+        if (generate_summary) {
+            const table = generateTable(matrix, latest_factors, factors)
+            core.summary.addHeading('C++ Test Matrix').addTable(table).write().then(result => {
+                log('Table generated', result);
+            }).catch(error => {
+                log('An error occurred generating the table:', error);
+            });
+        }
     } catch (error) {
         core.setFailed(error.message);
     }
@@ -937,7 +1136,8 @@ module.exports = {
     findMSVCVersions,
     SubrangePolicies,
     splitRanges,
-    generateMatrix
+    generateMatrix,
+    generateTable
 }
 
 /***/ }),

@@ -160,6 +160,11 @@ inputs:
       clang Time-Trace
       mingw Shared
 
+  generate-summary:
+    description: 'Generate summary with the complete matrix.'
+    required: false
+    default: 'true'
+
   trace-commands:
     description: 'Trace commands executed by the action.'
     required: false

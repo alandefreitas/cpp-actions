@@ -106,4 +106,6 @@ describe('generateMatrix', () => {
     const factors = {gcc: ['Asan', 'Shared'], msvc: ['Shared', 'x86']}
     const matrix = generateMatrix(compilerVersions, standards, max_standards, latest_factors, factors)
     expect(matrix.length === 0).toBe(false);
+    const table = generateTable(matrix, latest_factors, factors)
+    expect(table.length === 0).toBe(false);
 });
