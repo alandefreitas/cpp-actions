@@ -1030,6 +1030,7 @@ function generateTable(matrix, latest_factors, factors) {
 
         if (entry['is-main'] === true) {
             if (entry['is-earliest'] === true) {
+                // This is latest, earliest, and main
                 if (entry['version'] == '*') {
                     row.push(`💻 System ${humanizeCompilerName(entry['compiler'])} version`)
                 } else {
@@ -1040,9 +1041,6 @@ function generateTable(matrix, latest_factors, factors) {
                 row.push(`🆕 Latest ${humanizeCompilerName(entry['compiler'])} version`)
                 nameEmojis.push('🆕')
             }
-        } else if (entry['is-earliest'] === true) {
-            row.push(`🕒 Earliest ${humanizeCompilerName(entry['compiler'])} version`)
-            nameEmojis.push('🕒')
         } else {
             let factors = []
             for (let i = 0; i < allFactors.length && i < allFactorKeys.length; i++) {
@@ -1055,7 +1053,12 @@ function generateTable(matrix, latest_factors, factors) {
             }
             let factors_str = factors.join(', ')
             if (factors_str === '') {
-                factors_str = `(Intermediary ${humanizeCompilerName(entry['compiler'])} version)`
+                if (entry['is-earliest'] === true) {
+                    factors_str = `🕒 Earliest ${humanizeCompilerName(entry['compiler'])} version`
+                    nameEmojis.push('🕒')
+                } else {
+                    factors_str = `(Intermediary ${humanizeCompilerName(entry['compiler'])} version)`
+                }
             }
             if (cxxflags === '') {
                 row.push(factors_str)
