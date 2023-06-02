@@ -178,6 +178,12 @@ jobs:
           output-path: CHANGELOG.md
           trace-commands: true
 
+      - name: Changelog summary
+        run: |
+          echo "# Changelog" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat CHANGELOG.md >> $GITHUB_STEP_SUMMARY
+
       - name: Remove existing master release
         if: github.ref_name != 'develop' && !startsWith(github.ref, 'refs/tags/')
         uses: dev-drprasad/delete-tag-and-release@v1.0
