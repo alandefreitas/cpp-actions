@@ -630,11 +630,12 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
 
             // Recommended b2-toolset
             if (compiler === 'gcc') {
-                if (semver.satisfies(minSubrangeVersion, '>=5')) {
-                    entry['b2-toolset'] = `gcc-${minSubrangeVersion.major}`
-                } else {
-                    entry['b2-toolset'] = `gcc-${minSubrangeVersion.major}.${minSubrangeVersion.minor}`
-                }
+                entry['b2-toolset'] = `gcc`
+                // if (semver.satisfies(minSubrangeVersion, '>=5')) {
+                //     entry['b2-toolset'] = `gcc-${minSubrangeVersion.major}`
+                // } else {
+                //     entry['b2-toolset'] = `gcc-${minSubrangeVersion.major}.${minSubrangeVersion.minor}`
+                // }
             } else if (compiler === 'clang' || compiler === 'apple-clang') {
                 entry['b2-toolset'] = `clang`
             } else if (compiler === 'msvc') {
@@ -1054,7 +1055,7 @@ function generateTable(matrix, latest_factors, factors) {
             }
             let factors_str = factors.join(', ')
             if (factors_str === '') {
-                factors_str = '-'
+                factors_str = `(Intermediary ${humanizeCompilerName(entry['compiler'])} version)`
             }
             if (cxxflags === '') {
                 row.push(factors_str)

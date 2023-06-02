@@ -13,16 +13,23 @@ inputs:
     required: false
     default: '.'
   build-variant:
-    description: 'Custom build variants.'
+    description: |
+      Custom build variants. If the provided variant is a CMake build-type, the 
+      argument is mapped to the equivalent b2 variant:
+      
+      - `Release` -> `release`
+      
+      - `Debug` -> `debug`
+      
+      - `RelWithDebInfo` -> `profile`
+      
+      - `<other>` -> lowercase <other>
+
     required: false
     default: ''
   modules:
     description: 'The list of modules we should test.'
     required: true
-    default: ''
-  gcc-toolchain:
-    description: 'Create a special GCC toolchain for this version of GCC and update user-config.jam'
-    required: false
     default: ''
   toolset:
     description: 'Toolset name.'
@@ -34,10 +41,6 @@ inputs:
     default: ''
   cxx:
     description: 'Path to C++ compiler.'
-    required: false
-    default: ''
-  cc:
-    description: 'Path to C compiler.'
     required: false
     default: ''
   cxxflags:
@@ -98,55 +101,9 @@ runs:
       run: |
         # Bootstrap headers
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        ./bootstrap.sh
-        ./b2 headers
-
-    - name: Setup GCC Toolchain
-      if: ${{ inputs.gcc-toolchain }}
-      shell: bash
-      run: |
-        # Setup GCC Toolchain
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        # Create dir for toolchain
-        GCC_TOOLCHAIN_ROOT="$HOME/gcc-toolchain"
-        mkdir -p "$GCC_TOOLCHAIN_ROOT"
-        echo "GCC_TOOLCHAIN_ROOT=\"$GCC_TOOLCHAIN_ROOT\"" >> $GITHUB_ENV
-        
-        # Create symlinks for compiler into the toolchain dir
-        MULTIARCH_TRIPLET="$(dpkg-architecture -qDEB_HOST_MULTIARCH)"
-        ln -s /usr/include "$GCC_TOOLCHAIN_ROOT/include"
-        ln -s /usr/bin "$GCC_TOOLCHAIN_ROOT/bin"
-        mkdir -p "$GCC_TOOLCHAIN_ROOT/lib/gcc/$MULTIARCH_TRIPLET"
-        ln -s "/usr/lib/gcc/$MULTIARCH_TRIPLET/${{inputs.gcc-toolchain}}" "$GCC_TOOLCHAIN_ROOT/lib/gcc/$MULTIARCH_TRIPLET/${{inputs.gcc-toolchain}}"
-        
-        # Write toolchain data to ~/user-config.jam
-        cxx="${{ inputs.cxx }}"
-        cxx=$(basename $cxx)
-        if [[ $string == gcc* ]]; then
-          # when cxx is gcc, the toolchain already sets the compiler
-          cxx=""
-        fi
-        if [ -n "$cxx" -o -n "$GCC_TOOLCHAIN_ROOT" ]; then
-            echo -n "using ${{inputs.toolset}} : : ${{inputs.cxx}}" > ~/user-config.jam
-            if [ -n "$GCC_TOOLCHAIN_ROOT" ]; then
-                echo -n " : <compileflags>\"--gcc-toolchain=$GCC_TOOLCHAIN_ROOT\" <linkflags>\"--gcc-toolchain=$GCC_TOOLCHAIN_ROOT\"" >> ~/user-config.jam
-            fi
-            echo " ;" >> ~/user-config.jam
-        fi
-
-    - name: Setup user-config.jam
-      if: ${{ !inputs.gcc-toolchain }}
-      shell: bash
-      run: |
-        # Setup user-config.jam
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        if [ -n "${{ inputs.cxx }}" -o -n "$GCC_TOOLCHAIN_ROOT" ]; then
-            echo -n "using ${{ inputs.toolset }} : : ${{ inputs.cxx }}" > ~/user-config.jam
-            if [ -n "$GCC_TOOLCHAIN_ROOT" ]
-            then
-                echo -n " : <compileflags>\"--gcc-toolchain=$GCC_TOOLCHAIN_ROOT\" <linkflags>\"--gcc-toolchain=$GCC_TOOLCHAIN_ROOT\"" >> ~/user-config.jam
-            fi
-            echo " ;" >> ~/user-config.jam
+        if [ -f "./bootstrap.sh" ]; then
+          ./bootstrap.sh
+          ./b2 headers
         fi
 
     - name: B2 Workflow
@@ -160,6 +117,13 @@ runs:
         B2_ARGS+=(${{ (inputs.toolset && format('"toolset={0}"', inputs.toolset)) || '' }})
         B2_ARGS+=(${{ (inputs.address-model && format('"address-model={0}"', inputs.address-model)) || '' }})
         B2_ARGS+=(${{ (inputs.cxxstd && format('"cxxstd={0}"', inputs.cxxstd)) || '' }})
+        
+        # Set the compiler the toolset should use
+        if [ -n "${{ inputs.cxx }}" ] && [ -n "${{ inputs.toolset }}" ]; then
+          cxx="${{ inputs.cxx }}"
+          cxx="${cxx//\\/\\\\}"  # Replace single backslashes with double backslashes
+          echo -n "using ${{ inputs.toolset }} : : $cxx ;" > ~/user-config.jam
+        fi
         
         build_variant="${{ inputs.build-variant }}"
         if [ "${{ inputs.build-variant }}" != "" ]; then

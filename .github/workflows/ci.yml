@@ -99,8 +99,7 @@ jobs:
           modules: variant2
           toolset: ${{ matrix.b2-toolset }}
           build-variant: ${{ matrix.build-type }}
-          cxx: ${{ (startsWith(matrix.cxx, 'clang') && (steps.setup-cpp.outputs.cxx || matrix.cxx)) || '' }}
-          cc: ${{ (startsWith(matrix.cxx, 'clang') && (steps.setup-cpp.outputs.cc || matrix.cc)) || '' }}
+          cxx: ${{ (steps.setup-cpp.outputs.cxx || matrix.cxx) || '' }}
           cxxstd: ${{ matrix.cxxstd }}
           address-model: ${{ (matrix.x86 && '32') || '64' }}
           asan: ${{ matrix.asan }}

@@ -38,7 +38,17 @@ steps:
 |===
 |Parameter |Description |Default
 |`source-dir` |The boost source directory. |`.`
-|`build-variant` |Custom build variants. |
+|`build-variant` |Custom build variants. If the provided variant is a CMake build-type, the 
+argument is mapped to the equivalent b2 variant:
+
+- `Release` -> `release`
+
+- `Debug` -> `debug`
+
+- `RelWithDebInfo` -> `profile`
+
+- `<other>` -> lowercase <other>
+. |
 |`modules` |The list of modules we should test. |
 |`toolset` |Toolset name. |
 |`address-model` |Valid b2 list of address models. |

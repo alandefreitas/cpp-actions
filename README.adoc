@@ -620,7 +620,17 @@ steps:
 |===
 |Parameter |Description |Default
 |`source-dir` |The boost source directory. |`.`
-|`build-variant` |Custom build variants. |
+|`build-variant` |Custom build variants. If the provided variant is a CMake build-type, the 
+argument is mapped to the equivalent b2 variant:
+
+- `Release` -> `release`
+
+- `Debug` -> `debug`
+
+- `RelWithDebInfo` -> `profile`
+
+- `<other>` -> lowercase <other>
+. |
 |`modules` |The list of modules we should test. |
 |`gcc-toolchain` |Create a special GCC toolchain for this version of GCC and update user-config.jam. |
 |`toolset` |Toolset name. |
