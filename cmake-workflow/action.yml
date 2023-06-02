@@ -314,6 +314,9 @@ runs:
             # Configure step
             CONFIGURE_ARGS=(${{ (steps.setup-cmake.outputs.supports-path-to-build == 'true' && format('"-S" "{0}" "-B" "$std_build_dir"', steps.params.outputs.source_dir)) || '' }})
             CONFIGURE_ARGS+=(${{ (inputs.generator && format('"-G" "{0}"', inputs.generator)) || '' }})
+            if [[ "${{ inputs.cxxflags }}" == *"/m32"* ]] && [[ "${{ inputs.generator }}" == "Visual Studio"* ]]; then
+                CONFIGURE_ARGS+=("-A" "Win32")
+            fi
             CONFIGURE_ARGS+=(${{ (steps.generator.outputs.is_multi_config == 'false' && format('"-D" "CMAKE_BUILD_TYPE={0}"', inputs.build-type || 'Release')) || '' }})
             CONFIGURE_ARGS+=(${{ (steps.generator.outputs.is_multi_config == 'true' && format('"-D" "CMAKE_CONFIGURATION_TYPES={0}"', inputs.build-type || 'Release')) || '' }})
             CONFIGURE_ARGS+=(${{ (inputs.toolchain && format('"-D" "CMAKE_TOOLCHAIN_FILE={0}"', inputs.toolchain)) || '' }})
@@ -322,8 +325,19 @@ runs:
             CONFIGURE_ARGS+=(${{ (inputs.shared && '"-D" "BUILD_SHARED_LIBS=ON"') || '' }})
             CONFIGURE_ARGS+=(${{ (inputs.cc && format('"-D" "CMAKE_C_COMPILER={0}"', steps.params.outputs.cc)) || '' }})
             CONFIGURE_ARGS+=(${{ (inputs.cxx && format('"-D" "CMAKE_CXX_COMPILER={0}"', steps.params.outputs.cxx)) || '' }})
-            CONFIGURE_ARGS+=(${{ (inputs.ccflags && format('"-D" "CMAKE_C_FLAGS={0}"', inputs.ccflags)) || '' }})
-            CONFIGURE_ARGS+=(${{ (inputs.cxxflags && format('"-D" "CMAKE_CXX_FLAGS={0}"', inputs.cxxflags)) || '' }})
+            
+            ccflags="${{ inputs.ccflags }}"
+            ccflags=$(echo "$ccflags" | sed 's/\/m32//g')
+            if [ "$ccflags" != "" ]; then
+                CONFIGURE_ARGS+=("-D" "CMAKE_C_FLAGS=$ccflags")
+            fi
+            
+            cxxflags="${{ inputs.cxxflags }}"
+            cxxflags=$(echo "$cxxflags" | sed 's/\/m32//g')
+            if [ "$cxxflags" != "" ]; then
+                CONFIGURE_ARGS+=("-D" "CMAKE_CXX_FLAGS=$cxxflags")
+            fi
+            
             CONFIGURE_ARGS+=($( [ "$cxxstd" == "defaultcxx" ] && echo "" || echo "-D CMAKE_CXX_STANDARD=$cxxstd" ))
             SOURCE_DIR_ARG=${{ (steps.setup-cmake.outputs.supports-path-to-build == 'false' && format('{0}', steps.params.outputs.source_dir)) || '' }}
         

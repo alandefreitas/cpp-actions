@@ -797,10 +797,20 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
             }
             entry['build-type'] = 'Debug'
         }
+        if ('x86' in entry && entry['x86'] === true) {
+            if (entry['compiler'] === 'msvc') {
+                entry['cxxflags'] += ' /m32'
+                entry['ccflags'] += ' /m32'
+            } else if (entry['compiler'] === 'clang') {
+                entry['cxxflags'] += ' -m32'
+                entry['ccflags'] += ' -m32'
+            }
+            entry['build-type'] = 'Debug'
+        }
         if ('time-trace' in entry && entry['time-trace'] === true) {
             if (entry['compiler'] === 'clang') {
                 const v = semver.minSatisfying(findClangVersions(), entry['version'])
-                if (semver.satisfies(v, entry['version'])) {
+                if (semver.satisfies(v, '>=9')) {
                     entry['cxxflags'] += ' -ftime-trace'
                     entry['ccflags'] += ' -ftime-trace'
                 }
