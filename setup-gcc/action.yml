@@ -476,7 +476,8 @@ runs:
           else
             sudo_prefix=""
           fi
-          $sudo_prefix apt-get install -y "$package"
+        
+          $sudo_prefix apt-get -o Acquire::Retries=5 install -y "$package"
         
           # find the executable: apt-get should install it as gcc-$major
           if command -v "g++-$major.$minor" &> /dev/null; then
