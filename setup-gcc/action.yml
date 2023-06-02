@@ -659,6 +659,9 @@ runs:
           echo -E "cc=$gcc_bin_path/gcc" >> $GITHUB_OUTPUT
           echo -E "cxx=$gcc_bin_path/g++" >> $GITHUB_OUTPUT
           echo "version=$version_candidate" >> $GITHUB_OUTPUT
+        else
+          echo "::error title:Setup GCC::Setup GCC: Cannot find binaries for GCC $release"
+          false
         fi
 
 

@@ -655,6 +655,9 @@ runs:
           echo -E "cc=$clang_bin_path/clang" >> $GITHUB_OUTPUT
           echo -E "cxx=$clang_bin_path/clang++" >> $GITHUB_OUTPUT
           echo "version=$version_candidate" >> $GITHUB_OUTPUT
+        else
+          echo "::error title:Setup Clang::Setup Clang: Cannot find binaries for Clang $release"
+          false
         fi
 
     - name: Clang cache
