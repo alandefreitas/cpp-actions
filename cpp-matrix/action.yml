@@ -107,6 +107,7 @@ inputs:
       msvc >=14.2
       apple-clang *
       mingw *
+      clang-cl *
 
   standards:
     description: |

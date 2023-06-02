@@ -122,7 +122,10 @@ runs:
         if [ -n "${{ inputs.cxx }}" ] && [ -n "${{ inputs.toolset }}" ]; then
           cxx="${{ inputs.cxx }}"
           cxx="${cxx//\\/\\\\}"  # Replace single backslashes with double backslashes
-          echo -n "using ${{ inputs.toolset }} : : $cxx ;" > ~/user-config.jam
+          toolset="${{ inputs.toolset }}"
+          if [[ $toolset != "clang-win" ]]; then
+              echo -n "using $toolset : : \"$cxx\" ;" > ~/user-config.jam
+          fi
         fi
         
         build_variant="${{ inputs.build-variant }}"
@@ -145,6 +148,10 @@ runs:
         B2_ARGS+=(${{ (inputs.tsan == 'true' && '"thread-sanitizer=on"') || '' }})
         B2_ARGS+=(${{ (inputs.coverage == 'true' && '"coverage=on"') || '' }})
         B2_ARGS+=(${{ (inputs.linkflags && format('"linkflags={0}"', inputs.linkflags)) || '' }})
+        if [[ $toolset == "clang-win" ]]; then
+          B2_ARGS+=("embed-manifest-via=linker")
+        fi
+         
         
         modules="${{ inputs.modules }}"
         for module in ${modules//,/ }

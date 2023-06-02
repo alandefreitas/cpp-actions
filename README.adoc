@@ -165,6 +165,8 @@ For any other compilers, the version requirements will passthrough to the output
 `apple-clang *`
 
 `mingw *`
+
+`clang-cl *`
 |`standards` |A semver range describing what C++ standards should be tested.
 
 The compiler ranges are adjusted to only include compilers that support any subrange of these requirements.
@@ -604,17 +606,20 @@ This action is particularly useful for Boost library proposals.
 [source,yml,subs="attributes+"]
 ----
 steps:
-- name: Test Boost.Variant2
+- name: B2 Workflow
   uses: alandefreitas/cpp-actions/b2-workflow@master
   with:
     source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
     modules: variant2
     toolset: ${{ matrix.b2-toolset }}
+    build-variant: ${{ matrix.build-type }}
+    cxx: ${{ (steps.setup-cpp.outputs.cxx || matrix.cxx) || '' }}
     cxxstd: ${{ matrix.cxxstd }}
-    cxx: ${{ (startsWith(matrix.cxx, 'clang') && (steps.setup-cpp.outputs.cxx || matrix.cxx))
-      || '' }}
     address-model: ${{ (matrix.x86 && '32') || '64' }}
+    asan: ${{ matrix.asan }}
     ubsan: ${{ matrix.ubsan }}
+    tsan: ${{ matrix.tsan }}
+    shared: ${{ matrix.shared }}
 ----
 
 ==== Input Parameters
@@ -634,14 +639,18 @@ argument is mapped to the equivalent b2 variant:
 - `<other>` -> lowercase <other>
 . |
 |`modules` |The list of modules we should test. |
-|`gcc-toolchain` |Create a special GCC toolchain for this version of GCC and update user-config.jam. |
 |`toolset` |Toolset name. |
 |`address-model` |Valid b2 list of address models. |
 |`cxx` |Path to C++ compiler. |
-|`cxxflags` |Extra compiler flags. |
+|`cxxflags` |Extra C++ compiler flags. |
+|`ccflags` |Extra C compiler flags. |
+|`shared` |Build shared libraries. |
+|`asan` |Enable address-sanitizer. |
+|`ubsan` |Enable undefined-sanitizer. |
+|`tsan` |Enable thread-sanitizer. |
+|`coverage` |Enable coverage. |
 |`linkflags` |Extra linker flags. |
 |`cxxstd` |List of standards with which b2 will build and test the program. |
-|`ubsan` |Whether the undefined behavior sanitizer should be used. |`false`
 |`threading` |b2 threading option. |
 |`trace-commands` |Trace commands executed by the workflow. |`false`
 |===

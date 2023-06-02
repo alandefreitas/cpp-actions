@@ -100,13 +100,15 @@ function normalizeCppVersionRequirement(range) {
 function normalizeCompilerName(name) {
     const lowerCaseName = name.toLowerCase();
 
-    if (lowerCaseName.startsWith('gcc') || lowerCaseName.startsWith('g++') || lowerCaseName.startsWith('gcc-')) {
+    if (['gcc', 'g++', 'gcc-'].some(s => lowerCaseName.startsWith(s))) {
         return 'gcc';
-    } else if (lowerCaseName.startsWith('clang') || lowerCaseName.startsWith('clang++') || lowerCaseName.startsWith('llvm')) {
+    } else if (['clang-cl', 'clang-win'].some(s => lowerCaseName.startsWith(s))) {
+        return 'clang-cl';
+    } else if (['clang', 'clang++', 'llvm'].some(s => lowerCaseName.startsWith(s))) {
         return 'clang';
-    } else if (lowerCaseName.startsWith('msvc') || lowerCaseName.startsWith('cl') || lowerCaseName.startsWith('visual studio') || lowerCaseName.startsWith('vc')) {
+    } else if (['msvc', 'cl', 'visual studio', 'vc'].some(s => lowerCaseName.startsWith(s))) {
         return 'msvc';
-    } else if (lowerCaseName.startsWith('min-gw') || lowerCaseName.startsWith('mingw')) {
+    } else if (['min-gw', 'mingw'].some(s => lowerCaseName.startsWith(s))) {
         return 'mingw';
     }
 
@@ -507,7 +509,8 @@ function humanizeCompilerName(compiler) {
         'clang': 'Clang',
         'apple-clang': 'Apple-Clang',
         'msvc': 'MSVC',
-        'mingw': 'MinGW'
+        'mingw': 'MinGW',
+        'clang-cl': 'Windows-Clang'
     };
     if (compiler in human_compiler_names) {
         return human_compiler_names[compiler]
@@ -521,7 +524,8 @@ function compilerEmoji(compiler, with_emoji = false) {
         'clang': '🔧',
         'apple-clang': '🍏',
         'msvc': '🪟',
-        'mingw': '🪓'
+        'mingw': '🪓',
+        'clang-cl': '🛠️'
     };
     if (compiler in compiler_emojis) {
         return compiler_emojis[compiler]
@@ -583,6 +587,9 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
             } else if (compiler === 'apple-clang') {
                 entry['cxx'] = `clang++`
                 entry['cc'] = `clang`
+            } else if (compiler === 'clang-cl') {
+                entry['cxx'] = `clang++-cl`
+                entry['cc'] = `clang-cl`
             } else if (compiler === 'mingw') {
                 entry['cxx'] = `g++`
                 entry['cc'] = `gcc`
@@ -618,24 +625,19 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                 }
             } else if (compiler === 'apple-clang') {
                 entry['runs-on'] = 'macos-11'
-            } else if (compiler === 'mingw') {
+            } else if (['mingw', 'clang-cl'].includes(compiler)) {
                 entry['runs-on'] = 'windows-2022'
             }
 
             // Recommended b2-toolset
-            if (compiler === 'gcc') {
+            if (['mingw', 'gcc'].includes(compiler)) {
                 entry['b2-toolset'] = `gcc`
-                // if (semver.satisfies(minSubrangeVersion, '>=5')) {
-                //     entry['b2-toolset'] = `gcc-${minSubrangeVersion.major}`
-                // } else {
-                //     entry['b2-toolset'] = `gcc-${minSubrangeVersion.major}.${minSubrangeVersion.minor}`
-                // }
-            } else if (compiler === 'clang' || compiler === 'apple-clang') {
+            } else if (['clang', 'apple-clang'].includes(compiler)) {
                 entry['b2-toolset'] = `clang`
             } else if (compiler === 'msvc') {
                 entry['b2-toolset'] = `msvc`
-            } else if (compiler === 'mingw') {
-                entry['b2-toolset'] = `gcc`
+            } else if (compiler === 'clang-cl') {
+                entry['b2-toolset'] = `clang-win`
             }
 
             // Recommended cmake generator

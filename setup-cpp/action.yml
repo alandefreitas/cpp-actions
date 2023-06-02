@@ -247,6 +247,56 @@ runs:
           false
         fi
 
+    - name: Setup Clang-CL
+      shell: bash
+      if: ${{ (steps.split-compiler.outputs.compiler == 'clang-cl' || steps.split-compiler.outputs.compiler == 'clang') && runner.os == 'Windows' }}
+      id: setup-clang-cl
+      run: |
+        # Output information about the compiler we setup up
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+        
+        cc_path=""
+        cxx_path=""
+        output=$(where clang-cl)
+        if [ "$output" == "" ]; then
+            output=$(where clang)
+        fi
+        
+        while IFS= read -r line; do
+          line=${line%$'\r'}
+          cc_path="$line"
+          cxx_path="${line/clang/clang++}"
+          if [[ -f "$cxx_path" ]]; then
+            # Corresponding g++ executable found: $cxx_path
+            break
+          else
+            cxx_path="$cc_path"
+          fi
+        done <<< "$output"
+        
+        if [ "$cc_path" != "" ] && [ "$cxx_path" != "" ]; then 
+          echo -E "cc=$cc_path" >> $GITHUB_OUTPUT
+          echo -E "cxx=$cxx_path" >> $GITHUB_OUTPUT
+          VERSION_OUTPUT=$("$cxx_path" --version)
+          regex='([0-9]+)\.([0-9]+)\.([0-9]+)'
+          set +e
+          [[ $VERSION_OUTPUT =~ $regex ]]
+          version="${BASH_REMATCH[0]}"
+          major="${BASH_REMATCH[1]}"
+          minor="${BASH_REMATCH[2]}"
+          patch="${BASH_REMATCH[3]}"
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "major=$major" >> $GITHUB_OUTPUT
+          echo "minor=$minor" >> $GITHUB_OUTPUT
+          echo "patch=$patch" >> $GITHUB_OUTPUT
+          bindir=$(dirname "$cxx_path")
+          echo -E "dir=$bindir" >> $GITHUB_OUTPUT
+          set -e
+        else
+          echo "::error title:Setup C++::Setup C++: Cannot find clang-cl in PATH."
+          false
+        fi
+
     - name: Outputs
       shell: bash
       id: features
@@ -254,11 +304,11 @@ runs:
         # Output information about the compiler we setup up
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }} 
         
-        echo -E "cc=${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || steps.setup-mingw.outputs.cc }}" >> $GITHUB_OUTPUT
-        echo -E "cxx=${{ steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx || steps.setup-mingw.outputs.cxx }}" >> $GITHUB_OUTPUT
-        echo -E "dir=${{ steps.setup-gcc.outputs.dir || steps.setup-clang.outputs.dir || steps.setup-mingw.outputs.dir }}" >> $GITHUB_OUTPUT
-        echo -E "version=${{ steps.setup-gcc.outputs.version || steps.setup-clang.outputs.version || steps.setup-mingw.outputs.version }}" >> $GITHUB_OUTPUT
-        echo -E "version-major=${{ steps.setup-gcc.outputs.version-major || steps.setup-clang.outputs.version-major || steps.setup-mingw.outputs.version-major }}" >> $GITHUB_OUTPUT
-        echo -E "version-minor=${{ steps.setup-gcc.outputs.version-minor || steps.setup-clang.outputs.version-minor || steps.setup-mingw.outputs.version-minor }}" >> $GITHUB_OUTPUT
-        echo -E "version-patch=${{ steps.setup-gcc.outputs.version-patch || steps.setup-clang.outputs.version-patch || steps.setup-mingw.outputs.version-patch }}" >> $GITHUB_OUTPUT
+        echo -E "cc=${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || steps.setup-mingw.outputs.cc || steps.setup-clang-cl.outputs.cc }}" >> $GITHUB_OUTPUT
+        echo -E "cxx=${{ steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx || steps.setup-mingw.outputs.cxx || steps.setup-clang-cl.outputs.cxx }}" >> $GITHUB_OUTPUT
+        echo -E "dir=${{ steps.setup-gcc.outputs.dir || steps.setup-clang.outputs.dir || steps.setup-mingw.outputs.dir || steps.setup-clang-cl.outputs.dir }}" >> $GITHUB_OUTPUT
+        echo -E "version=${{ steps.setup-gcc.outputs.version || steps.setup-clang.outputs.version || steps.setup-mingw.outputs.version || steps.setup-clang-cl.outputs.version }}" >> $GITHUB_OUTPUT
+        echo -E "version-major=${{ steps.setup-gcc.outputs.version-major || steps.setup-clang.outputs.version-major || steps.setup-mingw.outputs.major || steps.setup-clang-cl.outputs.major }}" >> $GITHUB_OUTPUT
+        echo -E "version-minor=${{ steps.setup-gcc.outputs.version-minor || steps.setup-clang.outputs.version-minor || steps.setup-mingw.outputs.minor || steps.setup-clang-cl.outputs.minor }}" >> $GITHUB_OUTPUT
+        echo -E "version-patch=${{ steps.setup-gcc.outputs.version-patch || steps.setup-clang.outputs.version-patch || steps.setup-mingw.outputs.patch || steps.setup-clang-cl.outputs.patch }}" >> $GITHUB_OUTPUT
         echo -E "cache-hit=${{ steps.setup-gcc.outputs.cache-hit || steps.setup-clang.outputs.cache-hit }}" >> $GITHUB_OUTPUT

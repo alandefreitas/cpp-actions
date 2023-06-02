@@ -127,6 +127,8 @@ For any other compilers, the version requirements will passthrough to the output
 `apple-clang *`
 
 `mingw *`
+
+`clang-cl *`
 |`standards` |A semver range describing what C++ standards should be tested.
 
 The compiler ranges are adjusted to only include compilers that support any subrange of these requirements.

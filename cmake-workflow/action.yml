@@ -244,8 +244,8 @@ runs:
         echo -E "cpack_path=$cpack_path" >> $GITHUB_OUTPUT
         
         # C compiler path
-        cc=${{ inputs.cc }}
-        if [ "$cc" != "" ]; then
+        cc="${{ inputs.cc }}"
+        if [[ "$cc" != "" ]] && [[ ! -x "$cc" ]]; then
             if command -v $cc &> /dev/null; then
               cc="$(which $cc)"
             elif command -v /usr/bin/$cc &> /dev/null; then
@@ -255,8 +255,8 @@ runs:
         echo -E "cc=$cc" >> $GITHUB_OUTPUT
         
         # C++ compiler path
-        cxx=${{ inputs.cxx }}
-        if [ "$cxx" != "" ]; then
+        cxx="${{ inputs.cxx }}"
+        if [ "$cxx" != "" ] && [[ ! -x "$cxx" ]]; then
             if command -v $cxx &> /dev/null; then
               cxx="$(which $cxx)"
             elif command -v /usr/bin/$cxx &> /dev/null; then
@@ -266,8 +266,8 @@ runs:
         echo -E "cxx=$cxx" >> $GITHUB_OUTPUT
         
         # std versions
-        cxxstds=${{ inputs.cxxstd }}
-        cxxstds=$(echo "$cxxstds" | sed 's/,/ /g')
+        cxxstds="${{ inputs.cxxstd }}"
+        cxxstds="$(echo "$cxxstds" | sed 's/,/ /g')"
         if [ "$cxxstds" == "" ]; then
             cxxstds="defaultcxx"
         fi
