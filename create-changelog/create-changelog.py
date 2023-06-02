@@ -334,7 +334,7 @@ if __name__ == "__main__":
                                 output += f'{key}: {value}'
                         output += ')'
                     # Commit id
-                    output += f' {commit.hash}'
+                    output += f' {commit.hash[:7]}'
                     output += '\n'
 
     # Output parent release
