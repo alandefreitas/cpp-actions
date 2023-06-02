@@ -36,8 +36,36 @@ inputs:
     description: 'Path to C++ compiler.'
     required: false
     default: ''
+  cc:
+    description: 'Path to C compiler.'
+    required: false
+    default: ''
   cxxflags:
-    description: 'Extra compiler flags.'
+    description: 'Extra C++ compiler flags.'
+    required: false
+    default: ''
+  ccflags:
+    description: 'Extra C compiler flags.'
+    required: false
+    default: ''
+  shared:
+    description: 'Build shared libraries.'
+    required: false
+    default: ''
+  asan:
+    description: 'Enable address-sanitizer.'
+    required: false
+    default: ''
+  ubsan:
+    description: 'Enable undefined-sanitizer.'
+    required: false
+    default: ''
+  tsan:
+    description: 'Enable thread-sanitizer.'
+    required: false
+    default: ''
+  coverage:
+    description: 'Enable coverage.'
     required: false
     default: ''
   linkflags:
@@ -48,10 +76,6 @@ inputs:
     description: 'List of standards with which b2 will build and test the program.'
     required: false
     default: ''
-  ubsan:
-    description: 'Whether the undefined behavior sanitizer should be used.'
-    required: false
-    default: 'false'
   threading:
     description: 'b2 threading option.'
     required: false
@@ -136,11 +160,26 @@ runs:
         B2_ARGS+=(${{ (inputs.toolset && format('"toolset={0}"', inputs.toolset)) || '' }})
         B2_ARGS+=(${{ (inputs.address-model && format('"address-model={0}"', inputs.address-model)) || '' }})
         B2_ARGS+=(${{ (inputs.cxxstd && format('"cxxstd={0}"', inputs.cxxstd)) || '' }})
-        B2_ARGS+=(${{ (inputs.build-variant && format('"variant={0}"', inputs.build-variant)) || '' }})
+        
+        build_variant="${{ inputs.build-variant }}"
+        if [ "${{ inputs.build-variant }}" != "" ]; then
+            build_variant=$(echo "$build_variant" | tr '[:upper:]' '[:lower:]')
+            if [ "$build_variant" == "relwithdebinfo" ]; then
+                build_variant="profile"
+            fi
+            B2_ARGS+=("variant=$build_variant")
+        fi
+        
         B2_ARGS+=(${{ (inputs.threading && format('"threading={0}"', inputs.threading)) || '' }})
-        ${{ (inputs.ubsan == 'true' && 'export UBSAN_OPTIONS="print_stacktrace=1"') || '' }}
-        B2_ARGS+=(${{ (inputs.ubsan == 'true' && '"cxxflags=-fsanitize=undefined -fno-sanitize-recover=undefined" "linkflags=-fsanitize=undefined" "define=UBSAN=1" "debug-symbols=on" "visibility=global"') || '' }})
         B2_ARGS+=(${{ (inputs.cxxflags && format('"cxxflags={0}"', inputs.cxxflags)) || '' }})
+        B2_ARGS+=(${{ (inputs.ccflags && format('"cflags={0}"', inputs.ccflags)) || '' }})
+        B2_ARGS+=(${{ (inputs.shared == 'true' && '"link=shared"') || '' }})
+        B2_ARGS+=(${{ (inputs.asan == 'true' && '"address-sanitizer=on"') || '' }})
+        ${{ (inputs.ubsan == 'true' && 'export UBSAN_OPTIONS="print_stacktrace=1"') || '' }}
+        # B2_ARGS+=(${{ (inputs.ubsan == 'true' && '"cxxflags=-fsanitize=undefined -fno-sanitize-recover=undefined" "linkflags=-fsanitize=undefined" "define=UBSAN=1" "debug-symbols=on" "visibility=global"') || '' }})
+        B2_ARGS+=(${{ (inputs.ubsan == 'true' && '"undefined-sanitizer=on"') || '' }})
+        B2_ARGS+=(${{ (inputs.tsan == 'true' && '"thread-sanitizer=on"') || '' }})
+        B2_ARGS+=(${{ (inputs.coverage == 'true' && '"coverage=on"') || '' }})
         B2_ARGS+=(${{ (inputs.linkflags && format('"linkflags={0}"', inputs.linkflags)) || '' }})
         
         modules="${{ inputs.modules }}"

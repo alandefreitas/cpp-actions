@@ -92,16 +92,22 @@ jobs:
           modules-exclude-paths: ''
           trace-commands: true
 
-      - name: Test Boost.Variant2
+      - name: B2 Workflow
         uses: ./b2-workflow
         with:
           source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
           modules: variant2
           toolset: ${{ matrix.b2-toolset }}
-          cxxstd: ${{ matrix.cxxstd }}
+          build-variant: ${{ matrix.build-type }}
           cxx: ${{ (startsWith(matrix.cxx, 'clang') && (steps.setup-cpp.outputs.cxx || matrix.cxx)) || '' }}
+          cc: ${{ (startsWith(matrix.cxx, 'clang') && (steps.setup-cpp.outputs.cc || matrix.cc)) || '' }}
+          cxxstd: ${{ matrix.cxxstd }}
           address-model: ${{ (matrix.x86 && '32') || '64' }}
+          asan: ${{ matrix.asan }}
           ubsan: ${{ matrix.ubsan }}
+          tsan: ${{ matrix.tsan }}
+          shared: ${{ matrix.shared }}
+          trace-commands: true
 
       - name: CMake Workflow
         uses: ./cmake-workflow
