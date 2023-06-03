@@ -231,17 +231,20 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Test Boost.Variant2
+- name: B2 Workflow
   uses: alandefreitas/cpp-actions/b2-workflow@develop
   with:
     source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
     modules: variant2
     toolset: ${{ matrix.b2-toolset }}
+    build-variant: ${{ matrix.build-type }}
+    cxx: ${{ (steps.setup-cpp.outputs.cxx || matrix.cxx) || '' }}
     cxxstd: ${{ matrix.cxxstd }}
-    cxx: ${{ (startsWith(matrix.cxx, 'clang') &amp;&amp; (steps.setup-cpp.outputs.cxx || matrix.cxx))
-      || '' }}
     address-model: ${{ (matrix.x86 &amp;&amp; '32') || '64' }}
-    ubsan: ${{ matrix.ubsan }}</code></pre>
+    asan: ${{ matrix.asan }}
+    ubsan: ${{ matrix.ubsan }}
+    tsan: ${{ matrix.tsan }}
+    shared: ${{ matrix.shared }}</code></pre>
 </div>
 </div>
 </div>
@@ -268,17 +271,18 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-variant</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Custom build variants.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Custom build variants. If the provided variant is a CMake build-type, the
+argument is mapped to the equivalent b2 variant:</p>
+<p class="tableblock">- <code>Release</code> &#8594; <code>release</code></p>
+<p class="tableblock">- <code>Debug</code> &#8594; <code>debug</code></p>
+<p class="tableblock">- <code>RelWithDebInfo</code> &#8594; <code>profile</code></p>
+<p class="tableblock">- <code>&lt;other&gt;</code> &#8594; lowercase &lt;other&gt;
+.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>modules</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The list of modules we should test.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc-toolchain</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Create a special GCC toolchain for this version of GCC and update user-config.jam.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
@@ -298,7 +302,37 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Extra compiler flags.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extra C++ compiler flags.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ccflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extra C compiler flags.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>shared</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Build shared libraries.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>asan</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enable address-sanitizer.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ubsan</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enable undefined-sanitizer.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>tsan</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enable thread-sanitizer.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>coverage</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enable coverage.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
@@ -310,11 +344,6 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxstd</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">List of standards with which b2 will build and test the program.</p></td>
 <td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ubsan</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Whether the undefined behavior sanitizer should be used.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>threading</code></p></td>
