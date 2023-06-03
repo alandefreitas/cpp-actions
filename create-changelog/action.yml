@@ -85,6 +85,10 @@ inputs:
       The limit on the number of commits considered in the Changelog
     required: false
     default: '0'
+  thank-non-regular:
+    description: 'Thank non-regular contributors.'
+    required: false
+    default: 'true'
   trace-commands:
     description: 'Trace commands executed by the workflow.'
     required: false
@@ -103,4 +107,6 @@ runs:
       run: |
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         python_path="${{ steps.setup-python.outputs.python-path || 'python' }}"
-        $python_path "$GITHUB_ACTION_PATH/create-changelog.py" --dir "${{ inputs.source-dir }}" --version-pattern "${{ inputs.version-pattern }}" --tag-pattern "${{ inputs.tag-pattern }}" --output "${{ inputs.output-path }}" --limit "${{ inputs.limit }}"
+        pip3 install requests
+        thank_arg="${{ (inputs.thank-non-regular && '--thank-non-regular') || '' }}"
+        $python_path "$GITHUB_ACTION_PATH/create-changelog.py" --dir "${{ inputs.source-dir }}" --version-pattern "${{ inputs.version-pattern }}" --tag-pattern "${{ inputs.tag-pattern }}" --output "${{ inputs.output-path }}" --limit "${{ inputs.limit }}" $thank_arg

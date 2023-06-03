@@ -9,12 +9,17 @@ import os
 import subprocess
 import re
 import json
+import requests
 
 
 class Commit:
     def __init__(self):
         self.hash = None
         self.author = None
+        self.author_name = None
+        self.author_email = None
+        self.gh_name = None
+        self.gh_username = None
         self.date = None
         self.subject = None
         self.type = None
@@ -22,7 +27,21 @@ class Commit:
         self.description = None
         self.body = ''
         self.footers = []
+        self.issue = None
+        self.gh_issue_username = None
         self.breaking = False
+
+
+class GitHubUser:
+    def __init__(self):
+        self.username = None
+        self.name = None
+        self.commits = 0
+        self.commits_perc = 0
+        self.is_owner = False
+        self.is_admin = False
+        self.is_affiliated = False
+        self.is_regular = True
 
 
 def normalize_type(s):
@@ -73,6 +92,177 @@ def humanize(s):
     return s
 
 
+def get_github_profile_name(username):
+    url = f"https://api.github.com/users/{username}"
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        profile_data = response.json()
+        github_profile_name = profile_data.get("name")
+        if github_profile_name:
+            return github_profile_name
+    return None
+
+
+def get_github_username(email):
+    url = f"https://api.github.com/search/users?q={email}+in:email"
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        search_results = response.json()
+        items = search_results.get("items")
+        if items:
+            github_username = items[0].get("login")
+            return github_username
+
+    return None
+
+
+def get_issue_author(repo_url, issue_number):
+    # Extract the owner and repository name from the URL
+    _, _, owner, repository = repo_url.rstrip('/').split('/')[-4:]
+
+    # Make a GET request to the GitHub API to retrieve the issue information
+    url = f"https://api.github.com/repos/{owner}/{repository}/issues/{issue_number}"
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        issue_data = response.json()
+        author = issue_data['user']['login']
+        return author
+
+    return None
+
+
+def get_github_remote(git_path):
+    # Get the remote URL using the git command
+    try:
+        remote_output = subprocess.check_output("git remote -v", shell=True, stderr=subprocess.STDOUT, cwd=git_path)
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to execute 'git remote -v' command: {e.output.decode()}")
+        return None
+
+    # Parse the output to find the GitHub remote URL
+    remote_lines = remote_output.decode().strip().split('\n')
+    for line in remote_lines:
+        if line.startswith("origin"):
+            parts = line.split()
+            if len(parts) >= 2 and parts[1].startswith("https://github.com/"):
+                if parts[1].endswith('.git'):
+                    parts[1] = parts[1][:-4]
+                return parts[1]
+
+    return None
+
+
+def get_github_repo_owner(repo_url):
+    # Remove leading "https://" or "http://" if present
+    repo_url = repo_url.lstrip("https://").lstrip("http://")
+
+    # Extract the repository owner
+    if repo_url.startswith("github.com/"):
+        path_parts = repo_url.split("/")
+        if len(path_parts) >= 2:
+            return path_parts[1]
+    return None
+
+
+import requests
+
+
+def check_github_admin_permissions(repo_url, username, access_token):
+    # Extract the repository owner and name from the URL
+    _, _, _, owner, repo = repo_url.rstrip('/').split('/')
+
+    # Prepare the API endpoint URL
+    api_url = f"https://api.github.com/repos/{owner}/{repo}/collaborators/{username}/permission"
+
+    # Set the request headers with the access token for authentication
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+
+    # Send the GET request to the API endpoint
+    response = requests.get(api_url, headers=headers)
+
+    if response.status_code == 200:
+        permission_data = response.json()
+        if permission_data.get("permission") == "admin":
+            return True
+
+    return False
+
+
+def check_user_institution(repo_url, username, access_token):
+    # Extract the repository owner from the URL
+    _, _, _, owner, _ = repo_url.rstrip('/').split('/')
+
+    # Prepare the API endpoint URL to retrieve user information
+    api_url = f"https://api.github.com/users/{username}"
+
+    # Set the authorization header with the access token
+    response = None
+    if access_token is not None:
+        headers = {
+            "Authorization": f"Bearer {access_token}"
+        }
+    else:
+        headers = {}
+    response = requests.get(api_url, headers=headers)
+
+
+    if response.status_code == 200:
+        user_data = response.json()
+        organizations_url = user_data.get("organizations_url")
+
+        # Retrieve all organizations using pagination
+        organizations = []
+        page = 1
+        while True:
+            orgs_url = f"{organizations_url}?page={page}&per_page=100"
+            orgs_response = requests.get(orgs_url, headers=headers)
+            if orgs_response.status_code == 200:
+                orgs_data = orgs_response.json()
+                if len(orgs_data) > 0:
+                    organizations.extend(orgs_data)
+                    page += 1
+                else:
+                    break
+            else:
+                break
+
+        # Check if the repository owner is in the organizations list
+        for org in organizations:
+            if org.get("login") == owner:
+                return True
+
+    return False
+
+def calculate_percentile(data, percentile):
+    """
+    Calculate the percentile of a list of values.
+
+    Args:
+        data (list): List of numeric values.
+        percentile (float): The desired percentile (between 0 and 100).
+
+    Returns:
+        float: The calculated percentile value.
+    """
+    if not data:
+        return 1
+
+    sorted_data = sorted(data)
+    index = (percentile / 100) * (len(sorted_data) - 1)
+
+    if index.is_integer():
+        return sorted_data[int(index)]
+    else:
+        lower = sorted_data[int(index)]
+        upper = sorted_data[int(index) + 1]
+        return lower + (index % 1) * (upper - lower)
+
 if __name__ == "__main__":
     # Args
     parser = argparse.ArgumentParser(description='Installs the dependencies needed to test a Boost library.')
@@ -83,6 +273,7 @@ if __name__ == "__main__":
                         default='v.*\..*\..*')
     parser.add_argument('-o', '--output', help="output file", default='CHANGELOG.md')
     parser.add_argument('--limit', type=int, help="max number of commits in the log", default=0)
+    parser.add_argument('--thank-non-regular', action='store_true', help="Thank non-regular contributors")
     args = parser.parse_args()
 
     # Parameters
@@ -138,6 +329,10 @@ if __name__ == "__main__":
                 break
         if commit.hash and not commit.author and line.startswith('Author: '):
             commit.author = line[len('Author: '):]
+            p = commit.author.find(' <')
+            if p != -1:
+                commit.author_name = commit.author[:p]
+                commit.author_email = commit.author[p + 2:-1]
             continue
         if commit.author and not commit.date and line.startswith('Date: '):
             commit.date = line[len('Date: '):]
@@ -194,10 +389,92 @@ if __name__ == "__main__":
     if commit.hash and commit.subject:
         commits.append(commit)
     print(f'{len(commits)} commits')
-
     if args.limit:
         commits = commits[:args.limit]
         print(f'Limited to {args.limit}')
+
+    # Populate with github usernames
+    for c in commits:
+        if c.gh_username is not None:
+            continue
+        gh_username = get_github_username(c.author_email)
+        gh_name = get_github_profile_name(gh_username)
+        if gh_name is not None:
+            c.gh_username = gh_username
+            c.gh_name = gh_name
+            for c2 in commits:
+                if c2.author_email == c.author_email:
+                    c2.gh_username = gh_username
+                    c2.gh_name = gh_name
+
+    # Populate issue data
+    issue_footer_keys = ['Close', 'Closes', 'Closed', 'close', 'closes', 'closed',
+                         'Fix', 'Fixes', 'Fixed', 'fix', 'fixes', 'fixed',
+                         'Resolve', 'Resolves', 'Resolved', 'resolve', 'resolves', 'resolved']
+    repo_url = get_github_remote(project_path)
+    owner = None
+    if repo_url is not None:
+        owner = get_github_repo_owner(repo_url)
+    access_token = os.getenv("GITHUB_TOKEN")
+    if repo_url is not None:
+        for c in commits:
+            for [key, value] in c.footers:
+                if key in issue_footer_keys and value.startswith('#'):
+                    c.issue = value[1:]
+                    c.gh_issue_username = get_issue_author(repo_url, c.issue)
+                    break
+
+    # Author list
+    authors = {}
+    for c in commits:
+        if c.gh_username is not None:
+            if c.gh_username not in authors:
+                authors[c.gh_username] = GitHubUser()
+                authors[c.gh_username].username = c.gh_username
+                authors[c.gh_username].name = c.gh_name
+                authors[c.gh_username].commits = 1
+                authors[c.gh_username].commits_perc = 1 / len(commits)
+                if owner is not None and owner == c.gh_username:
+                    authors[c.gh_username].is_owner = True
+                authors[c.gh_username].is_admin = check_github_admin_permissions(repo_url, c.gh_username, access_token)
+                authors[c.gh_username].is_affiliated = check_user_institution(repo_url, c.gh_username, access_token)
+            else:
+                authors[c.gh_username].commits += 1
+                authors[c.gh_username].commits_perc = authors[c.gh_username].commits / len(commits)
+        if c.gh_issue_username is not None:
+            if c.gh_issue_username not in authors:
+                authors[c.gh_issue_username] = GitHubUser()
+                authors[c.gh_issue_username].username = c.gh_issue_username
+                authors[c.gh_issue_username].name = get_github_profile_name(c.gh_issue_username)
+                authors[c.gh_issue_username].commits = 0
+                authors[c.gh_issue_username].commits_perc = 0.
+                if owner is not None and owner == c.gh_issue_username:
+                    authors[c.gh_issue_username].is_owner = True
+                authors[c.gh_issue_username].is_admin = check_github_admin_permissions(repo_url, c.gh_issue_username, access_token)
+                authors[c.gh_issue_username].is_affiliated = check_user_institution(repo_url, c.gh_issue_username, access_token)
+
+    # Identify non-regular contributors
+    commit_hist = [author.commits for author in authors.values()]
+    commit_sum = sum(commit_hist)
+    perc_80 = calculate_percentile(commit_hist, 80)
+    for author in authors.values():
+        # 1. Is not owner, admin, or affiliated
+        if author.is_admin or author.is_affiliated or author.is_owner:
+            author.is_regular = True
+            continue
+        # 2. Has less than 10% of commits, or
+        if author.commits < commit_sum / 10:
+            author.is_regular = False
+            continue
+        # 3. Has less than 3 of commits, or
+        if author.commits <= 3:
+            author.is_regular = False
+            continue
+        # 4. Is not among 20% top contributors
+        if author.commits < perc_80:
+            author.is_regular = False
+            continue
+        author.is_regular = True
 
     # Footer tokens (differentiating from body):
     # - One or more footers MAY be provided one blank line after the body. Each footer MUST consist of a
@@ -256,17 +533,17 @@ if __name__ == "__main__":
         return s
 
 
-    def good_icon():
+    def feature_subject_icon():
         icon = [
             '✨',
             '💫',
             '🌟',
-        ][good_icon.count % 3]
-        good_icon.count += 1
+        ][feature_subject_icon.count % 3]
+        feature_subject_icon.count += 1
         return icon
 
 
-    good_icon.count = 0
+    feature_subject_icon.count = 0
 
 
     def capitalize_sentences(text: str):
@@ -292,19 +569,19 @@ if __name__ == "__main__":
                 if output:
                     output += '\n'
                 output += f'## {icon_for(change_type)} {humanize(change_type)}\n\n'
-            for [scope, commits] in scope_changes.items():
+            for [scope, scope_changes] in scope_changes.items():
                 scope_prefix = ''
-                multiline = scope is not None and len(commits) > 1
+                multiline = scope is not None and len(scope_changes) > 1
                 if multiline:
                     output += f'- {scope}:\n'
-                for commit in commits:
+                for commit in scope_changes:
                     # Padding
                     if multiline:
                         output += '    '
                     output += '- '
                     # Feat icon
                     if commit.type == 'feat':
-                        output += f'{good_icon()} '
+                        output += f'{feature_subject_icon()} '
                     # Scope prefix
                     if scope is not None and not multiline:
                         output += f'{scope}: '
@@ -335,6 +612,15 @@ if __name__ == "__main__":
                         output += ')'
                     # Commit id
                     output += f' {commit.hash[:7]}'
+                    # Thanks
+                    related_usernames = []
+                    if commit.gh_username is not None:
+                        related_usernames.append(commit.gh_username)
+                    if commit.gh_issue_username is not None and commit.gh_issue_username != commit.gh_username:
+                        related_usernames.append(commit.gh_issue_username)
+                    thank_list = [f'@{username}' for username in related_usernames if authors[username].is_regular == False]
+                    if thank_list:
+                        output += f' (thanks {", ".join(thank_list)})'
                     output += '\n'
 
     # Output parent release
