@@ -51,6 +51,7 @@ steps:
   uses: alandefreitas/cpp-actions/create-changelog@{page-version}
   with:
     output-path: CHANGELOG.md
+    thank-non-regular: ${{ startsWith(github.ref, 'refs/tags/') }}
 ----
 
 == Input Parameters
@@ -78,6 +79,7 @@ This constraint does not apply to the current and latest commit.
 . |`CHANGELOG.md`
 |`limit` |The limit on the number of commits considered in the Changelog
 . |`0`
+|`thank-non-regular` |Thank non-regular contributors. |`true`
 |`trace-commands` |Trace commands executed by the workflow. |`false`
 |===
 

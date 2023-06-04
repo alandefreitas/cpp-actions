@@ -13,6 +13,7 @@
 ** xref:actions/b2-workflow.adoc[]
 * Project
 ** xref:actions/create-changelog.adoc[]
+** xref:actions/flamegraph.adoc[]
 * xref:contribute.adoc[]
 * xref:license.adoc[]
 

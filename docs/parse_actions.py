@@ -55,8 +55,7 @@ action_pages_dir = os.path.join('docs', 'modules', 'ROOT', 'pages', 'actions')
 all_actions_page_dir = os.path.join('docs')
 example_path = os.path.join('.github', 'workflows', 'ci.yml')
 actions = ['cpp-matrix', 'setup-cpp', 'package-install', 'cmake-workflow', 'boost-clone', 'b2-workflow',
-           'create-changelog',
-           'setup-cmake', 'setup-gcc', 'setup-clang']
+           'create-changelog', 'flamegraph', 'setup-cmake', 'setup-gcc', 'setup-clang']
 
 with open(example_path, 'r') as f:
     ci_yml = yaml.load(f, Loader=OrderedLoader)
