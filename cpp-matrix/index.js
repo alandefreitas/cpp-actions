@@ -811,6 +811,13 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                     entry['ccflags'] += ' -ftime-trace'
                 }
             }
+            if (entry['cxxstd'] !== '') {
+                const cxxstdstrs = entry['cxxstd'].split(',')
+                entry['cxxstd'] = cxxstdstrs[cxxstdstrs.length - 1]
+                if (cxxstdstrs.length > 1) {
+                    entry['name'] = entry['name'].replace(/C\+\+\d+-\d+/g, `C++${entry['cxxstd']}`);
+                }
+            }
         }
         entry['cxxflags'] = entry['cxxflags'].trim()
         entry['ccflags'] = entry['ccflags'].trim()
