@@ -129,6 +129,9 @@
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
   </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
+  </li>
 </ul>
   </li>
   <li class="nav-item" data-depth="1">
@@ -303,7 +306,9 @@ annotations for CMake errors at the configure step and build errors emitted from
     cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
     cxxflags: ${{ matrix.cxxflags }}
     shared: ${{ matrix.shared }}
-    extra-args: -D BOOST_SRC_DIR="${{ steps.boost-clone.outputs.boost-dir }}"
+    extra-args: -D BOOST_SRC_DIR="${{ steps.boost-clone.outputs.boost-dir }}" ${{
+      ( steps.boost-clone.outputs.time-trace &amp;&amp; '-D CMAKE_EXPORT_COMPILE_COMMANDS=ON'
+      ) || '' }}
     ref-source-dir: .</code></pre>
 </div>
 </div>
