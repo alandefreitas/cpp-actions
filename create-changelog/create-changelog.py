@@ -265,7 +265,7 @@ def calculate_percentile(data, percentile):
 
 if __name__ == "__main__":
     # Args
-    parser = argparse.ArgumentParser(description='Installs the dependencies needed to test a Boost library.')
+    parser = argparse.ArgumentParser(description='Creates a changelog from the commit history.')
     parser.add_argument('--dir', help="directory to scan", default=os.getcwd())
     parser.add_argument('--version-pattern', help="regex pattern indicating a version commit",
                         default='(Bump|Set)\s+version')
