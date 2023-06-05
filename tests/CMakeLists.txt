@@ -3,6 +3,9 @@
 #######################################################
 cmake_minimum_required(VERSION 3.5)
 project(cpp_actions)
+project(cpp_actions
+        VERSION 1.0.0
+        LANGUAGES CXX)
 
 #######################################################
 ### Dependencies                                    ###
@@ -42,3 +45,53 @@ install(TARGETS test_executable
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION bin
         )
+
+#######################################################
+### Package                                         ###
+#######################################################
+# https://cmake.org/cmake/help/latest/module/CPack.html
+# Variables common to all CPack Generators
+set(CPACK_PACKAGE_NAME ${PROJECT_NAME})
+set(CPACK_PACKAGE_VENDOR ${PROJECT_NAME})
+set(CPACK_PACKAGE_DIRECTORY ${CMAKE_BINARY_DIR}/packages)
+set(CPACK_PACKAGE_VERSION_MAJOR ${CMAKE_PROJECT_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${CMAKE_PROJECT_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${CMAKE_PROJECT_VERSION_PATCH})
+set(CPACK_PACKAGE_DESCRIPTION ${CMAKE_PROJECT_DESCRIPTION})
+set(CPACK_PACKAGE_DESCRIPTION_FILE ${CMAKE_CURRENT_SOURCE_DIR}/../README.adoc)
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY ${CMAKE_PROJECT_DESCRIPTION})
+set(CPACK_PACKAGE_HOMEPAGE_URL http://www.github.com/alandefreitas/cpp-actions)
+set(DEFAULT_FILENAME ${CPACK_PACKAGE_NAME}-${PROJECT_VERSION}-${CMAKE_SYSTEM_NAME})
+string(TOLOWER ${DEFAULT_FILENAME} LC_DEFAULT_FILENAME)
+set(CPACK_PACKAGE_FILE_NAME ${LC_DEFAULT_FILENAME})
+string(TOLOWER ${PROJECT_NAME} LC_PROJECT_NAME)
+set(CPACK_PACKAGE_INSTALL_DIRECTORY ${LC_PROJECT_NAME})
+# CPACK_PACKAGE_ICON
+# CPACK_PACKAGE_CHECKSUM
+# CPACK_PROJECT_CONFIG_FILE
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE")
+set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/../README.adoc")
+set(CPACK_RESOURCE_FILE_WELCOME "${CMAKE_CURRENT_SOURCE_DIR}/../README.adoc")
+set(CPACK_PACKAGE_EXECUTABLES "test_executable" "C++ Actions - Test Executable")
+# CPACK_STRIP_FILES
+set(CPACK_THREADS 0)
+
+# Variables for Source Package Generators
+set(DEFAULT_FILENAME ${CPACK_PACKAGE_NAME}-${PROJECT_VERSION}-source)
+string(TOLOWER ${DEFAULT_FILENAME} LC_DEFAULT_FILENAME)
+set(CPACK_SOURCE_PACKAGE_FILE_NAME ${LC_DEFAULT_FILENAME})
+# CPACK_SOURCE_STRIP_FILES
+# CPACK_SOURCE_OUTPUT_CONFIG_FILE
+# Set CPACK_SOURCE_IGNORE_FILES with files source packages shouldn't install
+# We get these from .gitignore to avoid redundancy
+FILE(READ "${CMAKE_CURRENT_SOURCE_DIR}/../.gitignore" GITIGNORE_CONTENTS)
+STRING(REGEX REPLACE ";" "\\\\;" GITIGNORE_CONTENTS "${GITIGNORE_CONTENTS}")
+STRING(REGEX REPLACE "\n" ";" GITIGNORE_CONTENTS "${GITIGNORE_CONTENTS}")
+set(CPACK_SOURCE_IGNORE_FILES ${GITIGNORE_CONTENTS})
+
+
+
+# Always include CPack at last
+include(CPack)
+
+
