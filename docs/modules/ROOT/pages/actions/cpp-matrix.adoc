@@ -105,6 +105,15 @@ steps:
   id: cpp-matrix
   with:
     standards: '>=11'
+    factors: 'gcc Asan Shared No-Deps
+
+      msvc Shared x86
+
+      clang Time-Trace
+
+      mingw Shared
+
+      '
 ----
 
 == Input Parameters

@@ -35,6 +35,11 @@ jobs:
         id: cpp-matrix
         with:
           standards: '>=11'
+          factors: |
+            gcc Asan Shared No-Deps
+            msvc Shared x86
+            clang Time-Trace
+            mingw Shared
           trace-commands: true
 
   build:
@@ -126,7 +131,8 @@ jobs:
           cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
           cxxflags: ${{ matrix.cxxflags }}
           shared: ${{ matrix.shared }}
-          extra-args: -D BOOST_SRC_DIR="${{ steps.boost-clone.outputs.boost-dir }}" ${{ ( steps.boost-clone.outputs.time-trace && '-D CMAKE_EXPORT_COMPILE_COMMANDS=ON' ) || '' }}
+          extra-args: ${{ ( !matrix.no-deps && format('-D BOOST_SRC_DIR="{0}"', steps.boost-clone.outputs.boost-dir) ) || '' }} ${{ ( matrix.no-deps && '-D CPP_ACTIONS_NO_DEPS=ON' ) || '' }}
+          export-compile-commands: ${{ matrix.time-trace }}
           package: true
           package-artifact: ${{ matrix.is-main }}
           ref-source-dir: .
@@ -195,6 +201,7 @@ jobs:
         with:
           output-path: CHANGELOG.md
           thank-non-regular: ${{ startsWith(github.ref, 'refs/tags/') }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           trace-commands: true
 
       - name: Changelog summary

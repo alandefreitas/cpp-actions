@@ -10,21 +10,27 @@ project(cpp_actions
 #######################################################
 ### Dependencies                                    ###
 #######################################################
-find_package(fmt)
-find_package(Boost QUIET CONFIG)
-if (Boost_FOUND)
-    add_library(Boost::variant2 ALIAS Boost::headers)
-else ()
-    set(BOOST_SRC_DIR "boost-root" CACHE STRING "Boost source dir")
-    set(BOOST_INCLUDE_LIBRARIES variant2)
-    add_subdirectory(${BOOST_SRC_DIR} Dependencies/boost EXCLUDE_FROM_ALL)
+if (NOT CPP_ACTIONS_NO_DEPS)
+    find_package(fmt)
+    find_package(Boost QUIET CONFIG)
+    if (Boost_FOUND)
+        add_library(Boost::variant2 ALIAS Boost::headers)
+    else ()
+        set(BOOST_SRC_DIR "boost-root" CACHE STRING "Boost source dir")
+        set(BOOST_INCLUDE_LIBRARIES variant2)
+        add_subdirectory(${BOOST_SRC_DIR} Dependencies/boost EXCLUDE_FROM_ALL)
+    endif ()
 endif ()
 
 #######################################################
 ### Targets                                         ###
 #######################################################
 add_executable(test_executable main.cpp)
-target_link_libraries(test_executable Boost::variant2 fmt::fmt)
+if (NOT CPP_ACTIONS_NO_DEPS)
+    target_link_libraries(test_executable Boost::variant2 fmt::fmt)
+else ()
+    target_compile_definitions(test_executable PRIVATE CPP_ACTIONS_NO_DEPS)
+endif()
 
 #######################################################
 ### Tests                                           ###
