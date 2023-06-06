@@ -178,10 +178,12 @@ def check_github_admin_permissions(repo_url, username, access_token):
     api_url = f"https://api.github.com/repos/{owner}/{repo}/collaborators/{username}/permission"
 
     # Set the request headers with the access token for authentication
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Accept": "application/vnd.github.v3+json"
-    }
+    headers = {}
+    if access_token is not None:
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/vnd.github.v3+json"
+        }
 
     # Send the GET request to the API endpoint
     response = requests.get(api_url, headers=headers)
@@ -203,12 +205,11 @@ def check_user_institution(repo_url, username, access_token):
 
     # Set the authorization header with the access token
     response = None
+    headers = {}
     if access_token is not None:
         headers = {
             "Authorization": f"Bearer {access_token}"
         }
-    else:
-        headers = {}
     response = requests.get(api_url, headers=headers)
 
 
@@ -274,6 +275,7 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--output', help="output file", default='CHANGELOG.md')
     parser.add_argument('--limit', type=int, help="max number of commits in the log", default=0)
     parser.add_argument('--thank-non-regular', action='store_true', help="Thank non-regular contributors")
+    parser.add_argument('--github-token', help="GitHub token to identify non-regular contributors", default='')
     args = parser.parse_args()
 
     # Parameters
@@ -281,6 +283,7 @@ if __name__ == "__main__":
     version_pattern = re.compile(args.version_pattern, flags=re.IGNORECASE)
     tag_pattern = re.compile(args.tag_pattern, flags=re.IGNORECASE)
     output_path = args.output
+    access_token = args.github_token
 
     # Get tagged commits
     tagged_commit_hashes = set()
@@ -415,7 +418,11 @@ if __name__ == "__main__":
     owner = None
     if repo_url is not None:
         owner = get_github_repo_owner(repo_url)
-    access_token = os.getenv("GITHUB_TOKEN")
+    if access_token == '' or access_token is None:
+        access_token = os.getenv("GITHUB_TOKEN")
+    if access_token == '':
+        access_token = None
+
     if repo_url is not None:
         for c in commits:
             for [key, value] in c.footers:

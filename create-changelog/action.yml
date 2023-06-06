@@ -89,6 +89,10 @@ inputs:
     description: 'Thank non-regular contributors.'
     required: false
     default: 'true'
+  github-token:
+    description: 'Github token to identify non-regular contributors. Usually secrets.GITHUB_TOKEN.'
+    required: false
+    default: ''
   trace-commands:
     description: 'Trace commands executed by the workflow.'
     required: false
@@ -109,4 +113,5 @@ runs:
         python_path="${{ steps.setup-python.outputs.python-path || 'python' }}"
         pip3 install requests
         thank_arg="${{ (inputs.thank-non-regular && '--thank-non-regular') || '' }}"
-        $python_path "$GITHUB_ACTION_PATH/create-changelog.py" --dir "${{ inputs.source-dir }}" --version-pattern "${{ inputs.version-pattern }}" --tag-pattern "${{ inputs.tag-pattern }}" --output "${{ inputs.output-path }}" --limit "${{ inputs.limit }}" $thank_arg
+        token_arg="${{ (inputs.github_token && format('--github-token "{0}"', inputs.github-token)) || '' }}"
+        $python_path "$GITHUB_ACTION_PATH/create-changelog.py" --dir "${{ inputs.source-dir }}" --version-pattern "${{ inputs.version-pattern }}" --tag-pattern "${{ inputs.tag-pattern }}" --output "${{ inputs.output-path }}" --limit "${{ inputs.limit }}" $thank_arg $token_arg

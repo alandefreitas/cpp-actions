@@ -746,6 +746,7 @@ steps:
   with:
     output-path: CHANGELOG.md
     thank-non-regular: ${{ startsWith(github.ref, 'refs/tags/') }}
+    github-token: ${{ secrets.GITHUB_TOKEN }}
 ----
 
 ==== Input Parameters
@@ -774,6 +775,7 @@ This constraint does not apply to the current and latest commit.
 |`limit` |The limit on the number of commits considered in the Changelog
 . |`0`
 |`thank-non-regular` |Thank non-regular contributors. |`true`
+|`github-token` |Github token to identify non-regular contributors. Usually secrets.GITHUB_TOKEN. |
 |`trace-commands` |Trace commands executed by the workflow. |`false`
 |===
 
