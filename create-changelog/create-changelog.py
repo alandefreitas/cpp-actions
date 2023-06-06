@@ -15,6 +15,7 @@ import requests
 class Commit:
     def __init__(self):
         self.hash = None
+        self.extra_hashes = []
         self.author = None
         self.author_name = None
         self.author_email = None
@@ -424,7 +425,7 @@ def get_github_tags(repo_url, tag_pattern):
     return tags
 
 
-def remove_duplicates(arr, comparison_fields):
+def remove_object_duplicates(arr, comparison_fields):
     unique_items = []
     seen_values = set()
 
@@ -438,6 +439,35 @@ def remove_duplicates(arr, comparison_fields):
             seen_values.add(comparison_values)
 
     return unique_items
+
+
+def remove_commit_duplicates(commits: [Commit]):
+    unique_commits = []
+    seen_values = set()
+
+    for commit in commits:
+        comparison_values = tuple([commit.type, commit.scope, commit.description])
+        if comparison_values not in seen_values:
+            unique_commits.append(commit)
+            seen_values.add(comparison_values)
+        else:
+            idx = -1
+            for i in range(len(unique_commits)):
+                comparison_values2 = tuple([unique_commits[i].type, unique_commits[i].scope, unique_commits[i].description])
+                if comparison_values == comparison_values2:
+                    idx = i
+                    break
+            if idx != -1:
+                if unique_commits[idx].body != commit.body:
+                    unique_commits[idx].body += commit.body
+                for footer in commit.footers:
+                    if footer not in unique_commits[idx].footer:
+                        unique_commits[idx].footers.append(footer)
+                if commit.breaking:
+                    unique_commits[idx].breaking = True
+                unique_commits[idx].extra_hashes.append(commit.hash)
+
+    return unique_commits
 
 
 def check_github_admin_permissions(repo_url, username, access_token):
@@ -615,7 +645,7 @@ if __name__ == "__main__":
         repo_tags = get_github_tags(repo_url, tag_pattern)
         print(f'{len(tags)} repo tags')
         tags.extend(repo_tags)
-    tags = remove_duplicates(tags, ['name', 'sha'])
+    tags = remove_object_duplicates(tags, ['name', 'sha'])
     print(f'{len(tags)} tags')
 
     # Commits
@@ -629,6 +659,7 @@ if __name__ == "__main__":
             if repo_commit.hash not in commit_hashes:
                 commits.append(repo_commit)
         print(f'{len(commits)} total commits')
+    commits = remove_commit_duplicates(commits)
 
     # Limit number of commits
     if args.limit:
@@ -863,6 +894,8 @@ if __name__ == "__main__":
                         output += ')'
                     # Commit id
                     output += f' {commit.hash[:7]}'
+                    for extra_hash in commit.extra_hashes:
+                        output += f' {extra_hash[:7]}'
                     # Thanks
                     related_usernames = []
                     if commit.gh_username is not None:
