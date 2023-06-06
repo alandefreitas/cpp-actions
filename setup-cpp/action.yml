@@ -131,7 +131,7 @@ runs:
   using: "composite"
   steps:
     - name: Split compiler and version
-      id: split-compiler
+      id: params
       shell: bash
       run: |
         # Strip version from input prefixed string
@@ -171,13 +171,35 @@ runs:
         
         echo "compiler=$compiler" >> $GITHUB_OUTPUT
         echo "version=$version" >> $GITHUB_OUTPUT
+        
+        # Find current actions path
+        if [ -f "setup-gcc/action.yml" ] && [ -f "setup-gcc/action.yml" ]; then
+            repo_is_cpp_actions="true"
+        else
+            repo_is_cpp_actions="false"
+        fi
+        echo "repo_is_cpp_actions=$repo_is_cpp_actions" >> $GITHUB_OUTPUT
 
     - name: Setup GCC
-      if: ${{ steps.split-compiler.outputs.compiler == 'gcc' && runner.os == 'Linux' }}
-      uses: alandefreitas/cpp-actions/setup-gcc@v1.3.0
-      id: setup-gcc
+      if: ${{ steps.params.outputs.compiler == 'gcc' && runner.os == 'Linux' && steps.params.outputs.repo_is_cpp_actions == 'true' }}
+      uses: ./setup-gcc
+      id: setup-gcc-internal
       with:
-        version: ${{ steps.split-compiler.outputs.version }}
+        version: ${{ steps.params.outputs.version }}
+        path: g++
+        cache: ${{ inputs.cache }}
+        architecture: ${{ inputs.architecture }}
+        check-latest: ${{ inputs.check-latest }}
+        update-environment: ${{ inputs.update-environment }}
+        update-ld-library-path: ${{ inputs.update-ld-library-path }}
+        trace-commands: ${{ inputs.trace-commands }}
+
+    - name: Setup GCC
+      if: ${{ steps.params.outputs.compiler == 'gcc' && runner.os == 'Linux' && steps.params.outputs.repo_is_cpp_actions == 'false' }}
+      uses: alandefreitas/cpp-actions/setup-gcc@v1.3.0
+      id: setup-gcc-external
+      with:
+        version: ${{ steps.params.outputs.version }}
         path: g++
         cache: ${{ inputs.cache }}
         architecture: ${{ inputs.architecture }}
@@ -187,11 +209,24 @@ runs:
         trace-commands: ${{ inputs.trace-commands }}
 
     - name: Setup Clang
-      if: ${{ steps.split-compiler.outputs.compiler == 'clang' && runner.os == 'Linux' }}
-      uses: alandefreitas/cpp-actions/setup-clang@v1.3.0
-      id: setup-clang
+      if: ${{ steps.params.outputs.compiler == 'clang' && runner.os == 'Linux' && steps.params.outputs.repo_is_cpp_actions == 'true' }}
+      uses: ./setup-clang
+      id: setup-clang-internal
       with:
-        version: ${{ steps.split-compiler.outputs.version }}
+        version: ${{ steps.params.outputs.version }}
+        path: clang++
+        cache: ${{ inputs.cache }}
+        architecture: ${{ inputs.architecture }}
+        check-latest: ${{ inputs.check-latest }}
+        update-environment: ${{ inputs.update-environment }}
+        trace-commands: ${{ inputs.trace-commands }}
+
+    - name: Setup Clang
+      if: ${{ steps.params.outputs.compiler == 'clang' && runner.os == 'Linux' && steps.params.outputs.repo_is_cpp_actions == 'false' }}
+      uses: alandefreitas/cpp-actions/setup-clang@v1.3.0
+      id: setup-clang-external
+      with:
+        version: ${{ steps.params.outputs.version }}
         path: clang++
         cache: ${{ inputs.cache }}
         architecture: ${{ inputs.architecture }}
@@ -200,12 +235,12 @@ runs:
         trace-commands: ${{ inputs.trace-commands }}
 
     - name: Setup MSVC
-      if: ${{ steps.split-compiler.outputs.compiler == 'msvc' && runner.os == 'Windows' }}
+      if: ${{ steps.params.outputs.compiler == 'msvc' && runner.os == 'Windows' }}
       uses: ilammy/msvc-dev-cmd@v1
 
     - name: Setup MinGW
       shell: bash
-      if: ${{ (steps.split-compiler.outputs.compiler == 'gcc' || steps.split-compiler.outputs.compiler == 'mingw') && runner.os == 'Windows' }}
+      if: ${{ (steps.params.outputs.compiler == 'gcc' || steps.params.outputs.compiler == 'mingw') && runner.os == 'Windows' }}
       id: setup-mingw
       run: |
         # Output information about the compiler we setup up
@@ -249,7 +284,7 @@ runs:
 
     - name: Setup Clang-CL
       shell: bash
-      if: ${{ (steps.split-compiler.outputs.compiler == 'clang-cl' || steps.split-compiler.outputs.compiler == 'clang') && runner.os == 'Windows' }}
+      if: ${{ (steps.params.outputs.compiler == 'clang-cl' || steps.params.outputs.compiler == 'clang') && runner.os == 'Windows' }}
       id: setup-clang-cl
       run: |
         # Output information about the compiler we setup up
@@ -304,11 +339,11 @@ runs:
         # Output information about the compiler we setup up
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }} 
         
-        echo -E "cc=${{ steps.setup-gcc.outputs.cc || steps.setup-clang.outputs.cc || steps.setup-mingw.outputs.cc || steps.setup-clang-cl.outputs.cc }}" >> $GITHUB_OUTPUT
-        echo -E "cxx=${{ steps.setup-gcc.outputs.cxx || steps.setup-clang.outputs.cxx || steps.setup-mingw.outputs.cxx || steps.setup-clang-cl.outputs.cxx }}" >> $GITHUB_OUTPUT
-        echo -E "dir=${{ steps.setup-gcc.outputs.dir || steps.setup-clang.outputs.dir || steps.setup-mingw.outputs.dir || steps.setup-clang-cl.outputs.dir }}" >> $GITHUB_OUTPUT
-        echo -E "version=${{ steps.setup-gcc.outputs.version || steps.setup-clang.outputs.version || steps.setup-mingw.outputs.version || steps.setup-clang-cl.outputs.version }}" >> $GITHUB_OUTPUT
-        echo -E "version-major=${{ steps.setup-gcc.outputs.version-major || steps.setup-clang.outputs.version-major || steps.setup-mingw.outputs.major || steps.setup-clang-cl.outputs.major }}" >> $GITHUB_OUTPUT
-        echo -E "version-minor=${{ steps.setup-gcc.outputs.version-minor || steps.setup-clang.outputs.version-minor || steps.setup-mingw.outputs.minor || steps.setup-clang-cl.outputs.minor }}" >> $GITHUB_OUTPUT
-        echo -E "version-patch=${{ steps.setup-gcc.outputs.version-patch || steps.setup-clang.outputs.version-patch || steps.setup-mingw.outputs.patch || steps.setup-clang-cl.outputs.patch }}" >> $GITHUB_OUTPUT
-        echo -E "cache-hit=${{ steps.setup-gcc.outputs.cache-hit || steps.setup-clang.outputs.cache-hit }}" >> $GITHUB_OUTPUT
+        echo -E "cc=${{ steps.setup-gcc-internal.outputs.cc || steps.setup-gcc-external.outputs.cc || steps.setup-clang-internal.outputs.cc || steps.setup-clang-external.outputs.cc || steps.setup-mingw.outputs.cc || steps.setup-clang-cl.outputs.cc }}" >> $GITHUB_OUTPUT
+        echo -E "cxx=${{ steps.setup-gcc-internal.outputs.cxx || steps.setup-gcc-external.outputs.cxx || steps.setup-clang-internal.outputs.cxx || steps.setup-clang-external.outputs.cxx || steps.setup-mingw.outputs.cxx || steps.setup-clang-cl.outputs.cxx }}" >> $GITHUB_OUTPUT
+        echo -E "dir=${{ steps.setup-gcc-internal.outputs.dir || steps.setup-gcc-external.outputs.dir || steps.setup-clang-internal.outputs.dir || steps.setup-clang-external.outputs.dir || steps.setup-mingw.outputs.dir || steps.setup-clang-cl.outputs.dir }}" >> $GITHUB_OUTPUT
+        echo -E "version=${{ steps.setup-gcc-internal.outputs.version || steps.setup-gcc-external.outputs.version || steps.setup-clang-internal.outputs.version || steps.setup-clang-external.outputs.version || steps.setup-mingw.outputs.version || steps.setup-clang-cl.outputs.version }}" >> $GITHUB_OUTPUT
+        echo -E "version-major=${{ steps.setup-gcc-internal.outputs.version-major || steps.setup-gcc-external.outputs.version-major || steps.setup-clang-internal.outputs.version-major || steps.setup-clang-external.outputs.version-major || steps.setup-mingw.outputs.major || steps.setup-clang-cl.outputs.major }}" >> $GITHUB_OUTPUT
+        echo -E "version-minor=${{ steps.setup-gcc-internal.outputs.version-minor || steps.setup-gcc-external.outputs.version-minor || steps.setup-clang-internal.outputs.version-minor || steps.setup-clang-external.outputs.version-minor || steps.setup-mingw.outputs.minor || steps.setup-clang-cl.outputs.minor }}" >> $GITHUB_OUTPUT
+        echo -E "version-patch=${{ steps.setup-gcc-internal.outputs.version-patch || steps.setup-gcc-external.outputs.version-patch || steps.setup-clang-internal.outputs.version-patch || steps.setup-clang-external.outputs.version-patch || steps.setup-mingw.outputs.patch || steps.setup-clang-cl.outputs.patch }}" >> $GITHUB_OUTPUT
+        echo -E "cache-hit=${{ steps.setup-gcc-internal.outputs.cache-hit || steps.setup-gcc-external.outputs.cache-hit || steps.setup-clang-internal.outputs.cache-hit || steps.setup-clang-external.outputs.cache-hit }}" >> $GITHUB_OUTPUT
