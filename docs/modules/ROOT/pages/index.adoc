@@ -6,6 +6,8 @@ Alan Freitas <alandefreitas@gmail.com>
 :page-tags: cpp-actions
 :navtitle: Home
 
+image::banner.svg[caption="Read the Docs", alt="Read the Docs", width="800", height="315", link="https://alandefreitas.github.io/cpp-actions/"]
+
 Testing {cpp} libraries can be a challenging task, as there are various factors to consider such as the different compilers, operating systems, and architectures that the library may need to support.
 Furthermore, {cpp} itself is a complex language with a wide range of features, making it difficult to write comprehensive tests that cover all possible scenarios.
 
