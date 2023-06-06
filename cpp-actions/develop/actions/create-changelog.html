@@ -282,7 +282,8 @@ perform a shallow clone and the Changelog will only include the latest commit.</
   uses: alandefreitas/cpp-actions/create-changelog@develop
   with:
     output-path: CHANGELOG.md
-    thank-non-regular: ${{ startsWith(github.ref, 'refs/tags/') }}</code></pre>
+    thank-non-regular: ${{ startsWith(github.ref, 'refs/tags/') }}
+    github-token: ${{ secrets.GITHUB_TOKEN }}</code></pre>
 </div>
 </div>
 </div>
@@ -343,6 +344,11 @@ in the notes is complete.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>thank-non-regular</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Thank non-regular contributors.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>github-token</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Github token to identify non-regular contributors. Usually secrets.GITHUB_TOKEN.</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>

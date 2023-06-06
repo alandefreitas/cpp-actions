@@ -338,7 +338,16 @@ and create your workflow as usual with the parameters from the matrix:</p>
   uses: alandefreitas/cpp-actions/cpp-matrix@develop
   id: cpp-matrix
   with:
-    standards: '&gt;=11'</code></pre>
+    standards: '&gt;=11'
+    factors: 'gcc Asan Shared No-Deps
+
+      msvc Shared x86
+
+      clang Time-Trace
+
+      mingw Shared
+
+      '</code></pre>
 </div>
 </div>
 </div>
