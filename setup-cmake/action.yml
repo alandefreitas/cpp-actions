@@ -131,29 +131,20 @@ runs:
       run: |
         # Find system cmake executable
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
-        CMAKE_EXECUTABLE="${{ inputs.cmake-path || 'cmake' }}"
-        if [ "$CMAKE_EXECUTABLE" != "" ]; then
-            CMAKE_EXECUTABLE="cmake"
-        fi
-        if [ "$CMAKE_EXECUTABLE" != "" ]; then
-            if command -v "$CMAKE_EXECUTABLE" &> /dev/null; then
-              CMAKE_EXECUTABLE="$(which $CMAKE_EXECUTABLE)"
-            elif command -v "/usr/bin/$CMAKE_EXECUTABLE" &> /dev/null; then
-              CMAKE_EXECUTABLE="/usr/bin/$CMAKE_EXECUTABLE"
-            fi
-        fi
-        echo "path=$CMAKE_EXECUTABLE" >> $GITHUB_OUTPUT
-        
-        # Extract cmake current version string
-        cmake_version_output=$("$CMAKE_EXECUTABLE" --version)
-        
-        # extract the version number using a regular expression
-        regex='[0-9]+\.[0-9]+\.[0-9]+'
-        [[ $cmake_version_output =~ $regex ]]
-        cmake_version=${BASH_REMATCH[0]}
 
-        echo "version=$cmake_version" >> $GITHUB_OUTPUT
+        # Look for version in Path        
+        CMAKE_EXECUTABLE="${{ inputs.cmake-path || 'cmake' }}"
+        if command -v "$CMAKE_EXECUTABLE" &> /dev/null; then
+          VERSION_OUTPUT=$("$CMAKE_EXECUTABLE" --version)
+          regex='[0-9]+\.[0-9]+\.[0-9]+'
+          [[ $VERSION_OUTPUT =~ $regex ]]
+          CMAKE_VERSION="${BASH_REMATCH[0]}"
+        
+          if [ "$CMAKE_VERSION" != "" ]; then
+            echo -E "path=$(which $CMAKE_EXECUTABLE)" >> $GITHUB_OUTPUT
+            echo "version=$CMAKE_VERSION" >> $GITHUB_OUTPUT
+          fi
+        fi
 
     - name: CMake version from source files
       if: ${{ !inputs.version }}
@@ -186,6 +177,7 @@ runs:
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         
         # Download the Git tags from the CMake repository
+        ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
         git_tags=$(git ls-remote --tags https://github.com/Kitware/CMake.git | awk '{print $2}' | cut -d '/' -f 3)
         
         # Extract the version numbers from the Git tags using a regular expression
@@ -194,18 +186,20 @@ runs:
         all_versions=""
         for tag in $git_tags
         do
-        if [[ $tag =~ $regex ]]; then
-        version=${BASH_REMATCH[1]}
-        versions+=("$version")
-        all_versions+="$version "
-        fi
+          if [[ $tag =~ $regex ]]; then
+            version=${BASH_REMATCH[1]}
+            versions+=("$version")
+            all_versions+="$version "
+          fi
         done
+        ${{ (inputs.trace-commands == 'true' && 'echo "$all_versions"') || '' }}
+        ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
         
         # Sort the version numbers using the "sort -V" command and pick the latest one
         if [ ${#versions[@]} -gt 0 ]; then
-        latest_version=$(printf "%s\n" "${versions[@]}" | sort -V | tail -n1)
+          latest_version=$(printf "%s\n" "${versions[@]}" | sort -V | tail -n1)
         else
-        latest_version="3.26.3" # placeholder when the tags fail. Should not happen.
+          latest_version="3.26.3" # placeholder when the tags fail. Should not happen.
         fi
         
         echo "all-versions=$all_versions" >> $GITHUB_OUTPUT
@@ -214,6 +208,7 @@ runs:
     - name: Check if System CMake satisfies version requirements
       uses: madhead/semver-utils@v3.1.0
       id: system-version
+      if: ${{ steps.system-cmake.outputs.version != '' }}
       with:
         version: ${{ steps.system-cmake.outputs.version }}
         satisfies: ${{ inputs.version || steps.cmakelists-version.outputs.min-version-str || steps.cmake-versions.outputs.latest }}
@@ -221,7 +216,7 @@ runs:
 
     - name: Find a CMake release version that satisfies the requirements
       uses: alandefreitas/cpp-actions/semver-utils@v1.1.0
-      if: ${{ steps.system-version.outputs.satisfies == 'false' }}
+      if: ${{ steps.system-version.outputs.satisfies == 'false' || steps.system-version.outputs.satisfies == '' }}
       id: min-version
       with:
         version: ${{ steps.cmake-versions.outputs.all-versions }}
@@ -229,7 +224,7 @@ runs:
         lenient: false
 
     - name: Setup CMake
-      if: ${{ steps.system-version.outputs.satisfies == 'false' }}
+      if: ${{ steps.system-version.outputs.satisfies == 'false' || steps.system-version.outputs.satisfies == '' }}
       shell: bash
       id: setup-cmake
       run: |
@@ -303,23 +298,34 @@ runs:
         echo "version=$release" >> $GITHUB_OUTPUT
 
     - name: CMake cache
-      if: ${{ steps.system-version.outputs.satisfies == 'false' }}
+      if: ${{ steps.system-version.outputs.satisfies == 'false' || steps.system-version.outputs.satisfies == '' }}
       id: cache-cmake
       uses: actions/cache@v3
       with:
         path: ${{ steps.setup-cmake.outputs.cmake_dest }}
         key: ${{ steps.setup-cmake.outputs.cmake_url }}
 
+    - name: Ensure python is available for find-python action in containers
+      if: ${{ steps.cache-cmake.outputs.cache-hit != 'true' && (steps.system-version.outputs.satisfies == 'false' || steps.system-version.outputs.satisfies == '') }}
+      uses: alandefreitas/cpp-actions/package-install@v1.3.0
+      with:
+        apt-get: curl
+
     - name: Install cmake
-      if: ${{ steps.cache-cmake.outputs.cache-hit != 'true' && steps.system-version.outputs.satisfies == 'false' }}
+      if: ${{ steps.cache-cmake.outputs.cache-hit != 'true' && (steps.system-version.outputs.satisfies == 'false' || steps.system-version.outputs.satisfies == '') }}
       shell: bash
       id: install-cmake
       run: |
         # Download ${{ steps.setup-cmake.outputs.cmake_url }}
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+        
         if command -v curl &> /dev/null; then
           curl -L -o "${{ steps.setup-cmake.outputs.cmake_filename }}" "${{ steps.setup-cmake.outputs.cmake_url }}"
         elif command -v wget &> /dev/null; then
           wget -O "${{ steps.setup-cmake.outputs.cmake_filename }}" "${{ steps.setup-cmake.outputs.cmake_url }}"
+        else
+          echo "::error title:CMake-Setup::CMake Setup: neither curl nor wget are available"
+          false
         fi
         
         # Unzip binaries

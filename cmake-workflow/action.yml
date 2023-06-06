@@ -227,11 +227,12 @@ runs:
         fi
 
     - name: Setup CMake
-      uses: alandefreitas/cpp-actions/setup-cmake@v1.1.0
+      uses: alandefreitas/cpp-actions/setup-cmake@develop
       id: setup-cmake
       with:
         version: ${{ inputs.cmake-version }}
         cmake-path: ${{ inputs.cmake-path }}
+        trace-commands: ${{ inputs.trace-commands }}
 
     - name: CMake Generator Features
       shell: bash
