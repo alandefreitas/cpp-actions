@@ -126,6 +126,9 @@
   <li class="nav-item is-current-page" data-depth="2">
     <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
   </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
+  </li>
 </ul>
   </li>
   <li class="nav-item" data-depth="1">
@@ -275,7 +278,9 @@ perform a shallow clone and the Changelog will only include the latest commit.</
 - name: Create release notes
   uses: alandefreitas/cpp-actions/create-changelog@master
   with:
-    output-path: CHANGELOG.md</code></pre>
+    output-path: CHANGELOG.md
+    thank-non-regular: ${{ startsWith(github.ref, 'refs/tags/') }}
+    github-token: ${{ secrets.GITHUB_TOKEN }}</code></pre>
 </div>
 </div>
 </div>
@@ -331,6 +336,16 @@ in the notes is complete.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The limit on the number of commits considered in the Changelog
 .</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>0</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>thank-non-regular</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Thank non-regular contributors.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>github-token</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Github token to identify non-regular contributors. Usually secrets.GITHUB_TOKEN.</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>

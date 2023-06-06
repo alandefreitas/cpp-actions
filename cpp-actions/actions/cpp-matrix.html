@@ -126,6 +126,9 @@
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
   </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
+  </li>
 </ul>
   </li>
   <li class="nav-item" data-depth="1">
@@ -332,7 +335,16 @@ and create your workflow as usual with the parameters from the matrix:</p>
   uses: alandefreitas/cpp-actions/cpp-matrix@master
   id: cpp-matrix
   with:
-    standards: '&gt;=11'</code></pre>
+    standards: '&gt;=11'
+    factors: 'gcc Asan Shared No-Deps
+
+      msvc Shared x86
+
+      clang Time-Trace
+
+      mingw Shared
+
+      '</code></pre>
 </div>
 </div>
 </div>
@@ -365,7 +377,8 @@ For any other compilers, the version requirements will passthrough to the output
 <p class="tableblock"><code>clang &gt;=3.8</code></p>
 <p class="tableblock"><code>msvc &gt;=14.2</code></p>
 <p class="tableblock"><code>apple-clang *</code></p>
-<p class="tableblock"><code>mingw *</code></p></td>
+<p class="tableblock"><code>mingw *</code></p>
+<p class="tableblock"><code>clang-cl *</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>standards</code></p></td>
@@ -406,6 +419,11 @@ will be duplicated with this factor if there are no entries left to inject the f
 <p class="tableblock"><code>msvc Shared x86</code></p>
 <p class="tableblock"><code>clang Time-Trace</code></p>
 <p class="tableblock"><code>mingw Shared</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>generate-summary</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Generate summary with the complete matrix.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
