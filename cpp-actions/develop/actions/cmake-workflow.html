@@ -306,8 +306,8 @@ annotations for CMake errors at the configure step and build errors emitted from
     cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
     cxxflags: ${{ matrix.cxxflags }}
     shared: ${{ matrix.shared }}
-    extra-args: -D BOOST_SRC_DIR="${{ steps.boost-clone.outputs.boost-dir }}" ${{
-      ( matrix.no-deps &amp;&amp; '-D CPP_ACTIONS_NO_DEPS=ON' ) || '' }}
+    extra-args: ${{ ( !matrix.no-deps &amp;&amp; format('-D BOOST_SRC_DIR="{0}"', steps.boost-clone.outputs.boost-dir)
+      ) || '' }} ${{ ( matrix.no-deps &amp;&amp; '-D CPP_ACTIONS_NO_DEPS=ON' ) || '' }}
     export-compile-commands: ${{ matrix.time-trace }}
     package: true
     package-artifact: ${{ matrix.is-main }}
