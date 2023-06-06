@@ -93,6 +93,10 @@ inputs:
     description: 'Github token to identify non-regular contributors. Usually secrets.GITHUB_TOKEN.'
     required: false
     default: ''
+  update-summary:
+    description: 'Update action summary with the changelog'
+    required: false
+    default: 'true'
   trace-commands:
     description: 'Trace commands executed by the workflow.'
     required: false
@@ -115,3 +119,11 @@ runs:
         thank_arg="${{ (inputs.thank-non-regular && '--thank-non-regular') || '' }}"
         token_arg="${{ (inputs.github-token && format('--github-token "{0}"', inputs.github-token)) || '' }}"
         $python_path "$GITHUB_ACTION_PATH/create-changelog.py" --dir "${{ inputs.source-dir }}" --version-pattern "${{ inputs.version-pattern }}" --tag-pattern "${{ inputs.tag-pattern }}" --output "${{ inputs.output-path }}" --limit "${{ inputs.limit }}" $thank_arg $token_arg
+
+    - name: Changelog summary
+      shell: bash
+      if: "${{ inputs.update-summary == 'true' }}"
+      run: |
+        echo "# Changelog" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        cat "${{ inputs.output-path }}" >> $GITHUB_STEP_SUMMARY

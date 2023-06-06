@@ -221,7 +221,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: docs/build/site
 
-      - name: Create release notes
+      - name: Changelog
         uses: ./create-changelog
         with:
           output-path: CHANGELOG.md
@@ -229,13 +229,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           trace-commands: true
 
-      - name: Changelog summary
-        run: |
-          echo "# Changelog" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          cat CHANGELOG.md >> $GITHUB_STEP_SUMMARY
-
-      - name: Remove existing master release
+      - name: Remove existing branch release
         if: github.ref_name != 'develop' && !startsWith(github.ref, 'refs/tags/')
         uses: dev-drprasad/delete-tag-and-release@v1.0
         with:
@@ -255,7 +249,7 @@ jobs:
           draft: false
           token: ${{ github.token }}
 
-      - name: Delete draft master releases
+      - name: Delete draft branch releases
         uses: dev-drprasad/delete-older-releases@v0.2.1
         if: github.ref_name != 'develop' && !startsWith(github.ref, 'refs/tags/')
         with:
