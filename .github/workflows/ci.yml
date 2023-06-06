@@ -147,7 +147,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           trace-commands: true
 
-      - name: Codecov generate
+      - name: Codecov
         if: ${{ matrix.coverage }}
         run: |
           set -x
@@ -161,18 +161,17 @@ jobs:
           # genhtml --legend -f -q "./tests/build/coverage.info" -p "./tests" -o "./tests/build/coverage_html"
           cat "./tests/build/coverage.info"
           
+          bash <(curl -s https://codecov.io/bash) -f "./tests/build/coverage.info"
+          
           echo "# Coverage" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "[![codecov](https://codecov.io/github/$GITHUB_REPOSITORY/commit/$GITHUB_SHA/graphs/sunburst.svg)](https://codecov.io/github/$GITHUB_REPOSITORY/commit/$GITHUB_SHA)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "[![codecov](https://codecov.io/github/$GITHUB_REPOSITORY/commit/$GITHUB_SHA/graph/badge.svg)](https://codecov.io/github/$GITHUB_REPOSITORY/commit/$GITHUB_SHA)" >> $GITHUB_STEP_SUMMARY
-
-      - name: Codecov upload
-        if: ${{ matrix.coverage }}
-        uses: codecov/codecov-action@v3
-        with:
-          directory: ./tests
+          echo "Commit: [![codecov](https://codecov.io/github/$GITHUB_REPOSITORY/commit/$GITHUB_SHA/graph/badge.svg)](https://codecov.io/github/$GITHUB_REPOSITORY/commit/$GITHUB_SHA)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Branch: [![codecov](https://codecov.io/github/$GITHUB_REPOSITORY/branch/$GITHUB_REF_NAME/graph/badge.svg)](https://codecov.io/github/$GITHUB_REPOSITORY/commit/$GITHUB_SHA)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
 
   docs:
     needs: build
