@@ -22,8 +22,7 @@ steps:
     vcpkg: fmt
     vcpkg-triplet: ${{ ( runner.os == 'Windows' && matrix.x86 && 'x86-windows' ) ||
       '' }}
-    apt-get: ${{ join(matrix.install, ' ') }} ${{ (matrix.coverage && 'lcov') || ''
-      }}
+    apt-get: ${{ matrix.install }}
     apt-get-ignore-missing: ${{ matrix.container && 'true' }}
     cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
     ccflags: ${{ matrix.ccflags }}

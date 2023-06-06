@@ -761,6 +761,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
         entry['build-type'] = 'Release'
         entry['cxxflags'] = ''
         entry['ccflags'] = ''
+        entry['install'] = ''
         if ('asan' in entry && entry['asan'] === true) {
             if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
                 entry['cxxflags'] += ' -fsanitize=address'
@@ -793,6 +794,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
             if (entry['compiler'] === 'gcc') {
                 entry['cxxflags'] += ' --coverage -fprofile-arcs -ftest-coverage'
                 entry['ccflags'] += ' --coverage -fprofile-arcs -ftest-coverage'
+                entry['install'] += ' lcov'
             } else if (entry['compiler'] === 'clang') {
                 entry['cxxflags'] += ' -fprofile-instr-generate -fcoverage-mapping'
                 entry['ccflags'] += ' -fprofile-instr-generate -fcoverage-mapping'
@@ -825,6 +827,11 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                 }
             }
         }
+        if ('container' in entry && entry['container'].startsWith('ubuntu')) {
+            // Ubuntu containers need build-essential even to bootstrap other installers
+            entry['install'] += ' build-essential'
+        }
+        entry['install'] = entry['install'].trim()
         entry['cxxflags'] = entry['cxxflags'].trim()
         entry['ccflags'] = entry['ccflags'].trim()
     }
@@ -1079,10 +1086,12 @@ function generateTable(matrix, latest_factors, factors) {
                     factors_str = `(Intermediary ${humanizeCompilerName(entry['compiler'])} version)`
                 }
             }
-            if (cxxflags === '') {
-                row.push(factors_str)
-            } else {
-                row.push(`${factors_str} 🚩 ${cxxflags}`)
+            row.push(factors_str)
+            if (cxxflags !== '') {
+                row[row.length - 1] += ` 🚩 ${cxxflags}`
+            }
+            if ('install' in entry && entry['install'] != '') {
+                row[row.length - 1] += ` 🔧 <code>${entry['install']}</code>`
             }
         }
         // Generator

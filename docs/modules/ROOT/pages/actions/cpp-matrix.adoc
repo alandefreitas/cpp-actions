@@ -225,6 +225,9 @@ Each entry in the test matrix dictionary contains the following key-value pairs:
 - `cxxflags`: The recommended C++ flags to be used by this entry. It reflects the values of special factors, such
    as sanitizers, coverage, and time-trace.
 
+- `install`: The recommended packages to be installed before running the workflow. This includes packages 
+  such as build-essential for ubuntu containers and lcov for coverage entries. 
+
 - `<factors>...`: Provides additional factors or attributes associated with the test configuration as defined by
   the factors and latest-factors inputs. These usually include variant build configurations spread among the
   entries, such as asan, coverage, and shared libraries.
