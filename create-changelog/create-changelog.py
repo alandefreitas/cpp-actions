@@ -21,15 +21,24 @@ class Commit:
         self.gh_name = None
         self.gh_username = None
         self.date = None
+        self.message = ''
+
+        # conventional fields
         self.subject = None
         self.type = None
         self.scope = None
         self.description = None
         self.body = ''
         self.footers = []
+        self.breaking = False
+
+        # issue info
         self.issue = None
         self.gh_issue_username = None
-        self.breaking = False
+
+        # delimiter
+        self.tag = None
+        self.is_parent_release = False
 
 
 class GitHubUser:
@@ -156,6 +165,9 @@ def get_github_remote(git_path):
 
 
 def get_github_repo_owner(repo_url):
+    if repo_url is None:
+        return None
+
     # Remove leading "https://" or "http://" if present
     repo_url = repo_url.lstrip("https://").lstrip("http://")
 
@@ -167,7 +179,261 @@ def get_github_repo_owner(repo_url):
     return None
 
 
-import requests
+def get_github_repo_name(repo_url):
+    if repo_url is None:
+        return None
+
+    # Remove leading "https://" or "http://" if present
+    repo_url = repo_url.lstrip("https://").lstrip("http://")
+
+    # Extract the repository owner
+    if repo_url.startswith("github.com/"):
+        path_parts = repo_url.split("/")
+        if len(path_parts) >= 3:
+            return path_parts[2]
+    return None
+
+
+def get_local_commits(project_path, repo_url, version_pattern, tags):
+    commits = []
+    result = subprocess.run(['git', '--no-pager', 'log'], stdout=subprocess.PIPE, cwd=project_path)
+    commit_log_output = result.stdout.decode('utf-8').splitlines()
+    commit = Commit()
+    msg = ''
+    for line in commit_log_output:
+        if line == '':
+            continue
+        if line.startswith('commit ') and ' ' not in line[7:]:
+            if commit.hash:
+                commit = populate_conventional(commit, repo_url, version_pattern, tags)
+                commits.append(commit)
+                if len(commits) == 1:
+                    commits[-1].is_parent_release = False
+                elif commits[-1].is_parent_release:
+                    break
+                commit = Commit()
+            commit.hash = line[len('commit '):]
+        if commit.hash and not commit.author and line.startswith('Author: '):
+            commit.author = line[len('Author: '):]
+            p = commit.author.find(' <')
+            if p != -1:
+                commit.author_name = commit.author[:p]
+                commit.author_email = commit.author[p + 2:-1]
+            continue
+        if commit.author and not commit.date and line.startswith('Date: '):
+            commit.date = line[len('Date: '):]
+            continue
+        if commit.date and line.startswith('    '):
+            if commit.message != '':
+                commit.message += '\n' + line[4:]
+            else:
+                commit.message += line[4:]
+
+    return commits
+
+
+def populate_conventional(commit, repo_url, version_pattern, tags):
+    for line in commit.message.splitlines():
+        if not commit.subject:
+            # Is subject
+            commit.subject = line
+            m = re.match(r'([ \d\w_-]+)(\(([ \d\w_-]+)\))?(!?): ([^\n]*)\n?(.*)', line)
+            if m:
+                # conventional commit
+                commit.type = normalize_type(m[1])
+                commit.scope = m[3]
+                commit.description = m[5]
+                commit.breaking = m[4] == '!'
+            else:
+                # regular commit
+                commit.description = commit.subject
+                commit.type = 'other'
+                commit.scope = None
+                commit.breaking = commit.subject.find('BREAKING') != -1
+        else:
+            # Is body or footer
+            m = re.match(r'(([^ ]+): )|(([^ ]+) #)|((BREAKING CHANGE): )', line)
+            if m:
+                # is footer
+                if m[1]:
+                    commit.footers.append((m[2], line[len(m[2]) + 2:].strip()))
+                elif m[3]:
+                    commit.footers.append((m[4], line[len(m[4]) + 1:].strip()))
+                elif m[5]:
+                    commit.footers.append((m[6], line[len(m[6]) + 2:].strip()))
+                if commit.footers[-1][0].lower().startswith('breaking'):
+                    commit.breaking = True
+            elif line.lower() in ['breaking', 'breaking-change', 'breaking change']:
+                # footer with no key and value
+                # the whole message is breaking change footer
+                commit.breaking = True
+            else:
+                # if body
+                if not commit.body:
+                    commit.body += line
+                else:
+                    commit.body += '\n' + line
+
+    issue_footer_keys = ['Close', 'Closes', 'Closed', 'close', 'closes', 'closed',
+                         'Fix', 'Fixes', 'Fixed', 'fix', 'fixes', 'fixed',
+                         'Resolve', 'Resolves', 'Resolved', 'resolve', 'resolves', 'resolved']
+    for [key, value] in commit.footers:
+        if key in issue_footer_keys and value.startswith('#'):
+            commit.issue = value[1:]
+            commit.gh_issue_username = get_issue_author(repo_url, commit.issue)
+            break
+
+    for tag in tags:
+        if commit.hash == tag['sha']:
+            commit.tag = tag['name']
+            break
+
+    commit.is_parent_release = False
+    if commit.tag is not None:
+        print(f'Stopping at commit id {commit.hash[:8]} (tag {commit.tag})')
+        commit.is_parent_release = True
+    else:
+        matches = re.search(version_pattern, commit.description)
+        if matches:
+            print(f'Stopping at commit id {commit.hash[:8]} (description: {commit.description})')
+            commit.is_parent_release = True
+        else:
+            matches = re.search(version_pattern, commit.subject)
+            if matches:
+                print(f'Stopping at commit id {commit.hash[:8]} (subject: {commit.subject})')
+                commit.is_parent_release = True
+
+    return commit
+
+
+def get_github_commits(repo_url, branch, version_pattern, tags):
+    if repo_url is None:
+        return []
+
+    commits = []
+
+    url = f"https://api.github.com/repos/{get_github_repo_owner(repo_url)}/{get_github_repo_name(repo_url)}/commits"
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "My-User-Agent",
+        "sha": branch
+    }
+
+    page = 1
+    while len(commits) == 0 or not commits[-1].is_parent_release:
+        params = {
+            "page": page,
+            "per_page": 100  # Adjust the number of commits per page as needed
+        }
+
+        response = requests.get(url, headers=headers, params=params)
+        if response.status_code == 200:
+            page_commits = response.json()
+            if len(page_commits) > 0:
+                for page_commit in page_commits:
+                    commit = Commit()
+                    commit.hash = page_commit['sha']
+                    commit.author = f"{page_commit['commit']['committer']['name']} <{page_commit['commit']['committer']['email']}>"
+                    commit.author_name = page_commit['commit']['committer']['name']
+                    commit.author_email = page_commit['commit']['committer']['email']
+                    commit.gh_name = get_github_profile_name(page_commit['committer']['login'])
+                    commit.gh_username = page_commit['committer']['login']
+                    commit.date = page_commit['commit']['committer']['date']
+                    commit.message = page_commit['commit']['message']
+                    commit = populate_conventional(commit, repo_url, version_pattern, tags)
+                    commits.append(commit)
+                    if len(commits) == 1:
+                        commits[-1].is_parent_release = False
+                    elif commits and commits[-1].is_parent_release:
+                        break
+                page += 1
+            else:
+                break
+        else:
+            print(f"Error: {response.status_code} - {response.text}")
+            return commits
+
+    return commits
+
+
+def get_local_tags(project_path, tag_pattern):
+    tags = []
+    tags_result = subprocess.run(['git', 'tag', '-l'], stdout=subprocess.PIPE, cwd=project_path)
+    tags_output = tags_result.stdout.decode('utf-8').splitlines()
+    for tag in tags_output:
+        matches = re.search(tag_pattern, tag)
+        if matches:
+            commit_result = subprocess.run(['git', 'rev-list', '-n', '1', tag], stdout=subprocess.PIPE,
+                                           cwd=project_path)
+            commit_id = commit_result.stdout.decode('utf-8').strip()
+            tags.append({'name': tag, 'sha': commit_id})
+
+    ls_remote_result = subprocess.run(['git', 'ls-remote', '--tags'], stdout=subprocess.PIPE, cwd=project_path)
+    ls_remote_output = ls_remote_result.stdout.decode('utf-8').splitlines()
+    for line in ls_remote_output:
+        parts = line.split()
+        if len(parts) == 2 and parts[1].startswith("refs/tags/"):
+            commit_id = parts[0]
+            tag = parts[1].split('/')[-1]
+            matches = re.search(tag_pattern, tag)
+            if matches:
+                tags.append({'name': tag, 'sha': commit_id})
+    return tags
+
+
+def get_github_tags(repo_url, tag_pattern):
+    if repo_url is None:
+        return []
+
+    url = f"https://api.github.com/repos/{get_github_repo_owner(repo_url)}/{get_github_repo_name(repo_url)}/tags"
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "My-User-Agent"
+    }
+
+    tags = []
+
+    page = 1
+    per_page = 100  # Adjust the number of tags per page as needed
+
+    while True:
+        params = {
+            "page": page,
+            "per_page": per_page
+        }
+
+        response = requests.get(url, headers=headers, params=params)
+        if response.status_code == 200:
+            page_tags = response.json()
+            if len(page_tags) > 0:
+                for page_tag in page_tags:
+                    matches = re.search(tag_pattern, page_tag['name'])
+                    if matches:
+                        tags.append({'name': page_tag['name'], 'sha': page_tag['commit']['sha']})
+                page += 1
+            else:
+                break
+        else:
+            print(f"Error: {response.status_code} - {response.text}")
+            return tags
+
+    return tags
+
+
+def remove_duplicates(arr, comparison_fields):
+    unique_items = []
+    seen_values = set()
+
+    for item in arr:
+        # Generate a hashable representation of the comparison fields
+        comparison_values = tuple(item[field] for field in comparison_fields)
+
+        # Check if the comparison values have been seen before
+        if comparison_values not in seen_values:
+            unique_items.append(item)
+            seen_values.add(comparison_values)
+
+    return unique_items
 
 
 def check_github_admin_permissions(repo_url, username, access_token):
@@ -212,7 +478,6 @@ def check_user_institution(repo_url, username, access_token):
         }
     response = requests.get(api_url, headers=headers)
 
-
     if response.status_code == 200:
         user_data = response.json()
         organizations_url = user_data.get("organizations_url")
@@ -240,6 +505,39 @@ def check_user_institution(repo_url, username, access_token):
 
     return False
 
+
+def get_current_branch(project_path):
+    command = ["git", "-C", project_path, "rev-parse", "--abbrev-ref", "HEAD"]
+    try:
+        result = subprocess.run(command, capture_output=True, text=True)
+        if result.returncode == 0:
+            branch = result.stdout.strip()
+            if branch.startswith('heads/'):
+                branch = branch[6:]
+            return branch
+        else:
+            print(f"Git command execution failed: {result.stderr.strip()}")
+    except OSError as e:
+        print(f"Error executing Git command: {e}")
+
+
+def print_table(headers, data):
+    # Calculate the maximum length of each column
+    column_widths = [max(len(str(item)) for item in column) for column in zip(headers, *data)]
+
+    # Render the table header
+    header_row = "|".join(f" {header:<{width}} " for header, width in zip(headers, column_widths))
+    header_separator = "+".join("-" * (width + 2) for width in column_widths)
+    table = f"{header_row}\n{header_separator}\n"
+
+    # Render the table data rows
+    for row in data:
+        row_data = "|".join(f" {str(item):<{width}} " for item, width in zip(row, column_widths))
+        table += f"{row_data}\n"
+
+    print(table)
+
+
 def calculate_percentile(data, percentile):
     """
     Calculate the percentile of a list of values.
@@ -264,6 +562,7 @@ def calculate_percentile(data, percentile):
         upper = sorted_data[int(index) + 1]
         return lower + (index % 1) * (upper - lower)
 
+
 if __name__ == "__main__":
     # Args
     parser = argparse.ArgumentParser(description='Creates a changelog from the commit history.')
@@ -273,6 +572,7 @@ if __name__ == "__main__":
     parser.add_argument('--tag-pattern', help="regex indicating a tagged commit",
                         default='v.*\..*\..*')
     parser.add_argument('-o', '--output', help="output file", default='CHANGELOG.md')
+    parser.add_argument('--branch', help="reference parent branch", default='')
     parser.add_argument('--limit', type=int, help="max number of commits in the log", default=0)
     parser.add_argument('--thank-non-regular', action='store_true', help="Thank non-regular contributors")
     parser.add_argument('--github-token', help="GitHub token to identify non-regular contributors", default='')
@@ -280,123 +580,72 @@ if __name__ == "__main__":
 
     # Parameters
     project_path = args.dir
+    repo_branch = args.branch
     version_pattern = re.compile(args.version_pattern, flags=re.IGNORECASE)
     tag_pattern = re.compile(args.tag_pattern, flags=re.IGNORECASE)
     output_path = args.output
     access_token = args.github_token
 
-    # Get tagged commits
-    tagged_commit_hashes = set()
-    commit_tags = {}
-    tags_result = subprocess.run(['git', 'tag', '-l'], stdout=subprocess.PIPE, cwd=project_path)
-    tags_output = tags_result.stdout.decode('utf-8').splitlines()
-    for tag in tags_output:
-        matches = re.search(tag_pattern, tag)
-        if matches:
-            commit_result = subprocess.run(['git', 'rev-list', '-n', '1', tag], stdout=subprocess.PIPE,
-                                           cwd=project_path)
-            commit_id = commit_result.stdout.decode('utf-8').strip()
-            tagged_commit_hashes.add(commit_id)
-            commit_tags[commit_id] = tag
-    ls_remote_result = subprocess.run(['git', 'ls-remote', '--tags'], stdout=subprocess.PIPE, cwd=project_path)
-    ls_remote_output = ls_remote_result.stdout.decode('utf-8').splitlines()
-    for line in ls_remote_output:
-        parts = line.split()
-        if len(parts) == 2 and parts[1].startswith("refs/tags/"):
-            commit_id = parts[0]
-            tag = parts[1].split('/')[-1]
-            matches = re.search(tag_pattern, tag)
-            if matches:
-                tagged_commit_hashes.add(commit_id)
-                commit_tags[commit_id] = tag
-    print(f'{len(tagged_commit_hashes)} tagged commits')
+    # Adjust parameters
+    if repo_branch is None or repo_branch == '':
+        repo_branch = os.getenv("GITHUB_REF_NAME")
+    if repo_branch is None or repo_branch == '':
+        repo_branch = get_current_branch(project_path)
+    if access_token is None or access_token == '':
+        access_token = os.getenv("GITHUB_TOKEN")
 
-    # Parse commit log
-    result = subprocess.run(['git', '--no-pager', 'log'], stdout=subprocess.PIPE, cwd=project_path)
-    commit_log_output = result.stdout.decode('utf-8').splitlines()
-    commits = []
-    commit = Commit()
-    delimiter_commit_id = ''
-    msg = ''
-    for line in commit_log_output:
-        if line == '':
-            continue
-        if line.startswith('commit ') and ' ' not in line[7:]:
-            if commit.hash:
-                commits.append(commit)
-                commit = Commit()
-            commit.hash = line[len('commit '):]
-            if commits and commit.hash in tagged_commit_hashes:
-                print(f'Stopping at commit id {commit.hash[:8]} (tag {commit_tags[commit.hash]})')
-                delimiter_commit_id = commit.hash
-                break
-        if commit.hash and not commit.author and line.startswith('Author: '):
-            commit.author = line[len('Author: '):]
-            p = commit.author.find(' <')
-            if p != -1:
-                commit.author_name = commit.author[:p]
-                commit.author_email = commit.author[p + 2:-1]
-            continue
-        if commit.author and not commit.date and line.startswith('Date: '):
-            commit.date = line[len('Date: '):]
-            continue
-        if commit.date and line.startswith('    '):
-            msg = line[4:]
-            if not commit.subject:
-                # Is subject
-                commit.subject = msg
-                if commits:
-                    matches = re.search(version_pattern, commit.subject)
-                    if matches:
-                        print(f'Stopping at commit id {commit.hash[:8]} (subject: {commit.subject})')
-                        break
-                m = re.match(r'([ \d\w_-]+)(\(([ \d\w_-]+)\))?(!?): ([^\n]*)\n?(.*)', msg)
-                if m:
-                    commit.type = normalize_type(m[1])
-                    commit.scope = m[3]
-                    commit.description = m[5]
-                    if commits:
-                        matches = re.search(version_pattern, commit.description)
-                        if matches:
-                            print(f'Stopping at commit id {commit.hash[:8]} (description: {commit.description})')
-                            break
-                    commit.breaking = m[4] == '!'
-                else:
-                    # regular commit
-                    commit.description = commit.subject
-                    commit.type = 'other'
-                    commit.scope = None
-                    commit.breaking = commit.subject.find('BREAKING') != -1
-            else:
-                m = re.match(r'(([^ ]+): )|(([^ ]+) #)|((BREAKING CHANGE): )', msg)
-                if m:
-                    # is footer
-                    if m[1]:
-                        commit.footers.append((m[2], msg[len(m[2]) + 2:].strip()))
-                    elif m[3]:
-                        commit.footers.append((m[4], msg[len(m[4]) + 1:].strip()))
-                    elif m[5]:
-                        commit.footers.append((m[6], msg[len(m[6]) + 2:].strip()))
-                    if commit.footers[-1][0].lower().startswith('breaking'):
-                        commit.breaking = True
-                elif msg.lower() in ['breaking', 'breaking-change', 'breaking change']:
-                    # footer with no key and value
-                    # the whole message is breaking change footer
-                    commit.breaking = True
-                else:
-                    # if body
-                    if not commit.body:
-                        commit.body += msg
-                    else:
-                        commit.body += '\n' + msg
-    if commit.hash and commit.subject:
-        commits.append(commit)
-    print(f'{len(commits)} commits')
+    # GitHub parameters
+    repo_url = get_github_remote(project_path)
+    repo_owner = get_github_repo_owner(repo_url)
+    repo_name = get_github_repo_name(repo_url)
+
+    print_table(['Parameter', 'Value'],
+                [['Project path', project_path], ['Branch', repo_branch], ['Version Pattern', version_pattern],
+                 ['Tag Pattern', tag_pattern], ['Output', output_path], ['Repo', repo_url], ['Owner', repo_owner],
+                 ['Name', repo_name]])
+
+    # Tags
+    tags = get_local_tags(project_path, tag_pattern)
+    print(f'{len(tags)} local tags')
+    if len(tags) == 0:
+        repo_tags = get_github_tags(repo_url, tag_pattern)
+        print(f'{len(tags)} repo tags')
+        tags.extend(repo_tags)
+    tags = remove_duplicates(tags, ['name', 'sha'])
+    print(f'{len(tags)} tags')
+
+    # Commits
+    commits = get_local_commits(project_path, repo_url, version_pattern, tags)
+    print(f'{len(commits)} local commits')
+    if len(commits) == 0 or not commits[-1].is_parent_release:
+        commit_hashes = set(commit.hash for commit in commits)
+        repo_commits = get_github_commits(repo_url, repo_branch, version_pattern, tags)
+        print(f'{len(repo_commits)} repo commits')
+        for repo_commit in repo_commits:
+            if repo_commit.hash not in commit_hashes:
+                commits.append(repo_commit)
+        print(f'{len(commits)} total commits')
+
+    # Limit number of commits
     if args.limit:
         commits = commits[:args.limit]
-        print(f'Limited to {args.limit}')
+        print(f'Limited to {args.limit} commits')
 
-    # Populate with github usernames
+    # Populate github usernames
+    for c in commits:
+        if c.gh_username is None:
+            continue
+        gh_username = c.gh_username
+        gh_name = c.gh_name
+        if gh_name is None or gh_name == '':
+            gh_name = get_github_profile_name(gh_username)
+        if gh_name is not None:
+            c.gh_name = gh_name
+            for c2 in commits:
+                if c2.author_email == c.author_email:
+                    c2.gh_username = gh_username
+                    c2.gh_name = gh_name
+
     for c in commits:
         if c.gh_username is not None:
             continue
@@ -411,25 +660,10 @@ if __name__ == "__main__":
                     c2.gh_name = gh_name
 
     # Populate issue data
-    issue_footer_keys = ['Close', 'Closes', 'Closed', 'close', 'closes', 'closed',
-                         'Fix', 'Fixes', 'Fixed', 'fix', 'fixes', 'fixed',
-                         'Resolve', 'Resolves', 'Resolved', 'resolve', 'resolves', 'resolved']
-    repo_url = get_github_remote(project_path)
-    owner = None
-    if repo_url is not None:
-        owner = get_github_repo_owner(repo_url)
     if access_token == '' or access_token is None:
         access_token = os.getenv("GITHUB_TOKEN")
     if access_token == '':
         access_token = None
-
-    if repo_url is not None:
-        for c in commits:
-            for [key, value] in c.footers:
-                if key in issue_footer_keys and value.startswith('#'):
-                    c.issue = value[1:]
-                    c.gh_issue_username = get_issue_author(repo_url, c.issue)
-                    break
 
     # Author list
     authors = {}
@@ -441,7 +675,7 @@ if __name__ == "__main__":
                 authors[c.gh_username].name = c.gh_name
                 authors[c.gh_username].commits = 1
                 authors[c.gh_username].commits_perc = 1 / len(commits)
-                if owner is not None and owner == c.gh_username:
+                if repo_owner is not None and repo_owner == c.gh_username:
                     authors[c.gh_username].is_owner = True
                 authors[c.gh_username].is_admin = check_github_admin_permissions(repo_url, c.gh_username, access_token)
                 authors[c.gh_username].is_affiliated = check_user_institution(repo_url, c.gh_username, access_token)
@@ -455,10 +689,12 @@ if __name__ == "__main__":
                 authors[c.gh_issue_username].name = get_github_profile_name(c.gh_issue_username)
                 authors[c.gh_issue_username].commits = 0
                 authors[c.gh_issue_username].commits_perc = 0.
-                if owner is not None and owner == c.gh_issue_username:
+                if repo_owner is not None and repo_owner == c.gh_issue_username:
                     authors[c.gh_issue_username].is_owner = True
-                authors[c.gh_issue_username].is_admin = check_github_admin_permissions(repo_url, c.gh_issue_username, access_token)
-                authors[c.gh_issue_username].is_affiliated = check_user_institution(repo_url, c.gh_issue_username, access_token)
+                authors[c.gh_issue_username].is_admin = check_github_admin_permissions(repo_url, c.gh_issue_username,
+                                                                                       access_token)
+                authors[c.gh_issue_username].is_affiliated = check_user_institution(repo_url, c.gh_issue_username,
+                                                                                    access_token)
 
     # Identify non-regular contributors
     commit_hist = [author.commits for author in authors.values()]
@@ -496,8 +732,12 @@ if __name__ == "__main__":
     # https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue
 
     # Create dictionary of changes by type and scope
+    parent_release = None
     changes = {}
     for c in reversed(commits):
+        if c.is_parent_release:
+            parent_release = c
+            continue
         if c.type not in changes:
             changes[c.type] = {}
         if c.scope not in changes[c.type]:
@@ -625,25 +865,22 @@ if __name__ == "__main__":
                         related_usernames.append(commit.gh_username)
                     if commit.gh_issue_username is not None and commit.gh_issue_username != commit.gh_username:
                         related_usernames.append(commit.gh_issue_username)
-                    thank_list = [f'@{username}' for username in related_usernames if authors[username].is_regular == False]
+                    thank_list = [f'@{username}' for username in related_usernames if
+                                  authors[username].is_regular == False]
                     if thank_list:
                         output += f' (thanks {", ".join(thank_list)})'
                     output += '\n'
 
     # Output parent release
-    if delimiter_commit_id in tagged_commit_hashes and delimiter_commit_id in commit_tags:
-        parent_tag = commit_tags[delimiter_commit_id]
-        cmd = ['git', 'config', '--get', 'remote.origin.url']
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-        output += '\n'
-        if result.returncode == 0:
-            # Decode output and remove any trailing whitespace
-            repo_url = result.stdout.strip()
-            if repo_url.endswith('.git'):
-                repo_url = repo_url[:-len('.git')]
-            output += f'> Parent release: [{parent_tag}]({repo_url}/releases/tag/{parent_tag}) {delimiter_commit_id}\n'
-        else:
-            output += f'> Parent release: {parent_tag} {delimiter_commit_id}\n'
+    if parent_release is not None:
+        parent_tag = parent_release.tag
+        output += f'\n'
+        output += f'> Parent release: '
+        if repo_url is not None and parent_release.tag:
+            output += f'[{parent_release.tag}]({repo_url}/releases/tag/{parent_release.tag})'
+        elif parent_release.tag:
+            output += f'> Parent release: {parent_release.tag}'
+        output += f' {parent_release.hash[:7]}\n'
 
     # Output footnotes
     if footnotes_output:
