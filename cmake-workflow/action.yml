@@ -374,7 +374,7 @@ runs:
             CONFIGURE_ARGS+=(${{ (steps.generator.outputs.is_multi_config == 'true' && format('"-D" "CMAKE_CONFIGURATION_TYPES={0}"', inputs.build-type || 'Release')) || '' }})
             CONFIGURE_ARGS+=(${{ (inputs.toolchain && format('"-D" "CMAKE_TOOLCHAIN_FILE={0}"', inputs.toolchain)) || '' }})
             CONFIGURE_ARGS+=(${{ (inputs.run-tests && '"-D" "BUILD_TESTING=ON"') || '' }})
-            CONFIGURE_ARGS+=(${{ (inputs.shared && '"-D" "BUILD_SHARED_LIBS=ON"') || '' }})
+            CONFIGURE_ARGS+=(${{ (inputs.shared == 'true' && '"-D" "BUILD_SHARED_LIBS=ON"') || '' }})
             CONFIGURE_ARGS+=(${{ (inputs.cc && format('"-D" "CMAKE_C_COMPILER={0}"', steps.params.outputs.cc)) || '' }})
             CONFIGURE_ARGS+=(${{ (inputs.cxx && format('"-D" "CMAKE_CXX_COMPILER={0}"', steps.params.outputs.cxx)) || '' }})
         
