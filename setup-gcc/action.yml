@@ -203,7 +203,7 @@ runs:
         # Find GCC Path Versions
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
 
-        # Look for system GCC executables
+        # Look for Path GCC executable
         GCC_EXECUTABLE="${{ inputs.path }}"
         if command -v "$GCC_EXECUTABLE" &> /dev/null; then
           VERSION_OUTPUT=$("$GCC_EXECUTABLE" --version)
