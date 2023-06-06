@@ -206,11 +206,13 @@ def get_local_commits(project_path, repo_url, version_pattern, tags):
         if line.startswith('commit ') and ' ' not in line[7:]:
             if commit.hash:
                 commit = populate_conventional(commit, repo_url, version_pattern, tags)
-                commits.append(commit)
-                if len(commits) == 1:
-                    commits[-1].is_parent_release = False
-                elif commits[-1].is_parent_release:
-                    break
+                is_detail = commit.subject.startswith('[') and commit.subject.find(']') != -1
+                if not is_detail:
+                    commits.append(commit)
+                    if len(commits) == 1:
+                        commits[-1].is_parent_release = False
+                    elif commits[-1].is_parent_release:
+                        break
                 commit = Commit()
             commit.hash = line[len('commit '):]
         if commit.hash and not commit.author and line.startswith('Author: '):
@@ -341,11 +343,13 @@ def get_github_commits(repo_url, branch, version_pattern, tags):
                     commit.date = page_commit['commit']['committer']['date']
                     commit.message = page_commit['commit']['message']
                     commit = populate_conventional(commit, repo_url, version_pattern, tags)
-                    commits.append(commit)
-                    if len(commits) == 1:
-                        commits[-1].is_parent_release = False
-                    elif commits and commits[-1].is_parent_release:
-                        break
+                    is_detail = commit.subject.startswith('[') and commit.subject.find(']') != -1
+                    if not is_detail:
+                        commits.append(commit)
+                        if len(commits) == 1:
+                            commits[-1].is_parent_release = False
+                        elif commits and commits[-1].is_parent_release:
+                            break
                 page += 1
             else:
                 break
