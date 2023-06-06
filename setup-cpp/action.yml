@@ -109,19 +109,19 @@ outputs:
 
   version:
     description: "The installed compiler version. Useful when given a version range as input."
-    value: ${{ steps.version.outputs.release }}
+    value: ${{ steps.features.outputs.release }}
 
   version-major:
     description: "The installed compiler version major. Useful when given a version range as input."
-    value: ${{ steps.version.outputs.major }}
+    value: ${{ steps.features.outputs.version-major }}
 
   version-minor:
     description: "The installed compiler version minor. Useful when given a version range as input."
-    value: ${{ steps.version.outputs.minor }}
+    value: ${{ steps.features.outputs.version-minor }}
 
   version-patch:
     description: "The installed compiler version patch. Useful when given a version range as input."
-    value: ${{ steps.version.outputs.patch }}
+    value: ${{ steps.features.outputs.version-patch }}
 
   cache-hit:
     description: "A boolean value to indicate a cache entry was found"
