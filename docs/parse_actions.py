@@ -52,7 +52,6 @@ def sort_step(d):
 
 readme_base = os.path.join('README.base.adoc')
 action_pages_dir = os.path.join('docs', 'modules', 'ROOT', 'pages', 'actions')
-all_actions_page_dir = os.path.join('docs')
 example_path = os.path.join('.github', 'workflows', 'ci.yml')
 actions = ['cpp-matrix', 'setup-cpp', 'package-install', 'cmake-workflow', 'boost-clone', 'b2-workflow',
            'create-changelog', 'flamegraph', 'setup-cmake', 'setup-gcc', 'setup-clang']
@@ -63,11 +62,6 @@ with open(example_path, 'r') as f:
     steps = ci_yml['jobs']['build']['steps']
     steps += ci_yml['jobs']['docs']['steps']
     steps += ci_yml['jobs']['cpp-matrix']['steps']
-
-# Load the YAML file
-all_actions_toc_output = ''
-all_actions_output = ''
-
 
 def gha_tokenize(expression):
     tokens = []
@@ -344,7 +338,6 @@ for action in actions:
     output += f':navtitle: {action_name} Action\n'
     output += f'// This {action}.adoc file is automatically generated.\n// Edit parse_actions.py instead.\n\n'
     output += f'{action_description}\n\n'
-    all_actions_toc_output += f'- <<{action}>>\n'
 
     # Look for example templates
     example_templates = []
@@ -449,56 +442,3 @@ for action in actions:
     action_page_path = os.path.join(action_pages_dir, f'{action}.adoc')
     with open(action_page_path, 'w') as f:
         f.write(output)
-
-    # Update index content
-    all_actions_output += f'include::{os.path.relpath(action_page_path, all_actions_page_dir)}[leveloffset=+1]\n'
-
-if not os.path.exists(all_actions_page_dir):
-    os.makedirs(all_actions_page_dir)
-with open(os.path.join(all_actions_page_dir, 'all_actions.adoc'), 'w') as f:
-    f.write('= Actions\n:reftext: Actions\n:navtitle: All Actions\n\n')
-    f.write(all_actions_toc_output)
-    f.write('\n')
-    f.write(all_actions_output)
-
-
-# Render includes in README.adoc so that github can render it
-def render_include(fout, path, leveloffset):
-    with open(path, 'r') as fin:
-        for line in fin:
-            m = re.match(r'^( *)(=+) (.*)$', line)
-            if m:
-                fout.write(f'{m.group(1)}{m.group(2)}{"=" * leveloffset} {m.group(3)}\n')
-                continue
-
-            m = re.match(r'^ *include::([^\[]+)(\[[^]]+])?.*$', line)
-            if m:
-                offset = 0
-                if m.group(2):
-                    m2 = re.match(r'\[.*leveloffset=\+?(\d+).*]', m.group(2))
-                    if m2:
-                        offset = int(m2.group(1))
-                render_include(fout, os.path.join(os.path.dirname(path), m.group(1)), leveloffset + offset)
-                continue
-
-            replaced = line.replace('{page-version}', 'master')
-            replaced = re.sub(r'\{(\d+)\}', r'\{\1\}', replaced)
-            fout.write(replaced)
-
-
-readme_base = 'README.base.adoc'
-readme_target = 'README.adoc'
-with open(readme_target, 'w') as fout:
-    with open(readme_base, 'r') as fin:
-        for line in fin:
-            m = re.match(r'^ *include::([^\[]+)(\[[^]]+])?.*$', line)
-            if m:
-                offset = 0
-                if m.group(2):
-                    m2 = re.match(r'\[.*leveloffset=\+?(\d+).*]', m.group(2))
-                    if m2:
-                        offset = int(m2.group(1))
-                render_include(fout, os.path.join(os.getcwd(), m.group(1)), offset)
-                fout.write('\n')
-            else:
-                fout.write(line)
