@@ -19,3 +19,5 @@ This can help to ensure that the library is functioning correctly and that it is
 
 Whether you are a seasoned {cpp} developer or just starting out, these testing tools can help you to streamline your development workflow and ensure that your library is robust and reliable.
 With a comprehensive set of testing tools at your disposal, you can focus on writing high-quality code and delivering great software to your users.
+
+image:{url-repo}/actions/workflows/ci.yml/badge.svg?branch={page-version}[]
