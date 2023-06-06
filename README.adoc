@@ -527,6 +527,7 @@ This should usually match the `cmake_minimum_required` defined in your CMakeList
 |`build-target` |Targets to build instead of the default target. |
 |`install-prefix` |Path where the library should be installed. |`.local/usr`
 |`extra-args` |Extra arguments to cmake configure command. |
+|`export-compile-commands` |Set CMAKE_EXPORT_COMPILE_COMMANDS=ON. |`false`
 |`run-tests` |Whether we should run tests. |`true`
 |`install` |Whether we should install the library. 
 

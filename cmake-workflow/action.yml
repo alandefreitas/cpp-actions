@@ -105,6 +105,10 @@ inputs:
     description: 'Extra arguments to cmake configure command.'
     required: false
     default: ''
+  export-compile-commands:
+    description: 'Set CMAKE_EXPORT_COMPILE_COMMANDS=ON.'
+    required: false
+    default: 'false'
 
   # Test options
   run-tests:
@@ -377,7 +381,8 @@ runs:
             CONFIGURE_ARGS+=(${{ (inputs.shared == 'true' && '"-D" "BUILD_SHARED_LIBS=ON"') || '' }})
             CONFIGURE_ARGS+=(${{ (inputs.cc && format('"-D" "CMAKE_C_COMPILER={0}"', steps.params.outputs.cc)) || '' }})
             CONFIGURE_ARGS+=(${{ (inputs.cxx && format('"-D" "CMAKE_CXX_COMPILER={0}"', steps.params.outputs.cxx)) || '' }})
-        
+            CONFIGURE_ARGS+=(${{ (inputs.export-compile-commands == 'true' && '"-D" "CMAKE_EXPORT_COMPILE_COMMANDS=ON"') || '' }})
+
             # Install and package parameters
             CONFIGURE_ARGS+=(${{ (inputs.install-prefix && format('"-D" "CMAKE_INSTALL_PREFIX={0}"', inputs.install-prefix)) || '' }})
             CONFIGURE_ARGS+=(${{ (inputs.package-generators != '' && format('"-D" "CPACK_GENERATOR={0}"', inputs.package-generators)) || '' }})
