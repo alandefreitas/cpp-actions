@@ -95,6 +95,23 @@ runs:
       uses: SimenB/github-actions-cpu-cores@v1
       id: cpu-cores
 
+    - name: Set toolset compiler
+      working-directory: ${{ inputs.source-dir }}
+      shell: bash
+      run: |
+        # Bootstrap headers
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+        
+        # Set the compiler the toolset should use
+        if [ -n "${{ inputs.cxx }}" ] && [ -n "${{ inputs.toolset }}" ]; then
+          cxx="${{ inputs.cxx }}"
+          cxx="${cxx//\\/\\\\}"  # Replace single backslashes with double backslashes
+          toolset="${{ inputs.toolset }}"
+          if [[ $toolset != "clang-win" ]]; then
+              echo -n "using $toolset : : \"$cxx\" ;" > ~/user-config.jam
+          fi
+        fi
+
     - name: Bootstrap
       working-directory: ${{ inputs.source-dir }}
       shell: bash
@@ -118,16 +135,6 @@ runs:
         B2_ARGS+=(${{ (inputs.address-model && format('"address-model={0}"', inputs.address-model)) || '' }})
         B2_ARGS+=(${{ (inputs.cxxstd && format('"cxxstd={0}"', inputs.cxxstd)) || '' }})
         
-        # Set the compiler the toolset should use
-        if [ -n "${{ inputs.cxx }}" ] && [ -n "${{ inputs.toolset }}" ]; then
-          cxx="${{ inputs.cxx }}"
-          cxx="${cxx//\\/\\\\}"  # Replace single backslashes with double backslashes
-          toolset="${{ inputs.toolset }}"
-          if [[ $toolset != "clang-win" ]]; then
-              echo -n "using $toolset : : \"$cxx\" ;" > ~/user-config.jam
-          fi
-        fi
-        
         build_variant="${{ inputs.build-variant }}"
         if [ "${{ inputs.build-variant }}" != "" ]; then
             build_variant=$(echo "$build_variant" | tr '[:upper:]' '[:lower:]')
@@ -148,11 +155,11 @@ runs:
         B2_ARGS+=(${{ (inputs.tsan == 'true' && '"thread-sanitizer=on"') || '' }})
         B2_ARGS+=(${{ (inputs.coverage == 'true' && '"coverage=on"') || '' }})
         B2_ARGS+=(${{ (inputs.linkflags && format('"linkflags={0}"', inputs.linkflags)) || '' }})
-        if [[ $toolset == "clang-win" ]]; then
+        toolset="${{ inputs.toolset }}"
+        if [[ "$toolset" == "clang-win" ]]; then
           B2_ARGS+=("embed-manifest-via=linker")
         fi
          
-        
         modules="${{ inputs.modules }}"
         for module in ${modules//,/ }
         do

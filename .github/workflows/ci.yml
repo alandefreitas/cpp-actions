@@ -72,7 +72,7 @@ jobs:
         with:
           compiler: ${{ matrix.compiler }}
           version: ${{ matrix.version }}
-          trace-commands: 'true'
+          trace-commands: true
 
       - name: Install packages
         uses: ./package-install
@@ -80,7 +80,7 @@ jobs:
         with:
           vcpkg: fmt
           vcpkg-triplet: ${{ ( runner.os == 'Windows' && matrix.x86 && 'x86-windows' ) || '' }}
-          apt-get: ${{ join(matrix.install, ' ') }} ${{ (matrix.coverage && 'lcov') || '' }} ${{ matrix.container && 'sudo software-properties-common wget curl apt-transport-https make apt-file unzip libssl-dev build-essential autotools-dev autoconf automake g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3 ccache libpython-dev python3-distutils python3-pip git cmake' }}
+          apt-get: ${{ (matrix.coverage && 'lcov') || '' }} ${{ (matrix.container && 'build-essential') || '' }}
           apt-get-ignore-missing: ${{ matrix.container && 'true' }}
           cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
           ccflags: ${{ matrix.ccflags }}

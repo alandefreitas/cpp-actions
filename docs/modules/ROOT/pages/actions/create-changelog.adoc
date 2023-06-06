@@ -47,7 +47,7 @@ This parameter can also be used as a limit on the number of commits the action s
 [source,yml,subs="attributes+"]
 ----
 steps:
-- name: Create release notes
+- name: Changelog
   uses: alandefreitas/cpp-actions/create-changelog@{page-version}
   with:
     output-path: CHANGELOG.md
@@ -82,6 +82,7 @@ This constraint does not apply to the current and latest commit.
 . |`0`
 |`thank-non-regular` |Thank non-regular contributors. |`true`
 |`github-token` |Github token to identify non-regular contributors. Usually secrets.GITHUB_TOKEN. |
+|`update-summary` |Update action summary with the changelog. |`true`
 |`trace-commands` |Trace commands executed by the workflow. |`false`
 |===
 
