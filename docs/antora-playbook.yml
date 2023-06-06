@@ -19,7 +19,7 @@ content:
 
 ui:
   bundle:
-    url: https://github.com/bonitasoft/bonita-documentation-theme/releases/download/v1.11.0/bonita-documentation-theme-v1.11.0.zip
+    url: ./ui/ui-bundle.zip
     snapshot: true
   supplemental_files: ./supplemental-ui
 

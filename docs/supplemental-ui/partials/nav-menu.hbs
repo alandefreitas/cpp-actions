@@ -1,0 +1,20 @@
+{{#with page.navigation}}
+    <div class="nav-panel-menu is-active" data-panel="menu">
+        <div class="navbar-item search hide-for-print">
+            <div id="search-field" class="field has-filter">
+                <div style="display: flex; flex-direction: column;">
+                    <div style="display: flex; margin-bottom: 10px; position: relative;">
+                        <input id="search-input" type="text" placeholder="Search the docs"{{#if page.home}}
+                               autofocus{{/if}} style="flex: 1; padding: 0 0.25em" onkeyup="onSearch()">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <nav class="nav-menu">
+            {{#with @root.page.componentVersion}}
+                <h3 class="title"><a href="{{{relativize ./url}}}">{{./title}}</a></h3>
+            {{/with}}
+            {{> nav-tree navigation=this}}
+        </nav>
+    </div>
+{{/with}}

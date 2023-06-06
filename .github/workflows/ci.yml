@@ -191,27 +191,15 @@ jobs:
       - name: Clone cpp-actions
         uses: actions/checkout@v3
 
-      - name: Install Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
 
-      - name: Install Antora
+      - name: Generate site
         working-directory: docs
         run: |
           npm install
-
-      - name: Recreate symlinks
-        working-directory: docs
-        run: |
-          rm supplemental-ui/js/vendor/tabs.js
-          rm supplemental-ui/css/vendor/tabs.css
-          cp node_modules/@asciidoctor/tabs/dist/css/tabs.css supplemental-ui/css/vendor/
-          cp node_modules/@asciidoctor/tabs/dist/js/tabs.js supplemental-ui/js/vendor/
-
-      - name: Generate Site
-        working-directory: docs
-        run: |
           npx antora antora-playbook.yml
 
       - name: Publish to GitHub Pages
