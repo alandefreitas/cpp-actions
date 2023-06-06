@@ -80,7 +80,7 @@ jobs:
         with:
           vcpkg: fmt
           vcpkg-triplet: ${{ ( runner.os == 'Windows' && matrix.x86 && 'x86-windows' ) || '' }}
-          apt-get: ${{ join(matrix.install, ' ') }} ${{ matrix.container && 'sudo software-properties-common wget curl apt-transport-https make apt-file unzip libssl-dev build-essential autotools-dev autoconf automake g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3 ccache libpython-dev python3-distutils python3-pip git cmake' }}
+          apt-get: ${{ join(matrix.install, ' ') }} ${{ (matrix.coverage && 'lcov') || '' }} ${{ matrix.container && 'sudo software-properties-common wget curl apt-transport-https make apt-file unzip libssl-dev build-essential autotools-dev autoconf automake g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3 ccache libpython-dev python3-distutils python3-pip git cmake' }}
           apt-get-ignore-missing: ${{ matrix.container && 'true' }}
           cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
           ccflags: ${{ matrix.ccflags }}
@@ -99,7 +99,7 @@ jobs:
           trace-commands: true
 
       - name: B2 Workflow
-        if: ${{ ! matrix.time-trace }}
+        if: ${{ ! matrix.time-trace && ! matrix.coverage }}
         uses: ./b2-workflow
         with:
           source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
@@ -146,6 +146,33 @@ jobs:
           build-dir: tests/build
           github_token: ${{ secrets.GITHUB_TOKEN }}
           trace-commands: true
+
+      - name: Codecov generate
+        if: ${{ matrix.coverage }}
+        run: |
+          set -x
+          gcov_tool="gcov"
+          if command -v "gcov-${{ steps.setup-cpp.outputs.version-major }}.${{ steps.setup-cpp.outputs.version-minor }}" &> /dev/null; then
+              gcov_tool="gcov"
+          elif command -v "gcov-${{ steps.setup-cpp.outputs.version-major }}" &> /dev/null; then
+              gcov_tool="gcov-${{ steps.setup-cpp.outputs.version-major }}"
+          fi
+          lcov -c -q -o "./tests/build/coverage.info" -d "./tests/build" --include "$(pwd)/*" --gcov-tool "$gcov_tool"
+          # genhtml --legend -f -q "./tests/build/coverage.info" -p "./tests" -o "./tests/build/coverage_html"
+          cat "./tests/build/coverage.info"
+          
+          echo "# Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "[![codecov](https://codecov.io/github/$GITHUB_REPOSITORY/commit/$GITHUB_SHA/graphs/sunburst.svg)](https://codecov.io/github/$GITHUB_REPOSITORY/commit/$GITHUB_SHA)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "[![codecov](https://codecov.io/github/$GITHUB_REPOSITORY/commit/$GITHUB_SHA/graph/badge.svg)](https://codecov.io/github/$GITHUB_REPOSITORY/commit/$GITHUB_SHA)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Codecov upload
+        if: ${{ matrix.coverage }}
+        uses: codecov/codecov-action@v3
+        with:
+          directory: ./tests
 
   docs:
     needs: build
