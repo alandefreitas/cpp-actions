@@ -4,7 +4,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(cpp_actions)
 project(cpp_actions
-        VERSION 1.0.0
+        VERSION 1.4.0
         LANGUAGES CXX)
 
 #######################################################

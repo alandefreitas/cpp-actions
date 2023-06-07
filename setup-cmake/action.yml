@@ -215,7 +215,7 @@ runs:
         lenient: true
 
     - name: Find a CMake release version that satisfies the requirements
-      uses: alandefreitas/cpp-actions/semver-utils@v1.1.0
+      uses: alandefreitas/cpp-actions/semver-utils@v1.4.0
       if: ${{ steps.system-version.outputs.satisfies == 'false' || steps.system-version.outputs.satisfies == '' }}
       id: min-version
       with:
@@ -307,7 +307,7 @@ runs:
 
     - name: Ensure python is available for find-python action in containers
       if: ${{ steps.cache-cmake.outputs.cache-hit != 'true' && (steps.system-version.outputs.satisfies == 'false' || steps.system-version.outputs.satisfies == '') }}
-      uses: alandefreitas/cpp-actions/package-install@v1.3.0
+      uses: alandefreitas/cpp-actions/package-install@v1.4.0
       with:
         apt-get: curl
 
