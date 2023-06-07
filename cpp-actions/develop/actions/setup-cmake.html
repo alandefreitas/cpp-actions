@@ -184,14 +184,14 @@
     <button class="nav-item-toggle"></button>
     <span class="nav-text">Tools</span>
 <ul class="nav-list">
-  <li class="nav-item is-current-page" data-depth="2">
-    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
-  </li>
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="package-install.html">Install Packages Action</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
   </li>
 </ul>
   </li>
@@ -212,10 +212,10 @@
     <span class="nav-text">Project</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
+    <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
   </li>
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
+    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
   </li>
 </ul>
   </li>
@@ -311,7 +311,8 @@
 <p>This action will also set-up any dependencies required by CMake.</p>
 </div>
 <div class="paragraph">
-<p>In most workflows, this is used as an auxiliary action for the <a href="cmake-workflow.html" class="xref page">CMake Workflow</a> action.</p>
+<p>In most workflows, this is used as an auxiliary action for the <a href="cmake-workflow.html" class="xref page">CMake Workflow</a> action,
+which already calls this action if necessary.</p>
 </div>
 </div>
 </div>

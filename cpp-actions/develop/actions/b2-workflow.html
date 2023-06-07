@@ -185,13 +185,13 @@
     <span class="nav-text">Tools</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
-  </li>
-  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="package-install.html">Install Packages Action</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
   </li>
 </ul>
   </li>
@@ -212,10 +212,10 @@
     <span class="nav-text">Project</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
+    <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
   </li>
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
+    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
   </li>
 </ul>
   </li>
@@ -308,11 +308,31 @@
 <p>This action runs a complete B2 workflow from Boost source files.</p>
 </div>
 <div class="paragraph">
+<p>If you are developing a boost library, this is usually the next step in your workflow after setting up a C++ compiler
+and fetching dependencies with <a href="package-install.html" class="xref page">Install Packages</a>.</p>
+</div>
+<div class="paragraph">
 <p>It takes the Boost source directory and does whatever it needs to test the specified modules. This includes
 compiling <code>b2</code> if needed and generating a proper <code>user-config.jam</code> file.</p>
 </div>
 <div class="paragraph">
 <p>This action is particularly useful for Boost library proposals.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next steps</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>If you&#8217;re library also supports CMake, the next step in your workflow should usually be
+<a href="cmake-workflow.html" class="xref page">CMake Workflow</a>. Otherwise, the next step in your workflow should usually be
+the generation of reports, with tools such as the <a href="flamegraph.html" class="xref page">Create Flamegraph</a> (when <code>matrix.time-trace</code>) and
+<a href="create-changelog.html" class="xref page">Create Changelog</a> (usually in another workflow job). You can also include customs steps to
+upload coverage reports (when <code>matrix.coverage</code>).</p>
+</div>
+<div class="paragraph">
+<p>If your b2 workflow provides CMake installation and configuration scripts, it is also usual to include multiple
+CMake workflow steps as integration tests for CMake.</p>
 </div>
 </div>
 </div>
