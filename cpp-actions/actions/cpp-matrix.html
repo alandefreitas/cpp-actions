@@ -159,9 +159,6 @@
             <ul class="nav-list">
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="../index.html">Home</a>
-  </li>
   <li class="nav-item is-current-page" data-depth="1">
     <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
   </li>
@@ -246,6 +243,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.4.0/index.html">v1.4.0</a>
+        </li>
+        <li class="version">
           <a href="../v1.3.0/index.html">v1.3.0</a>
         </li>
         <li class="version">
@@ -282,6 +282,7 @@
   <div class="version-menu">
     <a class="version is-current" href="cpp-matrix.html">master</a>
     <a class="version" href="../develop/actions/cpp-matrix.html">develop</a>
+    <a class="version" href="../v1.4.0/actions/cpp-matrix.html">v1.4.0</a>
     <a class="version" href="../v1.3.0/actions/cpp-matrix.html">v1.3.0</a>
     <a class="version is-missing" href="../v1.2.1/index.html">v1.2.1</a>
     <a class="version is-missing" href="../v1.2.0/index.html">v1.2.0</a>
@@ -564,6 +565,8 @@ and factors to be tested.</p>
    as sanitizers, coverage, and time-trace.</p>
 <p class="tableblock">- `cxxflags`: The recommended C flags to be used by this entry. It reflects the values of special factors, such
    as sanitizers, coverage, and time-trace.</p>
+<p class="tableblock">- <code>install</code>: The recommended packages to be installed before running the workflow. This includes packages
+  such as build-essential for ubuntu containers and lcov for coverage entries.</p>
 <p class="tableblock">- <code>&lt;factors&gt;&#8230;&#8203;</code>: Provides additional factors or attributes associated with the test configuration as defined by
   the factors and latest-factors inputs. These usually include variant build configurations spread among the
   entries, such as asan, coverage, and shared libraries.</p></td>

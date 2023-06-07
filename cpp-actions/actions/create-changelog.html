@@ -160,9 +160,6 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="../index.html">Home</a>
-  </li>
-  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -246,6 +243,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.4.0/index.html">v1.4.0</a>
+        </li>
+        <li class="version">
           <a href="../v1.3.0/index.html">v1.3.0</a>
         </li>
         <li class="version">
@@ -283,6 +283,7 @@
   <div class="version-menu">
     <a class="version is-current" href="create-changelog.html">master</a>
     <a class="version" href="../develop/actions/create-changelog.html">develop</a>
+    <a class="version" href="../v1.4.0/actions/create-changelog.html">v1.4.0</a>
     <a class="version" href="../v1.3.0/actions/create-changelog.html">v1.3.0</a>
     <a class="version" href="../v1.2.1/actions/create-changelog.html">v1.2.1</a>
     <a class="version" href="../v1.2.0/actions/create-changelog.html">v1.2.0</a>
@@ -362,7 +363,7 @@ perform a shallow clone and the Changelog will only include the latest commit.</
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Create release notes
+- name: Changelog
   uses: alandefreitas/cpp-actions/create-changelog@master
   with:
     output-path: CHANGELOG.md
@@ -433,6 +434,11 @@ in the notes is complete.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>github-token</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Github token to identify non-regular contributors. Usually secrets.GITHUB_TOKEN.</p></td>
 <td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>update-summary</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Update action summary with the changelog.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>

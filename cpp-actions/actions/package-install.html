@@ -160,9 +160,6 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="../index.html">Home</a>
-  </li>
-  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -246,6 +243,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.4.0/index.html">v1.4.0</a>
+        </li>
+        <li class="version">
           <a href="../v1.3.0/index.html">v1.3.0</a>
         </li>
         <li class="version">
@@ -283,6 +283,7 @@
   <div class="version-menu">
     <a class="version is-current" href="package-install.html">master</a>
     <a class="version" href="../develop/actions/package-install.html">develop</a>
+    <a class="version" href="../v1.4.0/actions/package-install.html">v1.4.0</a>
     <a class="version" href="../v1.3.0/actions/package-install.html">v1.3.0</a>
     <a class="version" href="../v1.2.1/actions/package-install.html">v1.2.1</a>
     <a class="version" href="../v1.2.0/actions/package-install.html">v1.2.0</a>
@@ -322,11 +323,7 @@ Both vcpkg and its dependencies are cached.</p>
     vcpkg: fmt
     vcpkg-triplet: ${{ ( runner.os == 'Windows' &amp;&amp; matrix.x86 &amp;&amp; 'x86-windows' ) ||
       '' }}
-    apt-get: ${{ join(matrix.install, ' ') }} ${{ (matrix.coverage &amp;&amp; 'lcov') || ''
-      }} ${{ matrix.container &amp;&amp; 'sudo software-properties-common wget curl apt-transport-https
-      make apt-file unzip libssl-dev build-essential autotools-dev autoconf automake
-      g++ libc++-helpers python ruby cpio gcc-multilib g++-multilib pkgconf python3
-      ccache libpython-dev python3-distutils python3-pip git cmake' }}
+    apt-get: ${{ matrix.install }}
     apt-get-ignore-missing: ${{ matrix.container &amp;&amp; 'true' }}
     cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
     ccflags: ${{ matrix.ccflags }}
