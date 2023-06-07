@@ -7,6 +7,9 @@
 This action clones the Boost source directory, attempting to get it from the cache first. Only the specified
 modules are cloned and cached.
 
+This is usually the next step in your workflow after setting up a C++ compiler with 
+xref:actions/setup-cpp.adoc[] or installing other dependencies with xref:actions/package-install.adoc[]. 
+
 Cloning boost is useful when one wants the always use the latest version of boost in a library or is writing
 a boost proposal. For other use cases, individual boost modules can be fetched with vcpkg in 
 xref:actions/package-install.adoc[] or directly included in a package manager manifest.
@@ -18,6 +21,12 @@ The union of the implicitly and explicitly specified modules is cloned. Caching 
 
 For a project with about 5 boost dependencies, caching saves about 4 minutes in the workflow. When there's no
 cache, the scanning scripting saves us about 3 minutes.
+
+== Next steps
+
+After cloning boost modules for your C++ project, the next step in your workflow should usually be
+xref:actions/cmake-workflow.adoc[]. If you are developing a Boost library, it is also usual for the next
+step to be the xref:actions/b2-workflow.adoc[].
 
 
 == Example

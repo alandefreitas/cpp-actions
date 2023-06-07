@@ -4,15 +4,15 @@
 ** xref:actions/setup-gcc.adoc[]
 ** xref:actions/setup-clang.adoc[]
 * Tools
-** xref:actions/setup-cmake.adoc[]
 ** xref:actions/package-install.adoc[]
 ** xref:actions/boost-clone.adoc[]
+** xref:actions/setup-cmake.adoc[]
 * Workflows
 ** xref:actions/cmake-workflow.adoc[]
 ** xref:actions/b2-workflow.adoc[]
 * Project
-** xref:actions/create-changelog.adoc[]
 ** xref:actions/flamegraph.adoc[]
+** xref:actions/create-changelog.adoc[]
 * xref:contribute.adoc[]
 * xref:license.adoc[]
 

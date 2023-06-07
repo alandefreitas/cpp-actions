@@ -2,10 +2,24 @@ name: 'B2 Workflow'
 description: |
   This action runs a complete B2 workflow from Boost source files.
   
+  If you are developing a boost library, this is usually the next step in your workflow after setting up a C++ compiler
+  and fetching dependencies with xref:actions/package-install.adoc[].
+  
   It takes the Boost source directory and does whatever it needs to test the specified modules. This includes 
   compiling `b2` if needed and generating a proper `user-config.jam` file.
   
   This action is particularly useful for Boost library proposals.
+  
+  == Next steps
+  
+  If you're library also supports CMake, the next step in your workflow should usually be 
+  xref:actions/cmake-workflow.adoc[]. Otherwise, the next step in your workflow should usually be
+  the generation of reports, with tools such as the xref:actions/flamegraph.adoc[] (when `matrix.time-trace`) and 
+  xref:actions/create-changelog.adoc[] (usually in another workflow job). You can also include customs steps to
+  upload coverage reports (when `matrix.coverage`).
+  
+  If your b2 workflow provides CMake installation and configuration scripts, it is also usual to include multiple
+  CMake workflow steps as integration tests for CMake.
 
 inputs:
   source-dir:

@@ -4,7 +4,12 @@
 // This cmake-workflow.adoc file is automatically generated.
 // Edit parse_actions.py instead.
 
-This action runs a complete CMake workflow from source files. A workflow is composed of the following steps:
+This action runs a complete CMake workflow from source files. 
+
+This is usually the next step in your workflow after setting up a C++ compiler and fetching dependencies with 
+xref:actions/package-install.adoc[].
+
+A workflow is composed of the following steps:
 
 - Configure
 - Build
@@ -32,6 +37,16 @@ step once for each target.
 
 The action also creates GitHub annotations when warnings or errors are emitted at any of these steps. This includes
 annotations for CMake errors at the configure step and build errors emitted from the compiler at the build step.
+
+== Next steps
+
+After running the a complete CMake workflow for your project, the next step in your workflow should usually be
+the generation of reports, with tools such as the xref:actions/flamegraph.adoc[] (when `matrix.time-trace`) and 
+xref:actions/create-changelog.adoc[] (usually in another workflow job). You can also include customs steps to
+upload coverage reports (when `matrix.coverage`).
+
+If your project provides CMake installation and configuration scripts, it is also usual to include multiple
+CMake workflow steps as integration tests for CMake.
 
 
 == Example

@@ -20,7 +20,16 @@ description: |
   If a version of GCC is not available by any other methods above, the GCC binaries for
   a given platform can be built locally with a 
   https://github.com/alandefreitas/cpp-actions/tree/develop/setup-gcc[script,window="_blank"]
-  provided in this repository and added to our binary release. 
+  provided in this repository and added to our binary release.
+  
+  In most workflows, this is used as an auxiliary action for the xref:actions/setup-cpp.adoc[] action,
+  which already calls this action if necessary.
+  
+  == Next steps
+  
+  After setting up the proper C++ compiler for a matrix entry, the next step in your workflow should usually be
+  xref:actions/package-install.adoc[].
+
 
 inputs:
   version:

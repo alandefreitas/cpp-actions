@@ -6,6 +6,9 @@
 
 This action creates an initial Changelog from the commit history.
 
+This is usually the included in your workflow after building and testing your library with 
+xref:actions/cmake-workflow.adoc[] in another job with the complete matrix.
+
 The commits considered go from the latest commit up to a commit containing a version
 commit pattern specified by version-pattern.
 

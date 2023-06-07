@@ -17,6 +17,14 @@ This action uses a number of alternatives to find or install Clang:
 - Any other version of Clang available from APT
 - A version of Clang from our own binary releases
 
+In most workflows, this is used as an auxiliary action for the xref:actions/setup-cpp.adoc[] action,
+which already calls this action if necessary.
+
+== Next steps
+
+After setting up the proper C++ compiler for a matrix entry, the next step in your workflow should usually be
+xref:actions/package-install.adoc[].
+
 
 == Input Parameters
 

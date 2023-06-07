@@ -89,6 +89,11 @@ description: |
   
         # And you've safely tested your C++ library just like that...
   ----
+  
+  == Next steps
+  
+  After setting creating the test matrix, the next step in your workflow should usually be
+  xref:actions/setup-cpp.adoc[].
 
 inputs:
   compilers:
