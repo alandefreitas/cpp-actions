@@ -316,7 +316,7 @@ runs:
     - name: boost patches
       if: steps.cache-boost.outputs.cache-hit != 'true' && inputs.patches != ''
       shell: bash
-      working-directory: ${{ steps.ctx.outputs.boost_dir }}/libs
+      working-directory: ${{ ( inputs.boost-dir != '' && inputs.boost-dir ) || steps.ctx.outputs.boost_dir }}/libs
       run: |
         # Apply boost patches ${{ inputs.patches }}
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
@@ -333,7 +333,7 @@ runs:
 
     - name: Git features
       if: steps.cache-boost.outputs.cache-hit != 'true'
-      working-directory: ${{ steps.ctx.outputs.boost_dir }}
+      working-directory: ${{ ( inputs.boost-dir != '' && inputs.boost-dir ) || steps.ctx.outputs.boost_dir }}
       shell: bash
       id: features
       run: |
@@ -383,7 +383,7 @@ runs:
     # Initialize all submodules if boost not found in cache and no specific modules were specified
     - name: Initialize all submodules
       if: (steps.cache-boost.outputs.cache-hit != 'true' && steps.ctx.outputs.all_modules == '')
-      working-directory: ${{ steps.ctx.outputs.boost_dir }}
+      working-directory: ${{ ( inputs.boost-dir != '' && inputs.boost-dir ) || steps.ctx.outputs.boost_dir }}
       shell: bash
       run: |
         # Update all boost submodules
@@ -396,7 +396,7 @@ runs:
     # Initialize specified submodules if boost not found in cache and submodules were specified
     - name: Initialize specified submodules
       if: (steps.cache-boost.outputs.cache-hit != 'true' && steps.ctx.outputs.all_modules != '')
-      working-directory: ${{ steps.ctx.outputs.boost_dir }}
+      working-directory: ${{ ( inputs.boost-dir != '' && inputs.boost-dir ) || steps.ctx.outputs.boost_dir }}
       shell: bash
       run: |
         # Scan transitive dependencies and update submodules
