@@ -15,20 +15,19 @@ description: |
   For every object file, there will be a corresponding json file with details about build time.
   
   Each file in the build-dir will be combined into a single output file that contains
-  all traces.
+  all traces. The combined time-trace is used to generate a report and then converted to an image with 
+  https://github.com/brendangregg/FlameGraph[FlameGraph].
   
-  The combined time-trace file is uploaded to artifacts and can be visualized with
+  The combined time-trace files are uploaded to artifacts. It contains the svg 
+  file generated with https://github.com/brendangregg/FlameGraph[FlameGraph], which you can open directly 
+  in the browser. It also contains a json file you can open with:
 
-  - https://www.speedscope.app/ or https://github.com/jlfwong/speedscope
-  - https://github.com/brendangregg/FlameGraph or https://www.brendangregg.com/flamegraphs.html
+  - https://www.speedscope.app/ (https://github.com/jlfwong/speedscope), or
+  - chrome://tracing/
   
-  A simple analysis can be performed with:
-  
-  - https://github.com/aras-p/ClangBuildAnalyzer
-  
-  The combined time-trace is also converted to an image with https://github.com/brendangregg/FlameGraph.
-  This image is appended to the job step summary.
-  
+  A simple analysis is performed while combining the trace files and a report in markdown format is
+  also generated. This report is saved to 'inputs.report-path' and also included with the artifacts.
+
 inputs:
   source-dir:
     description: |
