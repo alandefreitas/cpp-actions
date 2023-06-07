@@ -1,82 +1,167 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
+        <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Create Flamegraph | C++ Actions</title>    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/flamegraph.html">
+    <title>Create Flamegraph :: C++ Actions</title>
+    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/flamegraph.html">
     <meta name="generator" content="Antora 3.1.3">
-<link rel="stylesheet" href="../../../_/stylesheets/vendor/libs.css">
-<link rel="stylesheet" href="../../../_/stylesheets/site.css">
-<link id="highlight-style-lnk" rel="stylesheet" href="../../../_/stylesheets/vendor/highlight-light.css">
-<link rel="stylesheet" href="../../../_/css/vendor/tabs.css"><link rel="icon" href="../../../_/img/favicon.svg" type="image/x-icon">  </head>
+    <link rel="stylesheet" href="../../../_/css/site.css">
+    <link rel="stylesheet" href="../../../_/css/vendor/tabs.css">
+    <script>var uiRootPath = '../../../_'</script>
+<link rel="icon" href="../../../_/img/favicon.svg" type="image/svg">
+    <style>
+      .algolia-autocomplete .ds-dropdown-menu:before {
+          display: block;
+          position: absolute;
+          content: "";
+          width: 14px;
+          height: 14px;
+          background: #fff;
+          z-index: 2;
+          top: 9px;
+          left: -7px !important;
+          border-top: 1px solid #d9d9d9;
+          border-right: 1px solid #d9d9d9;
+          -webkit-transform: rotate(-136deg);
+          transform: rotate(-136deg);
+          border-radius: 2px;
+      }
+      .search-result-dropdown-menu:before {
+          display: block;
+          position: absolute;
+          content: "";
+          width: 14px;
+          height: 14px;
+          background: #fff !important;
+          z-index: 2;
+          top: 9px;
+          border-top: 1px solid #d9d9d9;
+          border-right: 1px solid #d9d9d9;
+          -webkit-transform: rotate(-136deg);
+          transform: rotate(-136deg);
+          border-radius: 2px;
+          left: -7px;
+      }
+      .nav-container .search-result-dropdown-menu {
+        position: fixed;
+        top: 65px;
+        left: 13.5rem;
+        width: 50%;
+        overflow: visible;
+        max-height: calc(100vh - 5.25rem);
+        line-height: 1.5;
+        z-index: 9999;
+      }
+      .nav-container .button {
+        padding: 0px 14px;
+        background-color: #FF9F00;
+        color: #fff;
+      }
+      .algolia-autocomplete.algolia-autocomplete-left .ds-dropdown-menu {
+          position: fixed !important;
+          top: 65px !important;
+          left: 13.5rem !important;
+          z-index: 99 !important;
+      }
+      .search-selector {
+        margin-right: 133px;
+        text-transform: none;
+      }
+      @media screen and (max-width: 1024px) {
+        .nav-container .search-result-dropdown-menu {
+          top: 103px;
+          left: 14.5rem;
+        }
+      }
+      @media screen and (max-width: 768px) {
+        .search-result-dropdown-menu:before {
+            top: -6px;
+            -webkit-transform: rotate(-45deg);
+            transform: rotate(-45deg);
+            left: 35px;
+        }
+        .nav-container .search-result-dropdown-menu {
+            top: 100%;
+            left: 0;
+            width: 90vw;
+            position: absolute !important;
+        }
+        .algolia-autocomplete.algolia-autocomplete-left .ds-dropdown-menu {
+          position: absolute !important;
+          top: 100% !important;
+          left: 0px !important;
+          z-index: 99 !important;
+        }
+        .algolia-autocomplete .ds-dropdown-menu:before{
+            top: -6px;
+            -webkit-transform: rotate(-45deg);
+            transform: rotate(-45deg);
+            left: 35px !important;
+        }
+      }
+    </style>
+  </head>
   <body class="article">
-<script src="../../../_/js/header-site.js"></script>
-<header class="header">
-    <nav class="navbar  navbar-nonProduction  ">
+    <header class="header">
+    <nav class="navbar">
         <div class="navbar-brand">
-            <a class="navbar-item" href="https://alandefreitas.github.io/cpp-actions">C++ Actions</a>
-            <div class="navbar-item-nonProduction">
-                <p>develop</p>
-            </div>
-        </div>
-
-        <div id="topbar-nav" class="navbar-menu">
-            <div class="navbar-item is-hoverable">
-                <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions: Create Flamegraph</a>
-            </div>
-            <div class="navbar-item is-hoverable">
-                <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions" target="_blank">GitHub</a>
-            </div>
-            <div class="navbar-item is-hoverable">
-                <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions/releases" target="_blank">Releases</a>
-            </div>
-        </div>
-
-        <div class="navbar-end" id="search-container">
-            <div class="navbar-item search hide-for-print">
-                <div id="search-field" class="field has-filter">
-                    <input id="search-input" type="text" placeholder="Search the docs">
-                </div>
-            </div>
-
-
-            <div class="theme-switch-wrapper">
-                <input type="checkbox" class="checkbox" onclick="toggleDarkThemeMode(this)" id="check">
-                <div class="toggle-content">
-                    <label class="label" for="check">
-                        <span>🌚</span>
-                        <span>😎</span>
-                        <div class="ball"></div>
-                    </label>
-                </div>
-            </div>
-
-            <button class="navbar-burger" data-target="topbar-nav-mobile">
+            <a class="navbar-item" href="https://alandefreitas.github.io/cpp-actions/doc/cpp-actions/">
+                <img src="../../../_/img/banner.svg" alt="" width="130">
+                    <div class="navbar-item-nonProduction">
+                        <p>develop</p>
+                    </div>
+            </a>
+            <button class="navbar-burger" data-target="topbar-nav">
                 <span></span>
                 <span></span>
                 <span></span>
             </button>
         </div>
-    </nav>
 
-    <nav id="topbar-nav-mobile" class="navbar-menu-mobile">
-        <div class="navbar-item is-hoverable">
-            <a class="navbar-link" href="/cpp-actions/index.html">C++ Actions</a>
+
+        <div id="topbar-nav" class="navbar-menu">
+                <div class="navbar-item is-hoverable">
+                        <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions
+                            : Create Flamegraph</a>
+                </div>
+                    <div class="navbar-item is-hoverable">
+                        <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions" target="_blank">GitHub</a>
+                    </div>
+                    <div class="navbar-item is-hoverable">
+                        <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions/releases" target="_blank">Releases</a>
+                    </div>
+
+            <div class="navbar-end">
+                <div class="navbar-item">
+                      <span class="control">
+                        <a class="button is-primary" target="blank_"
+                           href="https://github.com/alandefreitas/cpp-actions/issues/new/choose">Report an Issue</a>
+                      </span>
+                </div>
+            </div>
         </div>
     </nav>
-</header><div class="body">
+</header>
+    <div class="body">
 <div class="nav-container" data-component="cpp-actions" data-version="develop">
   <aside class="nav">
     <div class="panels">
-<div class="nav-panel-menu is-active" data-panel="menu">
-  <nav class="nav-menu">
-    <h3 class="title"><a href="../index.html">C++ Actions</a></h3>
-<ul class="nav-list">
+    <div class="nav-panel-menu is-active" data-panel="menu">
+        <div class="navbar-item search hide-for-print">
+            <div id="search-field" class="field has-filter">
+                <div style="display: flex; flex-direction: column;">
+                    <div style="display: flex; margin-bottom: 10px; position: relative;">
+                        <input id="search-input" type="text" placeholder="Search the docs" style="flex: 1; padding: 0 0.25em" onkeyup="onSearch()">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <nav class="nav-menu">
+                <h3 class="title"><a href="../index.html">C++ Actions</a></h3>
+            <ul class="nav-list">
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="../index.html">Home</a>
-  </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
   </li>
@@ -143,8 +228,8 @@
 </ul>
   </li>
 </ul>
-  </nav>
-</div>
+        </nav>
+    </div>
 <div class="nav-panel-explore" data-panel="explore">
   <div class="context">
     <span class="title">C++ Actions</span>
@@ -152,7 +237,7 @@
   </div>
   <ul class="components">
     <li class="component is-current">
-      <span class="title">C++ Actions</span>
+      <a class="title" href="../../index.html">C++ Actions</a>
       <ul class="versions">
         <li class="version is-latest">
           <a href="../../index.html">master</a>
@@ -178,23 +263,23 @@
       </ul>
     </li>
   </ul>
-</div>    </div>
+</div>
+    </div>
   </aside>
 </div>
 <main class="article">
-<div class="toolbar toolbar-wrap">
-  <div class="toolbar" role="navigation">
-  <button class="nav-toggle"></button>  <a href="../../index.html" class="home-link"></a>
-  <nav class="breadcrumbs" aria-label="breadcrumbs">
+<div class="toolbar" role="navigation">
+    <button class="nav-toggle"></button>
+        <a href="../../index.html" class="home-link"></a>
+    <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">C++ Actions</a></li>
     <li>Project</li>
     <li><a href="flamegraph.html">Create Flamegraph Action</a></li>
   </ul>
 </nav>
-  <div class="page-versions">
-  <button class="version-menu-toggle"
-    title="Show other versions of page">develop</button>
+    <div class="page-versions">
+  <button class="version-menu-toggle" title="Show other versions of page">develop</button>
   <div class="version-menu">
     <a class="version" href="../../actions/flamegraph.html">master</a>
     <a class="version is-current" href="flamegraph.html">develop</a>
@@ -205,13 +290,12 @@
     <a class="version is-missing" href="../../v1.0.0/index.html">v1.0.0</a>
   </div>
 </div>
-  </div>
-
-
-
-
+        <div class="edit-this-page"><a href="https://github.com/alandefreitas/cpp-actions/edit/develop/docs/modules/ROOT/pages/actions/flamegraph.adoc">Edit this Page</a></div>
 </div>
   <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
 <article class="doc">
 <h1 class="page">Create Flamegraph</h1>
 <div id="preamble">
@@ -368,60 +452,67 @@ This image is appended to the job step summary.</p>
 </div>
 </div>
 </article>
-<aside class="toc sidebar" data-title="Contents" data-levels="2">
-  <div class="toc-menu"></div>
-</aside>
   </div>
 </main>
 </div>
-<footer>
-    <div class="footer-body">
-        <div class="footer-footer">
-            <p>
-                C++ Actions:
-                <a href="https://alandefreitas.github.io/cpp-actions">https://alandefreitas.github.io/cpp-actions</a>
-                - <a href="https://github.com/alandefreitas/cpp-actions" target="_blank">https://github.com/alandefreitas/cpp-actions</a>
-                - 2023
-            </p>
-            <p>
-                Bonita Theme:
-                <a href="https://github.com/bonitasoft/bonita-documentation-theme" target="_blank">
-                    https://github.com/bonitasoft/bonita-documentation-theme
-                </a>
-            </p>
-        </div>
-    </div>
-    <script src="../../../_/js/vendor/lunr.js"></script>
+    <footer class="footer">
+  <p>This page was built using the Antora UI adapted by <a href="https://github.com/cppalliance/site-docs" target="_blank">cppalliance/site-docs</a>.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+  <p>
+    <a href="https://github.com/alandefreitas/cpp-actions" target="_blank">alandefreitas/cpp-actions</a>
+  </p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
 <script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
 <script async src="../../../search-index.js"></script>
-</footer><script>window.uiRootPath = '../../../_'</script>
-<script src="../../../_/js/vendor/highlight.min.js"></script>
-<script async src="../../../_/js/vendor/tabs.js"></script>
-<script src="../../../_/js/vendor/libs.js"></script>
-<script>hljs.initHighlightingOnLoad();</script>
-<script src="../../../_/js/site.js"></script>
+<script async src="../../../_/js/vendor/tabs.js" data-sync-storage-key="preferred-tab"></script>
+    <script>
+      var element = document.querySelector('.search-result-dropdown-menu');
+      if (element) {
+        // Apply styles and additional class to element
+        element.style.display = 'none';
+        var element = document.querySelector('.search-result-dropdown-menu');
+        var arrow = document.createElement('div');
+        arrow.classList.add('search-result-dropdown-menu');
+        element.appendChild(arrow);
+      }
 
-<script>
-    let asciinemaPlayers = document.querySelectorAll('asciinema-player');
-    asciinemaPlayers.forEach(htmlPlayer => {
-        let options = {fit: false};
-        htmlPlayer.getAttributeNames().forEach(key => options[key] = htmlPlayer.getAttribute(key));
-        AsciinemaPlayer.create(htmlPlayer.getAttribute('src'), htmlPlayer, options);
-    });
-</script>
-
-<script>
-    // init toggle state
-    const isDarkThemeEnable = localStorage.getItem('theme') === 'dark';
-    initializeThemeToggleIfAvailable('check', isDarkThemeEnable);
-    initializeThemeToggleIfAvailable('check-mobile', isDarkThemeEnable);
-
-    function initializeThemeToggleIfAvailable(elementId, checked) {
-        const checkElement = document.getElementById(elementId);
-        if(checkElement) {
-            checkElement.checked = checked;
+      function onSearch() {
+        var searchInput = document.getElementById('search-input');
+        if (searchInput.value) {
+          element.style.display = 'block';
+        } else {
+          element.style.display = 'none';
         }
-    }
-</script>
+      }
+
+      function onSearchChange(search_active) {
+        var searchInputAlgolia = document.getElementById('search-input-algolia');
+        var searchInput = document.getElementById('search-input');
+        if (search_active === "algolia") {
+          searchInputAlgolia.style.display = 'block';
+          // searchInputAlgolia.style.lineHeight = '2.001';
+          searchInput.style.display = 'none';
+          setupAlgoliaDocsearch();
+        } else {
+          searchInputAlgolia.style.display = 'none';
+          searchInput.style.display = 'block';
+        }
+      }
+
+      // Add an event listener to the document
+      document.addEventListener("click", function(event) {
+        var searchInput = document.getElementById('search-input');
+        // Check if the click was outside of the modal
+        if (event.target !== element && event.target !== searchInput) {
+
+          // Hide the modal
+          searchInput.value = "";
+          onSearch();
+        }
+      });
+    </script>
   </body>
 </html>
