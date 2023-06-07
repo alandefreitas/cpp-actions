@@ -51,6 +51,15 @@ inputs:
     required: false
     default: 'combined-traces.json'
 
+  report-path:
+    description: |
+      The path where the report will be stored.
+      
+      If this is a relative path, it will be made relative to the build-dir.
+
+    required: false
+    default: 'time-trace-report.md'
+
   generate-svg:
     description: 'Generate SVG file with the output.'
     required: false
@@ -132,37 +141,32 @@ runs:
             output_path="$(readlink -f "$output_path" 2>/dev/null || realpath -e "$output_path" 2>/dev/null || echo "$working_dir/$output_path")"
         fi
         echo -E "output_path=$output_path" >> $GITHUB_OUTPUT
-
-    - name: Generate report
-      shell: bash
-      if: ${{ inputs.generate-report }}
-      working-directory: ${{ steps.ctx.outputs.build-dir }}
-      run: |
-        # ClangBuildAnalyzer
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         
-        wget https://github.com/aras-p/ClangBuildAnalyzer/releases/download/v1.4.0/ClangBuildAnalyzer-linux
-        chmod +x ClangBuildAnalyzer-linux
-        ./ClangBuildAnalyzer-linux --all . "${{ steps.ctx.outputs.output_path }}"
-        if [ "${{ inputs.update-summary }}" == "true" ]; then
-            ./ClangBuildAnalyzer-linux --analyze "${{ steps.ctx.outputs.output_path }}" | sed -E -e 's/^(\*{4})/##/' -e '/^##/{s/$/\n/;}' | sed -E -e 's/^(\*{3})/###/' -e '/^##/{s/$/\n/;}' | sed -E -e '/^[[:space:]]*[0-9]/s/^[[:space:]]*([0-9])/- \1/' >> "clang-build-analyzer-report.md"
-            if [ "${{ inputs.generate-svg }}" != "true" ]; then
-              echo "Time Trace" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-              cat "clang-build-analyzer-report.md" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
+        report_path="${{ inputs.report-path }}"
+        if [[ $report_path != /* ]]; then
+            if [[ "${build_dir}" == */ ]]; then
+                report_path="${build_dir}${report_path}"
+            else
+                report_path="${build_dir}/${report_path}"
             fi
-        else
-            ./ClangBuildAnalyzer-linux --analyze "${{ steps.ctx.outputs.output_path }}"
+            report_path="$(readlink -f "$report_path" 2>/dev/null || realpath -e "$report_path" 2>/dev/null || echo "$working_dir/$report_path")"
         fi
+        echo -E "report_path=$report_path" >> $GITHUB_OUTPUT
 
     - name: Merge time-trace files
       shell: bash
       run: |
+        # Merge time-traces and generate report
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         python_path="${{ steps.setup-python.outputs.python-path || 'python' }}"
         verbose_arg="${{ (inputs.trace-commands && '--verbose') || '' }}"
-        $python_path "$GITHUB_ACTION_PATH/combine-traces.py" --source-dir "${{ inputs.source-dir }}" --build-dir "${{ inputs.build-dir }}" --output "${{ inputs.output-path }}" $verbose_arg
+        $python_path "$GITHUB_ACTION_PATH/combine-traces.py" --source-dir "${{ inputs.source-dir }}" --build-dir "${{ inputs.build-dir }}" --output "${{ inputs.output-path }}" --report-output "${{ inputs.report-path }}" $verbose_arg
+        
+        if [ "${{ inputs.update-summary }}" == "true" ]; then
+            cat "${{ steps.ctx.outputs.report_path }}" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        
 
     - name: Generate SVG time trace
       shell: bash
@@ -182,17 +186,6 @@ runs:
           $python_path ./FlameGraph/stackcollapse-chrome-tracing.py "$output_path" > "$output_path.folded"
           ./FlameGraph/flamegraph.pl "$output_path.folded" > "$output_path.svg"
           echo -E "image_path=$output_path.svg" >> $GITHUB_OUTPUT
-        
-          if [ "${{ inputs.update-summary }}" == "true" ]; then
-            echo "Time Trace" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            # Unfortunately github can't render embedded svg content
-            # svg_content=$(sed -n '/<svg/,/<\/svg>/p' "$output_path.svg" | tail -n +1)
-            # echo "$svg_content" >> $GITHUB_STEP_SUMMARY
-            # echo "" >> $GITHUB_STEP_SUMMARY
-            cat "clang-build-analyzer-report.md" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-          fi
         else
           echo "::error title:FlameGraph::FlameGraph: /usr/bin/perl does not exist or is not executable"
           false
@@ -204,4 +197,5 @@ runs:
         name: time-traces
         path: |
           ${{ steps.ctx.outputs.output_path }}
+          ${{ steps.ctx.outputs.report_path }}
           ${{ steps.run-flamegraph.outputs.image_path }}

@@ -50,6 +50,10 @@ steps:
 
 If this is a relative path, it will be made relative to the build-dir.
 . |`combined-traces.json`
+|`report-path` |The path where the report will be stored.
+
+If this is a relative path, it will be made relative to the build-dir.
+. |`time-trace-report.md`
 |`generate-svg` |Generate SVG file with the output. |`true`
 |`generate-report` |Generate a small report with ClangBuildAnalyzer. |`true`
 |`update-summary` |Update action summary with the SVG file. |`true`
