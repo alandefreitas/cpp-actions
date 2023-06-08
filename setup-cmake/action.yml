@@ -294,7 +294,11 @@ runs:
         # Construct paths with the cmake destination
         cmake_dest="${{runner.tool_cache}}/cmake/$major.$minor"
         echo -E "cmake_dest=$cmake_dest" >> $GITHUB_OUTPUT
-        cmake_bin_path="$cmake_dest/$cmake_basename/bin"
+        if [ "$RUNNER_OS" != "macOS" ]; then
+          cmake_bin_path="$cmake_dest/$cmake_basename/bin"
+        else
+          cmake_bin_path="$cmake_dest/$cmake_basename/CMake.app/Contents/bin"
+        fi
         if [[ "${{ inputs.update-environment }}" != "false" ]]; then
           export PATH="$cmake_bin_path:$PATH"
           echo -E "$cmake_bin_path" >> $GITHUB_PATH
