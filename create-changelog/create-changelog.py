@@ -481,7 +481,7 @@ def remove_commit_duplicates(commits: [Commit]):
                 if unique_commits[idx].body != commit.body:
                     unique_commits[idx].body += commit.body
                 for footer in commit.footers:
-                    if footer not in unique_commits[idx].footer:
+                    if footer not in unique_commits[idx].footers:
                         unique_commits[idx].footers.append(footer)
                 if commit.breaking:
                     unique_commits[idx].breaking = True
