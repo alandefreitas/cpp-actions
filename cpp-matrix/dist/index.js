@@ -571,6 +571,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                 }
                 compiler_cxxs = compiler_cxxs.map(v => v.toString().slice(-2))
                 entry['cxxstd'] = compiler_cxxs.join(',')
+                entry['latest-cxxstd'] = compiler_cxxs[compiler_cxxs.length - 1]
             }
 
             // usual cxx/cc names (no name usually needed for msvc)
@@ -820,11 +821,8 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                 }
             }
             if (entry['cxxstd'] !== '') {
-                const cxxstdstrs = entry['cxxstd'].split(',')
-                entry['cxxstd'] = cxxstdstrs[cxxstdstrs.length - 1]
-                if (cxxstdstrs.length > 1) {
-                    entry['name'] = entry['name'].replace(/C\+\+\d+-\d+/g, `C++${entry['cxxstd']}`);
-                }
+                entry['cxxstd'] = entry['latest-cxxstd']
+                entry['name'] = entry['name'].replace(/C\+\+\d+-\d+/g, `C++${entry['latest-cxxstd']}`);
             }
         }
         if ('container' in entry && entry['container'].startsWith('ubuntu')) {

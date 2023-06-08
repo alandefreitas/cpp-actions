@@ -213,6 +213,8 @@ outputs:
       - `cxxstd`: A list of standards that should be tested with this compiler version. This option considers
         the `max-standards` latest standards supported by each compiler in its subrange of `standards`.
       
+      - `latest-cxxstd`: The last standard listed in `cxxstd` as a convenience variable 
+      
       - `b2-toolset`: The usual name of the toolset to be used in a b2 workflow.
 
       - `generator`: A CMake generator recommended to run the CMake workflow.

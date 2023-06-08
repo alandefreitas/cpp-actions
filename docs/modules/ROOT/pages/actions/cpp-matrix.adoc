@@ -136,7 +136,7 @@ For any other compilers, the version requirements will passthrough to the output
 
 `clang >=3.8`
 
-`msvc >=14.2`
+`msvc >=14`
 
 `apple-clang *`
 
@@ -216,6 +216,8 @@ Each entry in the test matrix dictionary contains the following key-value pairs:
 
 - `cxxstd`: A list of standards that should be tested with this compiler version. This option considers
   the `max-standards` latest standards supported by each compiler in its subrange of `standards`.
+
+- `latest-cxxstd`: The last standard listed in `cxxstd` as a convenience variable 
 
 - `b2-toolset`: The usual name of the toolset to be used in a b2 workflow.
 
