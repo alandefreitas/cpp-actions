@@ -641,10 +641,12 @@ if __name__ == "__main__":
     access_token = args.github_token
 
     # Adjust parameters
-    if repo_branch is None or repo_branch == '':
-        repo_branch = os.getenv("GITHUB_REF_NAME")
-        if repo_branch is not None:
-            print(f'Repository Branch {repo_branch} from GITHUB_REF_NAME')
+    for envkey in ["GITHUB_BASE_REF", "GITHUB_REF_NAME"]:
+        if repo_branch is None or repo_branch == '':
+            repo_branch = os.getenv(envkey)
+            if repo_branch is not None:
+                print(f'Repository Branch {repo_branch} from {envkey}')
+                break
     if repo_branch is None or repo_branch == '':
         repo_branch = get_current_branch(project_path)
         if repo_branch is not None:
