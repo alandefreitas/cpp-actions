@@ -135,6 +135,12 @@ runs:
       with:
         python-version: '3.5'
 
+    - name: Ensure curl is available for scan module step in containers
+      if: inputs.scan-modules-dir != ''
+      uses: alandefreitas/cpp-actions/package-install@v1.4.0
+      with:
+        apt-get: curl
+
     - name: Scan Required Boost Modules
       if: inputs.scan-modules-dir != ''
       id: scan-modules
