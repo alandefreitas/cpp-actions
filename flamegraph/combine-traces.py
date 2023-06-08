@@ -80,6 +80,16 @@ def extract_include_paths(command):
 
     return include_paths
 
+def format_time(microseconds):
+    if microseconds < 1000:
+        return f"{round(microseconds, 2)} µs"
+    elif microseconds < 1000000:
+        milliseconds = round(microseconds / 1000, 2)
+        return f"{milliseconds} ms"
+    else:
+        seconds = round(microseconds / 1000000, 2)
+        return f"{seconds} s"
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Installs the dependencies needed to test a Boost library.')
@@ -184,7 +194,6 @@ if __name__ == '__main__':
                                 if is_subpath(event['args']['detail'], include_path):
                                     event['args']['detail'] = os.path.relpath(event['args']['detail'], include_path)
                                     break
-                        log(f"Detail Path: {event['args']['detail']}")
 
             # Store data for the report
             if event['name'] == 'Source':
@@ -265,7 +274,7 @@ if __name__ == '__main__':
                 # This represents how long the whole object file took
                 # and can be used to shift the start time for the next file
                 file_total_time = event['dur']
-                log(filename, 'took', file_total_time)
+                log(f'{filename} took {format_time(file_total_time)}')
                 # Set the file name in ExecuteCompiler
                 if 'args' not in event:
                     event['args'] = {}
@@ -301,18 +310,6 @@ if __name__ == '__main__':
 
 
     # Report
-    def format_time(microseconds):
-        if microseconds < 1000:
-            return f"{round(microseconds, 2)} µs"
-        elif microseconds < 1000000:
-            milliseconds = round(microseconds / 1000, 2)
-            return f"{milliseconds} ms"
-        else:
-            seconds = round(microseconds / 1000000, 2)
-            return f"{seconds} s"
-
-
-    # Report output
     output = '# Time Trace\n\n'
     output += '## Summary\n\n'
     output += '| Step | %     | Total Time | Avg. | Count |\n'
