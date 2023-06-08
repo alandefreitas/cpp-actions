@@ -690,7 +690,7 @@ if __name__ == "__main__":
     commits = remove_commit_duplicates(commits)
 
     # Limit number of commits
-    if args.limit:
+    if args.limit and len(commits) > args.limit:
         commits = commits[:args.limit]
         print(f'Limited to {args.limit} commits')
 
