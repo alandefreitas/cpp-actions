@@ -109,7 +109,7 @@ inputs:
     default: |
       gcc >=4.8
       clang >=3.8
-      msvc >=14.2
+      msvc >=14
       apple-clang *
       mingw *
       clang-cl *
