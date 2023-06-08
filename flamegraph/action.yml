@@ -34,7 +34,8 @@ description: |
 inputs:
   source-dir:
     description: |
-      The source directory used to generate time-traces. This should usually be your build directory.
+      The source directory used to generate time-traces. Relative paths in the report will be relative to this
+      directory.
     required: false
     default: '.'
 

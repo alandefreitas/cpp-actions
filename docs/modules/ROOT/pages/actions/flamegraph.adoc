@@ -44,7 +44,8 @@ steps:
 
 |===
 |Parameter |Description |Default
-|`source-dir` |The source directory used to generate time-traces. This should usually be your build directory.
+|`source-dir` |The source directory used to generate time-traces. Relative paths in the report will be relative to this
+directory.
 . |`.`
 |`build-dir` |The directory with the time-traces. This should usually be your build directory.
 . |`.`
