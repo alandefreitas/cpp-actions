@@ -182,13 +182,13 @@
     <span class="nav-text">Tools</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
-  </li>
-  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="package-install.html">Install Packages Action</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
   </li>
 </ul>
   </li>
@@ -209,10 +209,10 @@
     <span class="nav-text">Project</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
+    <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
   </li>
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
+    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
   </li>
 </ul>
   </li>
@@ -241,6 +241,9 @@
         </li>
         <li class="version">
           <a href="../develop/index.html">develop</a>
+        </li>
+        <li class="version">
+          <a href="../v1.4.1/index.html">v1.4.1</a>
         </li>
         <li class="version">
           <a href="../v1.4.0/index.html">v1.4.0</a>
@@ -283,6 +286,7 @@
   <div class="version-menu">
     <a class="version is-current" href="cmake-workflow.html">master</a>
     <a class="version" href="../develop/actions/cmake-workflow.html">develop</a>
+    <a class="version" href="../v1.4.1/actions/cmake-workflow.html">v1.4.1</a>
     <a class="version" href="../v1.4.0/actions/cmake-workflow.html">v1.4.0</a>
     <a class="version" href="../v1.3.0/actions/cmake-workflow.html">v1.3.0</a>
     <a class="version" href="../v1.2.1/actions/cmake-workflow.html">v1.2.1</a>
@@ -302,7 +306,14 @@
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>This action runs a complete CMake workflow from source files. A workflow is composed of the following steps:</p>
+<p>This action runs a complete CMake workflow from source files.</p>
+</div>
+<div class="paragraph">
+<p>This is usually the next step in your workflow after setting up a C++ compiler and fetching dependencies with
+<a href="package-install.html" class="xref page">Install Packages</a>.</p>
+</div>
+<div class="paragraph">
+<p>A workflow is composed of the following steps:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -366,6 +377,21 @@ step once for each target.</p>
 <div class="paragraph">
 <p>The action also creates GitHub annotations when warnings or errors are emitted at any of these steps. This includes
 annotations for CMake errors at the configure step and build errors emitted from the compiler at the build step.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next steps</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>After running the a complete CMake workflow for your project, the next step in your workflow should usually be
+the generation of reports, with tools such as the <a href="flamegraph.html" class="xref page">Create Flamegraph</a> (when <code>matrix.time-trace</code>) and
+<a href="create-changelog.html" class="xref page">Create Changelog</a> (usually in another workflow job). You can also include customs steps to
+upload coverage reports (when <code>matrix.coverage</code>).</p>
+</div>
+<div class="paragraph">
+<p>If your project provides CMake installation and configuration scripts, it is also usual to include multiple
+CMake workflow steps as integration tests for CMake.</p>
 </div>
 </div>
 </div>

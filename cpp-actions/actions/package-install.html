@@ -181,14 +181,14 @@
     <button class="nav-item-toggle"></button>
     <span class="nav-text">Tools</span>
 <ul class="nav-list">
-  <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
-  </li>
   <li class="nav-item is-current-page" data-depth="2">
     <a class="nav-link" href="package-install.html">Install Packages Action</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
   </li>
 </ul>
   </li>
@@ -209,10 +209,10 @@
     <span class="nav-text">Project</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
+    <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
   </li>
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
+    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
   </li>
 </ul>
   </li>
@@ -241,6 +241,9 @@
         </li>
         <li class="version">
           <a href="../develop/index.html">develop</a>
+        </li>
+        <li class="version">
+          <a href="../v1.4.1/index.html">v1.4.1</a>
         </li>
         <li class="version">
           <a href="../v1.4.0/index.html">v1.4.0</a>
@@ -283,6 +286,7 @@
   <div class="version-menu">
     <a class="version is-current" href="package-install.html">master</a>
     <a class="version" href="../develop/actions/package-install.html">develop</a>
+    <a class="version" href="../v1.4.1/actions/package-install.html">v1.4.1</a>
     <a class="version" href="../v1.4.0/actions/package-install.html">v1.4.0</a>
     <a class="version" href="../v1.3.0/actions/package-install.html">v1.3.0</a>
     <a class="version" href="../v1.2.1/actions/package-install.html">v1.2.1</a>
@@ -305,8 +309,31 @@
 <p>This action installs dependencies from multiple package managers for a workflow.</p>
 </div>
 <div class="paragraph">
+<p>This is usually the next step in your workflow after setting up a C++ compiler with
+<a href="setup-cpp.html" class="xref page">Setup C++</a>.</p>
+</div>
+<div class="paragraph">
 <p>If vcpkg dependencies are required and vcpkg is not available, it will be installed.
 Both vcpkg and its dependencies are cached.</p>
+</div>
+<div class="paragraph">
+<p>When your library depends on vcpkg for dependencies, it&#8217;s important to run the <a href="setup-cpp.html" class="xref page">Setup C++</a>
+before this step because vcpkg packages are built from source and this allows us to use the compiler
+set up in the previous step.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next steps</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>After setting up the dependencies for your C++ project, the next step in your workflow should usually be
+<a href="cmake-workflow.html" class="xref page">CMake Workflow</a>.</p>
+</div>
+<div class="paragraph">
+<p>Alternatively, if your libraries depends on Boost, the next step in your workflow should usually be
+<a href="boost-clone.html" class="xref page">Boost Clone</a>, which allows the workflow to only download the required subset of Boost libraries
+required by the project.</p>
 </div>
 </div>
 </div>

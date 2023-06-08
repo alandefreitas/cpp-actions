@@ -182,13 +182,13 @@
     <span class="nav-text">Tools</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
-  </li>
-  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="package-install.html">Install Packages Action</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
   </li>
 </ul>
   </li>
@@ -208,11 +208,11 @@
     <button class="nav-item-toggle"></button>
     <span class="nav-text">Project</span>
 <ul class="nav-list">
-  <li class="nav-item is-current-page" data-depth="2">
-    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
-  </li>
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
   </li>
 </ul>
   </li>
@@ -241,6 +241,9 @@
         </li>
         <li class="version">
           <a href="../develop/index.html">develop</a>
+        </li>
+        <li class="version">
+          <a href="../v1.4.1/index.html">v1.4.1</a>
         </li>
         <li class="version">
           <a href="../v1.4.0/index.html">v1.4.0</a>
@@ -283,6 +286,7 @@
   <div class="version-menu">
     <a class="version is-current" href="create-changelog.html">master</a>
     <a class="version" href="../develop/actions/create-changelog.html">develop</a>
+    <a class="version" href="../v1.4.1/actions/create-changelog.html">v1.4.1</a>
     <a class="version" href="../v1.4.0/actions/create-changelog.html">v1.4.0</a>
     <a class="version" href="../v1.3.0/actions/create-changelog.html">v1.3.0</a>
     <a class="version" href="../v1.2.1/actions/create-changelog.html">v1.2.1</a>
@@ -303,6 +307,10 @@
 <div class="sectionbody">
 <div class="paragraph">
 <p>This action creates an initial Changelog from the commit history.</p>
+</div>
+<div class="paragraph">
+<p>This is usually the included in your workflow after building and testing your library with
+<a href="cmake-workflow.html" class="xref page">CMake Workflow</a> in another job with the complete matrix.</p>
 </div>
 <div class="paragraph">
 <p>The commits considered go from the latest commit up to a commit containing a version

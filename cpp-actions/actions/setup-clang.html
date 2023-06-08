@@ -182,13 +182,13 @@
     <span class="nav-text">Tools</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
-  </li>
-  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="package-install.html">Install Packages Action</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
   </li>
 </ul>
   </li>
@@ -209,10 +209,10 @@
     <span class="nav-text">Project</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
+    <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
   </li>
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
+    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
   </li>
 </ul>
   </li>
@@ -241,6 +241,9 @@
         </li>
         <li class="version">
           <a href="../develop/index.html">develop</a>
+        </li>
+        <li class="version">
+          <a href="../v1.4.1/index.html">v1.4.1</a>
         </li>
         <li class="version">
           <a href="../v1.4.0/index.html">v1.4.0</a>
@@ -283,6 +286,7 @@
   <div class="version-menu">
     <a class="version is-current" href="setup-clang.html">master</a>
     <a class="version" href="../develop/actions/setup-clang.html">develop</a>
+    <a class="version" href="../v1.4.1/actions/setup-clang.html">v1.4.1</a>
     <a class="version" href="../v1.4.0/actions/setup-clang.html">v1.4.0</a>
     <a class="version" href="../v1.3.0/actions/setup-clang.html">v1.3.0</a>
     <a class="version" href="../v1.2.1/actions/setup-clang.html">v1.2.1</a>
@@ -327,6 +331,19 @@ circumstantially provided by apt-get.</p>
 <p>A version of Clang from our own binary releases</p>
 </li>
 </ul>
+</div>
+<div class="paragraph">
+<p>In most workflows, this is used as an auxiliary action for the <a href="setup-cpp.html" class="xref page">Setup C++</a> action,
+which already calls this action if necessary.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next steps</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>After setting up the proper C++ compiler for a matrix entry, the next step in your workflow should usually be
+<a href="package-install.html" class="xref page">Install Packages</a>.</p>
 </div>
 </div>
 </div>

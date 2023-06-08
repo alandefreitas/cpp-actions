@@ -182,13 +182,13 @@
     <span class="nav-text">Tools</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
-  </li>
-  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="package-install.html">Install Packages Action</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
   </li>
 </ul>
   </li>
@@ -209,10 +209,10 @@
     <span class="nav-text">Project</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
+    <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
   </li>
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
+    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
   </li>
 </ul>
   </li>
@@ -241,6 +241,9 @@
         </li>
         <li class="version">
           <a href="../develop/index.html">develop</a>
+        </li>
+        <li class="version">
+          <a href="../v1.4.1/index.html">v1.4.1</a>
         </li>
         <li class="version">
           <a href="../v1.4.0/index.html">v1.4.0</a>
@@ -282,6 +285,7 @@
   <div class="version-menu">
     <a class="version is-current" href="cpp-matrix.html">master</a>
     <a class="version" href="../develop/actions/cpp-matrix.html">develop</a>
+    <a class="version" href="../v1.4.1/actions/cpp-matrix.html">v1.4.1</a>
     <a class="version" href="../v1.4.0/actions/cpp-matrix.html">v1.4.0</a>
     <a class="version" href="../v1.3.0/actions/cpp-matrix.html">v1.3.0</a>
     <a class="version is-missing" href="../v1.2.1/index.html">v1.2.1</a>
@@ -414,6 +418,15 @@ and create your workflow as usual with the parameters from the matrix:</p>
 </div>
 </div>
 <div class="sect1">
+<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next steps</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>After setting creating the test matrix, the next step in your workflow should usually be
+<a href="setup-cpp.html" class="xref page">Setup C++</a>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_example"><a class="anchor" href="#_example"></a>Example</h2>
 <div class="sectionbody">
 <div class="listingblock">
@@ -463,7 +476,7 @@ For any other compilers, the version requirements will passthrough to the output
 .</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc &gt;=4.8</code></p>
 <p class="tableblock"><code>clang &gt;=3.8</code></p>
-<p class="tableblock"><code>msvc &gt;=14.2</code></p>
+<p class="tableblock"><code>msvc &gt;=14</code></p>
 <p class="tableblock"><code>apple-clang *</code></p>
 <p class="tableblock"><code>mingw *</code></p>
 <p class="tableblock"><code>clang-cl *</code></p></td>
@@ -557,6 +570,7 @@ and factors to be tested.</p>
   instead.</p>
 <p class="tableblock">- `cxxstd`: A list of standards that should be tested with this compiler version. This option considers
   the `max-standards` latest standards supported by each compiler in its subrange of `standards`.</p>
+<p class="tableblock">- `latest-cxxstd`: The last standard listed in `cxxstd` as a convenience variable</p>
 <p class="tableblock">- `b2-toolset`: The usual name of the toolset to be used in a b2 workflow.</p>
 <p class="tableblock">- `generator`: A CMake generator recommended to run the CMake workflow.</p>
 <p class="tableblock">- `build-type`: A build type recommended to test this entry. This is usually `Release`, unless some special
