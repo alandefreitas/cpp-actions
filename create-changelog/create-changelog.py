@@ -102,10 +102,14 @@ def humanize(s):
     return s
 
 
-def get_github_profile_name(username):
+def get_github_profile_name(username, access_token):
     url = f"https://api.github.com/users/{username}"
-    response = requests.get(url)
-
+    headers = {
+        "Accept": "application/vnd.github.v3+json",
+    }
+    if access_token is not None:
+        headers["Authorization"] = f"Bearer {access_token}"
+    response = requests.get(url, headers=headers)
     if response.status_code == 200:
         profile_data = response.json()
         github_profile_name = profile_data.get("name")
@@ -114,9 +118,14 @@ def get_github_profile_name(username):
     return None
 
 
-def get_github_username(email):
+def get_github_username(email, access_token):
     url = f"https://api.github.com/search/users?q={email}+in:email"
-    response = requests.get(url)
+    headers = {
+        "Accept": "application/vnd.github.v3+json",
+    }
+    if access_token is not None:
+        headers["Authorization"] = f"Bearer {access_token}"
+    response = requests.get(url, headers=headers)
 
     if response.status_code == 200:
         search_results = response.json()
@@ -134,7 +143,12 @@ def get_issue_author(repo_url, issue_number):
 
     # Make a GET request to the GitHub API to retrieve the issue information
     url = f"https://api.github.com/repos/{owner}/{repository}/issues/{issue_number}"
-    response = requests.get(url)
+    headers = {
+        "Accept": "application/vnd.github.v3+json",
+    }
+    if access_token is not None:
+        headers["Authorization"] = f"Bearer {access_token}"
+    response = requests.get(url, headers=headers)
 
     if response.status_code == 200:
         issue_data = response.json()
@@ -309,7 +323,7 @@ def populate_conventional(commit, repo_url, version_pattern, tags):
     return commit
 
 
-def get_github_commits(repo_url, branch, version_pattern, tags):
+def get_github_commits(repo_url, branch, version_pattern, tags, access_token):
     if repo_url is None:
         return []
 
@@ -321,6 +335,9 @@ def get_github_commits(repo_url, branch, version_pattern, tags):
         "User-Agent": "My-User-Agent",
         "sha": branch
     }
+
+    if access_token is not None:
+        headers["Authorization"] = f"Bearer {access_token}"
 
     page = 1
     while len(commits) == 0 or not commits[-1].is_parent_release:
@@ -339,7 +356,7 @@ def get_github_commits(repo_url, branch, version_pattern, tags):
                     commit.author = f"{page_commit['commit']['committer']['name']} <{page_commit['commit']['committer']['email']}>"
                     commit.author_name = page_commit['commit']['committer']['name']
                     commit.author_email = page_commit['commit']['committer']['email']
-                    commit.gh_name = get_github_profile_name(page_commit['committer']['login'])
+                    commit.gh_name = get_github_profile_name(page_commit['committer']['login'], access_token)
                     commit.gh_username = page_commit['committer']['login']
                     commit.date = page_commit['commit']['committer']['date']
                     commit.message = page_commit['commit']['message']
@@ -386,7 +403,7 @@ def get_local_tags(project_path, tag_pattern):
     return tags
 
 
-def get_github_tags(repo_url, tag_pattern):
+def get_github_tags(repo_url, tag_pattern, access_token):
     if repo_url is None:
         return []
 
@@ -395,6 +412,9 @@ def get_github_tags(repo_url, tag_pattern):
         "Accept": "application/vnd.github+json",
         "User-Agent": "My-User-Agent"
     }
+
+    if access_token is not None:
+        headers["Authorization"] = f"Bearer {access_token}"
 
     tags = []
 
@@ -623,10 +643,16 @@ if __name__ == "__main__":
     # Adjust parameters
     if repo_branch is None or repo_branch == '':
         repo_branch = os.getenv("GITHUB_REF_NAME")
+        if repo_branch is not None:
+            print(f'Repository Branch {repo_branch} from GITHUB_REF_NAME')
     if repo_branch is None or repo_branch == '':
         repo_branch = get_current_branch(project_path)
+        if repo_branch is not None:
+            print(f'Repository Branch {repo_branch} from local path')
     if access_token is None or access_token == '':
         access_token = os.getenv("GITHUB_TOKEN")
+        if access_token is not None:
+            print(f'Access token **** from GITHUB_TOKEN')
 
     # GitHub parameters
     repo_url = get_github_remote(project_path)
@@ -642,7 +668,7 @@ if __name__ == "__main__":
     tags = get_local_tags(project_path, tag_pattern)
     print(f'{len(tags)} local tags')
     if len(tags) == 0:
-        repo_tags = get_github_tags(repo_url, tag_pattern)
+        repo_tags = get_github_tags(repo_url, tag_pattern, access_token)
         print(f'{len(tags)} repo tags')
         tags.extend(repo_tags)
     tags = remove_object_duplicates(tags, ['name', 'sha'])
@@ -653,7 +679,7 @@ if __name__ == "__main__":
     print(f'{len(commits)} local commits')
     if len(commits) == 0 or not commits[-1].is_parent_release:
         commit_hashes = set(commit.hash for commit in commits)
-        repo_commits = get_github_commits(repo_url, repo_branch, version_pattern, tags)
+        repo_commits = get_github_commits(repo_url, repo_branch, version_pattern, tags, access_token)
         print(f'{len(repo_commits)} repo commits')
         for repo_commit in repo_commits:
             if repo_commit.hash not in commit_hashes:
@@ -673,7 +699,7 @@ if __name__ == "__main__":
         gh_username = c.gh_username
         gh_name = c.gh_name
         if gh_name is None or gh_name == '':
-            gh_name = get_github_profile_name(gh_username)
+            gh_name = get_github_profile_name(gh_username, access_token)
         if gh_name is not None:
             c.gh_name = gh_name
             for c2 in commits:
@@ -684,8 +710,8 @@ if __name__ == "__main__":
     for c in commits:
         if c.gh_username is not None:
             continue
-        gh_username = get_github_username(c.author_email)
-        gh_name = get_github_profile_name(gh_username)
+        gh_username = get_github_username(c.author_email, access_token)
+        gh_name = get_github_profile_name(gh_username, access_token)
         if gh_name is not None:
             c.gh_username = gh_username
             c.gh_name = gh_name
@@ -721,7 +747,7 @@ if __name__ == "__main__":
             if c.gh_issue_username not in authors:
                 authors[c.gh_issue_username] = GitHubUser()
                 authors[c.gh_issue_username].username = c.gh_issue_username
-                authors[c.gh_issue_username].name = get_github_profile_name(c.gh_issue_username)
+                authors[c.gh_issue_username].name = get_github_profile_name(c.gh_issue_username, access_token)
                 authors[c.gh_issue_username].commits = 0
                 authors[c.gh_issue_username].commits_perc = 0.
                 if repo_owner is not None and repo_owner == c.gh_issue_username:
