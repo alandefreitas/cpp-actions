@@ -11,7 +11,21 @@ project(cpp_actions
 ### Dependencies                                    ###
 #######################################################
 if (NOT CPP_ACTIONS_NO_DEPS)
-    find_package(fmt)
+    find_package(fmt QUIET)
+    if (NOT fmt_FOUND)
+        include(FetchContent)
+        FetchContent_Declare(
+                fmt
+                URL https://github.com/fmtlib/fmt/releases/download/10.0.0/fmt-10.0.0.zip
+        )
+        FetchContent_GetProperties(fmt)
+        if (NOT fmt_POPULATED)
+            FetchContent_Populate(fmt)
+            set(FMT_SOURCE_ROOT ${fmt_SOURCE_DIR})
+        endif ()
+        add_subdirectory(${FMT_SOURCE_ROOT} EXCLUDE_FROM_ALL)
+    endif ()
+
     find_package(Boost QUIET CONFIG)
     if (Boost_FOUND)
         add_library(Boost::variant2 ALIAS Boost::headers)
