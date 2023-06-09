@@ -188,11 +188,14 @@ runs:
         verbose_arg="${{ (inputs.trace-commands && '--verbose') || '' }}"
         $python_path "$GITHUB_ACTION_PATH/combine-traces.py" --source-dir "${{ inputs.source-dir }}" --build-dir "${{ inputs.build-dir }}" --output "${{ inputs.output-path }}" --report-output "${{ inputs.report-path }}" $verbose_arg
         
-        if [ "${{ inputs.update-summary }}" == "true" ]; then
+        if [ "${{ inputs.update-summary }}" == "true" ]; then 
             cat "${{ steps.ctx.outputs.report_path }}" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ inputs.upload-artifact }}" == "true" ]; then
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "[For more information and graphics, see the time-trace artifacts](#artifacts)" >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+            fi
         fi
-        
-        
 
     - name: Generate SVG time trace
       shell: bash
