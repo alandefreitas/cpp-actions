@@ -119,7 +119,7 @@ runs:
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         python_path="${{ steps.setup-python.outputs.python-path || 'python' }}"
         pip3 install requests
-        thank_arg="${{ (inputs.thank-non-regular && '--thank-non-regular') || '' }}"
+        thank_arg="${{ (inputs.thank-non-regular == 'true' && '--thank-non-regular') || '' }}"
         token_arg="${{ (inputs.github-token && format('--github-token "{0}"', inputs.github-token)) || '' }}"
         $python_path "$GITHUB_ACTION_PATH/create-changelog.py" --dir "${{ inputs.source-dir }}" --version-pattern "${{ inputs.version-pattern }}" --tag-pattern "${{ inputs.tag-pattern }}" --output "${{ inputs.output-path }}" --limit "${{ inputs.limit }}" $thank_arg $token_arg
 
