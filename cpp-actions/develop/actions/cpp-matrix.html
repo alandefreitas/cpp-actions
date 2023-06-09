@@ -305,56 +305,39 @@
 </aside>
 <article class="doc">
 <h1 class="page">C++ Matrix</h1>
-<div id="preamble">
+<div class="sect1">
+<h2 id="_motivation"><a class="anchor" href="#_motivation"></a>Motivation</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Testing C libraries can be a challenging and time-consuming task, especially when considering the
+<p>Testing C++ libraries can be a challenging and time-consuming task, especially when considering the
 various compiler versions, error behaviors, and platform dependencies. A library that works flawlessly
-with one compiler might encounter issues when compiled with a different version or on a different
-platform. This is where the C Library Test Matrix GitHub Action comes to the rescue.</p>
+with one compiler will almost certainly fail to build with a different compiler version, not mention
+different compilers and platforms.</p>
 </div>
 <div class="paragraph">
-<p>The C Library Test Matrix GitHub Action is designed to automate the generation of a comprehensive
-test matrix for your C libraries given their requirements. It simplifies the process of testing your
-libraries across multiple compiler versions and platforms, reducing the manual effort and potential
-for human error.</p>
+<p>This has a viral effect with enormous implications to the C++ ecosystem. If your library doesn&#8217;t
+properly test and support all platforms in its manifest, this support is also broken for any
+projects depending on your library. With some notable exceptions, this is currently the case
+with most small standalone libraries one can find on GitHub. These are libraries that could be
+very useful otherwise, so avoid dependencies altogether is not a reasonable to the problem, since
+we will never get anywhere meaningful if we&#8217;re not able to stand to the shoulder of giants.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_c_test_matrix"><a class="anchor" href="#_c_test_matrix"></a>C++ Test Matrix</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The C Matrix Action is designed to automate the generation of a comprehensive test matrix for your
+C libraries given their requirements. It simplifies the process of defining the contract of what
+platforms your library supports and testing your project across a proper selected subset of revelant
+compiler versions and platforms.</p>
 </div>
 <div class="paragraph">
-<p>With this action, you can define a set of compiler versions, target platforms, standard requirements,
-and factors that you want to test your C++ library against. The action then automatically generates
-a test matrix by combining the specified compilers and platforms into a fractional factorial design,
-enabling you to run tests in a systematic and efficient manner.</p>
-</div>
-<div class="paragraph">
-<p>This action can ensure that your C++ library is thoroughly tested across a wide range of compiler
-versions and platforms. This approach significantly increases the chances of catching compatibility
-issues early on and helps in delivering a robust and reliable library that works across different
-environments.</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Automated test matrix generation: Define a list of compiler versions and platforms, and let the action handle
-the creation of the test matrix.</p>
-</li>
-<li>
-<p>Easy integration: Simply include the C++ Library Test Matrix GitHub Action in your workflow configuration to
-start generating the test matrix.</p>
-</li>
-<li>
-<p>Customization options: Fine-tune the test matrix generation process by specifying additional compiler flags,
-build configurations, or test suites.</p>
-</li>
-<li>
-<p>Comprehensive test coverage: Ensure your C++ library is thoroughly tested across multiple compiler versions
-and platforms to identify and address compatibility issues.</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>Get started with the C Library Test Matrix GitHub Action today and streamline your C library testing
-process. Say goodbye to manual matrix creation and embrace automated, systematic testing to deliver
-high-quality C++ libraries that work seamlessly across different compilers and platforms.</p>
+<p>With this action, you can define a set of requirements to test your C++ library. It will then generate
+a test matrix by combining the specified requirements into a fractional factorial design to ensure all
+proper combinations are tested in a systematic manner. This approach significantly increases the chances
+of catching compatibility issues early on and helps in delivering a robust and reliable library to users.</p>
 </div>
 </div>
 </div>
@@ -416,6 +399,106 @@ and create your workflow as usual with the parameters from the matrix:</p>
           cxxflags: ${{ matrix.cxxstd }}
 
       # And you've safely tested your C++ library just like that...</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_variable_matrices"><a class="anchor" href="#_variable_matrices"></a>Variable matrices</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In some cases, it might be useful to test different matrices based on the conditions of the workflow.
+These conditions might be the event_type and the types of files changed in the commit triggering the workflow.
+The workflows might vary between disabling tests for changes that don&#8217;t affect these certain files, running
+a reduced subset of tests for less important changes, or enabling extra tests, such as documentation tests in case
+only these files have been changed. This might be useful in terms of performance, costs, and safety.</p>
+</div>
+<div class="paragraph">
+<p>While this is hard to achieve with hard-coded matrices, this action makes variable matrices very easy to achieve.
+Simply define a previous step to determine the matrix parameters and use it to generate the matrix.
+For instance, the <code>compilers</code> parameters could be replaced from <code>gcc &gt;=4.8</code> to
+<code>gcc &gt;=4.8 &lt;6.0 ${{ github.event_name == 'push' &amp;&amp; '|| &gt;=6.0 &lt;10' }} || &gt;=11</code> to only test intermediary
+GCC versions <code>&gt;=6.0 &lt;10</code> when in push events.</p>
+</div>
+<div class="paragraph">
+<p>A more powerful strategy to save resources is analyzing files changed in the workflow and considering
+these files to determine what the matrix should be according to project conventions.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_about_matrix_recommendations"><a class="anchor" href="#_about_matrix_recommendations"></a>About matrix recommendations</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The values in each matrix entry very opinionated recommendations as a starting point for your test matrix.
+This could not be different, since there is a myriad of ways in which build parameters can be tested.</p>
+</div>
+<div class="sect2">
+<h3 id="_ignoring_recommendations"><a class="anchor" href="#_ignoring_recommendations"></a>Ignoring recommendations</h3>
+<div class="paragraph">
+<p>If a given recommendation does not apply to your use case, the first option is simply to ignore that
+entry key. For instance, <code>matrix.install</code> includes suggested packages that should be installed, but these
+can be ignored if a custom container with these dependencies is already provided.</p>
+</div>
+<div class="paragraph">
+<p>Some <code>factors</code> always need to be adjusted when basic assumptions about an initial library are not valid.
+For instance, the matrix will include the factor <code>matrix.shared</code> by default. If the only use case for your
+library is as a shared library, then this <code>Shared</code> factor can be removed from the matrix and you can configure
+all workflows to build a shared library.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_adjusting_semver_ranges"><a class="anchor" href="#_adjusting_semver_ranges"></a>Adjusting semver ranges</h3>
+<div class="paragraph">
+<p>The input parameters support semver ranges, including range disjunctions. For instance, consider the default
+compiler range <code>clang &gt;=3.8</code>, which might test your library with too many versions of clang. You could remove
+intermediary versions of clang with the range <code>clang &gt;=3.8 &lt;5 || &gt;=10</code>, which ensure old versions are
+recent versions are covered, while eliminating intermediary versions.</p>
+</div>
+<div class="paragraph">
+<p>Also when a bug is found in a specific version, semver ranges can also help. Consider someone has reported
+a bug in GCC 8.1, and you want to keep track of that. The semver range <code>gcc &gt;=4.8 &lt;7 || 8.1 || &gt;=10</code> would ensure
+version GCC8.1 specifically, and not any other version is the range <code>&gt;=8.0.0 &lt;9.0.0</code> is tested.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_overriding_recommendations"><a class="anchor" href="#_overriding_recommendations"></a>Overriding recommendations</h3>
+<div class="paragraph">
+<p>When the general recommendation does not work, but there&#8217;s a mapping between the recommendation and the expected
+values, you can use github action expressions to directly replace these values. For instance, if the recommendation
+of running a workflow in the runner image <code>ubuntu-22.04</code> is not appropriate because you&#8217;re going to use a container
+that already has your dependencies, you could set the job <code>runs-on</code> property to <code>ubuntu-22.04</code> instead of
+<code>matrix.runs-on</code> and set the <code>container</code> property to
+<code>( matrix.runs-on == 'ubuntu-22.04' &amp;&amp; 'my-ubuntu-22.04-container' ) || matrix.container )</code>, which replaces all
+occurrences of <code>ubuntu-22.04</code> with <code>my-ubuntu-22.04-container</code>.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_auxiliary_keys"><a class="anchor" href="#_auxiliary_keys"></a>Auxiliary keys</h3>
+<div class="paragraph">
+<p>Overriding recommendations can be verbose when there are too many conditions involved. The matrix provides
+auxiliary keys to make this easier. For instance, consider a matrix entry with the factor <code>matrix.cxxstd</code> equal
+to <code>17,20</code>. If you want to have two versions of tests, where one of them does not go through all C++ standards,
+you can use the <code>matrix.latest-cxxstd</code>, which will give you <code>20</code> without having to split <code>matrix.cxxstd</code> and take
+its last value.</p>
+</div>
+<div class="paragraph">
+<p>Other auxiliary keys have broader meaning, so they can be used in more general situations. For instance,
+it&#8217;s common to build release artifacts for a subset of entries in the matrix. This subset usually represents
+the latest version of each compiler without any factors applied. In that case, the factor <code>matrix.is-main</code> can
+be use to determine if the release artifacts should be generated. The factor <code>matrix.is-main</code> determines if
+the current entry is the latest version of a compiler but not one of the replicates of the latest version
+with factors applied.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_use_scripts"><a class="anchor" href="#_use_scripts"></a>Use scripts</h3>
+<div class="paragraph">
+<p>In more complex cases, it might be worth considering that this action only returns a json representation
+of the test matrix. If deeper modifications in the matrix are required, a following step including a script to
+adjust the matrix is always possible. In this scenario, the matrix will still fetch updated information
+about compiler versions and requirements while the script will only adjust local requirements. In most cases,
+this is unnecessary as the approaches above tend to have good results.</p>
 </div>
 </div>
 </div>
