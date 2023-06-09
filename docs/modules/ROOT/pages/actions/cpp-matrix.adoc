@@ -4,38 +4,31 @@
 // This cpp-matrix.adoc file is automatically generated.
 // Edit parse_actions.py instead.
 
+== Motivation
+
 Testing C++ libraries can be a challenging and time-consuming task, especially when considering the
 various compiler versions, error behaviors, and platform dependencies. A library that works flawlessly 
-with one compiler might encounter issues when compiled with a different version or on a different
-platform. This is where the C++ Library Test Matrix GitHub Action comes to the rescue.
+with one compiler will almost certainly fail to build with a different compiler version, not mention
+different compilers and platforms. 
 
-The C++ Library Test Matrix GitHub Action is designed to automate the generation of a comprehensive 
-test matrix for your C++ libraries given their requirements. It simplifies the process of testing your
-libraries across multiple compiler versions and platforms, reducing the manual effort and potential 
-for human error.
+This has a viral effect with enormous implications to the C++ ecosystem. If your library doesn't
+properly test and support all platforms in its manifest, this support is also broken for any
+projects depending on your library. With some notable exceptions, this is currently the case
+with most small standalone libraries one can find on GitHub. These are libraries that could be
+very useful otherwise, so avoid dependencies altogether is not a reasonable to the problem, since
+we will never get anywhere meaningful if we're not able to stand to the shoulder of giants.
 
-With this action, you can define a set of compiler versions, target platforms, standard requirements,
-and factors that you want to test your C++ library against. The action then automatically generates 
-a test matrix by combining the specified compilers and platforms into a fractional factorial design, 
-enabling you to run tests in a systematic and efficient manner.
+== C++ Test Matrix
 
-This action can ensure that your C++ library is thoroughly tested across a wide range of compiler
-versions and platforms. This approach significantly increases the chances of catching compatibility 
-issues early on and helps in delivering a robust and reliable library that works across different
-environments.
+The C++ Matrix Action is designed to automate the generation of a comprehensive test matrix for your 
+C++ libraries given their requirements. It simplifies the process of defining the contract of what
+platforms your library supports and testing your project across a proper selected subset of revelant 
+compiler versions and platforms.
 
-- Automated test matrix generation: Define a list of compiler versions and platforms, and let the action handle 
-  the creation of the test matrix.
-- Easy integration: Simply include the C++ Library Test Matrix GitHub Action in your workflow configuration to 
-  start generating the test matrix.
-- Customization options: Fine-tune the test matrix generation process by specifying additional compiler flags, 
-  build configurations, or test suites.
-- Comprehensive test coverage: Ensure your C++ library is thoroughly tested across multiple compiler versions 
-  and platforms to identify and address compatibility issues.
-
-Get started with the C++ Library Test Matrix GitHub Action today and streamline your C++ library testing 
-process. Say goodbye to manual matrix creation and embrace automated, systematic testing to deliver 
-high-quality C++ libraries that work seamlessly across different compilers and platforms.
+With this action, you can define a set of requirements to test your C++ library. It will then generate
+a test matrix by combining the specified requirements into a fractional factorial design to ensure all
+proper combinations are tested in a systematic manner. This approach significantly increases the chances
+of catching compatibility issues early on and helps in delivering a robust and reliable library to users.
 
 == Usage
 
