@@ -86,10 +86,15 @@ def format_time(microseconds):
     elif microseconds < 1000000:
         milliseconds = round(microseconds / 1000, 2)
         return f"{milliseconds} ms"
-    else:
+    elif microseconds < 60000000:
         seconds = round(microseconds / 1000000, 2)
         return f"{seconds} s"
-
+    elif microseconds < 3600000000:
+        minutes = round(microseconds / 60000000, 2)
+        return f"{minutes} min"
+    else:
+        hours = round(microseconds / 3600000000, 2)
+        return f"{hours} h"
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Installs the dependencies needed to test a Boost library.')
@@ -346,7 +351,7 @@ if __name__ == '__main__':
         n = 0
         for [file, v] in data.items():
             [count, time] = v
-            section_output += f'| `{file}` | {round(100 * time / acc, 2)} % | {format_time(time)} | {format_time(time / count)} | {count} |\n'
+            section_output += f'| `{file}` | {round(100 * time / acc, 2)}% | {format_time(time)} | {format_time(time / count)} | {count} |\n'
             n += 1
             if n > 7:
                 break
@@ -359,7 +364,7 @@ if __name__ == '__main__':
             n = 0
             for [file, v] in data.items():
                 [count, time] = v
-                section_output += f'| `{file}` | {round(100 * time / acc, 2)} % | {format_time(time)} | {format_time(time / count)} | {count} |\n'
+                section_output += f'| `{file}` | {round(100 * time / acc, 2)}% | {format_time(time)} | {format_time(time / count)} | {count} |\n'
                 n += 1
                 if n > 100:
                     break
