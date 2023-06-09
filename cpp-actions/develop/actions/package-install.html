@@ -350,7 +350,7 @@ required by the project.</p>
   uses: alandefreitas/cpp-actions/package-install@develop
   id: package-install
   with:
-    vcpkg: fmt
+    vcpkg: ${{ (!matrix.fetch-content &amp;&amp; 'fmt') || '' }}
     vcpkg-triplet: ${{ ( runner.os == 'Windows' &amp;&amp; matrix.x86 &amp;&amp; 'x86-windows' ) ||
       '' }}
     apt-get: ${{ matrix.install }}

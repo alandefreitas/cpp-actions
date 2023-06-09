@@ -379,7 +379,8 @@ perform a shallow clone and the Changelog will only include the latest commit.</
   with:
     output-path: CHANGELOG.md
     thank-non-regular: ${{ startsWith(github.ref, 'refs/tags/') }}
-    github-token: ${{ secrets.GITHUB_TOKEN }}</code></pre>
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    link-commits: ${{ github.ref_name == 'develop' }}</code></pre>
 </div>
 </div>
 </div>
@@ -440,6 +441,19 @@ in the notes is complete.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>thank-non-regular</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Thank non-regular contributors.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>link-commits</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Link commit ids in the changelog to the repository commit.</p>
+<p class="tableblock">This is usually unnecessary because GitHub flavored markdown automatically links commits id in
+text to the commits in the same repository. Thus, including explicit links would often make the
+output more verbose and remove any extra GitHub functionality, such as pop ups associated with
+these ids.</p>
+<p class="tableblock">However, when the outputs is only going to be used as an action summary or in any other context
+outside GitHub, these automatic links do not exist and it&#8217;s often a good idea to include them
+to allow the reader to navigate to these repository commits.
+.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>github-token</code></p></td>
