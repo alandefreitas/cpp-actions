@@ -156,6 +156,29 @@ runs:
         fi
         echo -E "report_path=$report_path" >> $GITHUB_OUTPUT
 
+        readme_path="$(dirname "$report_path")/time-trace-readme.md"
+        if [ "${{ inputs.upload-artifact }}" == "true" ]; then
+            echo "# Time-Trace reports" >> "$readme_path"
+            echo "" >> "$readme_path"
+        
+            echo "## time-trace-report.md" >> "$readme_path"
+            echo "" >> "$readme_path"
+            echo "This file includes the report that is also included in your action summary." >> "$readme_path"
+            echo "" >> "$readme_path"
+
+            echo "## combined-traces.json.svg" >> "$readme_path"
+            echo "" >> "$readme_path"
+            echo "This is an interactive graphical representation of the time-traces generated with [FlameGraph](https://github.com/brendangregg/FlameGraph)." >> "$readme_path"
+            echo "You can open this file directly in the browser to navigate the results." >> "$readme_path"
+            echo "" >> "$readme_path"
+        
+            echo "## combined-traces.json" >> "$readme_path"
+            echo "" >> "$readme_path"
+            echo "This file includes the combined time-trace files in a single file you can open with https://www.speedscope.app/ or chrome://tracing/." >> "$readme_path"
+            echo "" >> "$readme_path"
+        fi
+        echo -E "readme_path=$readme_path" >> $GITHUB_OUTPUT
+
     - name: Merge time-trace files
       shell: bash
       run: |
@@ -201,4 +224,5 @@ runs:
         path: |
           ${{ steps.ctx.outputs.output_path }}
           ${{ steps.ctx.outputs.report_path }}
+          ${{ steps.ctx.outputs.readme_path }}
           ${{ steps.run-flamegraph.outputs.image_path }}
