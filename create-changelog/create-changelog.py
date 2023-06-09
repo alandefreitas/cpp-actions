@@ -102,6 +102,29 @@ def humanize(s):
     return s
 
 
+def commit_type_description(s):
+    m = {
+        'docs': 'Documentation updates and improvements',
+        'fix': 'Bug fixes and error corrections',
+        'style': 'Code style and formatting changes',
+        'chore': 'Routine tasks, maintenance, and housekeeping',
+        'build': 'Build system and configuration changes',
+        'feat': 'New features and additions',
+        'refactor': 'Code refactoring and restructuring',
+        'perf': 'Performance optimizations and enhancements',
+        'test': 'Test cases and testing-related changes',
+        'release': 'Release-specific changes and preparations',
+        'ci': 'Changes related to continuous integration',
+        'improvement': 'General improvements and enhancements',
+        'breaking': 'Breaking changes and compatibility modifications',
+        'revert': 'Reverted changes to previous versions',
+        'other': 'Other changes not covered by specific categories'
+    }
+    if s in m:
+        return m[s]
+    return ''
+
+
 def get_github_profile_name(username, access_token):
     url = f"https://api.github.com/users/{username}"
     headers = {
@@ -473,7 +496,8 @@ def remove_commit_duplicates(commits: [Commit]):
         else:
             idx = -1
             for i in range(len(unique_commits)):
-                comparison_values2 = tuple([unique_commits[i].type, unique_commits[i].scope, unique_commits[i].description])
+                comparison_values2 = tuple(
+                    [unique_commits[i].type, unique_commits[i].scope, unique_commits[i].description])
                 if comparison_values == comparison_values2:
                     idx = i
                     break
@@ -875,15 +899,23 @@ if __name__ == "__main__":
     for change_type in change_type_priority:
         if change_type in changes:
             scope_changes = changes[change_type]
+
+            # Title
             if len(changes) > 1 or (len(changes) > 0 and change_type[0] != 'other'):
                 if output:
                     output += '\n'
                 output += f'## {icon_for(change_type)} {humanize(change_type)}\n\n'
+                desc = commit_type_description(change_type)
+                if desc:
+                    output += f'{commit_type_description(change_type)}\n\n'
+
+            # Scopes
             for [scope, scope_changes] in scope_changes.items():
                 scope_prefix = ''
                 multiline = scope is not None and len(scope_changes) > 1
                 if multiline:
                     output += f'- {scope}:\n'
+                # Scope changes
                 for commit in scope_changes:
                     # Padding
                     if multiline:
