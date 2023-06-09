@@ -957,15 +957,16 @@ if __name__ == "__main__":
                     for extra_hash in commit.extra_hashes:
                         output += f' {extra_hash[:7]}'
                     # Thanks
-                    related_usernames = []
-                    if commit.gh_username is not None:
-                        related_usernames.append(commit.gh_username)
-                    if commit.gh_issue_username is not None and commit.gh_issue_username != commit.gh_username:
-                        related_usernames.append(commit.gh_issue_username)
-                    thank_list = [f'@{username}' for username in related_usernames if
-                                  authors[username].is_regular == False]
-                    if thank_list:
-                        output += f' (thanks {", ".join(thank_list)})'
+                    if args.thank_non_regular:
+                        related_usernames = []
+                        if commit.gh_username is not None:
+                            related_usernames.append(commit.gh_username)
+                        if commit.gh_issue_username is not None and commit.gh_issue_username != commit.gh_username:
+                            related_usernames.append(commit.gh_issue_username)
+                        thank_list = [f'@{username}' for username in related_usernames if
+                                      authors[username].is_regular == False]
+                        if thank_list:
+                            output += f' (thanks {", ".join(thank_list)})'
                     output += '\n'
 
     # Output parent release
