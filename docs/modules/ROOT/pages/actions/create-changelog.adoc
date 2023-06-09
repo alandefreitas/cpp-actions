@@ -56,6 +56,7 @@ steps:
     output-path: CHANGELOG.md
     thank-non-regular: ${{ startsWith(github.ref, 'refs/tags/') }}
     github-token: ${{ secrets.GITHUB_TOKEN }}
+    link-commits: ${{ github.ref_name == 'develop' }}
 ----
 
 == Input Parameters
@@ -84,6 +85,17 @@ This constraint does not apply to the current and latest commit.
 |`limit` |The limit on the number of commits considered in the Changelog
 . |`0`
 |`thank-non-regular` |Thank non-regular contributors. |`true`
+|`link-commits` |Link commit ids in the changelog to the repository commit.
+
+This is usually unnecessary because GitHub flavored markdown automatically links commits id in
+text to the commits in the same repository. Thus, including explicit links would often make the
+output more verbose and remove any extra GitHub functionality, such as pop ups associated with
+these ids.
+
+However, when the outputs is only going to be used as an action summary or in any other context
+outside GitHub, these automatic links do not exist and it's often a good idea to include them
+to allow the reader to navigate to these repository commits.
+. |`false`
 |`github-token` |Github token to identify non-regular contributors. Usually secrets.GITHUB_TOKEN. |
 |`update-summary` |Update action summary with the changelog. |`true`
 |`trace-commands` |Trace commands executed by the workflow. |`false`

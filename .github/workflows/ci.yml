@@ -216,6 +216,8 @@ jobs:
           output-path: CHANGELOG.md
           thank-non-regular: ${{ startsWith(github.ref, 'refs/tags/') }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          # if ref_name is develop, it only goes to the summary, so we explicitly link commits
+          link-commits: ${{ github.ref_name == 'develop' }}
           trace-commands: true
 
       - name: Remove existing branch release

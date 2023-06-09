@@ -35,7 +35,7 @@ steps:
   uses: alandefreitas/cpp-actions/package-install@{page-version}
   id: package-install
   with:
-    vcpkg: fmt
+    vcpkg: ${{ (!matrix.fetch-content && 'fmt') || '' }}
     vcpkg-triplet: ${{ ( runner.os == 'Windows' && matrix.x86 && 'x86-windows' ) ||
       '' }}
     apt-get: ${{ matrix.install }}

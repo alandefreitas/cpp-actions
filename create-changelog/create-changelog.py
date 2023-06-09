@@ -653,6 +653,7 @@ if __name__ == "__main__":
     parser.add_argument('--branch', help="reference parent branch", default='')
     parser.add_argument('--limit', type=int, help="max number of commits in the log", default=0)
     parser.add_argument('--thank-non-regular', action='store_true', help="Thank non-regular contributors")
+    parser.add_argument('--link-commits', action='store_true', help="Link commit ids to commit URLs")
     parser.add_argument('--github-token', help="GitHub token to identify non-regular contributors", default='')
     args = parser.parse_args()
 
@@ -921,14 +922,18 @@ if __name__ == "__main__":
                     if multiline:
                         output += '    '
                     output += '- '
+
                     # Feat icon
                     if commit.type == 'feat':
                         output += f'{feature_subject_icon()} '
+
                     # Scope prefix
                     if scope is not None and not multiline:
                         output += f'{scope}: '
+
                     # Description
                     output += f'{capitalize_sentences(commit.description)}'
+
                     # Breaking
                     if commit.breaking:
                         output += f' ({icon_for("breaking")} BREAKING)'
@@ -938,6 +943,7 @@ if __name__ == "__main__":
                         footnote = commit.body.replace("\n", "").strip()
                         footnotes_output += f'[^{footnotes_count}]: {capitalize_sentences(footnote)}\n'
                         footnotes_count += 1
+
                     # Footer keys
                     if commit.footers:
                         output += ' ('
@@ -952,10 +958,15 @@ if __name__ == "__main__":
                             else:
                                 output += f'{key}: {value}'
                         output += ')'
-                    # Commit id
-                    output += f' {commit.hash[:7]}'
-                    for extra_hash in commit.extra_hashes:
-                        output += f' {extra_hash[:7]}'
+
+                    # Commit ids
+                    if args.link_commits:
+                        for h in [commit.hash] + commit.extra_hashes:
+                            output += f' [{h[:7]}]({repo_url}/commit/{h})'
+                    else:
+                        for h in [commit.hash] + commit.extra_hashes:
+                            output += f' {h[:7]}'
+
                     # Thanks
                     if args.thank_non_regular:
                         related_usernames = []

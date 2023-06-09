@@ -92,6 +92,20 @@ inputs:
     description: 'Thank non-regular contributors.'
     required: false
     default: 'true'
+  link-commits:
+    description: |
+      Link commit ids in the changelog to the repository commit.
+      
+      This is usually unnecessary because GitHub flavored markdown automatically links commits id in
+      text to the commits in the same repository. Thus, including explicit links would often make the
+      output more verbose and remove any extra GitHub functionality, such as pop ups associated with
+      these ids.
+      
+      However, when the outputs is only going to be used as an action summary or in any other context
+      outside GitHub, these automatic links do not exist and it's often a good idea to include them
+      to allow the reader to navigate to these repository commits.
+    required: false
+    default: 'false'
   github-token:
     description: 'Github token to identify non-regular contributors. Usually secrets.GITHUB_TOKEN.'
     required: false
@@ -120,8 +134,9 @@ runs:
         python_path="${{ steps.setup-python.outputs.python-path || 'python' }}"
         pip3 install requests
         thank_arg="${{ (inputs.thank-non-regular == 'true' && '--thank-non-regular') || '' }}"
+        link_commits_arg="${{ (inputs.link-commits == 'true' && '--link-commits') || '' }}"
         token_arg="${{ (inputs.github-token && format('--github-token "{0}"', inputs.github-token)) || '' }}"
-        $python_path "$GITHUB_ACTION_PATH/create-changelog.py" --dir "${{ inputs.source-dir }}" --version-pattern "${{ inputs.version-pattern }}" --tag-pattern "${{ inputs.tag-pattern }}" --output "${{ inputs.output-path }}" --limit "${{ inputs.limit }}" $thank_arg $token_arg
+        $python_path "$GITHUB_ACTION_PATH/create-changelog.py" --dir "${{ inputs.source-dir }}" --version-pattern "${{ inputs.version-pattern }}" --tag-pattern "${{ inputs.tag-pattern }}" --output "${{ inputs.output-path }}" --limit "${{ inputs.limit }}" $thank_arg $token_arg $link_commits_arg
 
     - name: Changelog summary
       shell: bash
