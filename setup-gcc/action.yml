@@ -403,6 +403,34 @@ runs:
         # Find all GCC apt-get versions
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
 
+        # Determine if apt-get should be called with `sudo`, which is often not the case with containers
+        if which sudo >/dev/null 2>&1; then
+          sudo -n apt-get -o Acquire::Retries=5 update > /dev/null 2>&1
+          if [ $? -eq 0 ]
+          then
+            sudo_prefix="sudo -n "
+          else
+            apt-get -o Acquire::Retries=5 update > /dev/null 2>&1
+            sudo_prefix=""
+          fi
+        else
+          apt-get -o Acquire::Retries=5 update > /dev/null 2>&1
+          sudo_prefix=""
+        fi
+        
+        # Install repo with extra versions
+        if command -v lsb_release &>/dev/null; then
+            wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg
+            $sudo_prefix mv microsoft.gpg /etc/apt/trusted.gpg.d/microsoft.gpg
+            ubuntu_version=$(lsb_release -rs)
+            ubuntu_version_name=$(lsb_release -cs)
+            if [ "$ubuntu_version" != "" ] && [ "$ubuntu_version_name" != "" ]; then
+                echo "deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/microsoft.gpg] https://packages.microsoft.com/ubuntu/$ubuntu_version/prod $ubuntu_version_name main" | $sudo_prefix -n tee /etc/apt/sources.list.d/microsoft.list
+            fi
+        fi
+        $sudo_prefix apt-get clean
+        $sudo_prefix apt-get update
+
         # Look for APT GCC version we can download
         all_apt_versions=""
         all_semver_versions=""

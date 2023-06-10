@@ -204,7 +204,7 @@ runs:
 
     - name: Setup GCC
       if: ${{ steps.params.outputs.compiler == 'gcc' && runner.os == 'Linux' && steps.params.outputs.repo_is_cpp_actions == 'false' }}
-      uses: alandefreitas/cpp-actions/setup-gcc@v1.4.1
+      uses: alandefreitas/cpp-actions/setup-gcc@develop
       id: setup-gcc-external
       with:
         version: ${{ steps.params.outputs.version }}
