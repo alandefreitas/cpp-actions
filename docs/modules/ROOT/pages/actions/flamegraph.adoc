@@ -45,25 +45,20 @@ steps:
 |===
 |Parameter |Description |Default
 |`source-dir` |The source directory used to generate time-traces. Relative paths in the report will be relative to this
-directory.
-. |`.`
-|`build-dir` |The directory with the time-traces. This should usually be your build directory.
-. |`.`
+directory. |`.`
+|`build-dir` |The directory with the time-traces. This should usually be your build directory. |`.`
 |`output-path` |The path where the combined traces will be stored.
 
-If this is a relative path, it will be made relative to the build-dir.
-. |`combined-traces.json`
+If this is a relative path, it will be made relative to the build-dir. |`combined-traces.json`
 |`report-path` |The path where the report will be stored.
 
-If this is a relative path, it will be made relative to the build-dir.
-. |`time-trace-report.md`
+If this is a relative path, it will be made relative to the build-dir. |`time-trace-report.md`
 |`generate-svg` |Generate SVG file with the output. |`true`
 |`generate-report` |Generate a small report with ClangBuildAnalyzer. |`true`
 |`update-summary` |Update action summary with the SVG file. |`true`
 |`github_token` |An imgur client ID to upload the SVG flamegraph.
 
-See https://api.imgur.com/
-. |
+See https://api.imgur.com/. |
 |`upload-artifact` |Upload combined traces as artifact. |`true`
 |`trace-commands` |Trace commands executed by the workflow. |`false`
 |===

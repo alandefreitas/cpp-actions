@@ -1,0 +1,109 @@
+= Setup Program [[setup-program]]
+:reftext: Setup Program
+:navtitle: Setup Program Action
+// This setup-program.adoc file is automatically generated.
+// Edit parse_actions.py instead.
+
+Set up a specific version of a program and add it to the PATH.
+This action is inspired in the cmake command find_program and the setup-python action.
+
+This allows us to find a certain version of program in the host environment and, if it
+cannot be found, fallback to basic patterns to download and install it.
+
+This action uses a number of alternatives to find or install a program:
+
+- The program path hints provided to 'path'
+- Any other version of the program it can find in the system
+- Any other version of the program available from APT
+- A version of the program from a link to binary releases
+
+In most workflows, this is used in conjunction to the xref:actions/setup-cpp.adoc[] and
+xref:actions/package-install.adoc[] actions to find or install extra programs necessary
+for the workflow that are not easily available from package managers or could already be
+available in the environment.
+
+== Next steps
+
+After setting up the dependencies for your C++ project, the next step in your workflow should usually be
+xref:actions/cmake-workflow.adoc[].
+
+
+== Example
+
+[source,yml,subs="attributes+"]
+----
+steps:
+- name: Setup Doxygen
+  uses: alandefreitas/cpp-actions/setup-program@{page-version}
+  id: setup-doxygen
+  with:
+    name: doxygen
+    version: '>=1.9'
+    url: 'https://github.com/doxygen/doxygen/releases/download/Release_1_9_7/doxygen-1.9.7.{{
+      os }}${{ ( runner.os == ''Windows'' && ''.x64'' ) || '''' }}.bin.${{ ( runner.os
+      == ''Windows'' && ''zip'' ) || ''tar.gz'' }}
+
+      '
+    install-prefix: ${{ ( runner.os == 'Linux' && '/usr/local' ) || '' }}
+    check-latest: true
+    update-environment: true
+    fail-on-error: ${{ runner.os != 'macOS' }}
+----
+
+== Input Parameters
+
+|===
+|Parameter |Description |Default
+|`name` |The name of the executable we should look for.
+
+This parameter can also include a list of names to look for. ⚠️ This parameter is required. |
+|`version` |Version range or exact version of the program to use, using SemVer's version range syntax.
+
+By default, it uses any version available in the environment.
+
+If a version is provided, any executable found will be run with the --version option
+and the result will be parsed to look for a semver version, which will be considered
+the version we found. |`*`
+|`path` |Specify directories and paths to search in addition to the default locations.
+
+The paths can be separated by ':' or ';'. |
+|`check-latest` |Set this option if you want the action to check for the latest available version that satisfies the version spec. |`false`
+|`url` |The URL to download the program binaries when it is not available in the environment.
+
+To simplify the download, the URL can contain the following placeholders:
+
+- `{\{name}}`: The program name.
+
+- `{\{version}}`: The version of the program to download. (coerced from the version input)
+
+- `{\{version-major}}`: The major version of the program to download. (coerced from the version input)
+
+- `{\{version-minor}}`: The minor version of the program to download. (coerced from the version input)
+
+- `{\{version-patch}}`: The patch version of the program to download. (coerced from the version input)
+
+- `{\{platform}}`: The platform name. (process.platform)
+
+- `{\{os}}`: The operating system name. (process.platform converted to 'windows', 'macos', or 'linux')
+
+- `{\{arch}}`: The architecture name. (process.arch). |
+|`install-prefix` |The directory where the tool should be installed if it's not available in the environment.
+
+By default, the tool will be installed in the hosttools cache directory. |
+|`update-environment` |Set this option if you want the action to update environment variables. |`true`
+|`trace-commands` |Trace commands executed by the workflow. |`false`
+|`fail-on-error` |Fail if the program is not found. |`true`
+|===
+
+== Outputs
+
+|===
+|Output |Description
+|`path` |The absolute path to the program executable.
+|`dir` |The absolute path to the directory containing the executable.
+|`version` |The installed program version. Useful when given a version range as input.
+|`version-major` |The installed program version major. Useful when given a version range as input.
+|`version-minor` |The installed program version minor. Useful when given a version range as input.
+|`version-patch` |The installed program version patch. Useful when given a version range as input.
+|`found` |Whether the program was found.
+|===

@@ -7,6 +7,7 @@
 ** xref:actions/package-install.adoc[]
 ** xref:actions/boost-clone.adoc[]
 ** xref:actions/setup-cmake.adoc[]
+** xref:actions/setup-program.adoc[]
 * Workflows
 ** xref:actions/cmake-workflow.adoc[]
 ** xref:actions/b2-workflow.adoc[]

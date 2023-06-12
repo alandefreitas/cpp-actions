@@ -54,7 +54,7 @@ readme_base = os.path.join('README.base.adoc')
 action_pages_dir = os.path.join('docs', 'modules', 'ROOT', 'pages', 'actions')
 example_path = os.path.join('.github', 'workflows', 'ci.yml')
 actions = ['cpp-matrix', 'setup-cpp', 'package-install', 'cmake-workflow', 'boost-clone', 'b2-workflow',
-           'create-changelog', 'flamegraph', 'setup-cmake', 'setup-gcc', 'setup-clang']
+           'create-changelog', 'flamegraph', 'setup-cmake', 'setup-gcc', 'setup-clang', 'setup-program']
 
 with open(example_path, 'r') as f:
     ci_yml = yaml.load(f, Loader=OrderedLoader)
@@ -62,6 +62,7 @@ with open(example_path, 'r') as f:
     steps = ci_yml['jobs']['build']['steps']
     steps += ci_yml['jobs']['docs']['steps']
     steps += ci_yml['jobs']['cpp-matrix']['steps']
+
 
 def gha_tokenize(expression):
     tokens = []
@@ -414,16 +415,24 @@ for action in actions:
     output += f'== Input Parameters\n\n'
     output += f'|===\n|Parameter |Description |Default\n'
     for parameter, details in inputs.items():
-        description = details['description']
+        description = details['description'].strip()
         if not description.endswith('.'):
             description += '.'
-        required = details['required']
-        if required == 'True':
+        if 'required' in details:
+            required = details['required']
+        else:
+            required = False
+        if required == 'True' or required == True:
             description += ' ⚠️ This parameter is required.'
         description = description.replace("|", "\\|")
-        default = details['default']
+        if 'default' in details:
+            default = details['default']
+        else:
+            default = ''
         if type(default) == str:
             default = '\n\n'.join(['' if not line else f'`{line}`' for line in default.splitlines()])
+        elif type(default) == bool:
+            default = '`false`' if not default else '`true`'
         else:
             default = '' if not default else f'`{default}`'
         default = default.replace("|", "\\|")

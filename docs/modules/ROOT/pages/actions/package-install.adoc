@@ -57,18 +57,14 @@ steps:
 Setting the compiler is particularly important in Linux workflows that use `clang`, since `clang` might link 
 `libc++` or `libstdc++`, while the default compiler used by vcpkg will usually be GCC linking `libstdc++`.
 
-This would cause conflict in workflows that later attempt to use vcpkg dependencies.
-. |
-|`cxxflags` |C++ flags used by vcpkg.
-. |
+This would cause conflict in workflows that later attempt to use vcpkg dependencies. |
+|`cxxflags` |C++ flags used by vcpkg. |
 |`cc` |C compiler used by vcpkg. |
-|`ccflags` |C flags used by vcpkg.
-. |
+|`ccflags` |C flags used by vcpkg. |
 |`vcpkg-triplet` |The triplet used by vcpkg to install packages. |
 |`vcpkg-dir` |The directory where vcpkg should be cloned and installed.
 
-If the directory is unspecified, the runner tool cache is used.
-. |
+If the directory is unspecified, the runner tool cache is used. |
 |`vcpkg-branch` |vcpkg branch we should use. |`master`
 |`apt-get-retries` |Number of times we should retry when apt-get fails. |`1`
 |`apt-get-sources` |List of sources for apt-get. |

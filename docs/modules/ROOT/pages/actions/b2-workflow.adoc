@@ -61,9 +61,8 @@ argument is mapped to the equivalent b2 variant:
 
 - `RelWithDebInfo` -> `profile`
 
-- `<other>` -> lowercase <other>
-. |
-|`modules` |The list of modules we should test. |
+- `<other>` -> lowercase <other>. |
+|`modules` |The list of modules we should test. ⚠️ This parameter is required. |
 |`toolset` |Toolset name. |
 |`address-model` |Valid b2 list of address models. |
 |`cxx` |Path to C++ compiler. |

@@ -76,6 +76,31 @@ jobs:
           version: ${{ matrix.version }}
           trace-commands: true
 
+      # We're not really going to use doxygen. This is only here to test the action.
+      - name: Setup Doxygen
+        uses: ./setup-program
+        id: setup-doxygen
+        with:
+          name: doxygen
+          version: '>=1.9'
+          url: |
+            https://github.com/doxygen/doxygen/releases/download/Release_1_9_7/doxygen-1.9.7.{{ os }}${{ ( runner.os == 'Windows' && '.x64' ) || '' }}.bin.${{ ( runner.os == 'Windows' && 'zip' ) || 'tar.gz' }}
+          install-prefix: ${{ ( runner.os == 'Linux' && '/usr/local' ) || '' }}
+          check-latest: true
+          update-environment: true
+          fail-on-error: ${{ runner.os != 'macOS' }}
+          trace-commands: true
+
+      - name: Print doxygen params
+        run: |
+          echo "steps.setup-doxygen.outputs.found=${{ steps.setup-doxygen.outputs.found }}"
+          echo "steps.setup-doxygen.outputs.path=${{ steps.setup-doxygen.outputs.path }}"
+          echo "steps.setup-doxygen.outputs.dir=${{ steps.setup-doxygen.outputs.dir }}"
+          echo "steps.setup-doxygen.outputs.version=${{ steps.setup-doxygen.outputs.version }}"
+          echo "steps.setup-doxygen.outputs.version-major=${{ steps.setup-doxygen.outputs.version-major }}"
+          echo "steps.setup-doxygen.outputs.version-minor=${{ steps.setup-doxygen.outputs.version-minor }}"
+          echo "steps.setup-doxygen.outputs.version-patch=${{ steps.setup-doxygen.outputs.version-patch }}"
+
       - name: Install packages
         uses: ./package-install
         id: package-install

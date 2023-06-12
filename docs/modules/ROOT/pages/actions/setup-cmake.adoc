@@ -20,24 +20,19 @@ which already calls this action if necessary.
 
 Reads from `cmake-file` input if unset.
 
-By default, it uses any version available in the environment.
-. |`*`
+By default, it uses any version available in the environment. |`*`
 |`cmake-file` |File containing the CMake version to use in a cmake_minimum_required command. 
 
-Example: A CMakeLists.txt file containing a call to cmake_minimum_required."
-. |`CMakeLists.txt`
+Example: A CMakeLists.txt file containing a call to cmake_minimum_required.". |`CMakeLists.txt`
 |`cmake-path` |The cmake executable. We attempt to find cmake at this path first. |`cmake`
-|`cache` |Used to specify whether the CMake installation should be cached in the case CMake needs to be downloaded."
-. |`True`
-|`architecture` |The target architecture (x86, x64). By default, this value is inferred.
-. |
+|`cache` |Used to specify whether the CMake installation should be cached in the case CMake needs to be downloaded.". |`true`
+|`architecture` |The target architecture (x86, x64). By default, this value is inferred. |
 |`check-latest` |By default, when CMake is not available, this action will install the minimum version in the version spec.
 This ensures the code respects its contract in terms of what minimum CMake version is supported.
 
 Set this option if you want the action to check for the latest available version that satisfies the version spec
-instead.
-. |
-|`update-environment` |Set this option if you want the action to update environment variables. |`True`
+instead. |`false`
+|`update-environment` |Set this option if you want the action to update environment variables. |`true`
 |`trace-commands` |Trace commands executed by the workflow. |`false`
 |===
 

@@ -32,19 +32,15 @@ xref:actions/package-install.adoc[].
 |Parameter |Description |Default
 |`version` |Version range or exact version of Clang to use, using SemVer's version range syntax. 
 
-By default, it uses any version available in the environment.
-. |`*`
+By default, it uses any version available in the environment. |`*`
 |`path` |The clang or clang++ executable. We attempt to find Clang at this path first. |`clang++`
-|`cache` |Used to specify whether the Clang installation should be cached in the case Clang needs to be downloaded."
-. |`false`
-|`architecture` |The target architecture (x86, x64). By default, this value is inferred.
-. |
+|`cache` |Used to specify whether the Clang installation should be cached in the case Clang needs to be downloaded.". |`false`
+|`architecture` |The target architecture (x86, x64). By default, this value is inferred. |
 |`check-latest` |By default, when Clang is not available, this action will install the minimum version in the version spec.
 This ensures the code respects its contract in terms of what minimum Clang version is supported.
 
 Set this option if you want the action to check for the latest available version that satisfies the version spec
-instead.
-. |`false`
+instead. |`false`
 |`update-environment` |Set this option if you want the action to update environment variables. |`true`
 |`trace-commands` |Trace commands executed by the workflow. |`false`
 |===

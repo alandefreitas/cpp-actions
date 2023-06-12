@@ -1,0 +1,131 @@
+name: "Setup Program"
+description: |
+  Set up a specific version of a program and add it to the PATH.
+  This action is inspired in the cmake command find_program and the setup-python action.
+  
+  This allows us to find a certain version of program in the host environment and, if it
+  cannot be found, fallback to basic patterns to download and install it.
+  
+  This action uses a number of alternatives to find or install a program:
+  
+  - The program path hints provided to 'path'
+  - Any other version of the program it can find in the system
+  - Any other version of the program available from APT
+  - A version of the program from a link to binary releases
+  
+  In most workflows, this is used in conjunction to the xref:actions/setup-cpp.adoc[] and
+  xref:actions/package-install.adoc[] actions to find or install extra programs necessary
+  for the workflow that are not easily available from package managers or could already be
+  available in the environment.
+  
+  == Next steps
+  
+  After setting up the dependencies for your C++ project, the next step in your workflow should usually be
+  xref:actions/cmake-workflow.adoc[].
+
+author: "alandefreitas"
+inputs:
+  name:
+    description: |
+      The name of the executable we should look for.
+      
+      This parameter can also include a list of names to look for.
+    required: true
+
+  version:
+    description: |
+      Version range or exact version of the program to use, using SemVer's version range syntax.
+      
+      By default, it uses any version available in the environment.
+      
+      If a version is provided, any executable found will be run with the --version option
+      and the result will be parsed to look for a semver version, which will be considered
+      the version we found.
+
+    required: false
+    default: '*'
+
+  path:
+    description: |
+      Specify directories and paths to search in addition to the default locations.
+      
+      The paths can be separated by ':' or ';'.
+    required: false
+    default: ''
+
+  check-latest:
+    description: "Set this option if you want the action to check for the latest available version that satisfies the version spec."
+    default: false
+
+  url:
+    description: |
+      The URL to download the program binaries when it is not available in the environment.
+      
+      To simplify the download, the URL can contain the following placeholders:
+      
+      - `{\{name}}`: The program name.
+      
+      - `{\{version}}`: The version of the program to download. (coerced from the version input)
+      
+      - `{\{version-major}}`: The major version of the program to download. (coerced from the version input)
+      
+      - `{\{version-minor}}`: The minor version of the program to download. (coerced from the version input)
+      
+      - `{\{version-patch}}`: The patch version of the program to download. (coerced from the version input)
+      
+      - `{\{platform}}`: The platform name. (process.platform)
+      
+      - `{\{os}}`: The operating system name. (process.platform converted to 'windows', 'macos', or 'linux')
+      
+      - `{\{arch}}`: The architecture name. (process.arch)
+    
+
+    required: false
+    default: ''
+
+  install-prefix:
+    description: |
+      The directory where the tool should be installed if it's not available in the environment.
+      
+      By default, the tool will be installed in the hosttools cache directory.
+
+    required: false
+    default: ''
+
+  update-environment:
+    description: "Set this option if you want the action to update environment variables."
+    default: true
+
+  trace-commands:
+    description: 'Trace commands executed by the workflow.'
+    required: false
+    default: 'false'
+
+  fail-on-error:
+    description: 'Fail if the program is not found.'
+    required: false
+    default: 'true'
+
+outputs:
+  path:
+    description: "The absolute path to the program executable."
+  dir:
+    description: "The absolute path to the directory containing the executable."
+  version:
+    description: "The installed program version. Useful when given a version range as input."
+  version-major:
+    description: "The installed program version major. Useful when given a version range as input."
+  version-minor:
+    description: "The installed program version minor. Useful when given a version range as input."
+  version-patch:
+    description: "The installed program version patch. Useful when given a version range as input."
+  found:
+    description: "Whether the program was found."
+
+runs:
+  using: 'node16'
+  main: 'dist/index.js'
+  post-if: success()
+branding:
+  icon: 'code'
+  color: 'yellow'
