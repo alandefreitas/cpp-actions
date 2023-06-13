@@ -86,10 +86,10 @@ LD_LIBRARY_PATH. |`false`
 |Output |Description
 |`cc` |The absolute path to the C compiler executable.
 |`cxx` |The absolute path to the C++ compiler executable.
-|`dir` |The absolute path to the directory containing the executable.
+|`bindir` |The absolute path to the directory containing the executable.
+|`dir` |The absolute path to the directory containing the installation.
 |`version` |The installed compiler version. Useful when given a version range as input.
 |`version-major` |The installed compiler version major. Useful when given a version range as input.
 |`version-minor` |The installed compiler version minor. Useful when given a version range as input.
 |`version-patch` |The installed compiler version patch. Useful when given a version range as input.
-|`cache-hit` |A boolean value to indicate a cache entry was found
 |===

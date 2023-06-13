@@ -111,8 +111,12 @@ outputs:
     description: "The absolute path to the C++ compiler executable."
     value: ${{ steps.features.outputs.cxx }}
 
-  dir:
+  bindir:
     description: "The absolute path to the directory containing the executable."
+    value: ${{ steps.features.outputs.dir }}
+
+  dir:
+    description: "The absolute path to the directory containing the installation."
     value: ${{ steps.features.outputs.dir }}
 
   version:
@@ -349,6 +353,7 @@ runs:
         
         echo -E "cc=${{ steps.setup-gcc-internal.outputs.cc || steps.setup-gcc-external.outputs.cc || steps.setup-clang-internal.outputs.cc || steps.setup-clang-external.outputs.cc || steps.setup-mingw.outputs.cc || steps.setup-clang-cl.outputs.cc }}" >> $GITHUB_OUTPUT
         echo -E "cxx=${{ steps.setup-gcc-internal.outputs.cxx || steps.setup-gcc-external.outputs.cxx || steps.setup-clang-internal.outputs.cxx || steps.setup-clang-external.outputs.cxx || steps.setup-mingw.outputs.cxx || steps.setup-clang-cl.outputs.cxx }}" >> $GITHUB_OUTPUT
+        echo -E "bindir=${{ steps.setup-gcc-internal.outputs.bindir || steps.setup-gcc-external.outputs.bindir || steps.setup-clang-internal.outputs.bindir || steps.setup-clang-external.outputs.bindir || steps.setup-mingw.outputs.bindir || steps.setup-clang-cl.outputs.bindir }}" >> $GITHUB_OUTPUT
         echo -E "dir=${{ steps.setup-gcc-internal.outputs.dir || steps.setup-gcc-external.outputs.dir || steps.setup-clang-internal.outputs.dir || steps.setup-clang-external.outputs.dir || steps.setup-mingw.outputs.dir || steps.setup-clang-cl.outputs.dir }}" >> $GITHUB_OUTPUT
         echo -E "version=${{ steps.setup-gcc-internal.outputs.version || steps.setup-gcc-external.outputs.version || steps.setup-clang-internal.outputs.version || steps.setup-clang-external.outputs.version || steps.setup-mingw.outputs.version || steps.setup-clang-cl.outputs.version }}" >> $GITHUB_OUTPUT
         echo -E "version-major=${{ steps.setup-gcc-internal.outputs.version-major || steps.setup-gcc-external.outputs.version-major || steps.setup-clang-internal.outputs.version-major || steps.setup-clang-external.outputs.version-major || steps.setup-mingw.outputs.major || steps.setup-clang-cl.outputs.major }}" >> $GITHUB_OUTPUT
