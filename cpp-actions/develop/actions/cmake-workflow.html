@@ -193,6 +193,9 @@
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
   </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-program.html">Setup Program Action</a>
+  </li>
 </ul>
   </li>
   <li class="nav-item" data-depth="1">
@@ -455,8 +458,7 @@ CMake workflow steps as integration tests for CMake.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">A semver range string with the cmake versions supported by this workflow.</p>
 <p class="tableblock">If the existing version in the environment does not satisfy this requirement, the action install
 the min CMake version that satisfies it.</p>
-<p class="tableblock">This should usually match the <code>cmake_minimum_required</code> defined in your CMakeLists.txt file.
-.</p></td>
+<p class="tableblock">This should usually match the <code>cmake_minimum_required</code> defined in your CMakeLists.txt file.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
@@ -543,20 +545,17 @@ the min CMake version that satisfies it.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>install</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Whether we should install the library.</p>
 <p class="tableblock">The library is only installed once in the <code>install-prefix</code>.</p>
-<p class="tableblock">The latest std version described in <code>cxxstd</code> is used for the installed version.
-.</p></td>
+<p class="tableblock">The latest std version described in <code>cxxstd</code> is used for the installed version.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>package</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Run cpack with the specified generators after the install step.
-.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Run cpack with the specified generators after the install step.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>package-name</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The name of the package (or application). If not specified, it defaults to the project name.
-.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The name of the package (or application). If not specified, it defaults to the project name.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
@@ -565,28 +564,24 @@ the min CMake version that satisfies it.</p>
 <p class="tableblock">If it is not set then this will default to the build dir.</p>
 <p class="tableblock">The CPACK_PACKAGE_DIRECTORY may be defined in CMakeLists.txt, a CPack config file or from the cpack command
 line option -B.</p>
-<p class="tableblock">If set, the command line option overrides the value found in the config file.
-.</p></td>
+<p class="tableblock">If set, the command line option overrides the value found in the config file.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>package-vendor</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Override/define CPACK_PACKAGE_VENDOR.
-.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Override/define CPACK_PACKAGE_VENDOR.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>package-generators</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">A semicolon-separated list of generator names used by cpack.</p>
 <p class="tableblock">If this variable is not set, the action will attempt to generate the package with all
-cpack generators available to CMake.
-.</p></td>
+cpack generators available to CMake.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>package-artifact</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Whether the packages generated with cpack should be stored as action artifacts.
-.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether the packages generated with cpack should be stored as action artifacts.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
@@ -599,8 +594,7 @@ cpack generators available to CMake.
 <td class="tableblock halign-left valign-top"><p class="tableblock">A reference source directory for annotations. Any annotation filename will be relative to this directory.</p>
 <p class="tableblock">This is typically useful when the repository being tested is not the current directory, in which
 we need to make annotations relative to some other directory.</p>
-<p class="tableblock">In most cases, the default option should be enough.
-.</p></td>
+<p class="tableblock">In most cases, the default option should be enough.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
 </tr>
 <tr>

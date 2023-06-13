@@ -193,6 +193,9 @@
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
   </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-program.html">Setup Program Action</a>
+  </li>
 </ul>
   </li>
   <li class="nav-item" data-depth="1">
@@ -393,14 +396,12 @@ required by the project.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">C compiler used by vcpkg.</p>
 <p class="tableblock">Setting the compiler is particularly important in Linux workflows that use `clang`, since `clang` might link
 `libc` or <code>libstdc`, while the default compiler used by vcpkg will usually be GCC linking `libstdc</code>.</p>
-<p class="tableblock">This would cause conflict in workflows that later attempt to use vcpkg dependencies.
-.</p></td>
+<p class="tableblock">This would cause conflict in workflows that later attempt to use vcpkg dependencies.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">C++ flags used by vcpkg.
-.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">C++ flags used by vcpkg.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
@@ -410,8 +411,7 @@ required by the project.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>ccflags</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">C flags used by vcpkg.
-.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">C flags used by vcpkg.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
@@ -422,8 +422,7 @@ required by the project.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-dir</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The directory where vcpkg should be cloned and installed.</p>
-<p class="tableblock">If the directory is unspecified, the runner tool cache is used.
-.</p></td>
+<p class="tableblock">If the directory is unspecified, the runner tool cache is used.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>

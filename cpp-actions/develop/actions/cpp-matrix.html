@@ -193,6 +193,9 @@
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
   </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-program.html">Setup Program Action</a>
+  </li>
 </ul>
   </li>
   <li class="nav-item" data-depth="1">
@@ -561,8 +564,7 @@ to be tested.</p>
 <p class="tableblock">When the compiler version requirements are provided, the action will break the requirements into
 subsets of major versions to be tested. When no version is provided, the '*' semver requirement
 is assumed. The action can identifies subsets of compiler versions for GCC, Clang, and MSVC.
-For any other compilers, the version requirements will passthrough to the output.
-.</p></td>
+For any other compilers, the version requirements will passthrough to the output.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc &gt;=4.8</code></p>
 <p class="tableblock"><code>clang &gt;=3.8</code></p>
 <p class="tableblock"><code>msvc &gt;=14</code></p>
@@ -575,16 +577,14 @@ For any other compilers, the version requirements will passthrough to the output
 <td class="tableblock halign-left valign-top"><p class="tableblock">A semver range describing what C standards should be tested.</p>
 <p class="tableblock">The compiler ranges are adjusted to only include compilers that support any subrange of these requirements.</p>
 <p class="tableblock">These requirements can include C standards as 2 or 4 digits versions, such as 11, 2011, 98, or 1998.
-2 digit versions are normalized into the 4 digits form so that 11 &gt; 98 (2011 &gt; 1998).
-.</p></td>
+2 digit versions are normalized into the 4 digits form so that 11 &gt; 98 (2011 &gt; 1998).</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>&gt;=11</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>max-standards</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The maximum number of standards to be tested with each compiler.</p>
 <p class="tableblock">For instance, if 'max-standards' is 2 and the compiler supports '11,14,17,20,23' given the in the standard
-requirements, the standards 20,23 will be tested by this compiler.
-.</p></td>
+requirements, the standards 20,23 will be tested by this compiler.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>2</code></p></td>
 </tr>
 <tr>
@@ -594,8 +594,7 @@ entry with the latest version of a compiler will be duplicated with an entry tha
 <p class="tableblock">Other entries will also include this factor as false.</p>
 <p class="tableblock">The following factors are considered special: 'asan', 'ubsan', 'msan', 'tsan', and 'coverage'.
 When these factors are defined in an entry, its 'ccflags', 'cxxflags', and 'linkflags' value are
-also modified to include the suggested flags for factor.
-.</p></td>
+also modified to include the suggested flags for factor.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc Coverage TSan UBSan</code></p></td>
 </tr>
 <tr>
@@ -603,8 +602,7 @@ also modified to include the suggested flags for factor.
 <td class="tableblock halign-left valign-top"><p class="tableblock">The factors to be tested with other versions of each compiler. Each factor in this list will be injected
 into a version of the compiler that is not the latest version. An entry with the latest version of the compiler
 will be duplicated with this factor if there are no entries left to inject the factor.</p>
-<p class="tableblock">Other entries will also include this factor as false.
-.</p></td>
+<p class="tableblock">Other entries will also include this factor as false.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc Asan Shared</code></p>
 <p class="tableblock"><code>msvc Shared x86</code></p>
 <p class="tableblock"><code>clang Time-Trace</code></p>
