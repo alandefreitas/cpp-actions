@@ -116,7 +116,7 @@ runs:
     # https://docs.github.com/en/actions/learn-github-actions/contexts#runner-context
     - name: apt-get packages
       shell: bash
-      if: ${{ runner.os == 'Linux' && inputs.apt-get }}
+      if: ${{ runner.os == 'Linux' && ( inputs.apt-get || inputs.vcpkg ) }}
       run: |
         # Install apt-get packages
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
@@ -185,14 +185,20 @@ runs:
         
         # Update and install
         $sudo_prefix apt-get -o Acquire::Retries=${{ inputs.apt-get-retries }} update
+        
+        # Install packages
+        apt_get_packages="${{ inputs.apt-get }}"
+        if [ "${{ inputs.vcpkg }}" != "" ]; then
+            # ensure we have git if we are installing vcpkg
+            apt_get_packages+=" git curl zip unzip tar"
+        fi
         if [ "${{ inputs.apt-get-ignore-missing }}" == "true" ]; then
-            apt_get_packages="${{ inputs.apt-get }}"
             for package in ${apt_get_packages// / }
             do
               $sudo_prefix apt-get -o Acquire::Retries=${{ inputs.apt-get-retries }} install --ignore-missing -y $package || true
             done
         else
-            $sudo_prefix apt-get -o Acquire::Retries=${{ inputs.apt-get-retries }} install -y ${{ inputs.apt-get }} 
+            $sudo_prefix apt-get -o Acquire::Retries=${{ inputs.apt-get-retries }} install -y $apt_get_packages 
         fi
 
     - name: vcpkg environment
