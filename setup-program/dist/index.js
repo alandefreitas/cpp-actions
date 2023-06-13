@@ -23,6 +23,10 @@ function log(...args) {
   }
 }
 
+function set_trace_commands(trace) {
+  trace_commands = trace
+}
+
 
 function isExecutable(path) {
   try {
@@ -118,11 +122,7 @@ async function find_program_in_path(paths, version, check_latest) {
     } else {
       // Execute program in path and extract a version string
       const this_output_version = await program_satisties(exec_path, version)
-      if (
-        output_version === null ||
-        (this_output_version !== '0.0.0' && this_output_version !== null) ||
-        (check_latest && semver.gt(this_output_version, output_version)) ||
-        (!check_latest && semver.lt(this_output_version, output_version))) {
+      if (output_version === null || (this_output_version !== '0.0.0' && this_output_version !== null) || (check_latest && semver.gt(this_output_version, output_version)) || (!check_latest && semver.lt(this_output_version, output_version))) {
         output_version = this_output_version
         output_path = exec_path
       }
@@ -190,8 +190,12 @@ async function find_program_in_paths(paths, names, version, check_latest, stop_a
         // Execute program in exec_path and extract a version string
         core.info(`Found ${exec_path}`)
         const this_output_version = await program_satisties(exec_path, version)
-        core.info(`Executable version ${this_output_version}`)
-        if (output_version === null || (check_latest && semver.gt(this_output_version, output_version)) || (!check_latest && semver.lt(this_output_version, output_version))) {
+        if (this_output_version === null) {
+          core.info(`${exec_path} does not satisfy requirement ${version}`)
+        } else {
+          core.info(`Executable version: ${this_output_version} satisfies requirement ${version}`)
+        }
+        if (output_version === null || (check_latest && typeof (this_output_version) === 'string' && semver.gt(this_output_version, output_version)) || (!check_latest && typeof (this_output_version) === 'string' && semver.lt(this_output_version, output_version))) {
           log(`Found ${exec_path} with version ${this_output_version}. It is the new best candidate.`)
           output_version = this_output_version
           output_path = exec_path
@@ -205,7 +209,7 @@ async function find_program_in_paths(paths, names, version, check_latest, stop_a
   return {output_version, output_path}
 }
 
-function find_program_in_system_paths(paths, name, version, check_latest) {
+async function find_program_in_system_paths(paths, name, version, check_latest) {
   // Append directories from PATH environment variable to paths
   // Get system PATHs with core
   const path_dirs = process.platform.startsWith('win') ? process.env.PATH.split(/[;]/) : process.env.PATH.split(/[:;]/)
@@ -214,18 +218,21 @@ function find_program_in_system_paths(paths, name, version, check_latest) {
       paths.push(path_dir)
     }
   }
-  return find_program_in_paths(paths, name, version, check_latest, false)
+  return await find_program_in_paths(paths, name, version, check_latest, false)
 }
 
 function removeSemverLeadingZeros(version) {
   const components = version.split('.')
   const cleanedComponents = components.map(component => parseInt(component, 10))
-  const cleanedVersion = cleanedComponents.join('.')
-  return cleanedVersion
+  return cleanedComponents.join('.')
 }
 
 function isSudoRequired() {
   return process.getuid() !== 0
+}
+
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 async function find_program_with_apt(names, version, check_latest) {
@@ -248,17 +255,23 @@ async function find_program_with_apt(names, version, check_latest) {
     log(`Searching for ${names.join(', ')} with APT`)
     let package_names = []
     for (const name of names) {
-      const {exitCode: exitCode, stdout: stdout} = await exec.getExecOutput(`apt-cache search '^${name}(-[0-9\\.]+)?$'`)
-      const apt_output = stdout.trim()
-      log(apt_output)
-      if (exitCode !== 0) {
-        throw new Error(`Failed to run "${path}" --version`)
+      if (isSudoRequired()) {
+        await exec.exec(`sudo -n apt-get update`)
+      } else {
+        await exec.exec(`apt-get update`)
       }
-
+      const search_expression = `${escapeRegExp(name)}(-[0-9\\.]+)?`
+      log(`Searching for packages matching ${search_expression}`)
+      const output = await exec.getExecOutput('apt-cache', ['search', `^${search_expression}$`])
+      const apt_output = output.stdout.trim()
+      if (output.exitCode === 0) {
+        log(`apt-cache search. Exit code ${output.exitCode}`)
+      } else {
+        throw new Error(`Failed to run apt-cache search. Exit code ${output.exitCode}`)
+      }
       const apt_lines = apt_output.split('\n')
       for (const apt_line of apt_lines) {
-        log(apt_line)
-        const apt_line_regex = new RegExp(`^(${name}(-([0-9\\.]+))?) `)
+        const apt_line_regex = new RegExp(`^(${search_expression}) `)
         const apt_line_matches = apt_line.match(apt_line_regex)
         if (apt_line_matches !== null) {
           const apt_version = apt_line_matches[1]
@@ -268,15 +281,17 @@ async function find_program_with_apt(names, version, check_latest) {
     }
     log(`Found packages [${package_names.join(', ')}]`)
 
-
     log(`Listing all versions of packages [${package_names.join(', ')}]`)
     let package_match = null
     let package_version_match = null
+    let install_matches = []
     for (const package_name of package_names) {
-      const {exitCode: exitCode, stdout: stdout} = await exec.getExecOutput(`apt-cache showpkg '${package_name}'`)
-      const showpkg_output = stdout.trim()
-      if (exitCode !== 0) {
+      const output = await exec.getExecOutput('apt-cache', ['showpkg', package_name], {silent: true})
+      const showpkg_output = output.stdout.trim()
+      if (output.exitCode !== 0) {
         throw new Error(`Failed to run "apt-cache showpkg '${package_name}'"`)
+      } else if (output.stdout.trim() === '') {
+        log('No output from apt-cache showpkg ' + package_name)
       }
       const showpkg_lines = showpkg_output.split('\n')
       const dependencies_index = showpkg_lines.findIndex((line) => line.startsWith('Dependencies:'))
@@ -289,7 +304,7 @@ async function find_program_with_apt(names, version, check_latest) {
       }
       const dependencies_lines = showpkg_lines.slice(dependencies_index + 1, provides_index)
       const package_versions = dependencies_lines.map((line) => line.split(' ')[0])
-      log(`Package ${package_name} has versions [${package_versions.join(', ')}]`)
+      log(`Package ${package_name} has APT versions [${package_versions.join(', ')}]`)
 
       // Filter the versions that install the required program version
       for (const package_version of package_versions) {
@@ -300,21 +315,22 @@ async function find_program_with_apt(names, version, check_latest) {
           if (version_matches !== null) {
             pkg_version_str = removeSemverLeadingZeros(version_matches[1])
             const pkg_version = semver.coerce(pkg_version_str)
-            if (output_version === null || (check_latest && semver.gt(pkg_version, output_version)) || (!check_latest && semver.lt(pkg_version, output_version))) {
-              log(`Package ${package_name}=${pkg_version_str} version ${pkg_version} satisfies ${names.join(', ')} version ${version}`)
-              package_match = package_name
-              package_version_match = package_version
-              output_version = pkg_version.toString()
-              break
+            const satisfies = pkg_version !== null ? semver.satisfies(pkg_version, version) : true
+            if (!satisfies) {
+              log(`Package ${package_name}=${package_version} version ${pkg_version} does NOT satisfy ${names.join(', ')} version ${version}`)
+            } else {
+              install_matches.push(`${package_name}=${package_version}`)
+              if (output_version === null || (check_latest && semver.gt(pkg_version, output_version)) || (!check_latest && semver.lt(pkg_version, output_version))) {
+                log(`Package ${package_name}=${package_version} version ${pkg_version} satisfies ${names.join(', ')} version ${version}`)
+                package_match = package_name
+                package_version_match = package_version
+                output_version = pkg_version.toString()
+              }
             }
+            break
           }
         }
       }
-    }
-
-    // Determine package name
-    if (package_match === null && package_names.length) {
-      package_match = package_names[0]
     }
 
     // Install the package name and version that match the requirements
@@ -323,20 +339,67 @@ async function find_program_with_apt(names, version, check_latest) {
       if (package_version_match !== null) {
         install_pkg = `${package_match}=${package_version_match}`
       }
+
       log(`Installing ${install_pkg}`)
+      // Install the package with the best match for the requirements
+      let apt_get_exit_code = null
       if (isSudoRequired()) {
-        await exec.exec(`sudo -n apt-get install -y ${install_pkg}`)
+        apt_get_exit_code = await exec.exec(`sudo -n apt-get install -f -y --allow-downgrades ${install_pkg}`, [], {ignoreReturnCode: true})
       } else {
-        await exec.exec(`apt-get install -y ${install_pkg}`)
+        apt_get_exit_code = await exec.exec(`apt-get install -f -y --allow-downgrades ${install_pkg}`, [], {ignoreReturnCode: true})
       }
-      const __ret = find_program_in_system_paths([], names, version, check_latest)
+
+      if (apt_get_exit_code !== 0) {
+        log(`Failed to install ${install_pkg}. Trying aptitude and alternatives packages [${install_matches.join(', ')}]`)
+        // Check if aptitude is available
+        let aptitude_path = null
+        try {
+          aptitude_path = await io.which('aptitude')
+        } catch (error) {
+          aptitude_path = null
+        }
+        if (aptitude_path !== null && aptitude_path !== '') {
+          // retry with aptitude, which can solve unmet dependencies
+          if (isSudoRequired()) {
+            apt_get_exit_code = await exec.exec(`sudo -n aptitude install -f -y ${install_pkg}`, [], {ignoreReturnCode: true})
+          } else {
+            apt_get_exit_code = await exec.exec(`aptitude install -f -y ${install_pkg}`, [], {ignoreReturnCode: true})
+          }
+        } else {
+          log(`aptitude unavailable.`)
+        }
+      }
+
+      // If the installation failed, try other versions that also satisfy the requirements
+      if (apt_get_exit_code !== 0) {
+        log(`Trying alternatives packages [${install_matches.join(', ')}]`)
+        for (const install_match of install_matches) {
+          if (isSudoRequired()) {
+            apt_get_exit_code = await exec.exec(`sudo -n apt-get install -f -y --allow-downgrades ${install_match}`, [], {ignoreReturnCode: true})
+          } else {
+            apt_get_exit_code = await exec.exec(`apt-get install -f -y --allow-downgrades ${install_match}`, [], {ignoreReturnCode: true})
+          }
+          if (apt_get_exit_code === 0) {
+            break
+          }
+        }
+      }
+
+      const __ret = await find_program_in_system_paths([], names, version, check_latest)
       output_version = __ret.output_version
       output_path = __ret.output_path
     }
   } catch (error) {
     log(error.message)
   }
-  if (output_version === null) {
+  if (output_path !== null) {
+    log(`Program found: ${output_path}`)
+  } else {
+    log(`Failed to find ${name} packages with APT`)
+  }
+  if (output_version !== null) {
+    log(`Package version found ${output_version}`)
+  } else {
     log(`Failed to find ${name} packages with APT`)
   }
   return {output_version, output_path}
@@ -383,15 +446,57 @@ function get_runner_os() {
   }
 }
 
+function isSymlink(path) {
+  try {
+    const stats = fs.lstatSync(path)
+    return stats.isSymbolicLink()
+  } catch (error) {
+    console.error('An error occurred while checking if the path is a symlink:', error)
+    return false
+  }
+}
+
+function copySymlink(sourcePath, destinationPath) {
+  const targetPath = fs.readlinkSync(sourcePath)
+  log(`Symlink found from ${sourcePath} to ${targetPath}`)
+  fs.symlinkSync(targetPath, destinationPath)
+  console.log(`Symlink recreated from ${sourcePath} to ${destinationPath}`)
+}
+
+/// Move files considering permissions and ownership that make the operation
+/// fail on lots of environments
+///
+/// - If the destination directory does not exist, it will be created
+/// - If the destination directory exists, it will be merged
+/// - If the destination file does not exist, it will be created
+/// - If the destination file exists, it will be overwritten
+/// - If destination is on a different device, retry as copy instead
+/// - If permissions are required, they will be moved or copied with sudo
 async function moveWithPermissions(source, destination, copyInstead = false) {
   try {
     // Iterate all files in source directory
     const files = fs.readdirSync(source)
     for (const file of files) {
-      if (!copyInstead) {
-        await io.mv(path.join(source, file), destination)
-      } else {
-        await io.cp(path.join(source, file), destination, {recursive: true})
+      const source_path = path.join(source, file)
+      const destination_path = path.join(destination, file)
+      log(`Handle move from ${source_path} to ${destination_path}`)
+      if (isSymlink(source_path)) {
+        log(`Recreate symlink ${source_path} in ${destination_path}`)
+        copySymlink(source_path, destination_path)
+      } else if (fs.statSync(source_path).isDirectory()) {
+        log(`Merge directory ${source_path} with existing ${destination_path}`)
+        const ok = await moveWithPermissions(source_path, destination_path, copyInstead)
+        if (!ok) {
+          throw new Error(`Failed to move ${source_path} to ${destination_path}`)
+        }
+      } else /* regular file or directory that doesn't exist at destination */ {
+        if (!copyInstead) {
+          log(`Moving ${source_path} to ${destination_path}`)
+          await io.mv(source_path, destination_path)
+        } else {
+          log(`Copy ${source_path} to ${destination_path}`)
+          await io.cp(source_path, destination_path, {recursive: true})
+        }
       }
     }
     log(`Successfully moved ${source} to ${destination}.`)
@@ -403,14 +508,30 @@ async function moveWithPermissions(source, destination, copyInstead = false) {
       return await moveWithPermissions(source, destination, true)
     }
     // If permission denied error, retry the move with sudo
-    if (((error.code || 'EACCES') === 'EACCES' || error.code === 'EXDEV') && process.platform === 'linux') {
+    // Also move with sudo when the file is a symlink and can't be moved because of that
+    if (((error.code || 'EACCES') === 'EACCES' || error.code === 'ENOENT') && process.platform === 'linux') {
       return await moveWithSudo(source, destination, copyInstead)
     }
     return false
   }
 }
 
+async function ensureSudoIsAvailable() {
+  let sudo_path = null
+  try {
+    sudo_path = await io.which('sudo')
+  } catch (error) {
+    sudo_path = null
+  }
+  if (sudo_path === null || sudo_path === '') {
+    await exec.exec(`apt-get update`, [], {ignoreReturnCode: true})
+    await exec.exec(`apt-get install -y sudo`, [], {ignoreReturnCode: true})
+    await io.which('sudo')
+  }
+}
+
 async function moveWithSudo(source, destination, copyInstead = false) {
+  await ensureSudoIsAvailable()
   const files = fs.readdirSync(source)
   for (const file of files) {
     const source_path = path.join(source, file)
@@ -421,8 +542,12 @@ async function moveWithSudo(source, destination, copyInstead = false) {
         return false
       }
     } else {
+      const mkdir_command = `sudo mkdir -p "${destination}"`
+      if (!fs.existsSync(destination_path)) {
+        const {exitCode: exitCode, stdout: stdout} = await exec.getExecOutput(mkdir_command)
+      }
       const mv_command = `sudo mv "${source_path}" "${destination}"`
-      const cp_command = `sudo cp "${source_path}" "${destination}"`
+      const cp_command = `sudo cp -r "${source_path}" "${destination}"`
       const command = copyInstead ? cp_command : mv_command
       const {exitCode: exitCode, stdout: stdout} = await exec.getExecOutput(command)
       const sudo_output = stdout.trim()
@@ -455,9 +580,11 @@ async function install_program_from_url(names, version, check_latest, url_templa
     patch: coercedVersion.patch
   }
   // Convert data to JSON string
-  log(`Template data: ${JSON.stringify(data)}`)
   const url = renderTemplate(url_template, data)
-  log(`Template ${url_template}: ${url}`)
+  if (url_template !== url) {
+    log(`Template data: ${JSON.stringify(data)}`)
+    log(`Template "${url_template}" rendered as "${url}"`)
+  }
 
   // Download and extract archive to temporary directory
   let extPath = null
@@ -494,7 +621,7 @@ async function install_program_from_url(names, version, check_latest, url_templa
     const subPath = path.join(extPath, files[0])
     const fileStat = fs.statSync(subPath)
     if (fileStat.isDirectory()) {
-      log(`${names.join(', ')} installed in ${subPath}`)
+      log(`${names.join(', ')} ultimately installed in single subdir ${subPath}`)
       // List all files in subpath
       const subFiles = fs.readdirSync(subPath)
       log(`Files in ${subPath}: [${subFiles.join(', ')}]`)
@@ -650,7 +777,13 @@ if (require.main === require.cache[eval('__filename')]) {
 }
 
 module.exports = {
-  find_program_in_path, find_program_in_system_paths, find_program_with_apt, install_program_from_url, trace_commands
+  find_program_in_path,
+  find_program_in_system_paths,
+  find_program_with_apt,
+  install_program_from_url,
+  trace_commands,
+  set_trace_commands,
+  isSudoRequired
 }
 
 /***/ }),

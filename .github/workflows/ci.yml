@@ -93,6 +93,9 @@ jobs:
 
       - name: Print doxygen params
         run: |
+          echo "# Doxygen parameters"
+          echo ""
+          echo "-------------------------"
           echo "steps.setup-doxygen.outputs.found=${{ steps.setup-doxygen.outputs.found }}"
           echo "steps.setup-doxygen.outputs.path=${{ steps.setup-doxygen.outputs.path }}"
           echo "steps.setup-doxygen.outputs.dir=${{ steps.setup-doxygen.outputs.dir }}"
@@ -100,6 +103,7 @@ jobs:
           echo "steps.setup-doxygen.outputs.version-major=${{ steps.setup-doxygen.outputs.version-major }}"
           echo "steps.setup-doxygen.outputs.version-minor=${{ steps.setup-doxygen.outputs.version-minor }}"
           echo "steps.setup-doxygen.outputs.version-patch=${{ steps.setup-doxygen.outputs.version-patch }}"
+          echo "-------------------------"
 
       - name: Install packages
         uses: ./package-install

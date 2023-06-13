@@ -84,15 +84,15 @@ inputs:
 
   update-ld-library-path:
     description: |
-        Set this option if you want the action to update LD_LIBRARY_PATH.
-        
-        Updating LD_LIBRARY_PATH might cause conflicts with system libraries and
-        is usually unnecessary because the binaries are built on equivalent 
-        containers. 
+      Set this option if you want the action to update LD_LIBRARY_PATH.
       
-        However, this is necessary on some custom containers and you can set
-        this option to let the action automatically add GCC library paths to 
-        LD_LIBRARY_PATH.
+      Updating LD_LIBRARY_PATH might cause conflicts with system libraries and
+      is usually unnecessary because the binaries are built on equivalent 
+      containers. 
+      
+      However, this is necessary on some custom containers and you can set
+      this option to let the action automatically add GCC library paths to 
+      LD_LIBRARY_PATH.
 
     required: false
     default: 'false'
@@ -134,10 +134,6 @@ outputs:
   version-patch:
     description: "The installed compiler version patch. Useful when given a version range as input."
     value: ${{ steps.features.outputs.version-patch }}
-
-  cache-hit:
-    description: "A boolean value to indicate a cache entry was found"
-    value: ${{ steps.cache-gcc.outputs.cache-hit }}
 
 runs:
   using: "composite"
@@ -192,6 +188,7 @@ runs:
         fi
         echo "repo_is_cpp_actions=$repo_is_cpp_actions" >> $GITHUB_OUTPUT
 
+
     - name: Setup GCC
       if: ${{ steps.params.outputs.compiler == 'gcc' && runner.os == 'Linux' && steps.params.outputs.repo_is_cpp_actions == 'true' }}
       uses: ./setup-gcc
@@ -199,11 +196,8 @@ runs:
       with:
         version: ${{ steps.params.outputs.version }}
         path: g++
-        cache: ${{ inputs.cache }}
-        architecture: ${{ inputs.architecture }}
         check-latest: ${{ inputs.check-latest }}
         update-environment: ${{ inputs.update-environment }}
-        update-ld-library-path: ${{ inputs.update-ld-library-path }}
         trace-commands: ${{ inputs.trace-commands }}
 
     - name: Setup GCC
@@ -213,11 +207,8 @@ runs:
       with:
         version: ${{ steps.params.outputs.version }}
         path: g++
-        cache: ${{ inputs.cache }}
-        architecture: ${{ inputs.architecture }}
         check-latest: ${{ inputs.check-latest }}
         update-environment: ${{ inputs.update-environment }}
-        update-ld-library-path: ${{ inputs.update-ld-library-path }}
         trace-commands: ${{ inputs.trace-commands }}
 
     - name: Setup Clang
@@ -359,4 +350,3 @@ runs:
         echo -E "version-major=${{ steps.setup-gcc-internal.outputs.version-major || steps.setup-gcc-external.outputs.version-major || steps.setup-clang-internal.outputs.version-major || steps.setup-clang-external.outputs.version-major || steps.setup-mingw.outputs.major || steps.setup-clang-cl.outputs.major }}" >> $GITHUB_OUTPUT
         echo -E "version-minor=${{ steps.setup-gcc-internal.outputs.version-minor || steps.setup-gcc-external.outputs.version-minor || steps.setup-clang-internal.outputs.version-minor || steps.setup-clang-external.outputs.version-minor || steps.setup-mingw.outputs.minor || steps.setup-clang-cl.outputs.minor }}" >> $GITHUB_OUTPUT
         echo -E "version-patch=${{ steps.setup-gcc-internal.outputs.version-patch || steps.setup-gcc-external.outputs.version-patch || steps.setup-clang-internal.outputs.version-patch || steps.setup-clang-external.outputs.version-patch || steps.setup-mingw.outputs.patch || steps.setup-clang-cl.outputs.patch }}" >> $GITHUB_OUTPUT
-        echo -E "cache-hit=${{ steps.setup-gcc-internal.outputs.cache-hit || steps.setup-gcc-external.outputs.cache-hit || steps.setup-clang-internal.outputs.cache-hit || steps.setup-clang-external.outputs.cache-hit }}" >> $GITHUB_OUTPUT
