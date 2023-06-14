@@ -34,8 +34,6 @@ xref:actions/package-install.adoc[].
 
 By default, it uses any version available in the environment. |`*`
 |`path` |The clang or clang++ executable. We attempt to find Clang at this path first. |`clang++`
-|`cache` |Used to specify whether the Clang installation should be cached in the case Clang needs to be downloaded.". |`false`
-|`architecture` |The target architecture (x86, x64). By default, this value is inferred. |
 |`check-latest` |By default, when Clang is not available, this action will install the minimum version in the version spec.
 This ensures the code respects its contract in terms of what minimum Clang version is supported.
 
@@ -56,5 +54,4 @@ instead. |`false`
 |`version-major` |The installed Clang version major. Useful when given a version range as input.
 |`version-minor` |The installed Clang version minor. Useful when given a version range as input.
 |`version-patch` |The installed Clang version patch. Useful when given a version range as input.
-|`cache-hit` |A boolean value to indicate a cache entry was found
 |===

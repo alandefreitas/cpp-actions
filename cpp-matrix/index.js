@@ -208,7 +208,7 @@ function findClangVersionsImpl() {
         const versionsFromFile = readVersionsFromFile('clang-versions.txt');
         if (versionsFromFile !== null) {
             cachedVersions = versionsFromFile;
-            log("GCC versions (from file): " + versionsFromFile);
+            log("Clang versions (from file): " + versionsFromFile);
             return versionsFromFile;
         }
 

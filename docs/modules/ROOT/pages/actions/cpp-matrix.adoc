@@ -182,6 +182,8 @@ steps:
     standards: '>=11'
     latest-factors: 'gcc Coverage TSan UBSan Fetch-Content
 
+      clang Fetch-Content
+
       '
     factors: 'gcc Asan Shared No-Deps
 

@@ -20,6 +20,10 @@ function log(...args) {
   }
 }
 
+function set_trace_commands(trace) {
+  trace_commands = trace
+}
+
 const fetchGitTags = async (repo) => {
   try {
     // Find git in path
@@ -215,6 +219,25 @@ async function run() {
     // Setup APT program
     if (output_version === null && process.platform === 'linux') {
       core.info(`Searching for GCC ${version} with APT`)
+
+      // Add APT repository
+      let add_apt_repository_path = null
+      try {
+        add_apt_repository_path = await io.which('add-apt-repository')
+        log(`add-apt-repository found at ${add_apt_repository_path}`)
+      } catch (error) {
+        add_apt_repository_path = null
+      }
+      if (add_apt_repository_path !== null && add_apt_repository_path !== '') {
+        const repo = `ppa:ubuntu-toolchain-r/ppa`
+        log(`Adding repository "${repo}"`)
+        if (setup_program.isSudoRequired()) {
+          await exec.exec(`sudo -n add-apt-repository -y "${repo}"`, [], {ignoreReturnCode: true})
+        } else {
+          await exec.exec(`add-apt-repository -y "${repo}"`, [], {ignoreReturnCode: true})
+        }
+      }
+
       const __ret = await setup_program.find_program_with_apt(names, version, check_latest)
       output_version = __ret.output_version
       output_path = __ret.output_path
@@ -415,5 +438,6 @@ if (require.main === module) {
 }
 
 module.exports = {
-  trace_commands
+  trace_commands,
+  set_trace_commands
 }

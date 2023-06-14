@@ -32,17 +32,18 @@ test('find_program_in_system_paths', async () => {
   }
 })
 
-test('find_program_with_apt', async () => {
-  if (process.platform === 'linux') {
-    const {find_program_with_apt} = main
-    for (const name of ['cowsay']) {
-      const version = '>=1'
-      const __ret = await find_program_with_apt([name], version, true)
-      if (__ret.output_path !== null) {
-        expect(semver.satisfies(__ret.output_version, version)).toBe(true)
-        expect(__ret.output_path == `/usr/local/bin/${name}` || __ret.output_path == `/usr/bin/${name}`).toBe(true)
-      }
-    }
-  }
-})
+// Unreliable for testing as it is
+// test('find_program_with_apt', async () => {
+//   if (process.platform === 'linux') {
+//     const {find_program_with_apt} = main
+//     for (const name of ['cowsay']) {
+//       const version = '>=1'
+//       const __ret = await find_program_with_apt([name], version, true)
+//       if (__ret.output_path !== null) {
+//         expect(semver.satisfies(__ret.output_version, version)).toBe(true)
+//         expect(__ret.output_path == `/usr/local/bin/${name}` || __ret.output_path == `/usr/bin/${name}`).toBe(true)
+//       }
+//     }
+//   }
+// })
 

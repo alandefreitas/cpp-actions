@@ -61,7 +61,7 @@ function isExecutable(path) {
 /// @param path: Path program path
 /// @param semver_requirements: Semver requirements
 /// @return: True if path program version satisfies the requirements
-async function program_satisties(path, semver_requirements) {
+async function program_satisfies(path, semver_requirements) {
   // Try to run the program and get the version string
   let version_output = null
   try {
@@ -121,7 +121,7 @@ async function find_program_in_path(paths, version, check_latest) {
       log(`Path program ${exec_path} is not an executable. Skipping it.`)
     } else {
       // Execute program in path and extract a version string
-      const this_output_version = await program_satisties(exec_path, version)
+      const this_output_version = await program_satisfies(exec_path, version)
       if (output_version === null || (this_output_version !== '0.0.0' && this_output_version !== null) || (check_latest && semver.gt(this_output_version, output_version)) || (!check_latest && semver.lt(this_output_version, output_version))) {
         output_version = this_output_version
         output_path = exec_path
@@ -189,14 +189,17 @@ async function find_program_in_paths(paths, names, version, check_latest, stop_a
       } else {
         // Execute program in exec_path and extract a version string
         core.info(`Found ${exec_path}`)
-        const this_output_version = await program_satisties(exec_path, version)
+        const this_output_version = await program_satisfies(exec_path, version)
         if (this_output_version === null) {
           core.info(`${exec_path} does not satisfy requirement ${version}`)
         } else {
           core.info(`Executable version: ${this_output_version} satisfies requirement ${version}`)
         }
         if (output_version === null || (check_latest && typeof (this_output_version) === 'string' && semver.gt(this_output_version, output_version)) || (!check_latest && typeof (this_output_version) === 'string' && semver.lt(this_output_version, output_version))) {
-          log(`Found ${exec_path} with version ${this_output_version}. It is the new best candidate.`)
+          log(`Found ${exec_path} with version ${this_output_version}.`)
+          if (output_version !== null && output_version !== this_output_version) {
+            log(`Previous best version was ${output_version}.`)
+          }
           output_version = this_output_version
           output_path = exec_path
         }
@@ -256,9 +259,9 @@ async function find_program_with_apt(names, version, check_latest) {
     let package_names = []
     for (const name of names) {
       if (isSudoRequired()) {
-        await exec.exec(`sudo -n apt-get update`)
+        await exec.exec(`sudo -n apt-get update`, [], {ignoreReturnCode: true})
       } else {
-        await exec.exec(`apt-get update`)
+        await exec.exec(`apt-get update`, [], {ignoreReturnCode: true})
       }
       const search_expression = `${escapeRegExp(name)}(-[0-9\\.]+)?`
       log(`Searching for packages matching ${search_expression}`)
@@ -308,7 +311,8 @@ async function find_program_with_apt(names, version, check_latest) {
 
       // Filter the versions that install the required program version
       for (const package_version of package_versions) {
-        const version_regexes = [/(\d+\.\d+\.\d+)/, /(\d+\.\d+)/, /(\d+)/]
+        // a limited list of common formats to express versions in apt package names
+        const version_regexes = [/\d+:(\d+.\d+)-\d+/, /\d+:(\d+)-\d+/, /(\d+\.\d+\.\d+)/, /(\d+\.\d+)/, /(\d+)/]
         let pkg_version_str = null
         for (const version_regex of version_regexes) {
           const version_matches = package_version.match(version_regex)
@@ -451,17 +455,127 @@ function isSymlink(path) {
     const stats = fs.lstatSync(path)
     return stats.isSymbolicLink()
   } catch (error) {
-    console.error('An error occurred while checking if the path is a symlink:', error)
+    log('An error occurred while checking if the path is a symlink:', error)
     return false
   }
 }
 
-function copySymlink(sourcePath, destinationPath) {
+function copySymlink(sourcePath, destinationPath, level = 0) {
   const targetPath = fs.readlinkSync(sourcePath)
-  log(`Symlink found from ${sourcePath} to ${targetPath}`)
+  const levelPrefix = ' '.repeat(level * 2)
+  log(`${levelPrefix}Symlink found from ${sourcePath} to ${targetPath}`)
   fs.symlinkSync(targetPath, destinationPath)
-  console.log(`Symlink recreated from ${sourcePath} to ${destinationPath}`)
+  log(`${levelPrefix}Symlink recreated from ${sourcePath} to ${destinationPath} with target ${targetPath}`)
 }
+
+const fetchGitTags = async (repo) => {
+  try {
+    // Find git in path
+    let git_path = null
+    try {
+      git_path = await io.which('git')
+    } catch (error) {
+      git_path = null
+    }
+    if (git_path === null || git_path === '') {
+      if (isSudoRequired()) {
+        await exec.exec(`sudo -n apt-get update`, [], {ignoreReturnCode: true})
+        await exec.exec(`sudo -n apt-get install -y git`, [], {ignoreReturnCode: true})
+      } else {
+        await exec.exec(`apt-get update`, [], {ignoreReturnCode: true})
+        await exec.exec(`apt-get install -y git`, [], {ignoreReturnCode: true})
+      }
+      git_path = await io.which('git')
+    }
+
+    const {
+      exitCode: exitCode, stdout: out
+    } = await exec.getExecOutput(`"${git_path}" ls-remote --tags ` + repo, [], {silent: true})
+    if (exitCode !== 0) {
+      throw new Error('Git exited with non-zero exit code: ' + exitCode)
+    }
+    const stdout = out.trim()
+    const tags = stdout.split('\n').filter(tag => tag.trim() !== '')
+    let gitTags = []
+    for (const tag of tags) {
+      const parts = tag.split('\t')
+      if (parts.length > 1) {
+        let ref = parts[1]
+        if (!ref.endsWith('^{}')) {
+          gitTags.push(ref)
+        }
+      }
+    }
+    log('Git tags: ' + gitTags)
+    return gitTags
+  } catch (error) {
+    throw new Error('Error fetching Git tags: ' + error.message)
+  }
+}
+
+function readVersionsFromFile(filename) {
+  try {
+    const fileContents = fs.readFileSync(filename, 'utf8')
+    const versions = JSON.parse(fileContents)
+    if (Array.isArray(versions)) {
+      return versions
+    }
+  } catch (error) {
+    // File reading failed or versions couldn't be parsed
+  }
+  return null
+}
+
+function saveVersionsToFile(versions, filename) {
+  try {
+    const fileContents = JSON.stringify(versions)
+    fs.writeFileSync(filename, fileContents, 'utf8')
+    log('Versions saved to file.')
+  } catch (error) {
+    log('Error saving versions to file: ' + error)
+  }
+}
+
+function getCurrentUbuntuVersion() {
+  try {
+    const osReleaseData = fs.readFileSync('/etc/os-release', 'utf8')
+    const lines = osReleaseData.split('\n')
+    const versionLine = lines.find(line => line.startsWith('VERSION_ID='))
+    if (versionLine) {
+      const version = versionLine.split('=')[1].replace(/"/g, '')
+      return version
+    }
+    throw new Error('Ubuntu version not found')
+  } catch (error) {
+    console.error('Error:', error)
+    return null
+  }
+}
+
+function getCurrentUbuntuName() {
+  const version = getCurrentUbuntuVersion()
+  if (version) {
+    if (version === '18.04') {
+      return 'bionic'
+    } else if (version === '20.04') {
+      return 'focal'
+    } else if (version === '20.10') {
+      return 'groovy'
+    } else if (version === '21.04') {
+      return 'hirsute'
+    } else if (version === '21.10') {
+      return 'impish'
+    } else if (version === '22.04') {
+      return 'jammy'
+    } else if (version === '22.10') {
+      return 'kinetic'
+    } else if (version === '23.04') {
+      return 'lunar'
+    }
+  }
+  return null
+}
+
 
 /// Move files considering permissions and ownership that make the operation
 /// fail on lots of environments
@@ -472,45 +586,48 @@ function copySymlink(sourcePath, destinationPath) {
 /// - If the destination file exists, it will be overwritten
 /// - If destination is on a different device, retry as copy instead
 /// - If permissions are required, they will be moved or copied with sudo
-async function moveWithPermissions(source, destination, copyInstead = false) {
+async function moveWithPermissions(source, destination, copyInstead = false, level = 0) {
+  const levelPrefix = '  '.repeat(level)
   try {
     // Iterate all files in source directory
     const files = fs.readdirSync(source)
+    let count = 0
     for (const file of files) {
+      count++
       const source_path = path.join(source, file)
       const destination_path = path.join(destination, file)
-      log(`Handle move from ${source_path} to ${destination_path}`)
+      log(`${levelPrefix}${count}) Handle move from ${source_path} to ${destination_path}`)
       if (isSymlink(source_path)) {
-        log(`Recreate symlink ${source_path} in ${destination_path}`)
-        copySymlink(source_path, destination_path)
-      } else if (fs.statSync(source_path).isDirectory()) {
-        log(`Merge directory ${source_path} with existing ${destination_path}`)
-        const ok = await moveWithPermissions(source_path, destination_path, copyInstead)
+        log(`${levelPrefix}${count}) Recreate symlink ${source_path} in ${destination_path}`)
+        copySymlink(source_path, destination_path, level)
+      } else if (fs.statSync(source_path).isDirectory() && fs.existsSync(destination_path)) {
+        log(`${levelPrefix}${count}) Merge directory ${source_path} with existing ${destination_path}`)
+        const ok = await moveWithPermissions(source_path, destination_path, copyInstead, level + 1)
         if (!ok) {
           throw new Error(`Failed to move ${source_path} to ${destination_path}`)
         }
       } else /* regular file or directory that doesn't exist at destination */ {
         if (!copyInstead) {
-          log(`Moving ${source_path} to ${destination_path}`)
+          log(`${levelPrefix}${count}) Moving ${source_path} to ${destination_path}`)
           await io.mv(source_path, destination_path)
         } else {
-          log(`Copy ${source_path} to ${destination_path}`)
+          log(`${levelPrefix}${count}) Copy ${source_path} to ${destination_path}`)
           await io.cp(source_path, destination_path, {recursive: true})
         }
       }
     }
-    log(`Successfully moved ${source} to ${destination}.`)
+    log(`${levelPrefix}Successfully moved ${source} to ${destination}.`)
     return true
   } catch (error) {
-    core.info(`Error occurred while moving ${source} to ${destination}: ${error} (code : ${error.code})`)
+    core.info(`${levelPrefix}Error occurred while moving ${source} to ${destination}: ${error} (code : ${error.code})`)
     // If failed because destination is on a different device, retry as copy
     if (error.code === 'EXDEV' && !copyInstead) {
-      return await moveWithPermissions(source, destination, true)
+      return await moveWithPermissions(source, destination, true, level)
     }
     // If permission denied error, retry the move with sudo
     // Also move with sudo when the file is a symlink and can't be moved because of that
     if (((error.code || 'EACCES') === 'EACCES' || error.code === 'ENOENT') && process.platform === 'linux') {
-      return await moveWithSudo(source, destination, copyInstead)
+      return await moveWithSudo(source, destination, copyInstead, level)
     }
     return false
   }
@@ -520,6 +637,7 @@ async function ensureSudoIsAvailable() {
   let sudo_path = null
   try {
     sudo_path = await io.which('sudo')
+    log(`sudo found at ${sudo_path}`)
   } catch (error) {
     sudo_path = null
   }
@@ -530,14 +648,45 @@ async function ensureSudoIsAvailable() {
   }
 }
 
-async function moveWithSudo(source, destination, copyInstead = false) {
+async function ensureAddAptRepositoryIsAvailable() {
+  let add_apt_repository_path = null
+  try {
+    add_apt_repository_path = await io.which('add-apt-repository')
+    log(`add-apt-repository found at ${add_apt_repository_path}`)
+  } catch (error) {
+    add_apt_repository_path = null
+  }
+  if (add_apt_repository_path === null || add_apt_repository_path === '') {
+    if (isSudoRequired()) {
+      ensureSudoIsAvailable()
+      await exec.exec(`sudo -n apt-get update`, [], {ignoreReturnCode: true})
+      await exec.exec(`sudo -n apt-get install -y software-properties-common`, [], {ignoreReturnCode: true})
+    } else {
+      await exec.exec(`apt-get update`, [], {ignoreReturnCode: true})
+      await exec.exec(`apt-get install -y software-properties-common`, [], {ignoreReturnCode: true})
+    }
+    await io.which('add-apt-repository')
+  }
+}
+
+async function moveWithSudo(source, destination, copyInstead = false, level) {
   await ensureSudoIsAvailable()
+  const levelPrefix = '  '.repeat(level)
   const files = fs.readdirSync(source)
+  let count = 0
   for (const file of files) {
     const source_path = path.join(source, file)
     const destination_path = path.join(destination, file)
-    if (fs.statSync(source_path).isDirectory() && fs.existsSync(destination_path)) {
-      const ok = await moveWithSudo(source_path, destination_path, copyInstead)
+    count++
+    if (isSymlink(source_path)) {
+      log(`${levelPrefix}${count}) Recreate symlink ${source_path} in ${destination_path}`)
+      const target_path = fs.readlinkSync(source_path)
+      log(`${levelPrefix}${count}) Symlink found from ${source_path} to ${target_path}`)
+      const ln_command = `sudo ln -sf "${target_path}" "${destination_path}"`
+      const {exitCode: exitCode, stdout: stdout} = await exec.getExecOutput(ln_command)
+      log(`${levelPrefix}${count}) Symlink recreated from ${source_path} to ${destination_path} with target ${target_path}`)
+    } else if (fs.statSync(source_path).isDirectory() && fs.existsSync(destination_path)) {
+      const ok = await moveWithSudo(source_path, destination_path, copyInstead, level + 1)
       if (!ok) {
         return false
       }
@@ -552,18 +701,18 @@ async function moveWithSudo(source, destination, copyInstead = false) {
       const {exitCode: exitCode, stdout: stdout} = await exec.getExecOutput(command)
       const sudo_output = stdout.trim()
       if (exitCode !== 0) {
-        core.warning(`Error occurred while moving with sudo: exit code ${exitCode}`)
+        core.warning(`${levelPrefix}${count}) Error occurred while moving with sudo: exit code ${exitCode}`)
         log(sudo_output)
         return false
       } else {
-        log(`Successfully moved ${source_path} to ${destination_path} with sudo.`)
+        log(`${levelPrefix}${count}) Successfully moved ${source_path} to ${destination_path} with sudo.`)
       }
     }
   }
   return true
 }
 
-async function install_program_from_url(names, version, check_latest, url_template, update_environment, install_prefix) {
+async function install_program_from_url(names, version, check_latest, url_template, update_environment, install_prefix = null) {
   let output_version = null
   let output_path = null
 
@@ -597,15 +746,15 @@ async function install_program_from_url(names, version, check_latest, url_templa
     } else if (url.endsWith('.tar.gz')) {
       extPath = await tc.extractTar(toolPath)
     } else if (url.endsWith('.tar.xz')) {
-      extPath = await tc.extractTar(toolPath)
+      extPath = await tc.extractTar(toolPath, undefined, 'xJ')
     } else if (url.endsWith('.tar.bz2')) {
-      extPath = await tc.extractTar(toolPath)
+      extPath = await tc.extractTar(toolPath, undefined, 'xj')
     } else if (url.endsWith('.7z')) {
       extPath = await tc.extract7z(toolPath)
     } else if (process.platform === 'darwin' && url.endsWith('.pkg')) {
       extPath = await tc.extractXar(toolPath)
     } else {
-      throw new Error(`Unsupported archive format: ${url}`)
+      throw new Error(`Unsupported archive format: ${path.basename(url)}`)
     }
     log(`Extracted ${toolPath} to ${extPath}`)
   } catch (error) {
@@ -783,7 +932,15 @@ module.exports = {
   install_program_from_url,
   trace_commands,
   set_trace_commands,
-  isSudoRequired
+  isSudoRequired,
+  fetchGitTags,
+  readVersionsFromFile,
+  saveVersionsToFile,
+  getCurrentUbuntuVersion,
+  moveWithPermissions,
+  getCurrentUbuntuName,
+  ensureSudoIsAvailable,
+  ensureAddAptRepositoryIsAvailable
 }
 
 /***/ }),

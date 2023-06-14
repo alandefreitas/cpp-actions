@@ -218,8 +218,6 @@ runs:
       with:
         version: ${{ steps.params.outputs.version }}
         path: clang++
-        cache: ${{ inputs.cache }}
-        architecture: ${{ inputs.architecture }}
         check-latest: ${{ inputs.check-latest }}
         update-environment: ${{ inputs.update-environment }}
         trace-commands: ${{ inputs.trace-commands }}
@@ -231,8 +229,6 @@ runs:
       with:
         version: ${{ steps.params.outputs.version }}
         path: clang++
-        cache: ${{ inputs.cache }}
-        architecture: ${{ inputs.architecture }}
         check-latest: ${{ inputs.check-latest }}
         update-environment: ${{ inputs.update-environment }}
         trace-commands: ${{ inputs.trace-commands }}
