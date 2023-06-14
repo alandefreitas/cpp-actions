@@ -190,6 +190,9 @@
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
   </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-program.html">Setup Program Action</a>
+  </li>
 </ul>
   </li>
   <li class="nav-item" data-depth="1">
@@ -243,6 +246,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.5.0/index.html">v1.5.0</a>
+        </li>
+        <li class="version">
           <a href="../v1.4.1/index.html">v1.4.1</a>
         </li>
         <li class="version">
@@ -286,6 +292,7 @@
   <div class="version-menu">
     <a class="version is-current" href="create-changelog.html">master</a>
     <a class="version" href="../develop/actions/create-changelog.html">develop</a>
+    <a class="version" href="../v1.5.0/actions/create-changelog.html">v1.5.0</a>
     <a class="version" href="../v1.4.1/actions/create-changelog.html">v1.4.1</a>
     <a class="version" href="../v1.4.0/actions/create-changelog.html">v1.4.0</a>
     <a class="version" href="../v1.3.0/actions/create-changelog.html">v1.3.0</a>
@@ -376,7 +383,8 @@ perform a shallow clone and the Changelog will only include the latest commit.</
   with:
     output-path: CHANGELOG.md
     thank-non-regular: ${{ startsWith(github.ref, 'refs/tags/') }}
-    github-token: ${{ secrets.GITHUB_TOKEN }}</code></pre>
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    link-commits: ${{ github.ref_name == 'develop' }}</code></pre>
 </div>
 </div>
 </div>
@@ -398,8 +406,7 @@ perform a shallow clone and the Changelog will only include the latest commit.</
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>source-dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The source directory from whose commits will be analyzed
-.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The source directory from whose commits will be analyzed.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
 </tr>
 <tr>
@@ -407,8 +414,7 @@ perform a shallow clone and the Changelog will only include the latest commit.</
 <td class="tableblock halign-left valign-top"><p class="tableblock">A regex pattern used to identify if a commit is a version delimiter.</p>
 <p class="tableblock">When a commit has a message that matches this pattern, the list of
 commits considered in the notes is complete.</p>
-<p class="tableblock">This constraint does not apply to the current and latest commit.
-.</p></td>
+<p class="tableblock">This constraint does not apply to the current and latest commit.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>(Bump|Set)\s+version</code></p></td>
 </tr>
 <tr>
@@ -417,26 +423,35 @@ commits considered in the notes is complete.</p>
 <p class="tableblock">When a commit has the same hash has the commit associated with a
 tag whose name matches this pattern, the list of commits considered
 in the notes is complete.</p>
-<p class="tableblock">This constraint does not apply to the current and latest commit.
-.</p></td>
+<p class="tableblock">This constraint does not apply to the current and latest commit.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>v.<strong>\..</strong>\..*</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>output-path</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The path where the changelog will be stored
-.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The path where the changelog will be stored.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>CHANGELOG.md</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>limit</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The limit on the number of commits considered in the Changelog
-.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The limit on the number of commits considered in the Changelog.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>0</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>thank-non-regular</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Thank non-regular contributors.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>link-commits</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Link commit ids in the changelog to the repository commit.</p>
+<p class="tableblock">This is usually unnecessary because GitHub flavored markdown automatically links commits id in
+text to the commits in the same repository. Thus, including explicit links would often make the
+output more verbose and remove any extra GitHub functionality, such as pop ups associated with
+these ids.</p>
+<p class="tableblock">However, when the outputs is only going to be used as an action summary or in any other context
+outside GitHub, these automatic links do not exist and it&#8217;s often a good idea to include them
+to allow the reader to navigate to these repository commits.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>github-token</code></p></td>

@@ -190,6 +190,9 @@
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
   </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-program.html">Setup Program Action</a>
+  </li>
 </ul>
   </li>
   <li class="nav-item" data-depth="1">
@@ -243,6 +246,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.5.0/index.html">v1.5.0</a>
+        </li>
+        <li class="version">
           <a href="../v1.4.1/index.html">v1.4.1</a>
         </li>
         <li class="version">
@@ -286,6 +292,7 @@
   <div class="version-menu">
     <a class="version is-current" href="setup-clang.html">master</a>
     <a class="version" href="../develop/actions/setup-clang.html">develop</a>
+    <a class="version" href="../v1.5.0/actions/setup-clang.html">v1.5.0</a>
     <a class="version" href="../v1.4.1/actions/setup-clang.html">v1.4.1</a>
     <a class="version" href="../v1.4.0/actions/setup-clang.html">v1.4.0</a>
     <a class="version" href="../v1.3.0/actions/setup-clang.html">v1.3.0</a>
@@ -365,8 +372,7 @@ which already calls this action if necessary.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>version</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Version range or exact version of Clang to use, using SemVer&#8217;s version range syntax.</p>
-<p class="tableblock">By default, it uses any version available in the environment.
-.</p></td>
+<p class="tableblock">By default, it uses any version available in the environment.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>*</code></p></td>
 </tr>
 <tr>
@@ -375,24 +381,11 @@ which already calls this action if necessary.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>clang++</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Used to specify whether the Clang installation should be cached in the case Clang needs to be downloaded."
-.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>architecture</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The target architecture (x86, x64). By default, this value is inferred.
-.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>check-latest</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">By default, when Clang is not available, this action will install the minimum version in the version spec.
 This ensures the code respects its contract in terms of what minimum Clang version is supported.</p>
 <p class="tableblock">Set this option if you want the action to check for the latest available version that satisfies the version spec
-instead.
-.</p></td>
+instead.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
@@ -449,10 +442,6 @@ instead.
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-patch</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The installed Clang version patch. Useful when given a version range as input.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache-hit</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A boolean value to indicate a cache entry was found</p></td>
 </tr>
 </tbody>
 </table>
