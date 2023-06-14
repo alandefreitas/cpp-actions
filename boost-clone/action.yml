@@ -80,7 +80,7 @@ runs:
   steps:
     - name: Ensure python is available for find-python action in containers
       if: inputs.modules != '' || inputs.scan-modules-dir != ''
-      uses: alandefreitas/cpp-actions/package-install@v1.4.1
+      uses: alandefreitas/cpp-actions/package-install@v1.5.0
       with:
         apt-get: python3
 
@@ -125,7 +125,7 @@ runs:
 
     - name: Ensure libssl is available for setup-python action
       if: (inputs.modules != '' || inputs.scan-modules-dir != '') && steps.find-python.outputs.supports_scan_scripts != 'true'
-      uses: alandefreitas/cpp-actions/package-install@v1.4.1
+      uses: alandefreitas/cpp-actions/package-install@v1.5.0
       with:
         apt-get: libssl-dev
 
@@ -137,7 +137,7 @@ runs:
 
     - name: Ensure curl is available for scan module step in containers
       if: inputs.scan-modules-dir != ''
-      uses: alandefreitas/cpp-actions/package-install@v1.4.1
+      uses: alandefreitas/cpp-actions/package-install@v1.5.0
       with:
         apt-get: curl
 
