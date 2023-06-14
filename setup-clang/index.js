@@ -456,5 +456,6 @@ if (require.main === module) {
 
 module.exports = {
   trace_commands,
-  set_trace_commands
+  set_trace_commands,
+  main
 }

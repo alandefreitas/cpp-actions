@@ -15,6 +15,11 @@ npm i
 npm run all
 cd ..
 
+cd setup-cpp || exit
+npm i
+npm run all
+cd ..
+
 cd cpp-matrix || exit
 npm i
 npm run all

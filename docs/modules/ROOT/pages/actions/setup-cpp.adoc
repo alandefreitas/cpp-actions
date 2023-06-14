@@ -60,23 +60,12 @@ steps:
 
 By default, it uses any version available in the environment. |`*`
 |`path` |The compiler executable. We attempt to find the compiler at this path first. |
-|`cache` |Used to specify whether the compiler installation should be cached in case it needs to be downloaded.". |`false`
-|`architecture` |The target architecture (x86, x64). By default, this value is inferred. |
 |`check-latest` |By default, when the compiler is not available, this action will install the minimum version in the version spec.
 This ensures the code respects its contract in terms of what minimum GCC version is supported.
 
 Set this option if you want the action to check for the latest available version that satisfies the version spec
 instead. |`false`
 |`update-environment` |Set this option if you want the action to update environment variables. |`true`
-|`update-ld-library-path` |Set this option if you want the action to update LD_LIBRARY_PATH.
-
-Updating LD_LIBRARY_PATH might cause conflicts with system libraries and
-is usually unnecessary because the binaries are built on equivalent 
-containers. 
-
-However, this is necessary on some custom containers and you can set
-this option to let the action automatically add GCC library paths to 
-LD_LIBRARY_PATH. |`false`
 |`trace-commands` |Trace commands executed by the workflow. |`false`
 |===
 

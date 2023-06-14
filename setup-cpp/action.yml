@@ -55,18 +55,6 @@ inputs:
     required: false
     default: ''
 
-  cache:
-    description: |
-      Used to specify whether the compiler installation should be cached in case it needs to be downloaded."
-    required: false
-    default: 'false'
-
-  architecture:
-    description: |
-      The target architecture (x86, x64). By default, this value is inferred.
-    required: false
-    default: ''
-
   check-latest:
     description: |
       By default, when the compiler is not available, this action will install the minimum version in the version spec.
@@ -82,21 +70,6 @@ inputs:
     required: false
     default: 'true'
 
-  update-ld-library-path:
-    description: |
-      Set this option if you want the action to update LD_LIBRARY_PATH.
-      
-      Updating LD_LIBRARY_PATH might cause conflicts with system libraries and
-      is usually unnecessary because the binaries are built on equivalent 
-      containers. 
-      
-      However, this is necessary on some custom containers and you can set
-      this option to let the action automatically add GCC library paths to 
-      LD_LIBRARY_PATH.
-
-    required: false
-    default: 'false'
-
   trace-commands:
     description: 'Trace commands executed by the workflow.'
     required: false
@@ -105,244 +78,25 @@ inputs:
 outputs:
   cc:
     description: "The absolute path to the C compiler executable."
-    value: ${{ steps.features.outputs.cc }}
-
   cxx:
     description: "The absolute path to the C++ compiler executable."
-    value: ${{ steps.features.outputs.cxx }}
-
   bindir:
     description: "The absolute path to the directory containing the executable."
-    value: ${{ steps.features.outputs.dir }}
-
   dir:
     description: "The absolute path to the directory containing the installation."
-    value: ${{ steps.features.outputs.dir }}
-
   version:
     description: "The installed compiler version. Useful when given a version range as input."
-    value: ${{ steps.features.outputs.release }}
-
   version-major:
     description: "The installed compiler version major. Useful when given a version range as input."
-    value: ${{ steps.features.outputs.version-major }}
-
   version-minor:
     description: "The installed compiler version minor. Useful when given a version range as input."
-    value: ${{ steps.features.outputs.version-minor }}
-
   version-patch:
     description: "The installed compiler version patch. Useful when given a version range as input."
-    value: ${{ steps.features.outputs.version-patch }}
 
 runs:
-  using: "composite"
-  steps:
-    - name: Split compiler and version
-      id: params
-      shell: bash
-      run: |
-        # Strip version from input prefixed string
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
-        # Split compiler and version
-        compiler="${{ inputs.compiler }}"
-        IFS="- " read -ra parts <<< "$compiler"
-        num_parts="${#parts[@]}"
-        if [ "$num_parts" -eq 1 ]; then
-            version="${{ inputs.version }}"
-        elif [[ "${parts[num_parts-1]}" =~ "[^0-9\.]" ]]; then
-            compiler="${parts[0]}"
-            for ((i=1; i<num_parts-1; i++)); do
-              compiler+="-${parts[i]}"
-            done
-            version="${parts[num_parts-1]}"
-        fi
-        
-        # Normalize compiler name
-        compiler=$(echo "$compiler" | tr '[:upper:]' '[:lower:]')
-        if [[ $compiler == gcc* ]]; then
-          compiler="gcc"
-        elif [[ $compiler == g++* ]]; then
-          compiler="gcc"
-        elif [[ $compiler == clang* ]]; then
-          compiler="clang"
-        elif [[ $compiler == apple-clang* ]]; then
-          compiler="clang"
-        elif [[ $compiler == appleclang* ]]; then
-          compiler="clang"
-        elif [[ $compiler == msvc* ]]; then
-          compiler="msvc"
-        elif [[ $compiler == cl* ]]; then
-          compiler="msvc"
-        fi
-        
-        echo "compiler=$compiler" >> $GITHUB_OUTPUT
-        echo "version=$version" >> $GITHUB_OUTPUT
-        
-        # Find current actions path
-        if [ -f "setup-gcc/action.yml" ] && [ -f "setup-gcc/action.yml" ]; then
-            repo_is_cpp_actions="true"
-        else
-            repo_is_cpp_actions="false"
-        fi
-        echo "repo_is_cpp_actions=$repo_is_cpp_actions" >> $GITHUB_OUTPUT
-
-
-    - name: Setup GCC
-      if: ${{ steps.params.outputs.compiler == 'gcc' && runner.os == 'Linux' && steps.params.outputs.repo_is_cpp_actions == 'true' }}
-      uses: ./setup-gcc
-      id: setup-gcc-internal
-      with:
-        version: ${{ steps.params.outputs.version }}
-        path: g++
-        check-latest: ${{ inputs.check-latest }}
-        update-environment: ${{ inputs.update-environment }}
-        trace-commands: ${{ inputs.trace-commands }}
-
-    - name: Setup GCC
-      if: ${{ steps.params.outputs.compiler == 'gcc' && runner.os == 'Linux' && steps.params.outputs.repo_is_cpp_actions == 'false' }}
-      uses: alandefreitas/cpp-actions/setup-gcc@develop
-      id: setup-gcc-external
-      with:
-        version: ${{ steps.params.outputs.version }}
-        path: g++
-        check-latest: ${{ inputs.check-latest }}
-        update-environment: ${{ inputs.update-environment }}
-        trace-commands: ${{ inputs.trace-commands }}
-
-    - name: Setup Clang
-      if: ${{ steps.params.outputs.compiler == 'clang' && runner.os == 'Linux' && steps.params.outputs.repo_is_cpp_actions == 'true' }}
-      uses: ./setup-clang
-      id: setup-clang-internal
-      with:
-        version: ${{ steps.params.outputs.version }}
-        path: clang++
-        check-latest: ${{ inputs.check-latest }}
-        update-environment: ${{ inputs.update-environment }}
-        trace-commands: ${{ inputs.trace-commands }}
-
-    - name: Setup Clang
-      if: ${{ steps.params.outputs.compiler == 'clang' && runner.os == 'Linux' && steps.params.outputs.repo_is_cpp_actions == 'false' }}
-      uses: alandefreitas/cpp-actions/setup-clang@v1.4.1
-      id: setup-clang-external
-      with:
-        version: ${{ steps.params.outputs.version }}
-        path: clang++
-        check-latest: ${{ inputs.check-latest }}
-        update-environment: ${{ inputs.update-environment }}
-        trace-commands: ${{ inputs.trace-commands }}
-
-    - name: Setup MSVC
-      if: ${{ steps.params.outputs.compiler == 'msvc' && runner.os == 'Windows' }}
-      uses: ilammy/msvc-dev-cmd@v1
-
-    - name: Setup MinGW
-      shell: bash
-      if: ${{ (steps.params.outputs.compiler == 'gcc' || steps.params.outputs.compiler == 'mingw') && runner.os == 'Windows' }}
-      id: setup-mingw
-      run: |
-        # Output information about the compiler we setup up
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
-        gcc_path=""
-        gpp_path=""
-        output=$(where gcc)
-        
-        while IFS= read -r line; do
-          line=${line%$'\r'}
-          gcc_path="$line"
-          gpp_path="${line/gcc/g++}"
-          if [[ -f "$gpp_path" ]]; then
-            # Corresponding g++ executable found: $gpp_path
-            break
-          fi
-        done <<< "$output"
-        if [ "$gcc_path" != "" ] && [ "$gpp_path" != "" ]; then 
-          echo -E "cc=$gcc_path" >> $GITHUB_OUTPUT
-          echo -E "cxx=$gpp_path" >> $GITHUB_OUTPUT
-          VERSION_OUTPUT=$("$gpp_path" --version)
-          regex='([0-9]+)\.([0-9]+)\.([0-9]+)'
-          set +e
-          [[ $VERSION_OUTPUT =~ $regex ]]
-          version="${BASH_REMATCH[0]}"
-          major="${BASH_REMATCH[1]}"
-          minor="${BASH_REMATCH[2]}"
-          patch="${BASH_REMATCH[3]}"
-          echo "version=$version" >> $GITHUB_OUTPUT
-          echo "major=$major" >> $GITHUB_OUTPUT
-          echo "minor=$minor" >> $GITHUB_OUTPUT
-          echo "patch=$patch" >> $GITHUB_OUTPUT
-          bindir=$(dirname "$gpp_path")
-          echo -E "dir=$bindir" >> $GITHUB_OUTPUT
-          set -e
-        else
-          echo "::error title:Setup C++::Setup C++: Cannot find g++ and gcc in PATH."
-          false
-        fi
-
-    - name: Setup Clang-CL
-      shell: bash
-      if: ${{ (steps.params.outputs.compiler == 'clang-cl' || steps.params.outputs.compiler == 'clang') && runner.os == 'Windows' }}
-      id: setup-clang-cl
-      run: |
-        # Output information about the compiler we setup up
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
-        cc_path=""
-        cxx_path=""
-        output=$(where clang-cl)
-        if [ "$output" == "" ]; then
-            output=$(where clang)
-        fi
-        
-        while IFS= read -r line; do
-          line=${line%$'\r'}
-          cc_path="$line"
-          cxx_path="${line/clang/clang++}"
-          if [[ -f "$cxx_path" ]]; then
-            # Corresponding g++ executable found: $cxx_path
-            break
-          else
-            cxx_path="$cc_path"
-          fi
-        done <<< "$output"
-        
-        if [ "$cc_path" != "" ] && [ "$cxx_path" != "" ]; then 
-          echo -E "cc=$cc_path" >> $GITHUB_OUTPUT
-          echo -E "cxx=$cxx_path" >> $GITHUB_OUTPUT
-          VERSION_OUTPUT=$("$cxx_path" --version)
-          regex='([0-9]+)\.([0-9]+)\.([0-9]+)'
-          set +e
-          [[ $VERSION_OUTPUT =~ $regex ]]
-          version="${BASH_REMATCH[0]}"
-          major="${BASH_REMATCH[1]}"
-          minor="${BASH_REMATCH[2]}"
-          patch="${BASH_REMATCH[3]}"
-          echo "version=$version" >> $GITHUB_OUTPUT
-          echo "major=$major" >> $GITHUB_OUTPUT
-          echo "minor=$minor" >> $GITHUB_OUTPUT
-          echo "patch=$patch" >> $GITHUB_OUTPUT
-          bindir=$(dirname "$cxx_path")
-          echo -E "dir=$bindir" >> $GITHUB_OUTPUT
-          set -e
-        else
-          echo "::error title:Setup C++::Setup C++: Cannot find clang-cl in PATH."
-          false
-        fi
-
-    - name: Outputs
-      shell: bash
-      id: features
-      run: |
-        # Output information about the compiler we setup up
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }} 
-        
-        echo -E "cc=${{ steps.setup-gcc-internal.outputs.cc || steps.setup-gcc-external.outputs.cc || steps.setup-clang-internal.outputs.cc || steps.setup-clang-external.outputs.cc || steps.setup-mingw.outputs.cc || steps.setup-clang-cl.outputs.cc }}" >> $GITHUB_OUTPUT
-        echo -E "cxx=${{ steps.setup-gcc-internal.outputs.cxx || steps.setup-gcc-external.outputs.cxx || steps.setup-clang-internal.outputs.cxx || steps.setup-clang-external.outputs.cxx || steps.setup-mingw.outputs.cxx || steps.setup-clang-cl.outputs.cxx }}" >> $GITHUB_OUTPUT
-        echo -E "bindir=${{ steps.setup-gcc-internal.outputs.bindir || steps.setup-gcc-external.outputs.bindir || steps.setup-clang-internal.outputs.bindir || steps.setup-clang-external.outputs.bindir || steps.setup-mingw.outputs.bindir || steps.setup-clang-cl.outputs.bindir }}" >> $GITHUB_OUTPUT
-        echo -E "dir=${{ steps.setup-gcc-internal.outputs.dir || steps.setup-gcc-external.outputs.dir || steps.setup-clang-internal.outputs.dir || steps.setup-clang-external.outputs.dir || steps.setup-mingw.outputs.dir || steps.setup-clang-cl.outputs.dir }}" >> $GITHUB_OUTPUT
-        echo -E "version=${{ steps.setup-gcc-internal.outputs.version || steps.setup-gcc-external.outputs.version || steps.setup-clang-internal.outputs.version || steps.setup-clang-external.outputs.version || steps.setup-mingw.outputs.version || steps.setup-clang-cl.outputs.version }}" >> $GITHUB_OUTPUT
-        echo -E "version-major=${{ steps.setup-gcc-internal.outputs.version-major || steps.setup-gcc-external.outputs.version-major || steps.setup-clang-internal.outputs.version-major || steps.setup-clang-external.outputs.version-major || steps.setup-mingw.outputs.major || steps.setup-clang-cl.outputs.major }}" >> $GITHUB_OUTPUT
-        echo -E "version-minor=${{ steps.setup-gcc-internal.outputs.version-minor || steps.setup-gcc-external.outputs.version-minor || steps.setup-clang-internal.outputs.version-minor || steps.setup-clang-external.outputs.version-minor || steps.setup-mingw.outputs.minor || steps.setup-clang-cl.outputs.minor }}" >> $GITHUB_OUTPUT
-        echo -E "version-patch=${{ steps.setup-gcc-internal.outputs.version-patch || steps.setup-gcc-external.outputs.version-patch || steps.setup-clang-internal.outputs.version-patch || steps.setup-clang-external.outputs.version-patch || steps.setup-mingw.outputs.patch || steps.setup-clang-cl.outputs.patch }}" >> $GITHUB_OUTPUT
+  using: 'node16'
+  main: 'dist/index.js'
+  post-if: success()
+branding:
+  icon: 'code'
+  color: 'yellow'

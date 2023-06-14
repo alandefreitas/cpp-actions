@@ -462,7 +462,8 @@ if (require.main === require.cache[eval('__filename')]) {
 
 module.exports = {
   trace_commands,
-  set_trace_commands
+  set_trace_commands,
+  main
 }
 
 /***/ }),
