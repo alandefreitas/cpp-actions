@@ -380,16 +380,6 @@ which already calls this action if necessary.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>clang++</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Used to specify whether the Clang installation should be cached in the case Clang needs to be downloaded.".</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>architecture</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The target architecture (x86, x64). By default, this value is inferred.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>check-latest</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">By default, when Clang is not available, this action will install the minimum version in the version spec.
 This ensures the code respects its contract in terms of what minimum Clang version is supported.</p>
@@ -451,10 +441,6 @@ instead.</p></td>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-patch</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The installed Clang version patch. Useful when given a version range as input.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache-hit</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A boolean value to indicate a cache entry was found</p></td>
 </tr>
 </tbody>
 </table>
