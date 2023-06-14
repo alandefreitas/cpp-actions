@@ -387,17 +387,7 @@ which already calls this action if necessary.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>path</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The gcc or g++ executable. We attempt to find GCC at this path first.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>g++</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Used to specify whether the GCC installation should be cached in the case GCC needs to be downloaded.".</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>architecture</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The target architecture (x86, x64). By default, this value is inferred.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Path to the gcc or g++ executable. We attempt to find GCC at this path first.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
@@ -412,17 +402,6 @@ instead.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>update-environment</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Set this option if you want the action to update environment variables.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>update-ld-library-path</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Set this option if you want the action to update LD_LIBRARY_PATH.</p>
-<p class="tableblock">Updating LD_LIBRARY_PATH might cause conflicts with system libraries and
-is usually unnecessary because the binaries are built on equivalent
-containers.</p>
-<p class="tableblock">However, this is necessary on some custom containers and you can set
-this option to let the action automatically add GCC library paths to
-LD_LIBRARY_PATH.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
@@ -473,10 +452,6 @@ LD_LIBRARY_PATH.</p></td>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-patch</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The installed GCC version patch. Useful when given a version range as input.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache-hit</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A boolean value to indicate a cache entry was found</p></td>
 </tr>
 </tbody>
 </table>
