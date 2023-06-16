@@ -414,6 +414,21 @@ if __name__ == '__main__':
             symbol_set_instantiate[symbol_set][0] + count, symbol_set_instantiate[symbol_set][1] + time)
     output += section_table('Symbol Set', symbol_set_instantiate)
 
+
+    def is_std_symbol(symbol):
+        return symbol.startswith('std::') or symbol.startswith('__gnu_cxx::')
+
+    output += '## Project Symbols\n\n'
+    output += '### Parse\n\n'
+    symbol_parse = {k: v for k, v in symbol_parse.items() if not is_std_symbol(k)}
+    output += section_table('Symbol', symbol_parse)
+    output += '### Instantiate\n\n'
+    symbol_instantiate = {k: v for k, v in symbol_instantiate.items() if not is_std_symbol(k)}
+    output += section_table('Symbol', symbol_instantiate)
+    output += '### Instantiate Sets\n\n'
+    symbol_set_instantiate = {k: v for k, v in symbol_set_instantiate.items() if not is_std_symbol(k)}
+    output += section_table('Symbol Set', symbol_set_instantiate)
+
     log(output)
     with open(report_path, 'w') as f:
         f.write(output)
