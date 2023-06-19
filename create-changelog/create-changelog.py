@@ -384,8 +384,9 @@ def get_github_commits(repo_url, branch, version_pattern, tags, access_token):
                     commit.author = f"{page_commit['commit']['committer']['name']} <{page_commit['commit']['committer']['email']}>"
                     commit.author_name = page_commit['commit']['committer']['name']
                     commit.author_email = page_commit['commit']['committer']['email']
-                    commit.gh_name = get_github_profile_name(page_commit['committer']['login'], access_token)
-                    commit.gh_username = page_commit['committer']['login']
+                    if 'login' in page_commit['commit']['committer']:
+                        commit.gh_name = get_github_profile_name(page_commit['committer']['login'], access_token)
+                        commit.gh_username = page_commit['committer']['login']
                     commit.date = page_commit['commit']['committer']['date']
                     commit.message = page_commit['commit']['message']
                     commit = populate_conventional(commit, repo_url, version_pattern, tags)
