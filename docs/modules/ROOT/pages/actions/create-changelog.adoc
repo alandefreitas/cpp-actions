@@ -80,6 +80,7 @@ This constraint does not apply to the current and latest commit. |`v.*\..*\..*`
 |`output-path` |The path where the changelog will be stored. |`CHANGELOG.md`
 |`limit` |The limit on the number of commits considered in the Changelog. |`0`
 |`thank-non-regular` |Thank non-regular contributors. |`true`
+|`check-unconventional` |Check for commits that do not follow the conventional commit format. |`true`
 |`link-commits` |Link commit ids in the changelog to the repository commit.
 
 This is usually unnecessary because GitHub flavored markdown automatically links commits id in

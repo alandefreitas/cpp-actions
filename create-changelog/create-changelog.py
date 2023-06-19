@@ -33,6 +33,9 @@ class Commit:
         self.footers = []
         self.breaking = False
 
+        # whether the commit is conventional or not
+        self.conventional = True
+
         # issue info
         self.issue = None
         self.gh_issue_username = None
@@ -284,12 +287,14 @@ def populate_conventional(commit, repo_url, version_pattern, tags):
                 commit.scope = m[3]
                 commit.description = m[5]
                 commit.breaking = m[4] == '!'
+                commit.conventional = True
             else:
                 # regular commit
                 commit.description = commit.subject
                 commit.type = 'other'
                 commit.scope = None
                 commit.breaking = commit.subject.find('BREAKING') != -1
+                commit.conventional = False
         else:
             # Is body or footer
             m = re.match(r'(([^ ]+): )|(([^ ]+) #)|((BREAKING CHANGE): )', line)
@@ -653,6 +658,7 @@ if __name__ == "__main__":
     parser.add_argument('--branch', help="reference parent branch", default='')
     parser.add_argument('--limit', type=int, help="max number of commits in the log", default=0)
     parser.add_argument('--thank-non-regular', action='store_true', help="Thank non-regular contributors")
+    parser.add_argument('--check-unconventional', action='store_true', help="Emit a warning on unconventional commits")
     parser.add_argument('--link-commits', action='store_true', help="Link commit ids to commit URLs")
     parser.add_argument('--github-token', help="GitHub token to identify non-regular contributors", default='')
     args = parser.parse_args()
@@ -703,6 +709,10 @@ if __name__ == "__main__":
 
     # Commits
     commits = get_local_commits(project_path, repo_url, version_pattern, tags)
+    if args.check_unconventional:
+        for commit in commits:
+            if not commit.conventional:
+                print(f"::warning title:Conventional Commits::Commit \"{commit.subject}\" is not a conventional commit")
     print(f'{len(commits)} local commits')
     if len(commits) == 0 or not commits[-1].is_parent_release:
         commit_hashes = set(commit.hash for commit in commits)
@@ -712,6 +722,7 @@ if __name__ == "__main__":
             if repo_commit.hash not in commit_hashes:
                 commits.append(repo_commit)
         print(f'{len(commits)} total commits')
+
     commits = remove_commit_duplicates(commits)
 
     # Limit number of commits

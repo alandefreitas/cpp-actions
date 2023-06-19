@@ -92,6 +92,10 @@ inputs:
     description: 'Thank non-regular contributors.'
     required: false
     default: 'true'
+  check-unconventional:
+    description: 'Check for commits that do not follow the conventional commit format.'
+    required: false
+    default: 'true'
   link-commits:
     description: |
       Link commit ids in the changelog to the repository commit.
@@ -135,8 +139,9 @@ runs:
         pip3 install requests
         thank_arg="${{ (inputs.thank-non-regular == 'true' && '--thank-non-regular') || '' }}"
         link_commits_arg="${{ (inputs.link-commits == 'true' && '--link-commits') || '' }}"
+        check_unconventional_arg="${{ (inputs.check-unconventional == 'true' && '--check-unconventional') || '' }}"
         token_arg="${{ (inputs.github-token && format('--github-token "{0}"', inputs.github-token)) || '' }}"
-        $python_path "$GITHUB_ACTION_PATH/create-changelog.py" --dir "${{ inputs.source-dir }}" --version-pattern "${{ inputs.version-pattern }}" --tag-pattern "${{ inputs.tag-pattern }}" --output "${{ inputs.output-path }}" --limit "${{ inputs.limit }}" $thank_arg $token_arg $link_commits_arg
+        $python_path "$GITHUB_ACTION_PATH/create-changelog.py" --dir "${{ inputs.source-dir }}" --version-pattern "${{ inputs.version-pattern }}" --tag-pattern "${{ inputs.tag-pattern }}" --output "${{ inputs.output-path }}" --limit "${{ inputs.limit }}" $thank_arg $token_arg $link_commits_arg $check_unconventional_arg
 
     - name: Changelog summary
       shell: bash
