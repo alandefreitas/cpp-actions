@@ -566,6 +566,11 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                         compiler_cxxs.push(cxxstd)
                     }
                 }
+                if (compiler_cxxs.length === 0) {
+                    // We know this compiler does not support any of the standards
+                    // we want to test. Skip it.
+                    continue
+                }
                 if (max_standards != null && max_standards !== 0 && compiler_cxxs.length > max_standards) {
                     compiler_cxxs = compiler_cxxs.splice(-max_standards)
                 }
