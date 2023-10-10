@@ -671,6 +671,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                         entry['generator'] = `Visual Studio 8 ${year}`
                     }
                 }
+                entry['generator'] = 'Ninja'
             }
 
             // Latest flag
