@@ -17243,7 +17243,7 @@ async function run() {
     } else if (compiler === 'msvc') {
       log(`compiler: ${compiler}... forwarding to setupMSVCDevCmd.`)
       const arch = process.env['PROCESSOR_ARCHITECTURE'] || 'x64'
-      setup_msvc.setupMSVCDevCmd(arch, '', '', '', '', '')
+      setup_msvc.setupMSVCDevCmd(arch, '', '', '', '', version)
       output_path = process.env['Path']
       for (const [key, value] of Object.entries(process.env)) {
         log(`${key}: ${value}`)
@@ -17449,8 +17449,8 @@ function findVcvarsall(vsversion) {
   const vsversion_number = vsversion_to_versionnumber(vsversion)
   let version_pattern
   if (vsversion_number) {
-    const upper_bound = vsversion_number.split('.')[0] + '.9'
-    version_pattern = `-version "${vsversion_number},${upper_bound}"`
+    //const upper_bound = vsversion_number.split('.')[0] + '.9'
+    version_pattern = `-version ["${vsversion_number},")`
   } else {
     version_pattern = '-latest'
   }
