@@ -243,11 +243,12 @@ function findMSVCVersions() {
     // See:
     // https://en.wikipedia.org/wiki/Microsoft_Visual_C%2B%2B
 
-    // windows-2019 -> ['10.0.40219', '12.0.40660', '14.29.30139', '14.34.31938']
-    // windows-2022 -> ['12.0.40660', '14.34.31938']
+    // not installed -> ['10.0.40219', '12.0.40660']
+    // windows-2019 ->  ['14.16.27023', '14.25.28610', '14.29.30133']
+    // windows-2022 ->  ['14.16.27023', '14.29.30133', '14.35.32215', '14.37.32822']
     // https://github.com/actions/runner-images/blob/main/images/win/Windows2019-Readme.md#microsoft-visual-c
     // https://github.com/actions/runner-images/blob/main/images/win/Windows2022-Readme.md#microsoft-visual-c
-    return ['10.0.40219', '12.0.40660', '14.29.30139', '14.34.31938']
+    return ['10.0.40219', '12.0.40660', '14.16.27023', '14.25.28610', '14.29.30133', '14.35.32215', '14.37.32822']
 }
 
 function findCompilerVersions(compiler) {
