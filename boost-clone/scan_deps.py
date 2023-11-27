@@ -76,7 +76,7 @@ def module_for_header(h, x, gm):
         if m and is_module(m.group(1), gm):
             return m.group(1)
 
-        vprint(0, 'Cannot determine module for header', h)
+        vprint(1, 'Cannot determine module for header', h)
 
         return None
 
