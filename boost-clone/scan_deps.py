@@ -216,5 +216,8 @@ if __name__ == "__main__":
         if ignored in modules:
             modules.remove(ignored)
 
+    while None in modules:
+        modules.remove(None)
+
     sorted_modules = sorted(modules)
     print(' '.join(sorted_modules))
