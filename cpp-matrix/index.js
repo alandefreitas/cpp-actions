@@ -815,6 +815,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
             entry['build-type'] = 'Debug'
         }
         if ('time-trace' in entry && entry['time-trace'] === true) {
+            entry['install'] += ' wget'
             if (entry['compiler'] === 'clang') {
                 const v = semver.minSatisfying(findClangVersions(), entry['version'])
                 if (semver.satisfies(v, '>=9')) {
