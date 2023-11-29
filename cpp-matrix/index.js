@@ -612,8 +612,16 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                     entry['container'] = 'ubuntu:18.04'
                 }
             } else if (compiler === 'clang') {
-                if (semver.satisfies(minSubrangeVersion, '>=12')) {
-                    entry['runs-on'] = 'ubuntu-22.04'
+                if (semver.satisfies(minSubrangeVersion, '=13 || =14')) {
+                    // later versions of clang handle gcc-13 fine
+                    // only use clang-13, clang-14 on a platform where gcc-13
+                    // doesn't exist so we can run C++20 tests without the need
+                    // for specifying the gcc toolchain which can be irksome
+                    // on Ubuntu installs
+                    entry['runs-on']   = 'ubuntu-22.04'
+                    entry['container'] = 'ubuntu:22.04'
+                } else if (semver.satisfies(minSubrangeVersion, '>=12')) {
+                  entry['runs-on'] = 'ubuntu-22.04'
                 } else if (semver.satisfies(minSubrangeVersion, '>=6')) {
                     entry['runs-on'] = 'ubuntu-20.04'
                 } else if (semver.satisfies(minSubrangeVersion, '>=3.9')) {
