@@ -190,7 +190,7 @@ runs:
         apt_get_packages="${{ inputs.apt-get }}"
         if [ "${{ inputs.vcpkg }}" != "" ]; then
             # ensure we have git if we are installing vcpkg
-            apt_get_packages+=" git curl zip unzip tar"
+            apt_get_packages+=" git curl zip unzip tar pkg-config"
         fi
         if [ "${{ inputs.apt-get-ignore-missing }}" == "true" ]; then
             for package in ${apt_get_packages// / }
