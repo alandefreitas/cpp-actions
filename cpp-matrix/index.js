@@ -620,7 +620,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                     // on Ubuntu installs
                     entry['runs-on']   = 'ubuntu-22.04'
                     entry['container'] = 'ubuntu:22.04'
-                } else if (semver.satisfies(minSubrangeVersion, '>=12')) {
+                } else if (semver.satisfies(minSubrangeVersion, '>=13')) {
                   entry['runs-on'] = 'ubuntu-22.04'
                 } else if (semver.satisfies(minSubrangeVersion, '>=6')) {
                     entry['runs-on'] = 'ubuntu-20.04'
