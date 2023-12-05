@@ -654,9 +654,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Creates a changelog from the commit history.')
     parser.add_argument('--dir', help="directory to scan", default=os.getcwd())
     parser.add_argument('--version-pattern', help="regex pattern indicating a version commit",
-                        default='(Bump|Set)\s+version')
+                        default='(Bump|Set)\\s+version')
     parser.add_argument('--tag-pattern', help="regex indicating a tagged commit",
-                        default='v.*\..*\..*')
+                        default='v.*\\..*\\..*')
     parser.add_argument('-o', '--output', help="output file", default='CHANGELOG.md')
     parser.add_argument('--branch', help="reference parent branch", default='')
     parser.add_argument('--limit', type=int, help="max number of commits in the log", default=0)
