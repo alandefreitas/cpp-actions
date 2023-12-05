@@ -74,7 +74,10 @@ jobs:
         id: setup-cpp
         with:
           compiler: ${{ matrix.compiler }}
-          version: ${{ matrix.version }}
+          # For GCC/Clang, we are iterating majors, so we get whatever major is available from the system
+          # so that we get the version most likely to be installed by default.
+          # For other libraries, any logic might be acceptable here.
+          version: ${{ (matrix.subrange-policy == 'one-per-major' && matrix.major) || matrix.version }}
           trace-commands: true
 
       # We're not really going to use doxygen. This is only here to test the action.

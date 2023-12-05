@@ -4,17 +4,17 @@ require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 /***/ 2932:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const core = __nccwpck_require__(2186);
+const core = __nccwpck_require__(2186)
 // const github = require('@actions/github');
-const semver = __nccwpck_require__(1383);
-const fs = __nccwpck_require__(7147);
-const {execSync} = __nccwpck_require__(2081);
+const semver = __nccwpck_require__(1383)
+const fs = __nccwpck_require__(7147)
+const {execSync} = __nccwpck_require__(2081)
 
-let trace_commands = false;
+let trace_commands = false
 
 function log(...args) {
     if (trace_commands) {
-        console.log(...args);
+        console.log(...args)
     }
 }
 
@@ -24,45 +24,45 @@ function isTruthy(s) {
 }
 
 function parseCompilerRequirements(inputString) {
-    const tokens = inputString.split(/[\n\s]+/);
-    const compilers = {};
+    const tokens = inputString.split(/[\n\s]+/)
+    const compilers = {}
 
-    let currentCompiler = null;
-    let currentRequirements = '';
+    let currentCompiler = null
+    let currentRequirements = ''
 
     for (const token of tokens) {
         if (/^[a-zA-Z\-]+$/.test(token)) {
             if (currentCompiler) {
-                compilers[currentCompiler] = semver.validRange(currentRequirements.trim(), {loose: true});
-                currentRequirements = '';
+                compilers[currentCompiler] = semver.validRange(currentRequirements.trim(), {loose: true})
+                currentRequirements = ''
             }
-            currentCompiler = token;
+            currentCompiler = token
         } else {
-            currentRequirements += ' ' + token.trim();
+            currentRequirements += ' ' + token.trim()
         }
     }
 
     if (currentCompiler) {
-        compilers[currentCompiler] = currentRequirements.trim();
+        compilers[currentCompiler] = currentRequirements.trim()
     }
 
-    return compilers;
+    return compilers
 }
 
 function parseCompilerFactors(inputString, compilers) {
-    const tokens = inputString.split(/[\n\s]+/);
+    const tokens = inputString.split(/[\n\s]+/)
 
-    const compilerFactors = {};
-    let currentCompiler = null;
-    let currentFactors = [];
+    const compilerFactors = {}
+    let currentCompiler = null
+    let currentFactors = []
 
     for (const token of tokens) {
         if (compilers.includes(token)) {
             if (currentCompiler) {
-                compilerFactors[currentCompiler] = currentFactors;
-                currentFactors = [];
+                compilerFactors[currentCompiler] = currentFactors
+                currentFactors = []
             }
-            currentCompiler = token.trim();
+            currentCompiler = token.trim()
         } else {
             currentFactors.push(token.trim())
         }
@@ -72,63 +72,63 @@ function parseCompilerFactors(inputString, compilers) {
         compilerFactors[currentCompiler] = currentFactors
     }
 
-    return compilerFactors;
+    return compilerFactors
 }
 
 function normalizeCppVersionRequirement(range) {
     // Regular expression to match two-digit C++ versions
-    const regex = /\b(\d{2})\b/g;
+    const regex = /\b(\d{2})\b/g
 
     const currentYear = new Date().getFullYear()
-    const currentCenturyFirstYear = Math.floor(currentYear / 100) * 100;
-    const previousCenturyFirstYear = currentCenturyFirstYear - 100;
+    const currentCenturyFirstYear = Math.floor(currentYear / 100) * 100
+    const previousCenturyFirstYear = currentCenturyFirstYear - 100
 
     // Replace the two-digit versions with their corresponding four-digit versions
     const replacedRange = range.replace(regex, (match, version) => {
-        const year = parseInt(version);
+        const year = parseInt(version)
         if (year >= 0 && year <= 99) {
-            const a = currentCenturyFirstYear + year;
-            const b = previousCenturyFirstYear + year;
-            const a_diff = Math.abs(currentYear - a);
-            const b_diff = Math.abs(currentYear - b);
+            const a = currentCenturyFirstYear + year
+            const b = previousCenturyFirstYear + year
+            const a_diff = Math.abs(currentYear - a)
+            const b_diff = Math.abs(currentYear - b)
             if (a_diff < b_diff) {
-                return a.toString();
+                return a.toString()
             } else {
-                return b.toString();
+                return b.toString()
             }
         }
-        return match; // Return the match as is if it's not a two-digit version
-    });
+        return match // Return the match as is if it's not a two-digit version
+    })
 
-    return replacedRange.trim();
+    return replacedRange.trim()
 }
 
 function normalizeCompilerName(name) {
-    const lowerCaseName = name.toLowerCase();
+    const lowerCaseName = name.toLowerCase()
 
     if (['gcc', 'g++', 'gcc-'].some(s => lowerCaseName.startsWith(s))) {
-        return 'gcc';
+        return 'gcc'
     } else if (['clang-cl', 'clang-win'].some(s => lowerCaseName.startsWith(s))) {
-        return 'clang-cl';
+        return 'clang-cl'
     } else if (['clang', 'clang++', 'llvm'].some(s => lowerCaseName.startsWith(s))) {
-        return 'clang';
+        return 'clang'
     } else if (['msvc', 'cl', 'visual studio', 'vc'].some(s => lowerCaseName.startsWith(s))) {
-        return 'msvc';
+        return 'msvc'
     } else if (['min-gw', 'mingw'].some(s => lowerCaseName.startsWith(s))) {
-        return 'mingw';
+        return 'mingw'
     }
 
     // Return the original name if no normalization rule matches
-    return name;
+    return name
 }
 
 const fetchGitTags = (repo) => {
     try {
-        const stdout = execSync("git ls-remote --tags " + repo).toString();
-        const tags = stdout.split("\n").filter(tag => tag.trim() !== "");
+        const stdout = execSync('git ls-remote --tags ' + repo).toString()
+        const tags = stdout.split('\n').filter(tag => tag.trim() !== '')
         let gitTags = []
         for (const tag of tags) {
-            const parts = tag.split("\t")
+            const parts = tag.split('\t')
             if (parts.length > 1) {
                 let ref = parts[1]
                 if (!ref.endsWith('^{}')) {
@@ -136,107 +136,107 @@ const fetchGitTags = (repo) => {
                 }
             }
         }
-        return gitTags;
+        return gitTags
     } catch (error) {
-        throw new Error("Error fetching Git tags: " + error.message);
+        throw new Error('Error fetching Git tags: ' + error.message)
     }
-};
+}
 
 function readVersionsFromFile(filename) {
     try {
-        const fileContents = fs.readFileSync(filename, 'utf8');
-        const versions = JSON.parse(fileContents);
+        const fileContents = fs.readFileSync(filename, 'utf8')
+        const versions = JSON.parse(fileContents)
         if (Array.isArray(versions)) {
-            return versions;
+            return versions
         }
     } catch (error) {
         // File reading failed or versions couldn't be parsed
     }
-    return null;
+    return null
 }
 
 function saveVersionsToFile(versions, filename) {
     try {
-        const fileContents = JSON.stringify(versions);
-        fs.writeFileSync(filename, fileContents, 'utf8');
-        log('Versions saved to file.');
+        const fileContents = JSON.stringify(versions)
+        fs.writeFileSync(filename, fileContents, 'utf8')
+        log('Versions saved to file.')
     } catch (error) {
-        log('Error saving versions to file: ' + error);
+        log('Error saving versions to file: ' + error)
     }
 }
 
 
 function findGCCVersionsImpl() {
-    let cachedVersions = null; // Cache variable to store the versions
+    let cachedVersions = null // Cache variable to store the versions
 
-    return function () {
+    return function() {
         if (cachedVersions !== null) {
             // Return the cached versions if available
-            return cachedVersions;
+            return cachedVersions
         }
 
         // Check if the versions can be read from a file
-        const versionsFromFile = readVersionsFromFile('gcc-versions.txt');
+        const versionsFromFile = readVersionsFromFile('gcc-versions.txt')
         if (versionsFromFile !== null) {
-            cachedVersions = versionsFromFile;
-            log("GCC versions (from file): " + versionsFromFile);
-            return versionsFromFile;
+            cachedVersions = versionsFromFile
+            log('GCC versions (from file): ' + versionsFromFile)
+            return versionsFromFile
         }
 
-        const regex = /^refs\/tags\/releases\/gcc-(\d+\.\d+\.\d+)$/;
-        let versions = [];
-        const gitTags = fetchGitTags("git://gcc.gnu.org/git/gcc.git");
+        const regex = /^refs\/tags\/releases\/gcc-(\d+\.\d+\.\d+)$/
+        let versions = []
+        const gitTags = fetchGitTags('git://gcc.gnu.org/git/gcc.git')
         for (const tag of gitTags) {
             if (tag.match(regex)) {
-                const version = tag.match(regex)[1];
-                versions.push(version);
+                const version = tag.match(regex)[1]
+                versions.push(version)
             }
         }
-        versions = versions.sort(semver.compare);
-        cachedVersions = versions;
-        log("GCC versions: " + versions);
-        saveVersionsToFile(versions, 'gcc-versions.txt');
+        versions = versions.sort(semver.compare)
+        cachedVersions = versions
+        log('GCC versions: ' + versions)
+        saveVersionsToFile(versions, 'gcc-versions.txt')
         return versions
     }
 }
 
-const findGCCVersions = findGCCVersionsImpl();
+const findGCCVersions = findGCCVersionsImpl()
 
 function findClangVersionsImpl() {
-    let cachedVersions = null; // Cache variable to store the versions
+    let cachedVersions = null // Cache variable to store the versions
 
-    return function () {
+    return function() {
         if (cachedVersions !== null) {
             // Return the cached versions if available
-            return cachedVersions;
+            return cachedVersions
         }
 
-        const versionsFromFile = readVersionsFromFile('clang-versions.txt');
+        const versionsFromFile = readVersionsFromFile('clang-versions.txt')
         if (versionsFromFile !== null) {
-            cachedVersions = versionsFromFile;
-            log("Clang versions (from file): " + versionsFromFile);
-            return versionsFromFile;
+            cachedVersions = versionsFromFile
+            log('Clang versions (from file): ' + versionsFromFile)
+            return versionsFromFile
         }
 
-        const regex = /^refs\/tags\/llvmorg-(\d+\.\d+\.\d+)$/;
-        let versions = [];
-        const gitTags = fetchGitTags("https://github.com/llvm/llvm-project");
+        const regex = /^refs\/tags\/llvmorg-(\d+\.\d+\.\d+)$/
+        let versions = []
+        const gitTags = fetchGitTags('https://github.com/llvm/llvm-project')
         for (const tag of gitTags) {
             if (tag.match(regex)) {
-                const version = tag.match(regex)[1];
-                versions.push(version);
+                const version = tag.match(regex)[1]
+                versions.push(version)
             }
         }
-        versions = versions.sort(semver.compare);
-        log("Clang versions: " + versions);
-        cachedVersions = versions;
-        saveVersionsToFile(versions, 'clang-versions.txt');
-        return versions;
-    };
+        versions = versions.sort(semver.compare)
+        log('Clang versions: ' + versions)
+        cachedVersions = versions
+        saveVersionsToFile(versions, 'clang-versions.txt')
+        return versions
+    }
 }
 
 // Usage:
-const findClangVersions = findClangVersionsImpl();
+const findClangVersions = findClangVersionsImpl()
 
 function findMSVCVersions() {
     // MSVC is not open source, so we assume the versions available from github runner images are available
@@ -302,25 +302,25 @@ function getVisualCppYear(msvc_version) {
 
 function arraysHaveSameElements(arr1, arr2) {
     if (arr1.length !== arr2.length) {
-        return false;
+        return false
     }
 
-    const sortedArr1 = arr1.slice().sort();
-    const sortedArr2 = arr2.slice().sort();
+    const sortedArr1 = arr1.slice().sort()
+    const sortedArr2 = arr2.slice().sort()
 
     for (let i = 0; i < sortedArr1.length; i++) {
         if (sortedArr1[i] !== sortedArr2[i]) {
-            return false;
+            return false
         }
     }
 
-    return true;
+    return true
 }
 
 
 const SubrangePolicies = {
     ONE_PER_MAJOR: 0, ONE_PER_MINOR: 1, DEFAULT: 2
-};
+}
 
 function splitRanges(range, versions, policy = SubrangePolicies.DEFAULT) {
     if (versions.length === 0) {
@@ -334,8 +334,8 @@ function splitRanges(range, versions, policy = SubrangePolicies.DEFAULT) {
     if (minVersion === null || maxVersion === null) {
         return ['*']
     }
-    const default_policy = minVersion.major === maxVersion.major ? SubrangePolicies.ONE_PER_MINOR : SubrangePolicies.ONE_PER_MAJOR;
-    const effective_policy = policy === SubrangePolicies.DEFAULT ? default_policy : policy;
+    const default_policy = minVersion.major === maxVersion.major ? SubrangePolicies.ONE_PER_MINOR : SubrangePolicies.ONE_PER_MAJOR
+    const effective_policy = policy === SubrangePolicies.DEFAULT ? default_policy : policy
     const range_versions = versions.filter(v => semver.satisfies(v, range))
     let subranges = []
     if (effective_policy === SubrangePolicies.ONE_PER_MAJOR) {
@@ -429,7 +429,7 @@ function splitRanges(range, versions, policy = SubrangePolicies.DEFAULT) {
                 .filter(v => v.major === i)
                 .map(v => v.minor)
                 .sort()
-                .filter((value, index, self) => self.indexOf(value) === index);
+                .filter((value, index, self) => self.indexOf(value) === index)
             for (const j of unique_minors) {
                 // Create an initial requirement with just the major version (eg: "9")
                 let minor_range = `${i}.${j}`
@@ -517,7 +517,7 @@ function humanizeCompilerName(compiler) {
         'msvc': 'MSVC',
         'mingw': 'MinGW',
         'clang-cl': 'Windows-Clang'
-    };
+    }
     if (compiler in human_compiler_names) {
         return human_compiler_names[compiler]
     }
@@ -532,7 +532,7 @@ function compilerEmoji(compiler, with_emoji = false) {
         'msvc': '🪟',
         'mingw': '🪓',
         'clang-cl': '🛠️'
-    };
+    }
     if (compiler in compiler_emojis) {
         return compiler_emojis[compiler]
     }
@@ -546,15 +546,15 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
     const cxxstds = allcxxstds.filter(v => semver.satisfies(v, standards)).map(v => semver.parse(v).major)
 
     for (const [compiler, range] of Object.entries(compilerVersions)) {
-        log(`Generating entry for ${compiler} version ${range}`);
+        log(`Generating entry for ${compiler} version ${range}`)
         const earliestIdx = matrix.length
-        const name = normalizeCompilerName(compiler)
-        const versions = findCompilerVersions(compiler)
+        const compilerName = normalizeCompilerName(compiler)
+        const versions = findCompilerVersions(compilerName)
         const subranges = splitRanges(range, versions, SubrangePolicies.DEFAULT)
         log(`GCC subranges: ${JSON.stringify(subranges)}`)
         for (let i = 0; i < subranges.length; i++) {
             const subrange = subranges[i]
-            let entry = {'compiler': compiler, 'version': subrange}
+            let entry = {'compiler': compilerName, 'version': subrange}
 
             // The standards we should test with this compiler
             let compiler_cxxs = []
@@ -562,7 +562,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
             const maxSubrangeVersion = semver.parse(semver.maxSatisfying(versions, subrange))
             if (versions.length !== 0) {
                 for (const cxxstd of cxxstds) {
-                    if (compilerSupportsStd(compiler, minSubrangeVersion, cxxstd)) {
+                    if (compilerSupportsStd(compilerName, minSubrangeVersion, cxxstd)) {
                         compiler_cxxs.push(cxxstd)
                     }
                 }
@@ -579,8 +579,30 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                 entry['latest-cxxstd'] = compiler_cxxs[compiler_cxxs.length - 1]
             }
 
+            // Extract major, minor, and patch versions from the subrange
+            if (minSubrangeVersion !== null && maxSubrangeVersion !== null) {
+                if (minSubrangeVersion.major === maxSubrangeVersion.major) {
+                    entry['major'] = minSubrangeVersion.major
+                    if (minSubrangeVersion.minor === maxSubrangeVersion.minor) {
+                        entry['minor'] = minSubrangeVersion.minor
+                        if (minSubrangeVersion.patch === maxSubrangeVersion.patch) {
+                            entry['patch'] = minSubrangeVersion.patch
+                        } else {
+                            entry['patch'] = `*`
+                        }
+                    } else {
+                        entry['minor'] = `*`
+                        entry['patch'] = `*`
+                    }
+                } else {
+                    entry['major'] = `*`
+                    entry['minor'] = `*`
+                    entry['patch'] = `*`
+                }
+            }
+
             // usual cxx/cc names (no name usually needed for msvc)
-            if (compiler === 'gcc') {
+            if (compilerName === 'gcc') {
                 if (semver.satisfies(minSubrangeVersion, '>=5')) {
                     entry['cxx'] = `g++-${minSubrangeVersion.major}`
                     entry['cc'] = `gcc-${minSubrangeVersion.major}`
@@ -588,7 +610,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                     entry['cxx'] = `g++-${minSubrangeVersion.major}.${minSubrangeVersion.minor}`
                     entry['cc'] = `gcc-${minSubrangeVersion.major}.${minSubrangeVersion.minor}`
                 }
-            } else if (compiler === 'clang') {
+            } else if (compilerName === 'clang') {
                 if (semver.satisfies(minSubrangeVersion, '>=7')) {
                     entry['cxx'] = `clang++-${minSubrangeVersion.major}`
                     entry['cc'] = `clang-${minSubrangeVersion.major}`
@@ -596,19 +618,19 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                     entry['cxx'] = `clang++-${minSubrangeVersion.major}.${minSubrangeVersion.minor}`
                     entry['cc'] = `clang-${minSubrangeVersion.major}.${minSubrangeVersion.minor}`
                 }
-            } else if (compiler === 'apple-clang') {
+            } else if (compilerName === 'apple-clang') {
                 entry['cxx'] = `clang++`
                 entry['cc'] = `clang`
-            } else if (compiler === 'clang-cl') {
+            } else if (compilerName === 'clang-cl') {
                 entry['cxx'] = `clang++-cl`
                 entry['cc'] = `clang-cl`
-            } else if (compiler === 'mingw') {
+            } else if (compilerName === 'mingw') {
                 entry['cxx'] = `g++`
                 entry['cc'] = `gcc`
             }
 
             // runs-on / container
-            if (compiler === 'gcc') {
+            if (compilerName === 'gcc') {
                 if (semver.satisfies(minSubrangeVersion, '>=9')) {
                     entry['runs-on'] = 'ubuntu-22.04'
                 } else if (semver.satisfies(minSubrangeVersion, '>=7')) {
@@ -617,7 +639,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                     entry['runs-on'] = 'ubuntu-22.04'
                     entry['container'] = 'ubuntu:18.04'
                 }
-            } else if (compiler === 'clang') {
+            } else if (compilerName === 'clang') {
                 if (semver.satisfies(minSubrangeVersion, '>=15')) {
                     entry['runs-on'] = 'ubuntu-22.04'
                 } else if (semver.satisfies(minSubrangeVersion, '>=12')) {
@@ -634,31 +656,31 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                     entry['runs-on'] = 'ubuntu-22.04'
                     entry['container'] = 'ubuntu:16.04'
                 }
-            } else if (compiler === 'msvc') {
+            } else if (compilerName === 'msvc') {
                 if (semver.satisfies(minSubrangeVersion, '>=14.30')) {
                     entry['runs-on'] = 'windows-2022'
                 } else {
                     entry['runs-on'] = 'windows-2019'
                 }
-            } else if (compiler === 'apple-clang') {
+            } else if (compilerName === 'apple-clang') {
                 entry['runs-on'] = 'macos-11'
-            } else if (['mingw', 'clang-cl'].includes(compiler)) {
+            } else if (['mingw', 'clang-cl'].includes(compilerName)) {
                 entry['runs-on'] = 'windows-2022'
             }
 
             // Recommended b2-toolset
-            if (['mingw', 'gcc'].includes(compiler)) {
+            if (['mingw', 'gcc'].includes(compilerName)) {
                 entry['b2-toolset'] = `gcc`
-            } else if (['clang', 'apple-clang'].includes(compiler)) {
+            } else if (['clang', 'apple-clang'].includes(compilerName)) {
                 entry['b2-toolset'] = `clang`
-            } else if (compiler === 'msvc') {
+            } else if (compilerName === 'msvc') {
                 entry['b2-toolset'] = `msvc`
-            } else if (compiler === 'clang-cl') {
+            } else if (compilerName === 'clang-cl') {
                 entry['b2-toolset'] = `clang-win`
             }
 
             // Recommended cmake generator
-            if (compiler === 'msvc') {
+            if (compilerName === 'msvc') {
                 const year = getVisualCppYear(minSubrangeVersion)
                 if (minSubrangeVersion === maxSubrangeVersion || year === getVisualCppYear(maxSubrangeVersion)) {
                     if (year === '2022') {
@@ -684,14 +706,30 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
             }
 
             // Latest flag
+            // subranges are ordered so the latest flag is the last entry
+            // in the matrix for this compiler
             entry['is-latest'] = i === subranges.length - 1
             entry['is-main'] = i === subranges.length - 1
 
             // Earliest flag
             entry['is-earliest'] = i === 0
 
+            // Indicate if major, minor, or patch are not specified
+            entry['has-major'] = entry['major'] !== '*'
+            entry['has-minor'] = entry['minor'] !== '*'
+            entry['has-patch'] = entry['patch'] !== '*'
+
+            // Flag with the subrange policy used
+            if (entry['has-major'] === false) {
+                entry['subrange-policy'] = 'system-version'
+            } else if (subranges.length === 1 || minSubrangeVersion.major !== maxSubrangeVersion.major) {
+                entry['subrange-policy'] = 'one-per-major'
+            } else {
+                entry['subrange-policy'] = 'one-per-minor'
+            }
+
             // Come up with a name for this entry
-            let name = `${humanizeCompilerName(compiler)}`
+            let name = `${humanizeCompilerName(compilerName)}`
             if (subrange !== '*') {
                 name += ` ${subrange}`
             }
@@ -707,19 +745,19 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
             matrix.push(entry)
         }
         const latestIdx = matrix.length - 1
-        log(`${compiler}: ${latestIdx - earliestIdx} basic entries`)
+        log(`${compilerName}: ${latestIdx - earliestIdx} basic entries`)
 
         // Apply latest factors
-        if (compiler in latest_factors) {
-            for (const factor of latest_factors[compiler]) {
-                let latest_copy = {...matrix[latestIdx]};
+        if (compilerName in latest_factors) {
+            for (const factor of latest_factors[compilerName]) {
+                let latest_copy = {...matrix[latestIdx]}
                 latest_copy['is-main'] = false
                 latest_copy[factor.toLowerCase()] = true
                 latest_copy['name'] += ` (${factor})`
                 matrix.push(latest_copy)
             }
             for (let i = earliestIdx; i < matrix.length; i++) {
-                for (const factor of latest_factors[compiler]) {
+                for (const factor of latest_factors[compilerName]) {
                     if (!(factor.toLowerCase() in matrix[i])) {
                         matrix[i][factor.toLowerCase()] = false
                     }
@@ -730,16 +768,16 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
         // Apply variant factors
         let variantIdx = latestIdx
         if (variantIdx !== earliestIdx) {
-            variantIdx--;
+            variantIdx--
         }
-        if (compiler in factors) {
-            for (const factor of factors[compiler]) {
+        if (compilerName in factors) {
+            for (const factor of factors[compilerName]) {
                 if (variantIdx !== earliestIdx) {
                     matrix[variantIdx][factor.toLowerCase()] = true
                     matrix[variantIdx]['name'] += ` (${factor})`
                     variantIdx--
                 } else {
-                    let latest_copy = {...matrix[latestIdx]};
+                    let latest_copy = {...matrix[latestIdx]}
                     latest_copy['is-main'] = false
                     latest_copy[factor.toLowerCase()] = true
                     latest_copy['name'] += ` (${factor})`
@@ -747,7 +785,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                 }
             }
             for (let i = earliestIdx; i < matrix.length; i++) {
-                for (const factor of factors[compiler]) {
+                for (const factor of factors[compilerName]) {
                     if (!(factor.toLowerCase() in matrix[i])) {
                         matrix[i][factor.toLowerCase()] = false
                     }
@@ -764,7 +802,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
          * and ensure they are all documented.
          */
 
-        log(`${compiler}: ${latestIdx - earliestIdx} total entries`)
+        log(`${compilerName}: ${latestIdx - earliestIdx} total entries`)
     }
 
     // Patch with recommended flags for special factors
@@ -832,7 +870,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
             }
             if (entry['cxxstd'] !== '') {
                 entry['cxxstd'] = entry['latest-cxxstd']
-                entry['name'] = entry['name'].replace(/C\+\+\d+-\d+/g, `C++${entry['latest-cxxstd']}`);
+                entry['name'] = entry['name'].replace(/C\+\+\d+-\d+/g, `C++${entry['latest-cxxstd']}`)
             }
         }
         if ('container' in entry && entry['container'].startsWith('ubuntu')) {
@@ -866,67 +904,67 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
     }
 
     const is_latest_no_factor = (entry) => {
-        return entry["is-latest"] && !entry["is-earliest"] && !contains_factor(entry)
+        return entry['is-latest'] && !entry['is-earliest'] && !contains_factor(entry)
     }
 
     const is_unique_no_factor = (entry) => {
-        return entry["is-latest"] && entry["is-earliest"] && !contains_factor(entry)
+        return entry['is-latest'] && entry['is-earliest'] && !contains_factor(entry)
     }
 
     const is_earliest_no_factor = (entry) => {
-        return entry["is-earliest"] && !entry["is-latest"] && !contains_factor(entry)
+        return entry['is-earliest'] && !entry['is-latest'] && !contains_factor(entry)
     }
 
     matrix.reverse()
-    matrix.sort(function (a, b) {
+    matrix.sort(function(a, b) {
         // Latest compilers come first
         const a0 = is_latest_no_factor(a)
         const b0 = is_latest_no_factor(b)
         if (a0 && !b0) {
-            return -1;
+            return -1
         } else if (!a0 && b0) {
-            return 1;
+            return 1
         }
 
         // Then compilers with a single version
         const a1 = is_unique_no_factor(a)
         const b1 = is_unique_no_factor(b)
         if (a1 && !b1) {
-            return -1;
+            return -1
         } else if (!a1 && b1) {
-            return 1;
+            return 1
         }
 
         // Then the oldest compilers
         const a2 = is_earliest_no_factor(a)
         const b2 = is_earliest_no_factor(b)
         if (a2 && !b2) {
-            return -1;
+            return -1
         } else if (!a2 && b2) {
-            return 1;
+            return 1
         }
 
         // Then configurations with special factors
         const a3 = contains_factor(a)
         const b3 = contains_factor(b)
         if (a3 && !b3) {
-            return -1;
+            return -1
         } else if (!a3 && b3) {
-            return 1;
+            return 1
         }
 
         // Then, ceteris paribus, compilers with fewer entries come first
         // so that it increases the changes all seeing all compilers on the screen
-        const an = matrix.filter(entry => entry.compiler === a.compiler).length;
-        const bn = matrix.filter(entry => entry.compiler === b.compiler).length;
+        const an = matrix.filter(entry => entry.compiler === a.compiler).length
+        const bn = matrix.filter(entry => entry.compiler === b.compiler).length
         if (an < bn) {
-            return -1;
+            return -1
         } else if (an > bn) {
-            return 1;
+            return 1
         } else {
-            return 0;
+            return 0
         }
-    });
+    })
 
     log(JSON.stringify(matrix, null, 2))
     return matrix
@@ -941,7 +979,7 @@ function factorEmoji(factor) {
         'coverage': '📊',
         'asan': '🛡️',
         'time-trace': '⏱️'
-    };
+    }
     if (factor in factor_emojis) {
         return factor_emojis[factor]
     }
@@ -954,7 +992,7 @@ function buildTypeEmoji(build_type) {
         'release': '🚀',
         'relwithdebinfo': '🔍',
         'minsizerel': '💡'
-    };
+    }
     lc_build_type = build_type.toLowerCase()
     if (lc_build_type in build_type_emojis) {
         return build_type_emojis[lc_build_type]
@@ -970,11 +1008,11 @@ function osEmoji(os) {
         'ubuntu': '🐧',
         'android': '🤖',
         'ios': '📱'
-    };
+    }
     lc_os = os.toLowerCase()
     for (const [key, value] of Object.entries(os_emojis)) {
         if (lc_os.startsWith(key)) {
-            return value;
+            return value
         }
     }
     return '🖥️'
@@ -982,44 +1020,44 @@ function osEmoji(os) {
 
 function generateTable(matrix, latest_factors, factors) {
     if (matrix.length === 0) {
-        return [];
+        return []
     }
 
     let allFactors = []
     Object.values(latest_factors).forEach(factors => {
-        allFactors.push(...factors);
-    });
+        allFactors.push(...factors)
+    })
     Object.values(factors).forEach(factors => {
-        allFactors.push(...factors);
-    });
-    allFactors = [...new Set(allFactors)];
+        allFactors.push(...factors)
+    })
+    allFactors = [...new Set(allFactors)]
 
     const allFactorKeys = allFactors.map(v => v.toLowerCase())
 
-    const headerEmojis = ['📋', '🖥️', '🔧', '📚', '🏗️', '🔢', '🔨', '🛠️'];
-    const headerNames = ['Name', 'Environment', 'Compiler', 'C++ Standard', 'Build Type', 'Factors', 'Generator', 'Toolset'];
-    const headerWithEmojis = headerNames.map((element, index) => `${headerEmojis[index]} ${element}`);
+    const headerEmojis = ['📋', '🖥️', '🔧', '📚', '🏗️', '🔢', '🔨', '🛠️']
+    const headerNames = ['Name', 'Environment', 'Compiler', 'C++ Standard', 'Build Type', 'Factors', 'Generator', 'Toolset']
+    const headerWithEmojis = headerNames.map((element, index) => `${headerEmojis[index]} ${element}`)
     const headerRow = headerWithEmojis.map(key => ({data: key, header: true}))
 
-    let table = [headerRow];
+    let table = [headerRow]
 
     function transformStdString(inputString) {
         if (inputString === undefined || inputString === null || inputString === '') {
-            return "System Default"
+            return 'System Default'
         }
-        const versions = inputString.split(',');
+        const versions = inputString.split(',')
         const transformedString = versions.map((version, index) => {
             if (index === versions.length - 1) {
-                return `C++${version}`;
+                return `C++${version}`
             } else {
-                return `C++${version},`;
+                return `C++${version},`
             }
-        }).join(' ');
-        const lastIndex = transformedString.lastIndexOf(',');
+        }).join(' ')
+        const lastIndex = transformedString.lastIndexOf(',')
         if (lastIndex !== -1) {
-            return transformedString.substring(0, lastIndex) + ' and' + transformedString.substring(lastIndex + 1);
+            return transformedString.substring(0, lastIndex) + ' and' + transformedString.substring(lastIndex + 1)
         }
-        return transformedString;
+        return transformedString
     }
 
 
@@ -1083,8 +1121,8 @@ function generateTable(matrix, latest_factors, factors) {
         } else {
             let factors = []
             for (let i = 0; i < allFactors.length && i < allFactorKeys.length; i++) {
-                const fact = allFactors[i];
-                const key = allFactorKeys[i];
+                const fact = allFactors[i]
+                const key = allFactorKeys[i]
                 if (entry[key] === true) {
                     factors.push(`${factorEmoji(key)} ${fact}`)
                     nameEmojis.push(factorEmoji(key))
@@ -1128,48 +1166,48 @@ function generateTable(matrix, latest_factors, factors) {
         table.push(row)
     }
 
-    return table;
+    return table
 }
 
 function run() {
     try {
-        trace_commands = isTruthy(core.getInput('trace-commands'));
+        trace_commands = isTruthy(core.getInput('trace-commands'))
 
-        const compiler_versions = parseCompilerRequirements(core.getInput('compilers'));
+        const compiler_versions = parseCompilerRequirements(core.getInput('compilers'))
         log(`compiler_versions: ${JSON.stringify(compiler_versions)}`)
 
-        const standards = normalizeCppVersionRequirement(core.getInput('standards'));
+        const standards = normalizeCppVersionRequirement(core.getInput('standards'))
         log(`standards: ${standards}`)
 
-        const max_standards = parseInt(core.getInput('max-standards').trim());
+        const max_standards = parseInt(core.getInput('max-standards').trim())
         log(`max_standards: ${max_standards}`)
 
         compilers = Object.keys(compiler_versions)
-        const latest_factors = parseCompilerFactors(core.getInput('latest-factors'), compilers);
+        const latest_factors = parseCompilerFactors(core.getInput('latest-factors'), compilers)
         log(`latest_factors: ${JSON.stringify(latest_factors)}`)
 
-        const factors = parseCompilerFactors(core.getInput('factors'), compilers);
+        const factors = parseCompilerFactors(core.getInput('factors'), compilers)
         log(`factors: ${JSON.stringify(factors)}`)
 
         const matrix = generateMatrix(compiler_versions, standards, max_standards, latest_factors, factors)
-        core.setOutput("matrix", matrix);
+        core.setOutput('matrix', matrix)
 
-        const generate_summary = isTruthy(core.getInput('generate-summary'));
+        const generate_summary = isTruthy(core.getInput('generate-summary'))
         if (generate_summary) {
             const table = generateTable(matrix, latest_factors, factors)
             core.summary.addHeading('C++ Test Matrix').addTable(table).write().then(result => {
-                log('Table generated', result);
+                log('Table generated', result)
             }).catch(error => {
-                log('An error occurred generating the table:', error);
-            });
+                log('An error occurred generating the table:', error)
+            })
         }
     } catch (error) {
-        core.setFailed(error.message);
+        core.setFailed(error.message)
     }
 }
 
 if (require.main === require.cache[eval('__filename')]) {
-    run();
+    run()
 }
 
 module.exports = {
