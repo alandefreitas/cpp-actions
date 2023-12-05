@@ -711,9 +711,11 @@ if __name__ == "__main__":
     # Commits
     commits = get_local_commits(project_path, repo_url, version_pattern, tags)
     if args.check_unconventional:
-        for commit in commits:
-            if not commit.conventional:
-                print(f"::warning title:Conventional Commits::Commit \"{commit.subject}\" is not a conventional commit")
+        unconventional_commits = [commit for commit in commits if not commit.conventional]
+        if len(unconventional_commits) == 1:
+            print(f"::warning title:Conventional Commits::Commit \"{commit[0].subject}\" is not a conventional commit")
+        elif len(unconventional_commits) > 1:
+            print(f"::warning title:Conventional Commits::{len(unconventional_commits)} commits are not conventional commits")
     print(f'{len(commits)} local commits')
     if len(commits) == 0 or not commits[-1].is_parent_release:
         commit_hashes = set(commit.hash for commit in commits)
