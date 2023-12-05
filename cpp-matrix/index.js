@@ -1,5 +1,5 @@
 const core = require('@actions/core');
-const github = require('@actions/github');
+// const github = require('@actions/github');
 const semver = require('semver');
 const fs = require('fs');
 const {execSync} = require("child_process");
@@ -329,7 +329,7 @@ function splitRanges(range, versions, policy = SubrangePolicies.DEFAULT) {
         return ['*']
     }
     const default_policy = minVersion.major === maxVersion.major ? SubrangePolicies.ONE_PER_MINOR : SubrangePolicies.ONE_PER_MAJOR;
-    const effective_policy = policy == SubrangePolicies.DEFAULT ? default_policy : policy;
+    const effective_policy = policy === SubrangePolicies.DEFAULT ? default_policy : policy;
     const range_versions = versions.filter(v => semver.satisfies(v, range))
     let subranges = []
     if (effective_policy === SubrangePolicies.ONE_PER_MAJOR) {
@@ -373,7 +373,7 @@ function splitRanges(range, versions, policy = SubrangePolicies.DEFAULT) {
                 let major_range = `^${i}.${latest_major_versions[0].minor}`
                 // but if there's another major version with the same minor outside the range, we need to specify the
                 // patch
-                if (major_versions.some(v => v.minor == latest_major_versions[0].minor && !semver.satisfies(v, range))) {
+                if (major_versions.some(v => v.minor === latest_major_versions[0].minor && !semver.satisfies(v, range))) {
                     major_range = `^${latest_major_versions[0].toString()}`
                 }
                 subranges.push(major_range)
@@ -391,7 +391,7 @@ function splitRanges(range, versions, policy = SubrangePolicies.DEFAULT) {
                 major_range = `${i} - ${i}.${earliest_major_versions[earliest_major_versions.length - 1].minor}`
                 // but if there's another major version with the same minor outside the range, we need to specify the
                 // patch
-                if (major_versions.some(v => v.minor == earliest_major_versions[earliest_major_versions.length - 1].minor && !semver.satisfies(v, range))) {
+                if (major_versions.some(v => v.minor === earliest_major_versions[earliest_major_versions.length - 1].minor && !semver.satisfies(v, range))) {
                     major_range = `${i} - ${earliest_major_versions[earliest_major_versions.length - 1].toString()}`
                 }
                 subranges.push(major_range)
@@ -420,7 +420,7 @@ function splitRanges(range, versions, policy = SubrangePolicies.DEFAULT) {
         // Add each major range (1, 2, 3, ...) from the main range for which there is a valid version
         for (let i = minVersion.major; i <= maxVersion.major; i++) {
             const unique_minors = versions
-                .filter(v => v.major == i)
+                .filter(v => v.major === i)
                 .map(v => v.minor)
                 .sort()
                 .filter((value, index, self) => self.indexOf(value) === index);
@@ -1011,8 +1011,7 @@ function generateTable(matrix, latest_factors, factors) {
         }).join(' ');
         const lastIndex = transformedString.lastIndexOf(',');
         if (lastIndex !== -1) {
-            const finalString = transformedString.substring(0, lastIndex) + ' and' + transformedString.substring(lastIndex + 1);
-            return finalString;
+            return transformedString.substring(0, lastIndex) + ' and' + transformedString.substring(lastIndex + 1);
         }
         return transformedString;
     }
@@ -1020,17 +1019,21 @@ function generateTable(matrix, latest_factors, factors) {
 
     for (const entry of matrix) {
         let row = []
+        let nameEmojis = []
+
         // Name
         row.push(`${entry['name']}`)
+
         // Environment
         if ('container' in entry) {
             row.push(`${osEmoji(entry['container'])} <code>${entry['container']}</code> on <code>${entry['runs-on']}</code>`)
         } else {
             row.push(`${osEmoji(entry['runs-on'])} <code>${entry['runs-on']}</code>`)
         }
+
         // Compiler
+        nameEmojis.push(compilerEmoji(entry['compiler']))
         row.push(`${compilerEmoji(entry['compiler'])} ${humanizeCompilerName(entry['compiler'])} ${entry['version']}`)
-        let nameEmojis = [compilerEmoji(entry['compiler'])]
         // Standards
         row.push(`${transformStdString(entry['cxxstd'])}`)
 
@@ -1040,6 +1043,7 @@ function generateTable(matrix, latest_factors, factors) {
         } else {
             row.push('')
         }
+
         // Factors
         let cxxflags = ''
         if (entry['cxxflags'] === entry['ccflags']) {
@@ -1059,12 +1063,13 @@ function generateTable(matrix, latest_factors, factors) {
         if (entry['is-main'] === true) {
             if (entry['is-earliest'] === true) {
                 // This is latest, earliest, and main
-                if (entry['version'] == '*') {
-                    row.push(`💻 System ${humanizeCompilerName(entry['compiler'])} version`)
+                if (entry['version'] === '*') {
+                    row.push(`🧰 System ${humanizeCompilerName(entry['compiler'])} version`)
+                    nameEmojis.push('🧰')
                 } else {
-                    row.push(`💻 Unique ${humanizeCompilerName(entry['compiler'])} version`)
+                    row.push(`🎩 Unique ${humanizeCompilerName(entry['compiler'])} version`)
+                    nameEmojis.push('🎩')
                 }
-                nameEmojis.push('💻')
             } else {
                 row.push(`🆕 Latest ${humanizeCompilerName(entry['compiler'])} version`)
                 nameEmojis.push('🆕')
@@ -1082,8 +1087,8 @@ function generateTable(matrix, latest_factors, factors) {
             let factors_str = factors.join(', ')
             if (factors_str === '') {
                 if (entry['is-earliest'] === true) {
-                    factors_str = `🕒 Earliest ${humanizeCompilerName(entry['compiler'])} version`
-                    nameEmojis.push('🕒')
+                    factors_str = `🕰️ Earliest ${humanizeCompilerName(entry['compiler'])} version`
+                    nameEmojis.push('🕰️')
                 } else {
                     factors_str = `(Intermediary ${humanizeCompilerName(entry['compiler'])} version)`
                 }
@@ -1092,16 +1097,18 @@ function generateTable(matrix, latest_factors, factors) {
             if (cxxflags !== '') {
                 row[row.length - 1] += ` 🚩 ${cxxflags}`
             }
-            if ('install' in entry && entry['install'] != '') {
+            if ('install' in entry && entry['install'] !== '') {
                 row[row.length - 1] += ` 🔧 <code>${entry['install']}</code>`
             }
         }
+
         // Generator
         if ('generator' in entry) {
             row.push(entry['generator'])
         } else {
             row.push('System Default')
         }
+
         // Toolset
         if ('b2-toolset' in entry) {
             row.push(entry['b2-toolset'])
