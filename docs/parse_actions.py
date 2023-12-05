@@ -449,5 +449,5 @@ for action in actions:
 
     # Write the output to a file
     action_page_path = os.path.join(action_pages_dir, f'{action}.adoc')
-    with open(action_page_path, 'w') as f:
+    with open(action_page_path, 'w', encoding='utf-8') as f:
         f.write(output)
