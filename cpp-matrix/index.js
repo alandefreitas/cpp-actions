@@ -521,7 +521,7 @@ function humanizeCompilerName(compiler) {
 function compilerEmoji(compiler, with_emoji = false) {
     const compiler_emojis = {
         'gcc': '🐧',
-        'clang': '🔧',
+        'clang': '🐉',
         'apple-clang': '🍏',
         'msvc': '🪟',
         'mingw': '🪓',
@@ -612,8 +612,13 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                     entry['container'] = 'ubuntu:18.04'
                 }
             } else if (compiler === 'clang') {
-                if (semver.satisfies(minSubrangeVersion, '>=12')) {
+                if (semver.satisfies(minSubrangeVersion, '>=15')) {
                     entry['runs-on'] = 'ubuntu-22.04'
+                } else if (semver.satisfies(minSubrangeVersion, '>=12')) {
+                    // Clang >=12 <15 require a container to isolate
+                    // incompatible libstdc++ versions
+                    entry['runs-on'] = 'ubuntu-22.04'
+                    entry['container'] = 'ubuntu:22.04'
                 } else if (semver.satisfies(minSubrangeVersion, '>=6')) {
                     entry['runs-on'] = 'ubuntu-20.04'
                 } else if (semver.satisfies(minSubrangeVersion, '>=3.9')) {
