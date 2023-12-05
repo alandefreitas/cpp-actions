@@ -347,8 +347,6 @@ def populate_conventional(commit, repo_url, version_pattern, tags):
             if matches:
                 print(f'Stopping at commit id {commit.hash[:8]} (subject: {commit.subject})')
                 commit.is_parent_release = True
-            else:
-                print(f'Stopping at unmatched commit id {commit.hash[:8]} (subject: {commit.subject})')
 
     return commit
 
