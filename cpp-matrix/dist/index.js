@@ -123,24 +123,43 @@ function normalizeCompilerName(name) {
 }
 
 const fetchGitTags = (repo) => {
-    try {
-        const stdout = execSync('git ls-remote --tags ' + repo).toString()
-        const tags = stdout.split('\n').filter(tag => tag.trim() !== '')
-        let gitTags = []
-        for (const tag of tags) {
-            const parts = tag.split('\t')
-            if (parts.length > 1) {
-                let ref = parts[1]
-                if (!ref.endsWith('^{}')) {
-                    gitTags.push(ref)
+    const maxRetries = 10
+    let currentAttempt = 1
+    while (currentAttempt <= maxRetries) {
+        try {
+            const stdout = execSync('git ls-remote --tags ' + repo).toString()
+            const tags = stdout.split('\n').filter(tag => tag.trim() !== '')
+            let gitTags = []
+            for (const tag of tags) {
+                const parts = tag.split('\t')
+                if (parts.length > 1) {
+                    let ref = parts[1]
+                    if (!ref.endsWith('^{}')) {
+                        gitTags.push(ref)
+                    }
                 }
             }
+            return gitTags
+        } catch (error) {
+            log(`Error fetching Git tags (attempt ${currentAttempt}): ${error.message}`)
+            if (currentAttempt < maxRetries) {
+                const delay = Math.pow(2, currentAttempt - 1) * 1000 // Exponential backoff
+                log(`Retrying in ${delay} milliseconds...`)
+                sleep(delay)
+            } else {
+                throw new Error('Max retries reached. Error fetching Git tags: ' + error.message)
+            }
+            currentAttempt++
         }
-        return gitTags
-    } catch (error) {
-        throw new Error('Error fetching Git tags: ' + error.message)
     }
 }
+
+const sleep = (ms) => {
+    const start = new Date().getTime()
+    while (new Date().getTime() < start + ms) {
+    }
+}
+
 
 function readVersionsFromFile(filename) {
     try {
@@ -551,7 +570,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
         const compilerName = normalizeCompilerName(compiler)
         const versions = findCompilerVersions(compilerName)
         const subranges = splitRanges(range, versions, SubrangePolicies.DEFAULT)
-        log(`GCC subranges: ${JSON.stringify(subranges)}`)
+        log(`${compilerName} subranges: ${JSON.stringify(subranges)}`)
         for (let i = 0; i < subranges.length; i++) {
             const subrange = subranges[i]
             let entry = {'compiler': compilerName, 'version': subrange}
