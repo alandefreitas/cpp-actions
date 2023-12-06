@@ -264,17 +264,10 @@ runs:
         generator="${{ inputs.generator }}"
         if [ "$generator" == "" ]; then
           echo "Use the --system-information option first"
-          exit_code=0
-          generator=$("$cmake_path" --system-information 2> errors.txt | sed -n 's/^CMAKE_GENERATOR [[:space:]]*"\([^"]*\)".*/\1/p') || exit_code=$? && true
-          if [ $exit_code -ne 0 ]; then
-            echo "I hope I see this"
-            cat errors.txt
-            echo "done cat'ing file"
-            echo "{errors}={`cat errors.txt`}" >> $GITHUB_OUTPUT
-            exit $exit_code
-          else
-            echo "relevant branch was not hit"
-          fi
+          generator=$("$cmake_path" --system-information | sed -n 's/^CMAKE_GENERATOR [[:space:]]*"\([^"]*\)".*/\1/p') 2>&1 > errors.txt
+          echo "A"
+          echo "$(<errors.txt)"
+          echo "B"
         fi
         if [ "$generator" == "" ]; then
           echo "Infer from the OS otherwise"
