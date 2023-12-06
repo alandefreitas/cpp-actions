@@ -264,7 +264,7 @@ runs:
         generator="${{ inputs.generator }}"
         if [ "$generator" == "" ]; then
           echo "Use the --system-information option first"
-          generator=$("$cmake_path" --system-information | sed -n 's/^CMAKE_GENERATOR [[:space:]]*"\([^"]*\)".*/\1/p') 2>&1 > errors.txt
+          generator=$("$cmake_path" --system-information | sed -n 's/^CMAKE_GENERATOR [[:space:]]*"\([^"]*\)".*/\1/p') 2>&1 | tee errors.txt
           echo "A"
           echo "$(<errors.txt)"
           echo "B"
