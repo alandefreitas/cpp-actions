@@ -269,7 +269,8 @@ runs:
           if [ $exit_code -ne 0 ]; then
             echo "I hope I see this"
             cat errors.txt
-            echo ::set-output name=errors::`cat errors.txt`
+            echo "done cat'ing file"
+            echo "{errors}={`cat errors.txt`}" >> $GITHUB_OUTPUT
             exit $exit_code
           else
             echo "relevant branch was not hit"
