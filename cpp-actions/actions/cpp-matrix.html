@@ -246,6 +246,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.6.1/index.html">v1.6.1</a>
+        </li>
+        <li class="version">
           <a href="../v1.6.0/index.html">v1.6.0</a>
         </li>
         <li class="version">
@@ -294,6 +297,7 @@
   <div class="version-menu">
     <a class="version is-current" href="cpp-matrix.html">master</a>
     <a class="version" href="../develop/actions/cpp-matrix.html">develop</a>
+    <a class="version" href="../v1.6.1/actions/cpp-matrix.html">v1.6.1</a>
     <a class="version" href="../v1.6.0/actions/cpp-matrix.html">v1.6.0</a>
     <a class="version" href="../v1.5.0/actions/cpp-matrix.html">v1.5.0</a>
     <a class="version" href="../v1.4.1/actions/cpp-matrix.html">v1.4.1</a>
@@ -531,6 +535,19 @@ this is unnecessary as the approaches above tend to have good results.</p>
   id: cpp-matrix
   with:
     standards: '&gt;=11'
+    compilers: 'gcc &gt;=4.8 &lt;6 || &gt;=9
+
+      clang &gt;=3.8 &lt;6 || &gt;11
+
+      msvc &gt;=14
+
+      apple-clang *
+
+      mingw *
+
+      clang-cl *
+
+      '
     latest-factors: 'gcc Coverage TSan UBSan Fetch-Content
 
       clang Fetch-Content
@@ -654,24 +671,28 @@ and factors to be tested.</p>
   input to the setup-cpp action.</p>
 <p class="tableblock">- <code>version</code>: Specifies the version requirements of the compiler to be used for the test configuration. This can
   be used as input to the setup-cpp action.</p>
+<p class="tableblock">- <code>major</code>, <code>minor</code>, <code>patch</code>: Specifies the version components of the compiler whenever the whole range includes
+   a single major, minor, or patch.</p>
+<p class="tableblock">- <code>has_major</code>, <code>has_minor</code>, <code>has_patch</code>: Determines if the corresponding version component of the compiler
+   is available representing all versions in the range.</p>
 <p class="tableblock">- <code>is-latest</code>: Specifies whether the entry version requirement is the latest version among the test configurations.</p>
 <p class="tableblock">- <code>is-main</code>: Specifies whether the entry version requirement is the latest version among the test configurations
   without any factors applied.</p>
 <p class="tableblock">- <code>is-earliest</code>: Specifies whether the entry version requirement is the earliest version among the test configurations.</p>
-<p class="tableblock">- <code>cxx</code>: The usual name of the C compiler executable. If using the `setup-cpp` action, its output should be used
+<p class="tableblock">- <code>cxx</code>: The usual name of the C&#43;&#43; compiler executable. If using the <code>setup-cpp</code> action, its output should be used
   instead.</p>
-<p class="tableblock">- `cc`: The usual name of the C compiler executable. If using the `setup-cpp` action, its output should be used
+<p class="tableblock">- <code>cc</code>: The usual name of the C compiler executable. If using the <code>setup-cpp</code> action, its output should be used
   instead.</p>
-<p class="tableblock">- `cxxstd`: A list of standards that should be tested with this compiler version. This option considers
-  the `max-standards` latest standards supported by each compiler in its subrange of `standards`.</p>
-<p class="tableblock">- `latest-cxxstd`: The last standard listed in `cxxstd` as a convenience variable</p>
-<p class="tableblock">- `b2-toolset`: The usual name of the toolset to be used in a b2 workflow.</p>
-<p class="tableblock">- `generator`: A CMake generator recommended to run the CMake workflow.</p>
-<p class="tableblock">- `build-type`: A build type recommended to test this entry. This is usually `Release`, unless some special
-  factor that requires `Debug` is defined.</p>
-<p class="tableblock">- `ccflags`: The recommended C flags to be used by this entry. It reflects the values of special factors, such
+<p class="tableblock">- <code>cxxstd</code>: A list of standards that should be tested with this compiler version. This option considers
+  the <code>max-standards</code> latest standards supported by each compiler in its subrange of <code>standards</code>.</p>
+<p class="tableblock">- <code>latest-cxxstd</code>: The last standard listed in <code>cxxstd</code> as a convenience variable</p>
+<p class="tableblock">- <code>b2-toolset</code>: The usual name of the toolset to be used in a b2 workflow.</p>
+<p class="tableblock">- <code>generator</code>: A CMake generator recommended to run the CMake workflow.</p>
+<p class="tableblock">- <code>build-type</code>: A build type recommended to test this entry. This is usually <code>Release</code>, unless some special
+  factor that requires <code>Debug</code> is defined.</p>
+<p class="tableblock">- <code>ccflags</code>: The recommended C flags to be used by this entry. It reflects the values of special factors, such
    as sanitizers, coverage, and time-trace.</p>
-<p class="tableblock">- `cxxflags`: The recommended C flags to be used by this entry. It reflects the values of special factors, such
+<p class="tableblock">- <code>cxxflags</code>: The recommended C&#43;&#43; flags to be used by this entry. It reflects the values of special factors, such
    as sanitizers, coverage, and time-trace.</p>
 <p class="tableblock">- <code>install</code>: The recommended packages to be installed before running the workflow. This includes packages
   such as build-essential for ubuntu containers and lcov for coverage entries.</p>
