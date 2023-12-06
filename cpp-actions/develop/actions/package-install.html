@@ -364,7 +364,7 @@ required by the project.</p>
     vcpkg: ${{ (!matrix.fetch-content &amp;&amp; 'fmt') || '' }}
     vcpkg-triplet: ${{ ( runner.os == 'Windows' &amp;&amp; matrix.x86 &amp;&amp; 'x86-windows' ) ||
       '' }}
-    apt-get: ${{ matrix.install }}
+    apt-get: ${{ matrix.install }} ${{ matrix.container &amp;&amp; 'pkg-config' }}
     apt-get-ignore-missing: ${{ matrix.container &amp;&amp; 'true' }}
     cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
     ccflags: ${{ matrix.ccflags }}

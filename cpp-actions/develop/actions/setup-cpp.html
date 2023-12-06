@@ -379,7 +379,8 @@ version ultimately setup by the action.</p>
   id: setup-cpp
   with:
     compiler: ${{ matrix.compiler }}
-    version: ${{ matrix.version }}</code></pre>
+    version: ${{ (matrix.subrange-policy == 'one-per-major' &amp;&amp; matrix.major) || matrix.version
+      }}</code></pre>
 </div>
 </div>
 </div>
@@ -456,7 +457,7 @@ instead.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the C++ compiler executable.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the C&#43;&#43; compiler executable.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>bindir</code></p></td>
