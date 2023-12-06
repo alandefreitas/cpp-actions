@@ -48,7 +48,8 @@ steps:
   id: setup-cpp
   with:
     compiler: ${{ matrix.compiler }}
-    version: ${{ matrix.version }}
+    version: ${{ (matrix.subrange-policy == 'one-per-major' && matrix.major) || matrix.version
+      }}
 ----
 
 == Input Parameters
@@ -74,7 +75,7 @@ instead. |`false`
 |===
 |Output |Description
 |`cc` |The absolute path to the C compiler executable.
-|`cxx` |The absolute path to the C++ compiler executable.
+|`cxx` |The absolute path to the {cpp} compiler executable.
 |`bindir` |The absolute path to the directory containing the executable.
 |`dir` |The absolute path to the directory containing the installation.
 |`version` |The installed compiler version. Useful when given a version range as input.

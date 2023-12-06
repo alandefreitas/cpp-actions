@@ -180,6 +180,19 @@ steps:
   id: cpp-matrix
   with:
     standards: '>=11'
+    compilers: 'gcc >=4.8 <6 || >=9
+
+      clang >=3.8 <6 || >11
+
+      msvc >=14
+
+      apple-clang *
+
+      mingw *
+
+      clang-cl *
+
+      '
     latest-factors: 'gcc Coverage TSan UBSan Fetch-Content
 
       clang Fetch-Content
@@ -271,6 +284,12 @@ Each entry in the test matrix dictionary contains the following key-value pairs:
 - `version`: Specifies the version requirements of the compiler to be used for the test configuration. This can
   be used as input to the setup-cpp action.
 
+- `major`, `minor`, `patch`: Specifies the version components of the compiler whenever the whole range includes
+   a single major, minor, or patch.
+
+- `has_major`, `has_minor`, `has_patch`: Determines if the corresponding version component of the compiler
+   is available representing all versions in the range.
+
 - `is-latest`: Specifies whether the entry version requirement is the latest version among the test configurations.
 
 - `is-main`: Specifies whether the entry version requirement is the latest version among the test configurations
@@ -278,7 +297,7 @@ Each entry in the test matrix dictionary contains the following key-value pairs:
 
 - `is-earliest`: Specifies whether the entry version requirement is the earliest version among the test configurations.
 
-- `cxx`: The usual name of the C++ compiler executable. If using the `setup-cpp` action, its output should be used 
+- `cxx`: The usual name of the {cpp} compiler executable. If using the `setup-cpp` action, its output should be used 
   instead. 
 
 - `cc`: The usual name of the C compiler executable. If using the `setup-cpp` action, its output should be used 
@@ -299,7 +318,7 @@ Each entry in the test matrix dictionary contains the following key-value pairs:
 - `ccflags`: The recommended C flags to be used by this entry. It reflects the values of special factors, such
    as sanitizers, coverage, and time-trace.
 
-- `cxxflags`: The recommended C++ flags to be used by this entry. It reflects the values of special factors, such
+- `cxxflags`: The recommended {cpp} flags to be used by this entry. It reflects the values of special factors, such
    as sanitizers, coverage, and time-trace.
 
 - `install`: The recommended packages to be installed before running the workflow. This includes packages 

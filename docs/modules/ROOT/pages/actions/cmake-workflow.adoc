@@ -88,7 +88,7 @@ steps:
 If the existing version in the environment does not satisfy this requirement, the action install
 the min CMake version that satisfies it.
 
-This should usually match the `cmake_minimum_required` defined in your CMakeLists.txt file. |
+This should usually match the `cmake_minimum_required` defined in your CMakeLists.txt file. |`*`
 |`source-dir` |Directory for the source files. |`.`
 |`build-dir` |Directory for the binaries relative to the source directory. |`build`
 |`cc` |Path to C compiler. |

@@ -443,7 +443,7 @@ for action in actions:
         output += f'== Outputs\n\n'
         output += f'|===\n|Output |Description\n'
         for parameter, details in outputs.items():
-            description = details['description']
+            description = details['description'].replace("C++", "{cpp}")
             output += f'|`{parameter}` |{description}\n'
         output += '|===\n'
 

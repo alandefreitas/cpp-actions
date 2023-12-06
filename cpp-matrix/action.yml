@@ -267,6 +267,12 @@ outputs:
       - `version`: Specifies the version requirements of the compiler to be used for the test configuration. This can
         be used as input to the setup-cpp action.
       
+      - `major`, `minor`, `patch`: Specifies the version components of the compiler whenever the whole range includes
+         a single major, minor, or patch.
+      
+      - `has_major`, `has_minor`, `has_patch`: Determines if the corresponding version component of the compiler
+         is available representing all versions in the range.
+      
       - `is-latest`: Specifies whether the entry version requirement is the latest version among the test configurations.
 
       - `is-main`: Specifies whether the entry version requirement is the latest version among the test configurations
