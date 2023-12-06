@@ -294,6 +294,7 @@ runs:
         echo "is_multi_config=$generator_is_multi_config" >> $GITHUB_OUTPUT
 
     - name: use error detail on failure
+      shell: bash
       if: ${{ failure() }}
       run: |
         echo ${{ steps.generator.outputs.errors }}
