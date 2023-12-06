@@ -61,7 +61,7 @@ inputs:
       This should usually match the `cmake_minimum_required` defined in your CMakeLists.txt file.
 
     required: false
-    default: ''
+    default: '*'
 
   # Configure options
   source-dir:
