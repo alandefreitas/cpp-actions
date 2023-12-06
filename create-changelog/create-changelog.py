@@ -713,9 +713,9 @@ if __name__ == "__main__":
     if args.check_unconventional:
         unconventional_commits = [commit for commit in commits if not commit.conventional]
         if len(unconventional_commits) == 1:
-            print(f"::warning title:Conventional Commits::Commit \"{commit[0].subject}\" is not a conventional commit")
+            print(f"::warning title:Conventional Commits::Commit \"{commits[0].subject}\" is not a conventional commit")
         elif len(unconventional_commits) > 1:
-            print(f"::warning title:Conventional Commits::{len(unconventional_commits)} commits are not conventional commits")
+            print(f"::warning title:Conventional Commits::{len(unconventional_commits)} unconventional commits")
     print(f'{len(commits)} local commits')
     if len(commits) == 0 or not commits[-1].is_parent_release:
         commit_hashes = set(commit.hash for commit in commits)
@@ -725,7 +725,6 @@ if __name__ == "__main__":
             if repo_commit.hash not in commit_hashes:
                 commits.append(repo_commit)
         print(f'{len(commits)} total commits')
-
     commits = remove_commit_duplicates(commits)
 
     # Limit number of commits
