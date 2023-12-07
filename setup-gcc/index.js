@@ -22,12 +22,13 @@ function log(...args) {
 
 function set_trace_commands(trace) {
     trace_commands = trace
+    setup_program.set_trace_commands(trace)
 }
 
 const fetchGitTags = async (repo) => {
     try {
         // Find git in path
-        let git_path = null
+        let git_path
         try {
             git_path = await io.which('git')
         } catch (error) {
@@ -69,30 +70,6 @@ const fetchGitTags = async (repo) => {
     }
 }
 
-function readVersionsFromFile(filename) {
-    try {
-        const fileContents = fs.readFileSync(filename, 'utf8')
-        const versions = JSON.parse(fileContents)
-        if (Array.isArray(versions)) {
-            return versions
-        }
-    } catch (error) {
-        // File reading failed or versions couldn't be parsed
-    }
-    return null
-}
-
-function saveVersionsToFile(versions, filename) {
-    try {
-        const fileContents = JSON.stringify(versions)
-        fs.writeFileSync(filename, fileContents, 'utf8')
-        log('Versions saved to file.')
-    } catch (error) {
-        log('Error saving versions to file: ' + error)
-    }
-}
-
-
 function findGCCVersionsImpl() {
     let cachedVersions = null // Cache variable to store the versions
 
@@ -103,7 +80,7 @@ function findGCCVersionsImpl() {
         }
 
         // Check if the versions can be read from a file
-        const versionsFromFile = readVersionsFromFile('gcc-versions.txt')
+        const versionsFromFile = setup_program.readVersionsFromFile('gcc-versions.txt')
         if (versionsFromFile !== null) {
             cachedVersions = versionsFromFile
             log('GCC versions (from file): ' + versionsFromFile)
@@ -123,7 +100,7 @@ function findGCCVersionsImpl() {
             versions = versions.sort(semver.compare)
             cachedVersions = versions
             log('GCC versions: ' + versions)
-            saveVersionsToFile(versions, 'gcc-versions.txt')
+            setup_program.saveVersionsToFile(versions, 'gcc-versions.txt')
             return versions
         } catch (error) {
             log('Error fetching GCC versions: ' + error)
@@ -146,22 +123,6 @@ function removeGCCPrefix(version) {
     }
 
     return version
-}
-
-function getCurrentUbuntuVersion() {
-    try {
-        const osReleaseData = fs.readFileSync('/etc/os-release', 'utf8')
-        const lines = osReleaseData.split('\n')
-        const versionLine = lines.find(line => line.startsWith('VERSION_ID='))
-        if (versionLine) {
-            const version = versionLine.split('=')[1].replace(/"/g, '')
-            return version
-        }
-        throw new Error('Ubuntu version not found')
-    } catch (error) {
-        console.error('Error:', error)
-        return null
-    }
 }
 
 
@@ -264,7 +225,7 @@ async function main(version, paths, check_latest, update_environment) {
         log(`Version candidates: [${version_candidates.join(', ')}]`)
 
         // Determine ubuntu version
-        const cur_ubuntu_version = getCurrentUbuntuVersion()
+        const cur_ubuntu_version = setup_program.getCurrentUbuntuVersion()
         log(`Ubuntu version: ${cur_ubuntu_version}`)
         let ubuntu_versions = []
         if (cur_ubuntu_version === '20.04') {

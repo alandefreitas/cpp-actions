@@ -5,6 +5,11 @@ call npm install
 call npm run all
 cd ..
 
+cd setup-cmake
+call npm install
+call npm run all
+cd ..
+
 cd setup-gcc
 call npm install
 call npm run all

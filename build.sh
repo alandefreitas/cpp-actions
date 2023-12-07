@@ -1,27 +1,32 @@
 # Description: Build all the javascript projects in the repository
 
 cd setup-program || exit
-npm i
+npm install
+npm run all
+cd ..
+
+cd setup-cmake || exit
+npm install
 npm run all
 cd ..
 
 cd setup-gcc || exit
-npm i
+npm install
 npm run all
 cd ..
 
 cd setup-clang || exit
-npm i
+npm install
 npm run all
 cd ..
 
 cd setup-cpp || exit
-npm i
+npm install
 npm run all
 cd ..
 
 cd cpp-matrix || exit
-npm i
+npm install
 npm run all
 cd ..
 

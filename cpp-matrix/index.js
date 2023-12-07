@@ -3,6 +3,7 @@ const core = require('@actions/core')
 const semver = require('semver')
 const fs = require('fs')
 const {execSync} = require('child_process')
+const setup_program = require('./../setup-program/index')
 
 let trace_commands = false
 
@@ -155,30 +156,6 @@ const sleep = (ms) => {
 }
 
 
-function readVersionsFromFile(filename) {
-    try {
-        const fileContents = fs.readFileSync(filename, 'utf8')
-        const versions = JSON.parse(fileContents)
-        if (Array.isArray(versions)) {
-            return versions
-        }
-    } catch (error) {
-        // File reading failed or versions couldn't be parsed
-    }
-    return null
-}
-
-function saveVersionsToFile(versions, filename) {
-    try {
-        const fileContents = JSON.stringify(versions)
-        fs.writeFileSync(filename, fileContents, 'utf8')
-        log('Versions saved to file.')
-    } catch (error) {
-        log('Error saving versions to file: ' + error)
-    }
-}
-
-
 function findGCCVersionsImpl() {
     let cachedVersions = null // Cache variable to store the versions
 
@@ -189,7 +166,7 @@ function findGCCVersionsImpl() {
         }
 
         // Check if the versions can be read from a file
-        const versionsFromFile = readVersionsFromFile('gcc-versions.txt')
+        const versionsFromFile = setup_program.readVersionsFromFile('gcc-versions.txt')
         if (versionsFromFile !== null) {
             cachedVersions = versionsFromFile
             log('GCC versions (from file): ' + versionsFromFile)
@@ -208,7 +185,7 @@ function findGCCVersionsImpl() {
         versions = versions.sort(semver.compare)
         cachedVersions = versions
         log('GCC versions: ' + versions)
-        saveVersionsToFile(versions, 'gcc-versions.txt')
+        setup_program.saveVersionsToFile(versions, 'gcc-versions.txt')
         return versions
     }
 }
@@ -224,7 +201,7 @@ function findClangVersionsImpl() {
             return cachedVersions
         }
 
-        const versionsFromFile = readVersionsFromFile('clang-versions.txt')
+        const versionsFromFile = setup_program.readVersionsFromFile('clang-versions.txt')
         if (versionsFromFile !== null) {
             cachedVersions = versionsFromFile
             log('Clang versions (from file): ' + versionsFromFile)
@@ -243,7 +220,7 @@ function findClangVersionsImpl() {
         versions = versions.sort(semver.compare)
         log('Clang versions: ' + versions)
         cachedVersions = versions
-        saveVersionsToFile(versions, 'clang-versions.txt')
+        setup_program.saveVersionsToFile(versions, 'clang-versions.txt')
         return versions
     }
 }

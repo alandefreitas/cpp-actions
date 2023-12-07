@@ -22,6 +22,7 @@ function log(...args) {
 
 function set_trace_commands(trace) {
     trace_commands = trace
+    setup_program.set_trace_commands(trace)
 }
 
 function findClangVersionsImpl() {
@@ -209,27 +210,30 @@ async function main(version, paths, check_latest, update_environment) {
     let output_version
 
     // Setup path program
-    core.info(`Searching for Clang ${version} in paths [${paths.join(',')}]`)
-    const __ret = await setup_program.find_program_in_path(paths, version, check_latest)
-    output_version = __ret.output_version
-    output_path = __ret.output_path
+    if (paths.length > 0) {
+        core.info(`Searching for Clang ${version} in paths [${paths.join(',')}]`)
+        const __ret = await setup_program.find_program_in_path(paths, version, check_latest)
+        output_version = __ret.output_version
+        output_path = __ret.output_path
+    }
 
     // Setup system program
-    if (output_path === null) {
+    if (!output_path) {
         core.info(`Searching for Clang ${version} in PATH`)
+        log(`Arguments: ${paths}, ['clang++'], ${version}, ${check_latest}`)
         const __ret = await setup_program.find_program_in_system_paths(paths, ['clang++'], version, check_latest)
         output_version = __ret.output_version
         output_path = __ret.output_path
     }
 
     // Setup APT program
-    if (output_version === null && process.platform === 'linux') {
+    if (!output_version && process.platform === 'linux') {
         core.info(`Searching for Clang ${version} with APT`)
 
         // Add repositories for major clang versions
         const allVersionMajors = allVersions
             .filter(v => semver.satisfies(v, version)) // the ones that satisfy the requested version
-            .map(v => semver.parse(v).major) // only major components
+            .map(v => semver.parse(v, {}).major) // only major components
             .filter((value) => value >= 10) // only major > 10
             .filter((value, index, self) => self.indexOf(value) === index) // no replicates
             .sort((a, b) => b - a) // descending order
@@ -302,7 +306,7 @@ async function main(version, paths, check_latest, update_environment) {
     let version_major = 0
     let version_minor = 0
     let version_patch = 0
-    if (output_path !== null && output_path !== undefined) {
+    if (output_path && output_path) {
         const path_basename = path.basename(output_path)
         if (path_basename.startsWith('clang++')) {
             cc = path.join(path.dirname(output_path), path_basename.replace('clang++', 'clang'))

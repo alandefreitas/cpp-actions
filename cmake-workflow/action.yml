@@ -247,6 +247,7 @@ runs:
       with:
         version: ${{ inputs.cmake-version }}
         cmake-path: ${{ inputs.cmake-path }}
+        cmake-file: ${{ inputs.source-dir }}/CMakeLists.txt
         trace-commands: ${{ inputs.trace-commands }}
 
     - name: CMake Generator Features
@@ -764,7 +765,7 @@ runs:
         generators="${{ inputs.package-generators }}"
         fail_is_ok=false
         if [ "$generators" == "" ]; then
-          generators=$(cpack --help | awk '/Generators/ {flag=1; next} flag && NF {print $1}' ORS=';' | sed 's/;$//')
+          generators=$("${{ steps.params.outputs.cpack_path }}" --help | awk '/Generators/ {flag=1; next} flag && NF {print $1}' ORS=';' | sed 's/;$//')
           # failure is OK when we try all default generators as the requirements for all default generators are
           # rarely available
           fail_is_ok=true
