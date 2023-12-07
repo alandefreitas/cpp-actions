@@ -242,7 +242,7 @@ runs:
         fi
 
     - name: Setup CMake
-      uses: alandefreitas/cpp-actions/setup-cmake@v1.5.0
+      uses: alandefreitas/cpp-actions/setup-cmake@74659aa043261d9026e40e48e6202580f1a92cfc
       id: setup-cmake
       with:
         version: ${{ inputs.cmake-version }}
@@ -849,7 +849,7 @@ runs:
           if [ "$ubuntu_version" == "" ]; then
             ubuntu_version=$(lsb_release -rs)
           fi
-          
+        
           if [ "$ubuntu_version" == "" ]; then
             # Extract Ubuntu version from /etc/os-release
             os_release=$(cat /etc/os-release)
@@ -860,7 +860,7 @@ runs:
               ubuntu_version=""
             fi
           fi
-          
+        
           if [ "$ubuntu_version" == "" ]; then
             # Extract Ubuntu version from /etc/lsb-release
             lsb_release=$(cat /etc/lsb-release)
@@ -869,7 +869,7 @@ runs:
               ubuntu_version=${BASH_REMATCH[1]}
             fi
           fi
-          
+        
           if [ "$ubuntu_version" == "" ]; then
             # Extract Ubuntu version from uname -a
             uname_output=$(uname -a)
@@ -884,7 +884,7 @@ runs:
           fi
           set -e
         fi
-          
+        
         cxx="${{ inputs.cxx }}"
         if [ "$cxx" == "" ] && [ "$artifact_name" == "windows" ]; then
           artifact_name+="-msvc"
@@ -900,7 +900,7 @@ runs:
           fi
           artifact_name+="-$cxx"
         fi
-      
+        
         artifact_name+="-packages"
         echo "artifact_name=$artifact_name" >> $GITHUB_OUTPUT
         echo "Artifact name: $artifact_name"
