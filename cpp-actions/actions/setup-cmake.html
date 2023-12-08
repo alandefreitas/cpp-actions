@@ -355,25 +355,31 @@ which already calls this action if necessary.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>*</code></p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>architecture</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The target architecture (x86, x64). By default, this value is inferred.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-file</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">File containing the CMake version to use in a cmake_minimum_required command.</p>
 <p class="tableblock">Example: A CMakeLists.txt file containing a call to cmake_minimum_required.".</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>CMakeLists.txt</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-path</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>path</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The cmake executable. We attempt to find cmake at this path first.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-path</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The cmake executable. We attempt to find cmake at this path first.
+This option is available for backwards compatibility and has priority over <code>path</code>.</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Used to specify whether the CMake installation should be cached in the case CMake needs to be downloaded.".</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>architecture</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The target architecture (x86, x64). By default, this value is inferred.</p></td>
-<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>check-latest</code></p></td>
@@ -411,6 +417,14 @@ instead.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>path</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the CMake executable.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the CMake directory.</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>version</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The installed CMake version. Useful when given a version range as input.</p></td>
 </tr>
@@ -429,14 +443,6 @@ instead.</p></td>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache-hit</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">A boolean value to indicate a cache entry was found</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>path</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the CMake executable.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the CMake directory.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>supports-path-to-build</code></p></td>
