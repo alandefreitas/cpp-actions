@@ -45,7 +45,9 @@ description: |
   CMake workflow steps as integration tests for CMake.
 
 inputs:
+  # ======================================
   # CMake options
+  # ======================================
   cmake-path:
     description: 'The cmake executable'
     required: false
@@ -63,7 +65,9 @@ inputs:
     required: false
     default: '*'
 
+  # ======================================
   # Configure options
+  # ======================================
   source-dir:
     description: 'Directory for the source files.'
     required: false
@@ -73,107 +77,260 @@ inputs:
     required: false
     default: 'build'
   cc:
-    description: 'Path to C compiler.'
+    description: |
+      Path to C compiler.
+      
+      If the input is not specified, the action will use the compiler defined by the environment variable `CC`.
+      
+      If the environment variable is not specified, the action will use the default compiler as identified by CMake.
+
     required: false
     default: ''
   ccflags:
-    description: 'Flags to be used with the C compiler.'
+    description: |
+      Flags to be used with the C compiler.
+      
+      If the input is not specified, the action will use the flags defined by the environment variable `CFLAGS`.
+      
+      If the environment variable is not specified, the action will use the default flags as identified by CMake.
+
     required: false
     default: ''
   cxx:
-    description: 'Path to C++ compiler.'
-    required: false
-    default: ''
-  cxxstd:
-    description: 'List of standards with which cmake will build and test the program.'
+    description: |
+      Path to C++ compiler.
+      
+      If the input is not specified, the action will use the compiler defined by the environment variable `CXX`.
+      
+      If the environment variable is not specified, the action will use the default compiler as identified by CMake.
+
     required: false
     default: ''
   cxxflags:
-    description: 'Flags to be used with the C++ compiler.'
+    description:
+      Flags to be used with the C++ compiler.
+      
+      If the input is not specified, the action will use the flags defined by the environment variable `CXXFLAGS`.
+      
+      If the environment variable is not specified, the action will use the default flags as identified by CMake.
+
+    required: false
+    default: ''
+  cxxstd:
+    description: |
+      Comma-separated list of standards with which cmake will build and test the program.
+      
+      If the input is not specified, the action will use the standards defined by the environment variable `CXXSTD`.
+      
+      If the environment variable is not specified, the action will use the default standards as identified by CMake.
+      
+      Unlike CMake, which can only build with one standard at a time, this action will iteratively build and test
+      with multiple standards. When multiple standards are used, the build directory will be suffixed with the
+      standard number with the exception of the latest standard.
+
     required: false
     default: ''
   shared:
-    description: 'Determines if add_library should create shared libraries (`BUILD_SHARED_LIBS`).'
+    description: |
+      Determines if add_library should create shared libraries (`BUILD_SHARED_LIBS`).
+      
+      If the input is not specified, the action will use the value defined by the environment variable `BUILD_SHARED_LIBS`.
+      
+      If the environment variable is not specified, the action will use the default value as identified by CMake (OFF).
+
     required: false
-    default: 'false'
+    default: ''
   toolchain:
-    description: 'Path to toolchain.'
+    description: |
+      Path to toolchain.
+      
+      If the input is not specified, the action will use the toolchain defined by the environment variable `CMAKE_TOOLCHAIN_FILE`.
+      
+      If the environment variable is not specified, the action will use the default toolchain as identified by CMake.
+
     required: false
     default: ''
   generator:
-    description: 'Generator name.'
+    description: |
+      Generator name. 
+      
+      If not specified, the action will use the generator defined by the environment variable `CMAKE_GENERATOR`.
+      
+      If the environment variable is not specified, the action will try to use the default generator for the platform.
+
     required: false
     default: ''
   build-type:
-    description: 'Build type.'
+    description: |
+      Build type.
+      
+      If not specified, the action will use the build type defined by the environment variable `CMAKE_BUILD_TYPE`.
+      
+      If the environment variable is not specified, the action will use `Release` as the build type.
+      
+      If all values are empty, the action will try to use the default generator for the platform.
+      
+      If the generator is multi-config, this values will be applies to the `CMAKE_CONFIGURATION_TYPES` CMake options
+      instead of `CMAKE_BUILD_TYPE`.
+
     required: false
     default: 'Release'
   build-target:
     description: 'Targets to build instead of the default target'
     required: false
     default: ''
-  install-prefix:
-    description: 'Path where the library should be installed.'
-    required: false
-    default: '.local/usr'
   extra-args:
     description: 'Extra arguments to cmake configure command.'
     required: false
     default: ''
   export-compile-commands:
-    description: 'Set CMAKE_EXPORT_COMPILE_COMMANDS=ON.'
+    description: |
+      Set CMAKE_EXPORT_COMPILE_COMMANDS=ON in the configure step.
+      
+      If the input is not specified, the action will use the value defined by the environment variable `CMAKE_EXPORT_COMPILE_COMMANDS`.
+      
+      If the environment variable is not specified, the action will use the default value as identified by CMake (OFF).
+
+    required: false
+    default: ''
+
+  # ======================================
+  # Configure and Install options
+  # ======================================
+  install-prefix:
+    description: |
+      Path where the library should be installed.
+      
+      If the input is not specified, the action will use the path defined by the environment variable `CMAKE_INSTALL_PREFIX`.
+      
+      If the environment variable is not specified, the action will use the default path as identified by CMake.
+
+    required: false
+    default: ''
+
+  # ======================================
+  # Build options
+  # ======================================
+  jobs:
+    description: |
+      Number of jobs to use in parallel builds.
+      
+      If the input is not specified, the action will use the value defined by the environment variable `CMAKE_JOBS`.
+      
+      If the environment variable is also not specified, the action will use the number of processors available in the 
+      system.
+
+    required: false
+    default: ''
+
+  # ======================================
+  # Test options
+  # ======================================
+  run-tests:
+    description: |
+      Whether we should run tests.
+      
+      If the input is not specified, the action will use the value defined by the environment variable `CMAKE_RUN_TESTS`.
+      
+      If the environment variable is also not specified, the action will attempt to run tests but will not fail if
+      there are no tests.
+      
+      When the value is `true` or `false`, the action will also set the `configure-tests-flag` to `ON` or `OFF`.
+      When the value is undefined, the `configure-tests-flag` is ignored.
+
+    required: false
+    default: ''
+
+  configure-tests-flag:
+    description: |
+      Specify the flag to be passed to cmake to enable/disable tests in the configuration step.
+      
+      By default this is `BUILD_TESTING`, which is an option automatically created by the CTest module.
+      
+      If the input contains a "=", the action will use the value as is.
+
+    required: false
+    default: 'BUILD_TESTING'
+
+  test-all-cxxstd:
+    description: |
+      Whether we should run tests for all C++ standards defined by `cxxstd`.
+      
+      If the input is not specified, the action will only run the tests with the last value defined in `cxxstd`.
+      
     required: false
     default: 'false'
 
-  # Test options
-  run-tests:
-    description: 'Whether we should run tests.'
-    required: false
-    default: 'true'
-
+  # ======================================
   # Install options
+  # ======================================
   install:
     description: |
-      Whether we should install the library. 
+      Whether we should install the library. The library is only installed once in the `install-prefix` using
+      the latest standard in `cxxstd`.
       
-      The library is only installed once in the `install-prefix`.
+      If the input is not specified, the action will use the value defined by the environment variable `CMAKE_INSTALL`.
       
-      The latest std version described in `cxxstd` is used for the installed version.
-    required: false
-    default: 'true'
+      If the environment variable is also not specified, the action will attempt to install the library but will not
+      fail if the library cannot installed.
 
+    required: false
+    default: ''
+
+  install-all-cxxstd:
+    description: |
+      Whether we should install the library for all C++ standards defined by `cxxstd`.
+      
+      If the input is not specified, the action will only install the library with the last value defined in `cxxstd`.
+
+    required: false
+    default: 'false'
+
+  # ======================================
   # Packaging options
+  # ======================================
   package:
     description: |
-      Run cpack with the specified generators after the install step.
+      Whether we should run cpack with the specified `package-generators` after the install step.
+      
+      If the input is not specified, the action will use the value defined by the environment variable `CMAKE_PACKAGE`.
+      
+      If the environment variable is also not specified, the action will attempt to run cpack but will not
+      fail if cpack cannot be run.
+
+    required: false
+    default: 'false'
+
+  package-all-cxxstd:
+    description: |
+      Whether we should run `cpack` for all C++ standards defined by `cxxstd`.
+      
+      If the input is not specified, the action will only run cpack with the last value defined in `cxxstd`.
 
     required: false
     default: 'false'
 
   package-name:
     description: |
-      The name of the package (or application). If not specified, it defaults to the project name.
+      The name of the package (or application). If not specified, CMake will default to the project name.
 
     required: false
     default: ''
 
   package-dir:
     description: |
-      The directory in which the packages are generated by cpack. 
-      
-      If it is not set then this will default to the build dir. 
-      
-      The CPACK_PACKAGE_DIRECTORY may be defined in CMakeLists.txt, a CPack config file or from the cpack command 
-      line option -B. 
-      
-      If set, the command line option overrides the value found in the config file.
+      The directory in which the packages are generated by cpack.
+    
+      If it is not set then this will default to the build dir determined by `CPACK_PACKAGE_DIRECTORY`,
+      which may be defined in CMakeLists.txt, a CPack config file or from the cpack command 
+      line option `-B`. If `package-dir` is set, it overrides the value found in the config file.
 
     required: false
     default: ''
 
   package-vendor:
     description: |
-      Override/define CPACK_PACKAGE_VENDOR.
+      Override or define CPACK_PACKAGE_VENDOR.
 
     required: false
     default: ''
@@ -182,732 +339,74 @@ inputs:
     description: |
       A semicolon-separated list of generator names used by cpack.
       
+      If not specified, the action will use the generators defined by the environment variable `CPACK_GENERATOR`.
+      
       If this variable is not set, the action will attempt to generate the package with all
-      cpack generators available to CMake.
+      CPack generators available to CMake.
 
     required: false
     default: ''
 
   package-artifact:
     description: |
-      Whether the packages generated with cpack should be stored as action artifacts.
+      Whether the packages generated with CPack should be stored as action artifacts.
+      
+      If the input is not specified, the action will use the value defined by the environment variable `CMAKE_PACKAGE_ARTIFACT`.
+      
+      If the environment variable is also not specified, the action will store the packages as artifacts.
 
     required: false
-    default: 'true'
+    default: ''
+
+  package-retention-days:
+    description: |
+      The number of days to keep the packages generated with CPack as action artifacts.
+    required: false
+    default: '10'
 
   # Annotation options
   create-annotations:
-    description: 'Create github annotations on errors.'
+    description: |
+      Create github annotations for errors and warnings at all steps.
+      
+      If the input is not specified, the action will use the value defined by the environment variable `CMAKE_CREATE_ANNOTATIONS`.
+      
+      If the environment variable is also not specified, the action will create annotations.
+
     required: false
-    default: 'true'
+    default: ''
+
   ref-source-dir:
     description: |
-      A reference source directory for annotations. Any annotation filename will be relative to this directory.
+      A reference base directory for annotations. 
       
-      This is typically useful when the repository being tested is not the current directory, in which
-      we need to make annotations relative to some other directory.
+      For instance, if there is an error in the `/home/user/project/src/main.cpp` file, the action will create an
+      annotation referring to the repository path `src/main.cpp`. 
+      
+      If the reference source directory is /home/user/project/src, the action will create an annotation referring to
+      `main.cpp` instead because any annotation filename will be relative to this directory.
+      
+      If no value is provided, the environment variable `GITHUB_WORKSPACE` will be used as the reference source
+      directory. This means all annotations will be relative to the repository root if `actions/checkout` has been
+      called without specifying a custom `path` option.
+      
+      Changing this value is typically useful when the repository being tested is not the workspace directory, in
+      which we need to make annotations relative to some other directory.
       
       In most cases, the default option should be enough.
 
     required: false
-    default: '.'
+    default: ''
+
   trace-commands:
     description: 'Trace commands executed by the workflow.'
     required: false
     default: 'false'
 
 runs:
-  using: "composite"
-  steps:
-    - name: Get CPU cores
-      uses: SimenB/github-actions-cpu-cores@v1
-      id: cpu-cores
-
-    - name: Setup msvc dev-cmd
-      if: runner.os == 'Windows'
-      uses: ilammy/msvc-dev-cmd@v1
-
-    - name: Self Context
-      id: ctx
-      shell: bash
-      run: |
-        # Identify context of cmake-workflow action
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        tag=$(basename "${{ github.action_path }}")
-        repo=alandefreitas/cpp-actions
-        if git ls-remote --exit-code --tags "https://github.com/$repo.git" "$tag" &> /dev/null; then
-          echo "tag=$tag" >> $GITHUB_OUTPUT
-        else
-          echo "tag=${{ (github.ref_name == 'master' && 'master' ) || 'develop' }}" >> $GITHUB_OUTPUT
-        fi
-
-    - name: Setup CMake
-      uses: alandefreitas/cpp-actions/setup-cmake@74659aa043261d9026e40e48e6202580f1a92cfc
-      id: setup-cmake
-      with:
-        version: ${{ inputs.cmake-version }}
-        cmake-path: ${{ inputs.cmake-path }}
-        cmake-file: ${{ inputs.source-dir }}/CMakeLists.txt
-        trace-commands: ${{ inputs.trace-commands }}
-
-    - name: CMake Generator Features
-      shell: bash
-      id: generator
-      working-directory: ${{ inputs.source_dir }}
-      run: |
-        # Generator features
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
-        cmake_path="${{ steps.setup-cmake.outputs.path }}"
-        echo "cmake_path=$cmake_path"
-        
-        # Find the generator that will effectively be used by this workflow
-        generator="${{ inputs.generator }}"
-        if [ "$generator" == "" ]; then
-          # Use the --system-information option first 
-          generator=$("$cmake_path" --system-information | sed -n 's/^CMAKE_GENERATOR [[:space:]]*"\([^"]*\)".*/\1/p')
-        fi
-        if [ "$generator" == "" ]; then
-          # Infer from the OS otherwise
-          generator=${{ ((runner.os == 'macOS') && '"XCode"') || ((runner.os == 'Windows') && '"Visual Studio"') || '"Unix Makefiles"' }}
-        fi
-        
-        # Identify if this generator is multi-config
-        if [[ $generator == "Visual Studio"* ]]; then
-          generator_is_multi_config=true
-        elif [ "$generator" == "Xcode" ]; then
-          generator_is_multi_config=true
-        elif [ "$generator" == "Ninja Multi-Config" ]; then
-          generator_is_multi_config=true
-        else
-          generator_is_multi_config=false
-        fi
-        
-        # Report results
-        ${{ (inputs.trace-commands == 'true' && 'if [ "$generator_is_multi_config" == "true" ]; then echo "Generator is multi-config"; fi') || '' }}
-        
-        # Export
-        echo "is_multi_config=$generator_is_multi_config" >> $GITHUB_OUTPUT
-
-    - name: Workflow parameters
-      shell: bash
-      id: params
-      working-directory: ${{ inputs.source_dir }}
-      run: |
-        # Calculate common parameters for the workflow
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
-        # CMake path
-        cmake_dir="${{ steps.setup-cmake.outputs.dir }}"
-        echo -E "cmake_dir=$cmake_dir" >> $GITHUB_OUTPUT
-        cmake_path="${{ steps.setup-cmake.outputs.path }}"
-        echo -E "cmake_path=$cmake_path" >> $GITHUB_OUTPUT
-        ctest_path="${{ steps.setup-cmake.outputs.dir }}/ctest"
-        echo -E "ctest_path=$ctest_path" >> $GITHUB_OUTPUT
-        cpack_path="${{ steps.setup-cmake.outputs.dir }}/cpack"
-        echo -E "cpack_path=$cpack_path" >> $GITHUB_OUTPUT
-        
-        # C compiler path
-        cc="${{ inputs.cc }}"
-        if [[ "$cc" != "" ]] && [[ ! -x "$cc" ]]; then
-            if command -v $cc &> /dev/null; then
-              cc="$(which $cc)"
-            elif command -v /usr/bin/$cc &> /dev/null; then
-              cc="/usr/bin/$cc"
-            fi
-        fi
-        echo -E "cc=$cc" >> $GITHUB_OUTPUT
-        
-        # C++ compiler path
-        cxx="${{ inputs.cxx }}"
-        if [ "$cxx" != "" ] && [[ ! -x "$cxx" ]]; then
-            if command -v $cxx &> /dev/null; then
-              cxx="$(which $cxx)"
-            elif command -v /usr/bin/$cxx &> /dev/null; then
-              cxx="/usr/bin/$cxx"
-            fi
-        fi
-        echo -E "cxx=$cxx" >> $GITHUB_OUTPUT
-        
-        # std versions
-        cxxstds="${{ inputs.cxxstd }}"
-        cxxstds="$(echo "$cxxstds" | sed 's/,/ /g')"
-        if [ "$cxxstds" == "" ]; then
-            cxxstds="defaultcxx"
-        fi
-        echo -E "cxxstds=$cxxstds" >> $GITHUB_OUTPUT
-        main_cxxstd=${cxxstds##* }
-        echo -E "main_cxxstd=$main_cxxstd" >> $GITHUB_OUTPUT
-        
-        # absolute directories
-        working_dir="$(pwd)"
-        source_dir="${{ inputs.source-dir }}"
-        if [[ $source_dir != /* ]]; then
-          source_dir="$(readlink -f "$source_dir" 2>/dev/null || realpath -e "$source_dir" 2>/dev/null || echo "$working_dir/$source_dir")"
-        fi
-        echo -E "source_dir=$source_dir" >> $GITHUB_OUTPUT
-        
-        ref_source_dir="${{ inputs.ref-source-dir || inputs.source-dir }}"
-        if [[ $ref_source_dir != /* ]]; then
-          ref_source_dir="$(readlink -f "$ref_source_dir" 2>/dev/null || realpath -e "$ref_source_dir" 2>/dev/null || echo "$working_dir/$ref_source_dir")"
-        fi
-        echo -E "ref_source_dir=$ref_source_dir" >> $GITHUB_OUTPUT
-        
-        build_dir="${{ inputs.build-dir }}"
-        if [[ $build_dir != /* ]]; then
-          build_dir="$(readlink -f "$source_dir/$build_dir" 2>/dev/null || realpath -e "$source_dir/$build_dir" 2>/dev/null || echo "$source_dir/$build_dir")"
-        fi
-        echo -E "build_dir=$build_dir" >> $GITHUB_OUTPUT
-
-        package_dir="${{ inputs.package-dir }}"
-        if [[ $package_dir == "" ]]; then
-            # package_dir is build_dir itself
-            package_dir="$build_dir"
-        elif [[ $package_dir != /* ]]; then
-            # if relative, package_dir is relative to build_dir 
-            package_dir="$(readlink -f "$build_dir/$package_dir" 2>/dev/null || realpath -e "$build_dir/$package_dir" 2>/dev/null || echo "$build_dir/$package_dir")"
-        fi
-        echo -E "package_dir=$package_dir" >> $GITHUB_OUTPUT
-
-    - name: Configure All
-      shell: bash
-      id: configure
-      working-directory: ${{ inputs.source_dir }}
-      run: |
-        # Configure all workflows
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
-        cxxstds="${{ steps.params.outputs.cxxstds }}"
-        for cxxstd in ${cxxstds// / }
-        do
-            if [ "$cxxstd" != "defaultcxx" ]; then
-              echo "==================================> Configure C++$cxxstd"
-            fi
-            std_build_dir="${{ steps.params.outputs.build_dir }}$( [ "$cxxstd" == "${{ steps.params.outputs.main_cxxstd }}" ] && echo "" || echo "-$cxxstd" )"
-
-            # Build parameters
-            CONFIGURE_ARGS=(${{ (steps.setup-cmake.outputs.supports-path-to-build == 'true' && format('"-S" "{0}" "-B" "$std_build_dir"', steps.params.outputs.source_dir)) || '' }})
-            CONFIGURE_ARGS+=(${{ (inputs.generator && format('"-G" "{0}"', inputs.generator)) || '' }})
-            if [[ "${{ inputs.cxxflags }}" == *"/m32"* ]] && [[ "${{ inputs.generator }}" == "Visual Studio"* ]]; then
-                CONFIGURE_ARGS+=("-A" "Win32")
-            fi
-            CONFIGURE_ARGS+=(${{ (steps.generator.outputs.is_multi_config == 'false' && format('"-D" "CMAKE_BUILD_TYPE={0}"', inputs.build-type || 'Release')) || '' }})
-            CONFIGURE_ARGS+=(${{ (steps.generator.outputs.is_multi_config == 'true' && format('"-D" "CMAKE_CONFIGURATION_TYPES={0}"', inputs.build-type || 'Release')) || '' }})
-            CONFIGURE_ARGS+=(${{ (inputs.toolchain && format('"-D" "CMAKE_TOOLCHAIN_FILE={0}"', inputs.toolchain)) || '' }})
-            CONFIGURE_ARGS+=(${{ (inputs.run-tests == 'true' && '"-D" "BUILD_TESTING=ON"') || '' }})
-            CONFIGURE_ARGS+=(${{ (inputs.shared == 'true' && '"-D" "BUILD_SHARED_LIBS=ON"') || '' }})
-            CONFIGURE_ARGS+=(${{ (inputs.cc && format('"-D" "CMAKE_C_COMPILER={0}"', steps.params.outputs.cc)) || '' }})
-            CONFIGURE_ARGS+=(${{ (inputs.cxx && format('"-D" "CMAKE_CXX_COMPILER={0}"', steps.params.outputs.cxx)) || '' }})
-            CONFIGURE_ARGS+=(${{ (inputs.export-compile-commands == 'true' && '"-D" "CMAKE_EXPORT_COMPILE_COMMANDS=ON"') || '' }})
-            CONFIGURE_ARGS+=("--no-warn-unused-cli")
-
-            # Install and package parameters
-            CONFIGURE_ARGS+=(${{ (inputs.install-prefix && format('"-D" "CMAKE_INSTALL_PREFIX={0}"', inputs.install-prefix)) || '' }})
-            CONFIGURE_ARGS+=(${{ (inputs.package-generators != '' && format('"-D" "CPACK_GENERATOR={0}"', inputs.package-generators)) || '' }})
-            CONFIGURE_ARGS+=(${{ (inputs.package-name != '' && format('"-D" "CPACK_PACKAGE_NAME={0}"', inputs.package-name)) || '' }})
-            CONFIGURE_ARGS+=(${{ (inputs.package-dir != '' && format('"-D" "CPACK_PACKAGE_DIRECTORY={0}"', steps.params.outputs.package_dir)) || '' }})
-            CONFIGURE_ARGS+=(${{ (inputs.package-vendor != '' && format('"-D" "CPACK_PACKAGE_VENDOR={0}"', inputs.package-vendor)) || '' }})
-        
-            ccflags="${{ inputs.ccflags }}"
-            ccflags=$(echo "$ccflags" | sed 's/\/m32//g')
-            if [ "$ccflags" != "" ]; then
-                CONFIGURE_ARGS+=("-D" "CMAKE_C_FLAGS=$ccflags")
-            fi
-        
-            cxxflags="${{ inputs.cxxflags }}"
-            cxxflags=$(echo "$cxxflags" | sed 's/\/m32//g')
-            if [ "$cxxflags" != "" ]; then
-                CONFIGURE_ARGS+=("-D" "CMAKE_CXX_FLAGS=$cxxflags")
-            fi
-        
-            CONFIGURE_ARGS+=($( [ "$cxxstd" == "defaultcxx" ] && echo "" || echo "-D CMAKE_CXX_STANDARD=$cxxstd" ))
-            SOURCE_DIR_ARG=(${{ (steps.setup-cmake.outputs.supports-path-to-build == 'false' && format('"{0}"', steps.params.outputs.source_dir)) || '' }})
-        
-            mkdir "$std_build_dir" || true
-            cd "$std_build_dir"
-            set +e
-            set -x
-            "${{ steps.params.outputs.cmake_path }}" "${CONFIGURE_ARGS[@]}" ${{ inputs.extra-args }} "${SOURCE_DIR_ARG[@]}" 2>&1 | tee -a "$std_build_dir/cmake-configure-output.txt"
-            exit_code=$?
-            if [[ $exit_code -ne 0 ]]; then
-              break
-            fi
-            ${{ (inputs.trace-commands != 'true' && 'set +x') || '' }}
-            set -e
-            cd "${{ steps.params.outputs.source_dir }}"
-        done
-        echo "exit_code=$exit_code" >> $GITHUB_OUTPUT
-
-    - name: Configure All (Annotations)
-      if: ${{ inputs.create-annotations == 'true' }}
-      shell: bash
-      working-directory: ${{ inputs.source_dir }}
-      run: |
-        # Configure all workflows (Annotations)
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
-        cxxstds="${{ steps.params.outputs.cxxstds }}"
-        for cxxstd in ${cxxstds// / }
-        do
-            if [ "$cxxstd" != "defaultcxx" ]; then
-              echo "==================================> C++$cxxstd Configure Annotations"
-            fi
-            std_build_dir="${{ steps.params.outputs.build_dir }}$( [ "$cxxstd" == "${{ steps.params.outputs.main_cxxstd }}" ] && echo "" || echo "-$cxxstd" )"
-        
-            # Configure step annotations
-            if [[ ${{ inputs.create-annotations }}  == "true" ]]; then
-              cmake_regex="^CMake (Warning|Error)( at ([^:]+):([[:digit:]]+) \\(([^:]+)\\))?:(.*)"
-              message_type=""
-              lines=""
-              while read line; do
-                  if [[ "$message_type" != "" ]]; then
-                      ${{ (inputs.trace-commands == 'true' && 'echo "$line"') || '' }}
-                      ${{ (inputs.trace-commands == 'true' && 'echo "$lines"') || '' }}
-                      lines="$lines\n$line"
-                      ${{ (inputs.trace-commands == 'true' && 'echo "$lines"') || '' }}
-                      if [[ "${lines: -4}" != "\n\n" ]]; then
-                        continue
-                      fi
-                  else
-                      if [[ $line == "CMake Error"* ]]; then
-                        message_type="error"
-                        lines="$line"
-                        continue
-                      elif [[ $line == "CMake Warning"* ]]; then
-                        message_type="warning"
-                        lines="$line"
-                        continue
-                      fi
-                  fi
-        
-                  ${{ (inputs.trace-commands == 'true' && 'echo "$lines"') || '' }}
-                  if [[ $lines =~ $cmake_regex ]]; then
-                    filename=${BASH_REMATCH[3]}
-                    if [ "$filename" != "" ]; then
-                      ${{ runner.os != 'macOS' && format('filename="$(realpath -m --relative-to="{0}" "{1}/$filename")"', steps.params.outputs.ref_source_dir, steps.params.outputs.source_dir ) }}
-                    fi
-                    line_number=${BASH_REMATCH[4]}
-                    error_type=${BASH_REMATCH[1]}
-                    error_code=${BASH_REMATCH[5]}
-                    error_message=${BASH_REMATCH[6]}
-                    error_message="${error_message:2}"
-                    error_message=$(echo $error_message | sed 's/....$//')
-                    error_message=$(echo "$error_message" | sed 's/:\\n\\n/: /g')
-                    error_message=$(echo "$error_message" | sed 's/\\.\\n/. /g')
-                    error_message=$(echo "$error_message" | sed 's/\\n/ /g')
-                    error_message=$(echo "$error_message" | sed 's/\n/ /g')
-                    if [ "$filename" == "" ]; then
-                      echo "::$message_type title:CMake-$error_type::CMake: $error_message"
-                    else
-                      echo "::$message_type file=$filename,line=$line_number,title:CMake-$error_type::CMake: $error_message"
-                    fi
-                  fi
-                  message_type=""
-                  lines=""
-              done < "$std_build_dir/cmake-configure-output.txt"
-            fi
-        
-            if [[ "${{ steps.configure.outputs.exit_code }}" -ne 0 ]]; then
-              echo "CMake configuration step failed with exit code ${{ steps.configure.outputs.exit_code }}"
-              echo "::error title:CMake(Configure)::CMake: Configuration step failed with exit code ${{ steps.configure.outputs.exit_code }}"
-              false
-            fi        
-        done
-
-    - name: Build All
-      shell: bash
-      id: build
-      working-directory: ${{ inputs.source_dir }}
-      run: |
-        # Build All
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
-        cxxstds="${{ steps.params.outputs.cxxstds }}"
-        for cxxstd in ${cxxstds// / }
-        do
-            if [ "$cxxstd" != "defaultcxx" ]; then
-              echo "==================================> Build C++$cxxstd"
-            fi
-            std_build_dir="${{ steps.params.outputs.build_dir }}$( [ "$cxxstd" == "${{ steps.params.outputs.main_cxxstd }}" ] && echo "" || echo "-$cxxstd" )"
-        
-            # Build step
-            set +e
-            jobs_args=${{ (steps.setup-cmake.outputs.supports-parallel-build == 'false' && '""') || format('"--parallel {0}"', steps.cpu-cores.outputs.count) }}
-            if [[ "${{ steps.setup-cmake.outputs.supports-build-multiple-targets }}" == "true" || "${{ inputs.build-target }}" != *" "* ]]; then
-              set -x
-              "${{ steps.params.outputs.cmake_path }}" --build "$std_build_dir" --config "${{ inputs.build-type || 'Release' }}" $jobs_args ${{ (inputs.build-target != '' && format('--target {0}', inputs.build-target)) || '' }} 2>&1 | tee -a "$std_build_dir/cmake-build-output.txt"
-              exit_code=$?
-              if [[ $exit_code -ne 0 ]]; then
-                break
-              fi
-              ${{ (inputs.trace-commands != 'true' && 'set +x') || '' }}
-            else
-              build_targets="${{ inputs.build-target }}"
-              for build_target in ${build_targets// / }; do
-                set -x
-                "${{ steps.params.outputs.cmake_path }}" --build "$std_build_dir" --config "${{ inputs.build-type || 'Release' }}" $jobs_args --target $build_target 2>&1 | tee -a "$std_build_dir/cmake-build-output.txt"
-                exit_code=$?
-                if [[ $exit_code -ne 0 ]]; then
-                  break
-                fi
-                ${{ (inputs.trace-commands != 'true' && 'set +x') || '' }}
-              done
-            fi
-            set -e
-        done
-        echo "exit_code=$exit_code" >> $GITHUB_OUTPUT
-
-    - name: Build All (Annotations)
-      if: ${{ inputs.create-annotations == 'true' }}
-      shell: bash
-      working-directory: ${{ inputs.source_dir }}
-      run: |
-        # Build All (Annotations)
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
-        cxxstds="${{ steps.params.outputs.cxxstds }}"
-        for cxxstd in ${cxxstds// / }
-        do
-            if [ "$cxxstd" != "defaultcxx" ]; then
-              echo "==================================> C++$cxxstd" Build Annotations
-            fi
-            std_build_dir="${{ steps.params.outputs.build_dir }}$( [ "$cxxstd" == "${{ steps.params.outputs.main_cxxstd }}" ] && echo "" || echo "-$cxxstd" )"
-        
-            # Build step annotations
-            if [[ ${{ inputs.create-annotations }}  == "true" ]]; then
-              msvc_regex="^([^\\(\\)]+)\\(([[:digit:]]+)\\): (warning|error) ([^:]+): (.*)$"
-              gcc_clang_regex="^([^:]+):([[:digit:]]+):([[:digit:]]+)?: (warning|error):([^\\[]*)(\\[-W[A-Za-z0-9-]*\\])?$"
-              while read line; do
-                  ${{ (inputs.trace-commands == 'true' && 'echo "$line"') || '' }}
-                  if [[ "$line" =~ $gcc_clang_regex ]]; then
-                    filename=${BASH_REMATCH[1]}
-                    ${{ runner.os != 'macOS' && format('filename="$(realpath -m --relative-to="{0}" "$filename")"', steps.params.outputs.ref_source_dir ) }}
-                    if [[ $filename == ../* ]]; then
-                      continue
-                    fi
-                    error_type=${BASH_REMATCH[4]}
-                    line_number=${BASH_REMATCH[2]}
-                    column=${BASH_REMATCH[3]}
-                    title="Build Error"
-                    msg=""
-                    compiler="${{ inputs.cxx }}"
-                    if [ "$compiler" != "" ]; then
-                      compiler=$(basename $compiler)
-                      title="$title - $compiler"
-                      msg="$compiler"
-                    fi
-                    error_message=${BASH_REMATCH[5]}
-                    if [ "$msg" != "" ]; then
-                      msg="$msg: $error_message"
-                    else
-                      msg="$error_message"
-                    fi
-                    error_code=${BASH_REMATCH[6]}
-                    if [ "$error_code" != "" ]; then
-                      title="$title - $error_code"
-                      msg="$msg ($error_code)"
-                    fi
-                    echo "::$error_type file=$filename,line=$line_number,col:$column,title:$title::$msg"
-                  elif [[ "$line" =~ $msvc_regex ]]; then
-                    filename=${BASH_REMATCH[1]}
-                    ${{ runner.os != 'macOS' && format('filename="$(realpath -m --relative-to="{0}" "$filename")"', steps.params.outputs.ref_source_dir ) }}
-                    if [[ $filename == ../* ]]; then
-                      continue
-                    fi
-                    line_number=${BASH_REMATCH[2]}
-                    error_type=${BASH_REMATCH[3]}
-                    error_code=${BASH_REMATCH[4]}
-                    error_message=${BASH_REMATCH[5]}
-                    compiler="${{ inputs.cxx }}"
-                    if [ "$compiler" != ""]; then
-                      compiler=$(basename $compiler)
-                    fi
-                    echo "::$error_type file=$filename,line=$line_number,title:$compiler: $error_type $error_code::$compiler: $error_message ($error_type - $error_code)"
-                  fi
-              done < "$std_build_dir/cmake-build-output.txt"
-            fi
-        
-            if [[ "${{ steps.build.outputs.exit_code }}" -ne 0 ]]; then
-              echo "CMake build step failed with exit code ${{ steps.build.outputs.exit_code }}"
-              false
-            fi
-        done
-
-    - name: Test
-      shell: bash
-      id: test
-      if: ${{ inputs.run-tests == 'true' }}
-      working-directory: ${{ inputs.source_dir }}
-      run: |
-        # Test C++${{ steps.params.outputs.main_cxxstd }}
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
-        cxxstds="${{ steps.params.outputs.cxxstds }}"
-        for cxxstd in ${cxxstds// / }
-        do
-            if [ "$cxxstd" != "defaultcxx" ]; then
-              echo "==================================> Test C++$cxxstd"
-            fi
-            std_build_dir="${{ steps.params.outputs.build_dir }}$( [ "$cxxstd" == "${{ steps.params.outputs.main_cxxstd }}" ] && echo "" || echo "-$cxxstd" )"
-        
-            # Test step
-            if [[ "${{ inputs.run-tests }}" == true && "$cxxstd" == "${{ steps.params.outputs.main_cxxstd }}" ]]; then
-              set +e
-              "${{ steps.params.outputs.ctest_path }}" --test-dir "$std_build_dir" $jobs_args -C "${{ inputs.build-type || 'Release' }}" --no-tests=error --progress --output-on-failure  2>&1 | tee -a "$std_build_dir/cmake-test-output.txt"
-              exit_code=$?
-              if [[ $exit_code -ne 0 ]]; then
-                break
-              fi
-              set -e
-            fi
-        done
-        echo "exit_code=$exit_code" >> $GITHUB_OUTPUT
-
-    - name: Test (Annotations)
-      if: ${{ inputs.run-tests == 'true' && inputs.create-annotations == 'true' }}
-      shell: bash
-      working-directory: ${{ inputs.source_dir }}
-      run: |
-        # Test ${{ steps.params.outputs.main_cxxstd }} (Annotations)
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
-        cxxstds="${{ steps.params.outputs.cxxstds }}"
-        for cxxstd in ${cxxstds// / }
-        do
-            if [ "$cxxstd" != "defaultcxx" ]; then
-              echo "==================================> C++$cxxstd" Test Annotations
-            fi
-            std_build_dir="${{ steps.params.outputs.build_dir }}$( [ "$cxxstd" == "${{ steps.params.outputs.main_cxxstd }}" ] && echo "" || echo "-$cxxstd" )"
-        
-            # Test step
-            if [[ "${{ inputs.run-tests }}" == true && "$cxxstd" == "${{ steps.params.outputs.main_cxxstd }}" ]]; then
-              # Test step annotations
-              if [[ "${{ inputs.create-annotations }}" == true ]]; then
-                boost_test_regex="^#[[:digit:]]+ ([^\\(\\)]+)\\(([[:digit:]]+)\\) failed: (.*)"
-                while read line; do
-                  if [[ "$line" =~ $boost_test_regex ]]; then
-                    filename=${BASH_REMATCH[1]}
-                    if [ -e "${{ steps.params.outputs.ref_source_dir }}/$filename" ]; then
-                      ${{ runner.os != 'macOS' && format('filename="$(realpath -m --relative-to="{0}" "{1}/$filename")"', steps.params.outputs.ref_source_dir, steps.params.outputs.ref_source_dir ) }}
-                    else
-                      test_filename=$(find "${{ steps.params.outputs.ref_source_dir }}/test" -name "$filename" | head -n 1 | xargs)
-                      if [ "$test_filename" != "" ]; then
-                        ${{ runner.os != 'macOS' && format('filename="$(realpath -m --relative-to="{0}" "$test_filename")"', steps.params.outputs.ref_source_dir ) }}
-                      else
-                        ref_filename=$(find "${{ steps.params.outputs.ref_source_dir }}" -name "$filename" | head -n 1 | xargs)
-                        if [ "$ref_filename" == "" ]; then
-                          ${{ runner.os != 'macOS' && format('filename="$(realpath -m --relative-to="{0}" "$ref_filename")"', steps.params.outputs.ref_source_dir ) }}
-                        fi
-                      fi
-                    fi
-                    line_number=${BASH_REMATCH[2]}
-                    error_message=${BASH_REMATCH[3]}
-                    echo "::error file=$filename,line=$line_number,title:Boost.Test::Boost.Test: $error_message"
-                  fi
-                done < "$std_build_dir/cmake-test-output.txt"
-              fi
-        
-              if [[ "${{ steps.test.outputs.exit_code }}" -ne 0 ]]; then
-                echo "CMake test step failed with exit code ${{ steps.test.outputs.exit_code }}"
-                false
-              fi
-            fi        
-        done
-
-    - name: Install main cxxstd
-      shell: bash
-      if: ${{ inputs.install == 'true' }}
-      working-directory: ${{ inputs.source_dir }}
-      run: |
-        # Install ${{ steps.params.outputs.main_cxxstd }}
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
-        cxxstds="${{ steps.params.outputs.cxxstds }}"
-        for cxxstd in ${cxxstds// / }
-        do
-            if [ "$cxxstd" != "defaultcxx" ]; then
-              echo "==================================> Install C++$cxxstd"
-            fi
-            std_build_dir="${{ steps.params.outputs.build_dir }}$( [ "$cxxstd" == "${{ steps.params.outputs.main_cxxstd }}" ] && echo "" || echo "-$cxxstd" )"
-        
-            # Install step
-            if [[ "$cxxstd" == "${{ steps.params.outputs.main_cxxstd }}" ]]; then
-              mkdir "${{ inputs.install-prefix }}" || true
-              INSTALL_ARGS=("$std_build_dir")
-              INSTALL_ARGS+=("--config" "${{ inputs.build-type || 'Release' }}")
-              if [[ "${{ steps.setup-cmake.outputs.supports-cmake-install }}"  == "true" ]]; then
-                INSTALL_ARGS+=(${{ (inputs.install-prefix != '' && format('"--prefix" "{0}"', inputs.install-prefix)) || '' }})
-                set -x
-                "${{ steps.params.outputs.cmake_path }}" --install "${INSTALL_ARGS[@]}" 2>&1 | tee -a "$std_build_dir/cmake-install-output.txt"
-                ${{ (inputs.trace-commands != 'true' && 'set +x') || '' }}
-              else
-                set -x
-                "${{ steps.params.outputs.cmake_path }}" --build "${INSTALL_ARGS[@]}" --target install || true 2>&1 | tee -a "$std_build_dir/cmake-install-output.txt"
-                ${{ (inputs.trace-commands != 'true' && 'set +x') || '' }}
-              fi
-            fi
-        done
-
-    - name: Package main cxxstd
-      shell: bash
-      id: cpack
-      if: ${{ inputs.package == 'true' }}
-      run: |
-        # Package ${{ steps.params.outputs.main_cxxstd }}
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
-        working_dir=$(pwd)
-        
-        std_build_dir="${{ steps.params.outputs.build_dir }}"
-        cd "$std_build_dir"
-        
-        # determine default generator
-        generators="${{ inputs.package-generators }}"
-        fail_is_ok=false
-        if [ "$generators" == "" ]; then
-          generators=$("${{ steps.params.outputs.cpack_path }}" --help | awk '/Generators/ {flag=1; next} flag && NF {print $1}' ORS=';' | sed 's/;$//')
-          # failure is OK when we try all default generators as the requirements for all default generators are
-          # rarely available
-          fail_is_ok=true
-        fi
-        
-        # cpack arguments
-        std_build_dir="${{ steps.params.outputs.build_dir }}"
-        output=""
-        touch "$std_build_dir/cpack-output.txt"
-        for generator in ${generators//;/ }
-        do
-          CPACK_ARGS=("-G" "$generator")
-          CPACK_ARGS+=("-C" "${{ inputs.build-type || 'Release' }}")
-          CPACK_ARGS+=(${{ (inputs.trace-commands != '' && '"--verbose"') || '' }})
-          CPACK_ARGS+=(${{ (inputs.package-name != '' && format('"-P" "{0}"', inputs.package-name)) || '' }})
-          CPACK_ARGS+=(${{ (inputs.package-dir != '' && format('"-B" "{0}"', steps.params.outputs.package_dir)) || '' }})
-          CPACK_ARGS+=(${{ (inputs.package-vendor != '' && format('"--vendor" "{0}"', inputs.package-vendor)) || '' }})
-        
-          # run cpack
-          if [ "$fail_is_ok" == "true" ]; then
-              set +e
-          fi
-          "${{ steps.params.outputs.cpack_path }}" "${CPACK_ARGS[@]}" 2>&1 | tee -a "$std_build_dir/cpack-output.txt"
-          if [ "$fail_is_ok" == "true" ]; then
-              set -e
-          fi
-        done
-        
-        # parse output to find package files
-        output=$(cat "$std_build_dir/cpack-output.txt")
-        package_lines=$(echo "$output" | grep 'CPack: - package:')
-        paths=()
-        while IFS= read -r line; do
-          path=$(echo "$line" | sed -n 's/CPack: - package: \(.*\) generated\./\1/p')
-          if [ -f "$path" ]; then
-            paths+=("$path")
-          fi
-        done <<< "$package_lines"
-        
-        # Aggregate package paths for artifact
-        echo "Package paths:"
-        for path in "${paths[@]}"; do
-          echo "- $path"
-        done
-        
-        # Determine artifact pattern
-        common_prefix="${paths[0]}"
-        for path in "${paths[@]}"; do
-          echo "path=$path"
-          while [[ "$path" != "$common_prefix"* ]]; do
-            common_prefix="${common_prefix%?}"
-            echo "common_prefix=$common_prefix"
-          done
-        done
-
-        artifact_pattern=$(basename "$common_prefix")
-        echo "artifact_pattern=$artifact_pattern*" >> $GITHUB_OUTPUT
-
-        # Clean intermediary package artifacts
-        package_dir=$(dirname "$common_prefix")
-        if [ -d "$package_dir/_CPack_Packages" ]; then
-          rm -rf "$package_dir/_CPack_Packages"
-        fi
-
-        # Calculate package_dir relative to default actions working path
-        relative_package_dir="$(realpath --relative-to="$working_dir" "$package_dir" 2>/dev/null || echo "$package_dir")"
-        if [[ "$relative_package_dir" == $working_dir* ]]; then
-          relative_package_dir="${package_dir#$working_dir}"
-          relative_package_dir="${relative_package_dir#/}"
-        fi
-        echo -E "relative_package_dir=$relative_package_dir" >> $GITHUB_OUTPUT
-
-        # Define artifact name for the packages
-        artifact_name=${{ runner.os }}
-        artifact_name="$(echo "$artifact_name" | tr '[:upper:]' '[:lower:]')"
-        
-        # Determine ubuntu version if ubuntu
-        if [ "$artifact_name" == "linux" ]; then
-          ubuntu_version=""
-          set +e
-          if [ "$ubuntu_version" == "" ]; then
-            ubuntu_version=$(lsb_release -rs)
-          fi
-        
-          if [ "$ubuntu_version" == "" ]; then
-            # Extract Ubuntu version from /etc/os-release
-            os_release=$(cat /etc/os-release)
-            version_regex='VERSION_ID="([^"]+)"'
-            if [[ $os_release =~ $version_regex ]]; then
-              ubuntu_version=${BASH_REMATCH[1]}
-            else
-              ubuntu_version=""
-            fi
-          fi
-        
-          if [ "$ubuntu_version" == "" ]; then
-            # Extract Ubuntu version from /etc/lsb-release
-            lsb_release=$(cat /etc/lsb-release)
-            version_regex='DISTRIB_RELEASE=([^ ]+)$'
-            if [[ $lsb_release =~ $version_regex ]]; then
-              ubuntu_version=${BASH_REMATCH[1]}
-            fi
-          fi
-        
-          if [ "$ubuntu_version" == "" ]; then
-            # Extract Ubuntu version from uname -a
-            uname_output=$(uname -a)
-            version_regex='~([0-9]+\.[0-9]+)'
-            if [[ $uname_output =~ $version_regex ]]; then
-              ubuntu_version=${BASH_REMATCH[1]}
-            fi
-          fi
-        
-          if [ "$ubuntu_version" != "" ]; then
-            artifact_name+="-ubuntu-$ubuntu_version"
-          fi
-          set -e
-        fi
-        
-        cxx="${{ inputs.cxx }}"
-        if [ "$cxx" == "" ] && [ "$artifact_name" == "windows" ]; then
-          artifact_name+="-msvc"
-        elif [ "$cxx" != "" ]; then
-          cxx=$(basename "$cxx" | cut -d. -f1)
-          if [[ "$cxx" == "clang++"* ]]; then
-            cxx="${cxx/clang++/clang}"
-          elif [[ "$cxx" == "g++"* ]]; then
-            cxx="${cxx/g++/gcc}"
-          fi
-          if [[ "$cxx" == "gcc"* ]] && [[ "$artifact_name" == "windows" ]]; then
-            cxx="${cxx/gcc/mingw}"
-          fi
-          artifact_name+="-$cxx"
-        fi
-        
-        artifact_name+="-packages"
-        echo "artifact_name=$artifact_name" >> $GITHUB_OUTPUT
-        echo "Artifact name: $artifact_name"
-
-    - uses: actions/upload-artifact@v3
-      if: ${{ inputs.package == 'true' && inputs.package-artifact == 'true' }}
-      with:
-        name: ${{ steps.cpack.outputs.artifact_name }}
-        path: |
-          ${{ steps.cpack.outputs.relative_package_dir }}/${{ steps.cpack.outputs.artifact_pattern }}
+  using: 'node16'
+  main: 'dist/index.js'
+  post-if: success()
+branding:
+  icon: 'code'
+  color: 'yellow'

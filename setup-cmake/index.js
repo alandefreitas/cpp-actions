@@ -152,7 +152,7 @@ function update_version_from_file(cmake_file, version, allVersions) {
     return version
 }
 
-async function main(inputs) {
+async function main(inputs, subgroups = true) {
     function fnlog(msg) {
         log('setup-cmake: ' + msg)
     }
@@ -170,21 +170,29 @@ async function main(inputs) {
     // ----------------------------------------------
     // Look for CMake versions
     // ----------------------------------------------
-    core.startGroup('Find CMake versions')
+    if (subgroups) {
+        core.startGroup('🌐 Find CMake versions')
+    }
     const allVersions = await findCMakeVersions()
     fnlog('All CMake versions: ' + allVersions)
-    core.endGroup()
+    if (subgroups) {
+        core.endGroup()
+    }
 
     // ----------------------------------------------
     // Identify requirements
     // ----------------------------------------------
-    core.startGroup('Identify requirements')
+    if (subgroups) {
+        core.startGroup('📋 Identify requirements')
+    }
     version = semver.simplifyRange(allVersions, version)
     if (!version) {
         version = '*'
     }
     version = update_version_from_file(cmake_file, version, allVersions)
-    core.endGroup()
+    if (subgroups) {
+        core.endGroup()
+    }
 
     // ----------------------------------------------
     // Adjust hostedtoolcache directory
@@ -200,7 +208,9 @@ async function main(inputs) {
     // ----------------------------------------------
     // Look for path CMake
     // ----------------------------------------------
-    core.startGroup('Look for path CMake')
+    if (subgroups) {
+        core.startGroup(`📂 Look for CMake in ${inputPath}`)
+    }
     let output_path
     let output_version
 
@@ -213,32 +223,40 @@ async function main(inputs) {
     }
     let __ret = await setup_program.find_program_in_path(paths, version, check_latest)
     if (__ret.output_version && __ret.output_path) {
-        fnlog(`Found CMake ${__ret.output_version} in ${__ret.output_path}`)
+        core.info(`✅ Found CMake ${__ret.output_version} in ${__ret.output_path}`)
     }
     output_version = __ret.output_version
     output_path = __ret.output_path
-    core.endGroup()
+    if (subgroups) {
+        core.endGroup()
+    }
 
     // ----------------------------------------------
     // Look for system CMake
     // ----------------------------------------------
     if (output_path === null) {
-        core.startGroup('Look for system CMake')
+        if (subgroups) {
+            core.startGroup('📦 Look for system CMake')
+        }
         core.info(`Searching for CMake ${version} in PATH`)
         const __ret = await setup_program.find_program_in_system_paths(paths, ['cmake'], version, check_latest)
         if (__ret.output_path && __ret.output_version) {
-            fnlog(`Found CMake ${__ret.output_version} in ${__ret.output_path}`)
+            core.info(`✅ Found CMake ${__ret.output_version} in ${__ret.output_path}`)
         }
         output_version = __ret.output_version
         output_path = __ret.output_path
-        core.endGroup()
+        if (subgroups) {
+            core.endGroup()
+        }
     }
 
     // ----------------------------------------------
     // Download CMake
     // ----------------------------------------------
     if (!output_version) {
-        core.startGroup('Download CMake')
+        if (subgroups) {
+            core.startGroup('⬇️ Download CMake')
+        }
         version = inputs.check_latest ?
             semver.maxSatisfying(allVersions, version) :
             semver.minSatisfying(allVersions, version)
@@ -302,15 +320,20 @@ async function main(inputs) {
 
         const __ret = await setup_program.install_program_from_url(['cmake'], version, check_latest, cmake_url, update_environment)
         if (__ret.output_version && __ret.output_path) {
-            fnlog(`Installed CMake ${__ret.output_version} to ${__ret.output_path}`)
+            core.info(`✅ Installed CMake ${__ret.output_version} to ${__ret.output_path}`)
         }
         output_version = __ret.output_version
         output_path = __ret.output_path
-        core.endGroup()
+        if (subgroups) {
+            core.endGroup()
+        }
     }
 
+    if (subgroups) {
+        core.startGroup('📤 Return outputs')
+    }
     if (!output_path) {
-        core.error(`Could not find or install CMake ${version}`)
+        core.error(`❌ Could not find or install CMake ${version}`)
         fnlog(`output_version: ${output_version}`)
         fnlog(`output_path: ${output_path}`)
         return {}
@@ -320,6 +343,9 @@ async function main(inputs) {
     version = output_version
     const versionSV = semver.coerce(version)
     fnlog(`Found CMake ${version} in ${inputPath}`)
+    if (subgroups) {
+        core.endGroup()
+    }
 
     // Create outputs
     return {
@@ -342,6 +368,7 @@ async function run() {
     function fnlog(msg) {
         log('setup-cmake: ' + msg)
     }
+
     try {
         const inputs = {
             trace_commands: core.getBooleanInput('trace-commands'),
@@ -354,14 +381,14 @@ async function run() {
             check_latest: core.getBooleanInput('check-latest'),
             update_environment: core.getBooleanInput('update-environment')
         }
-        for (const [name, value] of Object.entries(inputs)) {
-            fnlog(`${name}: ${value}`)
-        }
-
         trace_commands = inputs['trace_commands']
         set_trace_commands(trace_commands)
         fnlog(`setup-cmake.trace_commands: ${trace_commands}`)
         fnlog(`setup-program.trace_commands: ${setup_program.trace_commands}`)
+
+        for (const [name, value] of Object.entries(inputs)) {
+            fnlog(`${name}: ${value}`)
+        }
 
         if (inputs.cmake_path) {
             inputs.path = inputs.cmake_path
@@ -371,7 +398,7 @@ async function run() {
             const outputs = await main(inputs)
             // Parse Final program / Setup version / Outputs
             if (outputs['path']) {
-                core.startGroup('Set outputs')
+                core.startGroup('📥 Set outputs')
                 for (const [name, value] of Object.entries(outputs)) {
                     const yaml_key = name.replaceAll('_', '-')
                     core.setOutput(yaml_key, value)

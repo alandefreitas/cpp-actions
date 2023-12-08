@@ -51,7 +51,7 @@ inputs:
     description: |
       Used to specify whether the CMake installation should be cached in the case CMake needs to be downloaded."
     required: false
-    default: true
+    default: 'true'
 
   check-latest:
     description: |
@@ -61,12 +61,12 @@ inputs:
       Set this option if you want the action to check for the latest available version that satisfies the version spec
       instead.
     required: false
-    default: false
+    default: 'false'
 
   update-environment:
     description: "Set this option if you want the action to update environment variables."
-    default: true
     required: false
+    default: 'true'
 
   trace-commands:
     description: 'Trace commands executed by the workflow.'

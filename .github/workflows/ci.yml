@@ -166,14 +166,16 @@ jobs:
           toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
           build-type: ${{ matrix.build-type }}
           run-tests: true
-          install-prefix: $GITHUB_WORKSPACE/.local
+          install-prefix: .local
           cxxstd: ${{ matrix.cxxstd }}
           cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
           ccflags: ${{ matrix.ccflags }}
           cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
           cxxflags: ${{ matrix.cxxflags }}
           shared: ${{ matrix.shared }}
-          extra-args: ${{ ( !matrix.no-deps && format('-D BOOST_SRC_DIR="{0}"', steps.boost-clone.outputs.boost-dir) ) || '' }} ${{ ( matrix.no-deps && '-D CPP_ACTIONS_NO_DEPS=ON' ) || '' }}
+          extra-args: | 
+            ${{ ( !matrix.no-deps && format('-D BOOST_SRC_DIR="{0}"', steps.boost-clone.outputs.boost-dir) ) || '' }} 
+            ${{ ( matrix.no-deps && '-D CPP_ACTIONS_NO_DEPS=ON' ) || '' }}
           export-compile-commands: ${{ matrix.time-trace }}
           package: true
           package-artifact: ${{ matrix.is-main }}
