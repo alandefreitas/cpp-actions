@@ -381,6 +381,9 @@ async function main(inputs) {
         update_environment: false
     }
     const setupCMakeOutputs = await setup_cmake.main(setupCMakeInputs, false)
+    if (!setupCMakeOutputs.path) {
+        throw new Error('❌ CMake not found')
+    }
     cmake_path = setupCMakeOutputs.path
     // cmake_version = setupCMakeOutputs.version
     const cmake_dir = setupCMakeOutputs.dir
@@ -1141,6 +1144,7 @@ async function run() {
         if (process.env['ACTIONS_STEP_DEBUG'] === 'true') {
             // Force trace-commands
             inputs.trace_commands = true
+            trace_commands = true
         }
         trace_commands = inputs.trace_commands
         set_trace_commands(trace_commands)

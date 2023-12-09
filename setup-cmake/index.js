@@ -81,7 +81,8 @@ function update_version_from_file(cmake_file, version, allVersions) {
     }
 
     // Check if cmake_file exists
-    let cmake_file_path = path.join(process.cwd(), cmake_file)
+    let cmake_file_path = path.resolve(process.cwd(), cmake_file)
+    fnlog(`cmake_file: ${cmake_file} resolved to ${cmake_file_path}`)
     if (!fs.existsSync(cmake_file_path)) {
         fnlog(`CMake file ${cmake_file_path} does not exist`)
         return version
