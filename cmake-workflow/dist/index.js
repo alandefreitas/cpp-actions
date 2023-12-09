@@ -1130,7 +1130,7 @@ async function run() {
             package: toBooleanInput(core.getInput('package') || process.env['CMAKE_PACKAGE'] || ''),
             package_all_cxxstd: core.getBooleanInput('package-all-cxxstd'),
             package_name: core.getInput('package-name') || '',
-            package_dir: (core.getInput('package-dir') && path.resolve(core.getInput('package-dir'))) || '',
+            package_dir: core.getInput('package-dir'),
             package_vendor: core.getInput('package-vendor') || '',
             package_generators: (core.getInput('package-generators') || process.env['CPACK_GENERATOR'] || '').split(/[,; ]/).filter((input) => input !== ''),
             package_artifact: toBooleanInput(core.getInput('package-artifact') || process.env['CMAKE_PACKAGE_ARTIFACT'] || 'true'),
@@ -1146,6 +1146,9 @@ async function run() {
         inputs.build_dir = path.resolve(inputs.source_dir, inputs.build_dir)
         if (inputs.install_prefix) {
             inputs.install_prefix = path.resolve(inputs.install_prefix)
+        }
+        if (inputs.package_dir) {
+            inputs.package_dir = path.resolve(inputs.build_dir, inputs.package_dir)
         }
         if (process.env['ACTIONS_STEP_DEBUG'] === 'true') {
             // Force trace-commands
