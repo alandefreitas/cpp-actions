@@ -672,7 +672,9 @@ async function main(inputs) {
             build_args.push(build_type || 'Release')
             if (cur_build_target) {
                 build_args.push('--target')
-                build_args.push(cur_build_target)
+                for (const split_build_target of cur_build_target.split(' ').filter((input) => input !== '')) {
+                    build_args.push(split_build_target)
+                }
             }
             core.info(`💻 ${source_dir}> ${cmake_path} ${build_args.join(' ')}`)
             const {exitCode: exitCode, stdout} = await exec.getExecOutput(`"${cmake_path}"`, build_args, {
