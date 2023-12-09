@@ -18,7 +18,7 @@ inputs:
       By default, it uses any version available in the environment.
 
     required: false
-    default: '*'
+    default: '>=3.0.2'
 
   architecture:
     description: |
