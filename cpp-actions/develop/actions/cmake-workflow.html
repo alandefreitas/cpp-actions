@@ -428,15 +428,15 @@ CMake workflow steps as integration tests for CMake.</p>
     toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     build-type: ${{ matrix.build-type }}
     run-tests: true
-    install-prefix: $GITHUB_WORKSPACE/.local
+    install-prefix: .local
     cxxstd: ${{ matrix.cxxstd }}
     cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
     ccflags: ${{ matrix.ccflags }}
     cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
     cxxflags: ${{ matrix.cxxflags }}
     shared: ${{ matrix.shared }}
-    extra-args: ${{ ( !matrix.no-deps &amp;&amp; format('-D BOOST_SRC_DIR="{0}"', steps.boost-clone.outputs.boost-dir)
-      ) || '' }} ${{ ( matrix.no-deps &amp;&amp; '-D CPP_ACTIONS_NO_DEPS=ON' ) || '' }}
+    extra-args: "${{ ( !matrix.no-deps &amp;&amp; format('-D BOOST_SRC_DIR=\"{0}\"', steps.boost-clone.outputs.boost-dir)\
+      \ ) || '' }} \n${{ ( matrix.no-deps &amp;&amp; '-D CPP_ACTIONS_NO_DEPS=ON' ) || '' }}\n"
     export-compile-commands: ${{ matrix.time-trace }}
     package: true
     package-artifact: ${{ matrix.is-main }}
@@ -485,47 +485,71 @@ the min CMake version that satisfies it.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Path to C compiler.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Path to C compiler.</p>
+<p class="tableblock">If the input is not specified, the action will use the compiler defined by the environment variable <code>CC</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default compiler as identified by CMake.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>ccflags</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Flags to be used with the C compiler.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Flags to be used with the C compiler.</p>
+<p class="tableblock">If the input is not specified, the action will use the flags defined by the environment variable <code>CFLAGS</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default flags as identified by CMake.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Path to C++ compiler.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxstd</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of standards with which cmake will build and test the program.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Path to C++ compiler.</p>
+<p class="tableblock">If the input is not specified, the action will use the compiler defined by the environment variable <code>CXX</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default compiler as identified by CMake.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Flags to be used with the C++ compiler.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Flags to be used with the C++ compiler.
+If the input is not specified, the action will use the flags defined by the environment variable <code>CXXFLAGS</code>.
+If the environment variable is not specified, the action will use the default flags as identified by CMake.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxstd</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Comma-separated list of standards with which cmake will build and test the program.</p>
+<p class="tableblock">If the input is not specified, the action will use the standards defined by the environment variable <code>CXXSTD</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default standards as identified by CMake.</p>
+<p class="tableblock">Unlike CMake, which can only build with one standard at a time, this action will iteratively build and test
+with multiple standards. When multiple standards are used, the build directory will be suffixed with the
+standard number with the exception of the latest standard.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>shared</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Determines if add_library should create shared libraries (<code>BUILD_SHARED_LIBS</code>).</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Determines if add_library should create shared libraries (<code>BUILD_SHARED_LIBS</code>).</p>
+<p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>BUILD_SHARED_LIBS</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default value as identified by CMake (OFF).</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>toolchain</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Path to toolchain.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Path to toolchain.</p>
+<p class="tableblock">If the input is not specified, the action will use the toolchain defined by the environment variable <code>CMAKE_TOOLCHAIN_FILE</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default toolchain as identified by CMake.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>generator</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Generator name.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Generator name.</p>
+<p class="tableblock">If not specified, the action will use the generator defined by the environment variable <code>CMAKE_GENERATOR</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will try to use the default generator for the platform.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-type</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Build type.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Build type.</p>
+<p class="tableblock">If not specified, the action will use the build type defined by the environment variable <code>CMAKE_BUILD_TYPE</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use <code>Release</code> as the build type.</p>
+<p class="tableblock">If all values are empty, the action will try to use the default generator for the platform.</p>
+<p class="tableblock">If the generator is multi-config, this values will be applies to the <code>CMAKE_CONFIGURATION_TYPES</code> CMake options
+instead of <code>CMAKE_BUILD_TYPE</code>.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>Release</code></p></td>
 </tr>
 <tr>
@@ -534,80 +558,143 @@ the min CMake version that satisfies it.</p>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>install-prefix</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Path where the library should be installed.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>.local/usr</code></p></td>
-</tr>
-<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>extra-args</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Extra arguments to cmake configure command.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>export-compile-commands</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Set CMAKE_EXPORT_COMPILE_COMMANDS=ON.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Set CMAKE_EXPORT_COMPILE_COMMANDS=ON in the configure step.</p>
+<p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>CMAKE_EXPORT_COMPILE_COMMANDS</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default value as identified by CMake (OFF).</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>install-prefix</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Path where the library should be installed.</p>
+<p class="tableblock">If the input is not specified, the action will use the path defined by the environment variable <code>CMAKE_INSTALL_PREFIX</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default path as identified by CMake.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>jobs</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Number of jobs to use in parallel builds.</p>
+<p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>CMAKE_JOBS</code>.</p>
+<p class="tableblock">If the environment variable is also not specified, the action will use the number of processors available in the
+system.</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>run-tests</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Whether we should run tests.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether we should run tests.</p>
+<p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>CMAKE_RUN_TESTS</code>.</p>
+<p class="tableblock">If the environment variable is also not specified, the action will attempt to run tests but will not fail if
+there are no tests.</p>
+<p class="tableblock">When the value is <code>true</code> or <code>false</code>, the action will also set the <code>configure-tests-flag</code> to <code>ON</code> or <code>OFF</code>.
+When the value is undefined, the <code>configure-tests-flag</code> is ignored.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>configure-tests-flag</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Specify the flag to be passed to cmake to enable/disable tests in the configuration step.</p>
+<p class="tableblock">By default this is <code>BUILD_TESTING</code>, which is an option automatically created by the CTest module.</p>
+<p class="tableblock">If the input contains a "=", the action will use the value as is.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>BUILD_TESTING</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>test-all-cxxstd</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether we should run tests for all C++ standards defined by <code>cxxstd</code>.</p>
+<p class="tableblock">If the input is not specified, the action will only run the tests with the last value defined in <code>cxxstd</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>install</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Whether we should install the library.</p>
-<p class="tableblock">The library is only installed once in the <code>install-prefix</code>.</p>
-<p class="tableblock">The latest std version described in <code>cxxstd</code> is used for the installed version.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether we should install the library. The library is only installed once in the <code>install-prefix</code> using
+the latest standard in <code>cxxstd</code>.</p>
+<p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>CMAKE_INSTALL</code>.</p>
+<p class="tableblock">If the environment variable is also not specified, the action will attempt to install the library but will not
+fail if the library cannot installed.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>install-all-cxxstd</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether we should install the library for all C++ standards defined by <code>cxxstd</code>.</p>
+<p class="tableblock">If the input is not specified, the action will only install the library with the last value defined in <code>cxxstd</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>package</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Run cpack with the specified generators after the install step.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether we should run cpack with the specified <code>package-generators</code> after the install step.</p>
+<p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>CMAKE_PACKAGE</code>.</p>
+<p class="tableblock">If the environment variable is also not specified, the action will attempt to run cpack but will not
+fail if cpack cannot be run.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>package-all-cxxstd</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether we should run <code>cpack</code> for all C++ standards defined by <code>cxxstd</code>.</p>
+<p class="tableblock">If the input is not specified, the action will only run cpack with the last value defined in <code>cxxstd</code>.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>package-name</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The name of the package (or application). If not specified, it defaults to the project name.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The name of the package (or application). If not specified, CMake will default to the project name.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>package-dir</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The directory in which the packages are generated by cpack.</p>
-<p class="tableblock">If it is not set then this will default to the build dir.</p>
-<p class="tableblock">The CPACK_PACKAGE_DIRECTORY may be defined in CMakeLists.txt, a CPack config file or from the cpack command
-line option -B.</p>
-<p class="tableblock">If set, the command line option overrides the value found in the config file.</p></td>
+<p class="tableblock">If it is not set then this will default to the build dir determined by <code>CPACK_PACKAGE_DIRECTORY</code>,
+which may be defined in CMakeLists.txt, a CPack config file or from the cpack command
+line option <code>-B</code>. If <code>package-dir</code> is set, it overrides the value found in the config file.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>package-vendor</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Override/define CPACK_PACKAGE_VENDOR.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Override or define CPACK_PACKAGE_VENDOR.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>package-generators</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">A semicolon-separated list of generator names used by cpack.</p>
+<p class="tableblock">If not specified, the action will use the generators defined by the environment variable <code>CMAKE_GENERATOR</code>.</p>
 <p class="tableblock">If this variable is not set, the action will attempt to generate the package with all
-cpack generators available to CMake.</p></td>
+CPack generators available to CMake.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>package-artifact</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Whether the packages generated with cpack should be stored as action artifacts.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether the packages generated with CPack should be stored as action artifacts.</p>
+<p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>CMAKE_PACKAGE_ARTIFACT</code>.</p>
+<p class="tableblock">If the environment variable is also not specified, the action will store the packages as artifacts.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>package-retention-days</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The number of days to keep the packages generated with CPack as action artifacts.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>10</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>create-annotations</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Create github annotations on errors.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Create github annotations for errors and warnings at all steps.</p>
+<p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>CMAKE_CREATE_ANNOTATIONS</code>.</p>
+<p class="tableblock">If the environment variable is also not specified, the action will create annotations.</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>ref-source-dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A reference source directory for annotations. Any annotation filename will be relative to this directory.</p>
-<p class="tableblock">This is typically useful when the repository being tested is not the current directory, in which
-we need to make annotations relative to some other directory.</p>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A reference base directory for annotations.</p>
+<p class="tableblock">For instance, if there is an error in the <code>/home/user/project/src/main.cpp</code> file, the action will create an
+annotation referring to the repository path <code>src/main.cpp</code>.</p>
+<p class="tableblock">If the reference source directory is /home/user/project/src, the action will create an annotation referring to
+<code>main.cpp</code> instead because any annotation filename will be relative to this directory.</p>
+<p class="tableblock">If no value is provided, the environment variable <code>GITHUB_WORKSPACE</code> will be used as the reference source
+directory. This means all annotations will be relative to the repository root if <code>actions/checkout</code> has been
+called without specifying a custom <code>path</code> option.</p>
+<p class="tableblock">Changing this value is typically useful when the repository being tested is not the workspace directory, in
+which we need to make annotations relative to some other directory.</p>
 <p class="tableblock">In most cases, the default option should be enough.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
