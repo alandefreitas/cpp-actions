@@ -409,7 +409,11 @@ async function run() {
         for (const [name, value] of inputs) {
             if (name === 'trace_commands') {
                 trace_commands = value
-                setup_program.set_trace_commands(value)
+                if (process.env['ACTIONS_STEP_DEBUG'] === 'true') {
+                    // Force trace-commands
+                    trace_commands = true
+                }
+                setup_program.set_trace_commands(trace_commands)
                 log(`setup_program.trace_commands: ${setup_program.trace_commands}`)
             }
             log(`${name}: ${value}`)
@@ -11142,6 +11146,10 @@ async function run() {
     try {
         // Get trace_commands input first
         trace_commands = core.getBooleanInput('trace-commands')
+        if (process.env['ACTIONS_STEP_DEBUG'] === 'true') {
+            // Force trace-commands
+            trace_commands = true
+        }
         fnlog(`trace_commands: ${trace_commands}`)
 
         // Get inputs

@@ -1168,6 +1168,10 @@ function generateTable(matrix, latest_factors, factors) {
 function run() {
     try {
         trace_commands = isTruthy(core.getInput('trace-commands'))
+        if (process.env['ACTIONS_STEP_DEBUG'] === 'true') {
+            // Force trace-commands
+            trace_commands = true
+        }
 
         const compiler_versions = parseCompilerRequirements(core.getInput('compilers'))
         log(`compiler_versions: ${JSON.stringify(compiler_versions)}`)
@@ -8076,6 +8080,10 @@ async function run() {
     try {
         // Get trace_commands input first
         trace_commands = core.getBooleanInput('trace-commands')
+        if (process.env['ACTIONS_STEP_DEBUG'] === 'true') {
+            // Force trace-commands
+            trace_commands = true
+        }
         fnlog(`trace_commands: ${trace_commands}`)
 
         // Get inputs

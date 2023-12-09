@@ -1136,6 +1136,10 @@ async function run() {
         if (inputs.install_prefix) {
             inputs.install_prefix = path.resolve(inputs.install_prefix)
         }
+        if (process.env['ACTIONS_STEP_DEBUG'] === 'true') {
+            // Force trace-commands
+            inputs.trace_commands = true
+        }
         trace_commands = inputs.trace_commands
         set_trace_commands(trace_commands)
         setup_cmake.set_trace_commands(trace_commands)

@@ -381,6 +381,10 @@ async function run() {
             check_latest: core.getBooleanInput('check-latest'),
             update_environment: core.getBooleanInput('update-environment')
         }
+        if (process.env['ACTIONS_STEP_DEBUG'] === 'true') {
+            // Force trace-commands
+            inputs.trace_commands = true
+        }
         trace_commands = inputs['trace_commands']
         set_trace_commands(trace_commands)
         fnlog(`setup-cmake.trace_commands: ${trace_commands}`)

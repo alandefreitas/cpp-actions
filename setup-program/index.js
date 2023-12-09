@@ -942,6 +942,10 @@ async function run() {
     try {
         // Get trace_commands input first
         trace_commands = core.getBooleanInput('trace-commands')
+        if (process.env['ACTIONS_STEP_DEBUG'] === 'true') {
+            // Force trace-commands
+            trace_commands = true
+        }
         fnlog(`trace_commands: ${trace_commands}`)
 
         // Get inputs
