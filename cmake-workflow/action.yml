@@ -174,7 +174,7 @@ inputs:
       instead of `CMAKE_BUILD_TYPE`.
 
     required: false
-    default: 'Release'
+    default: ''
   build-target:
     description: 'Targets to build instead of the default target'
     required: false
