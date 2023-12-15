@@ -623,7 +623,6 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
             } else if (compilerName === 'mingw') {
                 entry['cxx'] = `g++`
                 entry['cc'] = `gcc`
-                entry['generator'] = `MinGW Makefiles`
             }
 
             // runs-on / container
@@ -700,6 +699,8 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                         entry['generator'] = `Visual Studio 8 ${year}`
                     }
                 }
+            } else if (compilerName === 'mingw') {
+                entry['generator'] = `MinGW Makefiles`
             }
 
             // Latest flag
@@ -744,7 +745,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
         const latestIdx = matrix.length - 1
         log(`${compilerName}: ${latestIdx - earliestIdx} basic entries`)
 
-        // Apply latest factors
+        // Apply latest factors for this compiler
         if (compilerName in latest_factors) {
             for (const factor of latest_factors[compilerName]) {
                 let latest_copy = {...matrix[latestIdx]}
@@ -762,7 +763,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
             }
         }
 
-        // Apply variant factors
+        // Apply variant factors for this compiler
         let variantIdx = latestIdx
         if (variantIdx !== earliestIdx) {
             variantIdx--
@@ -877,6 +878,20 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
         entry['install'] = entry['install'].trim()
         entry['cxxflags'] = entry['cxxflags'].trim()
         entry['ccflags'] = entry['ccflags'].trim()
+    }
+
+    // Include vcpkg triplet recommendations (vcpkg help triplet)
+    for (let entry of matrix) {
+        const arch_prefix = entry['x86'] ? 'x86' : 'x64'
+        if (['msvc', 'clang-cl'].includes(entry['compiler'])) {
+            entry['triplet'] = `${arch_prefix}-windows`
+        } else if (entry['compiler'] === 'mingw') {
+            entry['triplet'] = `${arch_prefix}-mingw-static`
+        } else if (entry['compiler'] === 'apple-clang') {
+            entry['triplet'] = `${arch_prefix}-osx`
+        } else {
+            entry['triplet'] = `${arch_prefix}-linux`
+        }
     }
 
     // Sort matrix
@@ -1031,8 +1046,8 @@ function generateTable(matrix, latest_factors, factors) {
 
     const allFactorKeys = allFactors.map(v => v.toLowerCase())
 
-    const headerEmojis = ['📋', '🖥️', '🔧', '📚', '🏗️', '🔢', '🔨', '🛠️']
-    const headerNames = ['Name', 'Environment', 'Compiler', 'C++ Standard', 'Build Type', 'Factors', 'Generator', 'Toolset']
+    const headerEmojis = ['📋', '🖥️', '🔧', '📚', '🏗️', '🔢', '🔨', '🛠️', '🛠️']
+    const headerNames = ['Name', 'Environment', 'Compiler', 'C++ Standard', 'Build Type', 'Factors', 'Generator', 'Toolset', 'Triplet']
     const headerWithEmojis = headerNames.map((element, index) => `${headerEmojis[index]} ${element}`)
     const headerRow = headerWithEmojis.map(key => ({data: key, header: true}))
 
@@ -1156,6 +1171,9 @@ function generateTable(matrix, latest_factors, factors) {
         } else {
             row.push('')
         }
+
+        // Triplet
+        row.push(entry['triplet'])
 
         // Apply emojis to name
         row[0] = `${nameEmojis.join('')} ${row[0]}`
