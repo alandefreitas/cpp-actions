@@ -20,7 +20,7 @@ which already calls this action if necessary.
 
 Reads from `cmake-file` input if unset.
 
-By default, it uses any version available in the environment. |`*`
+By default, it uses any version available in the environment. |`>=3.0.2`
 |`architecture` |The target architecture (x86, x64). By default, this value is inferred. |
 |`cmake-file` |File containing the CMake version to use in a cmake_minimum_required command. 
 

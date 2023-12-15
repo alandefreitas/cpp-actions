@@ -36,8 +36,7 @@ steps:
   id: package-install
   with:
     vcpkg: ${{ (!matrix.fetch-content && 'fmt') || '' }}
-    vcpkg-triplet: ${{ ( runner.os == 'Windows' && matrix.x86 && 'x86-windows' ) ||
-      '' }}
+    vcpkg-triplet: ${{ matrix.triplet }}
     apt-get: ${{ matrix.install }} ${{ matrix.container && 'pkg-config' }}
     apt-get-ignore-missing: ${{ matrix.container && 'true' }}
     cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}

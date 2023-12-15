@@ -701,6 +701,8 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                 }
             } else if (compilerName === 'mingw') {
                 entry['generator'] = `MinGW Makefiles`
+            } else if (compilerName === 'clang-cl') {
+                entry['generator-toolset'] = `ClangCL`
             }
 
             // Latest flag

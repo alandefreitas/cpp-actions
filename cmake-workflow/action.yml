@@ -160,6 +160,16 @@ inputs:
 
     required: false
     default: ''
+  generator-toolset:
+    description: |
+      Toolset specification for the generator, if supported. 
+      
+      If not specified, the action will use the toolset defined by the environment variable `CMAKE_GENERATOR_TOOLSET`.
+      
+      If the environment variable is not specified, the action will use the default toolset for the generator.
+
+    required: false
+    default: ''
   build-type:
     description: |
       Build type.

@@ -149,6 +149,7 @@ jobs:
           cmake-version: '>=3.20'
           source-dir: tests
           generator: ${{ matrix.generator }}
+          generator-toolset: ${{ matrix.generator-toolset }}
           toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
           build-type: ${{ matrix.build-type }}
           run-tests: true

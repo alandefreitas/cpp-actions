@@ -337,6 +337,7 @@ async function main(inputs) {
         shared,
         toolchain,
         generator,
+        generator_toolset,
         build_type,
         build_target,
         extra_args,
@@ -508,6 +509,10 @@ async function main(inputs) {
         if (generator) {
             configure_args.push('-G')
             configure_args.push(generator)
+        }
+        if (generator_toolset) {
+            configure_args.push('-T')
+            configure_args.push(generator_toolset)
         }
         if (cxxflags.includes('/m32') && generator.startsWith('Visual Studio')) {
             // In Visual Studio, the -A option is used to specify the architecture,
@@ -1114,6 +1119,7 @@ async function run() {
             shared: toBooleanInput(core.getInput('shared') || process.env['BUILD_SHARED_LIBS'] || ''),
             toolchain: normalizePath(core.getInput('toolchain') || process.env['CMAKE_TOOLCHAIN_FILE'] || ''),
             generator: core.getInput('generator') || process.env['CMAKE_GENERATOR'] || '',
+            generator_toolset: core.getInput('generator-toolset') || process.env['CMAKE_GENERATOR_TOOLSET'] || '',
             build_type: core.getInput('build-type') || process.env['CMAKE_BUILD_TYPE'] || 'Release',
             build_target: (core.getInput('build-target') || '').split(/[,; ]/).filter((input) => input !== ''),
             extra_args: parseExtraArgs(core.getMultilineInput('extra-args')) || '',
@@ -1162,8 +1168,8 @@ async function run() {
         setup_cmake.set_trace_commands(trace_commands)
 
         core.startGroup('📥 Workflow Inputs')
-        fnlog(`cmake-workflow.trace_commands: ${trace_commands}`)
-        fnlog(`setup-cmake.trace_commands: ${setup_cmake.trace_commands}`)
+        fnlog(`🧩 cmake-workflow.trace_commands: ${trace_commands}`)
+        fnlog(`🧩 setup-cmake.trace_commands: ${setup_cmake.trace_commands}`)
         for (const [name, value] of Object.entries(inputs)) {
             core.info(`🧩 ${name.replaceAll('_', '-')}: ${value ? value : '<empty>'}`)
         }

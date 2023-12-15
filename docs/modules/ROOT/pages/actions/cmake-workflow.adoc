@@ -60,6 +60,7 @@ steps:
     cmake-version: '>=3.20'
     source-dir: tests
     generator: ${{ matrix.generator }}
+    generator-toolset: ${{ matrix.generator-toolset }}
     toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     build-type: ${{ matrix.build-type }}
     run-tests: true
@@ -133,6 +134,11 @@ If the environment variable is not specified, the action will use the default to
 If not specified, the action will use the generator defined by the environment variable `CMAKE_GENERATOR`.
 
 If the environment variable is not specified, the action will try to use the default generator for the platform. |
+|`generator-toolset` |Toolset specification for the generator, if supported. 
+
+If not specified, the action will use the toolset defined by the environment variable `CMAKE_GENERATOR_TOOLSET`.
+
+If the environment variable is not specified, the action will use the default toolset for the generator. |
 |`build-type` |Build type.
 
 If not specified, the action will use the build type defined by the environment variable `CMAKE_BUILD_TYPE`.
@@ -142,7 +148,7 @@ If the environment variable is not specified, the action will use `Release` as t
 If all values are empty, the action will try to use the default generator for the platform.
 
 If the generator is multi-config, this values will be applies to the `CMAKE_CONFIGURATION_TYPES` CMake options
-instead of `CMAKE_BUILD_TYPE`. |`Release`
+instead of `CMAKE_BUILD_TYPE`. |
 |`build-target` |Targets to build instead of the default target. |
 |`extra-args` |Extra arguments to cmake configure command. |
 |`export-compile-commands` |Set CMAKE_EXPORT_COMPILE_COMMANDS=ON in the configure step.
