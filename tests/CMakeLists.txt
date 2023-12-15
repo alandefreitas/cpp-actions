@@ -7,6 +7,10 @@ project(cpp_actions
         VERSION 1.4.0
         LANGUAGES CXX)
 
+if (BUILD_SHARED_LIBS)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+endif()
+
 #######################################################
 ### Dependencies                                    ###
 #######################################################
@@ -109,9 +113,7 @@ STRING(REGEX REPLACE ";" "\\\\;" GITIGNORE_CONTENTS "${GITIGNORE_CONTENTS}")
 STRING(REGEX REPLACE "\n" ";" GITIGNORE_CONTENTS "${GITIGNORE_CONTENTS}")
 set(CPACK_SOURCE_IGNORE_FILES ${GITIGNORE_CONTENTS})
 
-
-
-# Always include CPack at last
+# Always include CPack last
 include(CPack)
 
 
