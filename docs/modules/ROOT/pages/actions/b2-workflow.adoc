@@ -76,6 +76,7 @@ argument is mapped to the equivalent b2 variant:
 |`linkflags` |Extra linker flags. |
 |`cxxstd` |List of standards with which b2 will build and test the program. |
 |`threading` |b2 threading option. |
+|`rtti` |Enables or disables run-time type information. |
 |`trace-commands` |Trace commands executed by the workflow. |`false`
 |===
 

@@ -97,6 +97,11 @@ inputs:
     description: 'b2 threading option.'
     required: false
     default: ''
+  rtti:
+    description: |
+      Enables or disables run-time type information.
+    required: false
+    default: ''
   trace-commands:
     description: 'Trace commands executed by the workflow.'
     required: false
@@ -161,6 +166,7 @@ runs:
         B2_ARGS+=(${{ (inputs.threading && format('"threading={0}"', inputs.threading)) || '' }})
         B2_ARGS+=(${{ (inputs.cxxflags && format('"cxxflags={0}"', inputs.cxxflags)) || '' }})
         B2_ARGS+=(${{ (inputs.ccflags && format('"cflags={0}"', inputs.ccflags)) || '' }})
+        B2_ARGS+=(${{ (inputs.rtti == 'true' && '"rtti=on"') || (inputs.rtti == 'false' && '"rtti=off"') || '' }})
         B2_ARGS+=(${{ (inputs.shared == 'true' && '"link=shared"') || '' }})
         B2_ARGS+=(${{ (inputs.asan == 'true' && '"address-sanitizer=on"') || '' }})
         ${{ (inputs.ubsan == 'true' && 'export UBSAN_OPTIONS="print_stacktrace=1"') || '' }}
