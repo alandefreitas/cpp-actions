@@ -1091,6 +1091,14 @@ function parseExtraArgs(extra_args) {
     return args
 }
 
+function normalizePath(path) {
+    const pathIsString = typeof path === 'string' || path instanceof String
+    if (pathIsString && process.platform === 'win32') {
+        return path.replace(/\\/g, '/')
+    }
+    return path
+}
+
 async function run() {
     function fnlog(msg) {
         log('cmake-workflow: ' + msg)
@@ -1102,21 +1110,20 @@ async function run() {
             cmake_path: core.getInput('cmake-path') || 'cmake',
             cmake_version: core.getInput('cmake-version') || '*',
             // Configure options
-            source_dir: core.getInput('source-dir'),
-            build_dir: core.getInput('build-dir'),
-            cc: core.getInput('cc') || process.env['CC'] || '',
+            source_dir: normalizePath(core.getInput('source-dir')),
+            build_dir: normalizePath(core.getInput('build-dir')),
+            cc: normalizePath(core.getInput('cc') || process.env['CC'] || ''),
             ccflags: core.getInput('ccflags') || process.env['CFLAGS'] || '',
-            cxx: core.getInput('cxx') || process.env['CXX'] || '',
+            cxx: normalizePath(core.getInput('cxx') || process.env['CXX'] || ''),
             cxxflags: core.getInput('cxxflags') || process.env['CXXFLAGS'] || '',
             cxxstd: (core.getInput('cxxstd') || process.env['CXXSTD'] || '').split(/[,; ]/).filter((input) => input !== ''),
             shared: toBooleanInput(core.getInput('shared') || process.env['BUILD_SHARED_LIBS'] || ''),
-            toolchain: core.getInput('toolchain') || process.env['CMAKE_TOOLCHAIN_FILE'] || '',
+            toolchain: normalizePath(core.getInput('toolchain') || process.env['CMAKE_TOOLCHAIN_FILE'] || ''),
             generator: core.getInput('generator') || process.env['CMAKE_GENERATOR'] || '',
             build_type: core.getInput('build-type') || process.env['CMAKE_BUILD_TYPE'] || 'Release',
             build_target: (core.getInput('build-target') || '').split(/[,; ]/).filter((input) => input !== ''),
             extra_args: parseExtraArgs(core.getMultilineInput('extra-args')) || '',
             export_compile_commands: toBooleanInput(core.getInput('export-compile-commands') || process.env['CMAKE_EXPORT_COMPILE_COMMANDS'] || ''),
-            install_prefix: core.getInput('install-prefix') || process.env['CMAKE_INSTALL_PREFIX'] || '',
             // Build options
             jobs: toIntegerInput(core.getInput('jobs') || process.env['CMAKE_JOBS']) || numberOfCpus(),
             // Test options
@@ -1126,18 +1133,19 @@ async function run() {
             // Install
             install: toBooleanInput(core.getInput('install') || process.env['CMAKE_INSTALL'] || ''),
             install_all_cxxstd: core.getBooleanInput('install-all-cxxstd'),
+            install_prefix: normalizePath(core.getInput('install-prefix') || process.env['CMAKE_INSTALL_PREFIX'] || ''),
             // Package
             package: toBooleanInput(core.getInput('package') || process.env['CMAKE_PACKAGE'] || ''),
             package_all_cxxstd: core.getBooleanInput('package-all-cxxstd'),
             package_name: core.getInput('package-name') || '',
-            package_dir: core.getInput('package-dir'),
+            package_dir: normalizePath(core.getInput('package-dir')),
             package_vendor: core.getInput('package-vendor') || '',
             package_generators: (core.getInput('package-generators') || process.env['CPACK_GENERATOR'] || '').split(/[,; ]/).filter((input) => input !== ''),
             package_artifact: toBooleanInput(core.getInput('package-artifact') || process.env['CMAKE_PACKAGE_ARTIFACT'] || 'true'),
             package_retention_days: toIntegerInput(core.getInput('package-retention-days')) || 10,
             // Annotations and tracing
             create_annotations: toBooleanInput(core.getInput('create-annotations') || process.env['CMAKE_CREATE_ANNOTATIONS'] || 'true'),
-            ref_source_dir: path.resolve(core.getInput('ref-source-dir') || process.env['GITHUB_WORKSPACE'] || ''),
+            ref_source_dir: normalizePath(path.resolve(core.getInput('ref-source-dir') || process.env['GITHUB_WORKSPACE'] || '')),
             trace_commands: core.getBooleanInput('trace-commands')
         }
 
