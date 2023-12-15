@@ -547,6 +547,13 @@ standard number with the exception of the latest standard.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>generator-toolset</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Toolset specification for the generator, if supported.</p>
+<p class="tableblock">If not specified, the action will use the toolset defined by the environment variable <code>CMAKE_GENERATOR_TOOLSET</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default toolset for the generator.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-type</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Build type.</p>
 <p class="tableblock">If not specified, the action will use the build type defined by the environment variable <code>CMAKE_BUILD_TYPE</code>.</p>
@@ -554,7 +561,7 @@ standard number with the exception of the latest standard.</p></td>
 <p class="tableblock">If all values are empty, the action will try to use the default generator for the platform.</p>
 <p class="tableblock">If the generator is multi-config, this values will be applies to the <code>CMAKE_CONFIGURATION_TYPES</code> CMake options
 instead of <code>CMAKE_BUILD_TYPE</code>.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>Release</code></p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-target</code></p></td>
