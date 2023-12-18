@@ -2,17 +2,19 @@ name: 'B2 Workflow'
 description: |
   This action runs a complete B2 workflow from Boost source files.
   
-  If you are developing a boost library, this is usually the next step in your workflow after setting up a C++ compiler
+  If you are developing a Boost library, this is usually the next step in your workflow after setting up a C++ compiler
   and fetching dependencies with xref:actions/package-install.adoc[].
   
-  It takes the Boost source directory and does whatever it needs to test the specified modules. This includes 
+  It takes the Boost source directory and runs the usual steps to test the specified modules. This includes 
   compiling `b2` if needed and generating a proper `user-config.jam` file.
   
-  This action is particularly useful for Boost library proposals.
+  This action is particularly useful for Boost library proposals, where B2 is mandatory. It assumes
+  the library being tested is in the `libs` directory of the Boost super-project and that
+  `source-dir` is the root of the super-project.
   
   == Next steps
   
-  If you're library also supports CMake, the next step in your workflow should usually be 
+  If your library also supports CMake, the next step in your workflow should usually be 
   xref:actions/cmake-workflow.adoc[]. Otherwise, the next step in your workflow should usually be
   the generation of reports, with tools such as the xref:actions/flamegraph.adoc[] (when `matrix.time-trace`) and 
   xref:actions/create-changelog.adoc[] (usually in another workflow job). You can also include customs steps to
@@ -22,51 +24,124 @@ description: |
   CMake workflow steps as integration tests for CMake.
 
 inputs:
+  # ======================================
+  # Configure options
+  # ======================================
   source-dir:
-    description: 'The boost source directory.'
+    description: |
+      The boost source directory.
+      
+      This path will be used to build and install `B2` for the workflow
+      and test the specified modules.
+
     required: false
     default: '.'
+  cxx:
+    description: |
+      Path to C++ compiler.
+      
+      If the input is not specified, the action will use the compiler defined by the environment variable `CXX`.
+      
+      If the environment variable is not specified, the action will use the default compiler as identified by B2.
+    required: false
+    default: ''
+  cxxflags:
+    description:
+      Flags to be used with the C++ compiler.
+      
+      If the input is not specified, the action will use the flags defined by the environment variable `CXXFLAGS`.
+      
+      If the environment variable is not specified, the action will use the default flags as identified by B2.
+
+    required: false
+    default: ''
+  ccflags:
+    description: |
+      Flags to be used with the C compiler.
+      
+      If the input is not specified, the action will use the flags defined by the environment variable `CFLAGS`.
+      
+      If the environment variable is not specified, the action will use the default flags as identified by B2.
+
+    required: false
+    default: ''
+  cxxstd:
+    description: |
+      Comma-separated list of standards with which B2 will build and test the program.
+      
+      If the input is not specified, the action will use the standards defined by the environment variable `CXXSTD`.
+      
+      If the environment variable is not specified, the action will use the default standards as identified by B2.
+      
+      B2 will iteratively build and test the specified modules with multiple standards.
+    required: false
+    default: ''
+  shared:
+    description: |
+      Determines if the `link` option should be `shared` so that it creates shared libraries.
+      
+      If the input is not specified, the action will use the value defined by the environment variable `BUILD_SHARED_LIBS`.
+      
+      If the environment variable is not specified, the action will use the default value as identified by B2.
+    required: false
+    default: ''
+  toolset:
+    description: |
+      B2 toolset name. The toolset is somewhat equivalent to a CMake generator.
+      
+      If not specified, the action will use the toolset defined by the environment variable `B2_TOOLSET`.
+      
+      If the environment variable is not specified, the action will use the default toolset detected by B2.
+
+    required: false
+    default: ''
+
   build-variant:
     description: |
       Custom build variants. If the provided variant is a CMake build-type, the 
-      argument is mapped to the equivalent b2 variant:
+      argument is mapped to the equivalent B2 variant:
       
       - `Release` -> `release`
       
       - `Debug` -> `debug`
       
-      - `RelWithDebInfo` -> `profile`
+      - `RelWithDebInfo` -> `release` with `debug-symbols=on`
       
       - `<other>` -> lowercase <other>
+      
+      If the input is not specified, the action will use the value defined by the environment variable `B2_BUILD_VARIANT`.
+      
+      If the environment variable is not specified, the action will use the value from `build-type`.
 
     required: false
     default: ''
+
+  build-type:
+    description: |
+      An alternative to `build-variant`, for compatibility with CMake workflows. When `build-variant` is not provided,
+      this input is used to set the build variant.
+      
+      If the input is not specified, the action will use the value defined by the environment variable `B2_BUILD_TYPE`.
+      
+      If the environment variable is not specified, the action will use the default value as identified by B2.
+
+    required: false
+    default: ''
+
   modules:
-    description: 'The list of modules we should test.'
+    description: |
+      The list of modules we should test with B2 in the `libs` directory of the Boost super-project.
+      
+      The directory `libs/<module>/test` will be provided for each module in the list.
+
     required: true
     default: ''
-  toolset:
-    description: 'Toolset name.'
-    required: false
-    default: ''
+
+  # ======================================
+  # B2-specific options
+  # ======================================
   address-model:
-    description: 'Valid b2 list of address models.'
-    required: false
-    default: ''
-  cxx:
-    description: 'Path to C++ compiler.'
-    required: false
-    default: ''
-  cxxflags:
-    description: 'Extra C++ compiler flags.'
-    required: false
-    default: ''
-  ccflags:
-    description: 'Extra C compiler flags.'
-    required: false
-    default: ''
-  shared:
-    description: 'Build shared libraries.'
+    description: 'Valid B2 list of address models.'
     required: false
     default: ''
   asan:
@@ -89,12 +164,8 @@ inputs:
     description: 'Extra linker flags.'
     required: false
     default: ''
-  cxxstd:
-    description: 'List of standards with which b2 will build and test the program.'
-    required: false
-    default: ''
   threading:
-    description: 'b2 threading option.'
+    description: 'B2 threading option.'
     required: false
     default: ''
   rtti:
@@ -102,93 +173,46 @@ inputs:
       Enables or disables run-time type information.
     required: false
     default: ''
+
+  # ======================================
+  # Configure and Install options
+  # ======================================
+
+  # ======================================
+  # Build options
+  # ======================================
+  jobs:
+    description: |
+      Number of jobs to use in parallel builds.
+      
+      If the input is not specified, the action will use the value defined by the environment variable `B2_JOBS`.
+      
+      If the environment variable is also not specified, the action will use the number of processors available in the 
+      system.
+
+    required: false
+    default: ''
+
+  # ======================================
+  # Test options
+  # ======================================
+
+  # ======================================
+  # Install options
+  # ======================================
+
+  # ======================================
+  # Annotation options
+  # ======================================
   trace-commands:
     description: 'Trace commands executed by the workflow.'
     required: false
     default: 'false'
 
 runs:
-  using: "composite"
-  steps:
-    - name: Get CPU cores
-      uses: SimenB/github-actions-cpu-cores@v1
-      id: cpu-cores
-
-    - name: Set toolset compiler
-      working-directory: ${{ inputs.source-dir }}
-      shell: bash
-      run: |
-        # Bootstrap headers
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
-        # Set the compiler the toolset should use
-        if [ -n "${{ inputs.cxx }}" ] && [ -n "${{ inputs.toolset }}" ]; then
-          cxx="${{ inputs.cxx }}"
-          cxx="${cxx//\\/\\\\}"  # Replace single backslashes with double backslashes
-          toolset="${{ inputs.toolset }}"
-          if [[ $toolset != "clang-win" ]]; then
-              echo -n "using $toolset : : \"$cxx\" ;" > ~/user-config.jam
-          fi
-        fi
-
-    - name: Bootstrap
-      working-directory: ${{ inputs.source-dir }}
-      shell: bash
-      run: |
-        # Bootstrap headers
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        if [ -f "./bootstrap.sh" ]; then
-          ./bootstrap.sh
-          ./b2 headers
-        fi
-
-    - name: B2 Workflow
-      working-directory: ${{ inputs.source-dir }}
-      shell: bash
-      run: |
-        # B2 Workflow
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
-        B2_ARGS+=(${{ (steps.cpu-cores.outputs.count != '1' && format('"-j" "{0}"', steps.cpu-cores.outputs.count)) || '' }})
-        B2_ARGS+=(${{ (inputs.toolset && format('"toolset={0}"', inputs.toolset)) || '' }})
-        B2_ARGS+=(${{ (inputs.address-model && format('"address-model={0}"', inputs.address-model)) || '' }})
-        B2_ARGS+=(${{ (inputs.cxxstd && format('"cxxstd={0}"', inputs.cxxstd)) || '' }})
-        
-        build_variant="${{ inputs.build-variant }}"
-        if [ "${{ inputs.build-variant }}" != "" ]; then
-            build_variant=$(echo "$build_variant" | tr '[:upper:]' '[:lower:]')
-            if [ "$build_variant" == "relwithdebinfo" ]; then
-                build_variant="release"
-                B2_ARGS+=("variant=$build_variant")
-                B2_ARGS+=("debug-symbols=on")
-            else
-                B2_ARGS+=("variant=$build_variant")
-            fi
-        fi
-        
-        B2_ARGS+=(${{ (inputs.threading && format('"threading={0}"', inputs.threading)) || '' }})
-        B2_ARGS+=(${{ (inputs.cxxflags && format('"cxxflags={0}"', inputs.cxxflags)) || '' }})
-        B2_ARGS+=(${{ (inputs.ccflags && format('"cflags={0}"', inputs.ccflags)) || '' }})
-        B2_ARGS+=(${{ (inputs.rtti == 'true' && '"rtti=on"') || (inputs.rtti == 'false' && '"rtti=off"') || '' }})
-        B2_ARGS+=(${{ (inputs.shared == 'true' && '"link=shared"') || '' }})
-        B2_ARGS+=(${{ (inputs.asan == 'true' && '"address-sanitizer=on"') || '' }})
-        ${{ (inputs.ubsan == 'true' && 'export UBSAN_OPTIONS="print_stacktrace=1"') || '' }}
-        # B2_ARGS+=(${{ (inputs.ubsan == 'true' && '"cxxflags=-fsanitize=undefined -fno-sanitize-recover=undefined" "linkflags=-fsanitize=undefined" "define=UBSAN=1" "debug-symbols=on" "visibility=global"') || '' }})
-        B2_ARGS+=(${{ (inputs.ubsan == 'true' && '"undefined-sanitizer=on"') || '' }})
-        B2_ARGS+=(${{ (inputs.tsan == 'true' && '"thread-sanitizer=on"') || '' }})
-        B2_ARGS+=(${{ (inputs.coverage == 'true' && '"coverage=on"') || '' }})
-        B2_ARGS+=(${{ (inputs.linkflags && format('"linkflags={0}"', inputs.linkflags)) || '' }})
-        toolset="${{ inputs.toolset }}"
-        if [[ "$toolset" == "clang-win" ]]; then
-          B2_ARGS+=("embed-manifest-via=linker")
-        fi
-         
-        modules="${{ inputs.modules }}"
-        for module in ${modules//,/ }
-        do
-            B2_ARGS+=("libs/$module/test")
-        done
-        
-        set -x        
-        ./b2 "${B2_ARGS[@]}"
-        set +x
+  using: 'node16'
+  main: 'dist/index.js'
+  post-if: success()
+branding:
+  icon: 'code'
+  color: 'yellow'

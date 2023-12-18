@@ -374,7 +374,9 @@ inputs:
     required: false
     default: '10'
 
+  # ======================================
   # Annotation options
+  # ======================================
   create-annotations:
     description: |
       Create github annotations for errors and warnings at all steps.
