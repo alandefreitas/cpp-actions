@@ -535,7 +535,7 @@ function compilerEmoji(compiler, with_emoji = false) {
     return '🛠️'
 }
 
-function generateMatrix(compilerVersions, standards, max_standards, latest_factors, factors) {
+function generateMatrix(compilerVersions, standards, max_standards, latest_factors, factors, sanitizer_build_type) {
     let matrix = []
 
     const allcxxstds = ['1998.0.0', '2003.0.0', '2011.0.0', '2014.0.0', '2017.0.0', '2020.0.0', '2023.0.0', '2026.0.0']
@@ -815,28 +815,28 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
             if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
                 entry['cxxflags'] += ' -fsanitize=address'
                 entry['ccflags'] += ' -fsanitize=address'
-                entry['build-type'] = 'Debug'
+                entry['build-type'] = sanitizer_build_type ? sanitizer_build_type : 'Release'
             }
         }
         if ('ubsan' in entry && entry['ubsan'] === true) {
             if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
                 entry['cxxflags'] += ' -fsanitize=undefined'
                 entry['ccflags'] += ' -fsanitize=undefined'
-                entry['build-type'] = 'Debug'
+                entry['build-type'] = sanitizer_build_type ? sanitizer_build_type : 'Release'
             }
         }
         if ('msan' in entry && entry['msan'] === true) {
             if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
                 entry['cxxflags'] += ' -fsanitize=memory'
                 entry['ccflags'] += ' -fsanitize=memory'
-                entry['build-type'] = 'Debug'
+                entry['build-type'] = sanitizer_build_type ? sanitizer_build_type : 'Release'
             }
         }
         if ('tsan' in entry && entry['tsan'] === true) {
             if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
                 entry['cxxflags'] += ' -fsanitize=thread'
                 entry['ccflags'] += ' -fsanitize=thread'
-                entry['build-type'] = 'Debug'
+                entry['build-type'] = sanitizer_build_type ? sanitizer_build_type : 'Release'
             }
         }
         if ('coverage' in entry && entry['coverage'] === true) {
@@ -1210,7 +1210,10 @@ function run() {
         const factors = parseCompilerFactors(core.getInput('factors'), compilers)
         log(`factors: ${JSON.stringify(factors)}`)
 
-        const matrix = generateMatrix(compiler_versions, standards, max_standards, latest_factors, factors)
+        const sanitizer_build_type = core.getInput('sanitizer-build-type').trim()
+        log(`sanitizer_build_type: ${sanitizer_build_type}`)
+
+        const matrix = generateMatrix(compiler_versions, standards, max_standards, latest_factors, factors, sanitizer_build_type)
         core.setOutput('matrix', matrix)
 
         const generate_summary = isTruthy(core.getInput('generate-summary'))

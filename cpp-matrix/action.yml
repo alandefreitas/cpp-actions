@@ -236,6 +236,12 @@ inputs:
       clang Time-Trace
       mingw Shared
 
+  sanitizer-build-type:
+    description: |
+      Determine the default build type to suggest when testing with sanitizers.
+    required: false
+    default: 'RelWithDebInfo'
+
   generate-summary:
     description: 'Generate summary with the complete matrix.'
     required: false
