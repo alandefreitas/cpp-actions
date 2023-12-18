@@ -640,6 +640,16 @@ will be duplicated with this factor if there are no entries left to inject the f
 <p class="tableblock"><code>mingw Shared</code></p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>sanitizer-build-type</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Determine the default build type to suggest when testing with sanitizers.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RelWithDebInfo</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>x86-build-type</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Determine the default build type to suggest when testing with x86.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>Release</code></p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>generate-summary</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Generate summary with the complete matrix.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
@@ -701,6 +711,7 @@ and factors to be tested.</p>
    as sanitizers, coverage, and time-trace.</p>
 <p class="tableblock">- <code>cxxflags</code>: The recommended C&#43;&#43; flags to be used by this entry. It reflects the values of special factors, such
    as sanitizers, coverage, and time-trace.</p>
+<p class="tableblock">- <code>env</code>: A dictionary of environment variables to be set for this entry.</p>
 <p class="tableblock">- <code>install</code>: The recommended packages to be installed before running the workflow. This includes packages
   such as build-essential for ubuntu containers and lcov for coverage entries.</p>
 <p class="tableblock">- <code>&lt;factors&gt;&#8230;&#8203;</code>: Provides additional factors or attributes associated with the test configuration as defined by
