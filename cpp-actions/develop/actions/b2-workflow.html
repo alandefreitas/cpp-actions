@@ -330,15 +330,17 @@
 <p>This action runs a complete B2 workflow from Boost source files.</p>
 </div>
 <div class="paragraph">
-<p>If you are developing a boost library, this is usually the next step in your workflow after setting up a C++ compiler
+<p>If you are developing a Boost library, this is usually the next step in your workflow after setting up a C++ compiler
 and fetching dependencies with <a href="package-install.html" class="xref page">Install Packages</a>.</p>
 </div>
 <div class="paragraph">
-<p>It takes the Boost source directory and does whatever it needs to test the specified modules. This includes
+<p>It takes the Boost source directory and runs the usual steps to test the specified modules. This includes
 compiling <code>b2</code> if needed and generating a proper <code>user-config.jam</code> file.</p>
 </div>
 <div class="paragraph">
-<p>This action is particularly useful for Boost library proposals.</p>
+<p>This action is particularly useful for Boost library proposals, where B2 is mandatory. It assumes
+the library being tested is in the <code>libs</code> directory of the Boost super-project and that
+<code>source-dir</code> is the root of the super-project.</p>
 </div>
 </div>
 </div>
@@ -346,7 +348,7 @@ compiling <code>b2</code> if needed and generating a proper <code>user-config.ja
 <h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next steps</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>If you&#8217;re library also supports CMake, the next step in your workflow should usually be
+<p>If your library also supports CMake, the next step in your workflow should usually be
 <a href="cmake-workflow.html" class="xref page">CMake Workflow</a>. Otherwise, the next step in your workflow should usually be
 the generation of reports, with tools such as the <a href="flamegraph.html" class="xref page">Create Flamegraph</a> (when <code>matrix.time-trace</code>) and
 <a href="create-changelog.html" class="xref page">Create Changelog</a> (usually in another workflow job). You can also include customs steps to
@@ -399,52 +401,83 @@ CMake workflow steps as integration tests for CMake.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>source-dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The boost source directory.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The boost source directory.</p>
+<p class="tableblock">This path will be used to build and install <code>B2</code> for the workflow
+and test the specified modules.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-variant</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Custom build variants. If the provided variant is a CMake build-type, the
-argument is mapped to the equivalent b2 variant:</p>
-<p class="tableblock">- <code>Release</code> &#8594; <code>release</code></p>
-<p class="tableblock">- <code>Debug</code> &#8594; <code>debug</code></p>
-<p class="tableblock">- <code>RelWithDebInfo</code> &#8594; <code>profile</code></p>
-<p class="tableblock">- <code>&lt;other&gt;</code> &#8594; lowercase &lt;other&gt;.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>modules</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The list of modules we should test. ⚠️ This parameter is required.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>toolset</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Toolset name.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>address-model</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Valid b2 list of address models.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Path to C++ compiler.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Path to C++ compiler.</p>
+<p class="tableblock">If the input is not specified, the action will use the compiler defined by the environment variable <code>CXX</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default compiler as identified by B2.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Extra C++ compiler flags.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Flags to be used with the C++ compiler.
+If the input is not specified, the action will use the flags defined by the environment variable <code>CXXFLAGS</code>.
+If the environment variable is not specified, the action will use the default flags as identified by B2.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>ccflags</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Extra C compiler flags.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Flags to be used with the C compiler.</p>
+<p class="tableblock">If the input is not specified, the action will use the flags defined by the environment variable <code>CFLAGS</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default flags as identified by B2.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxstd</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Comma-separated list of standards with which B2 will build and test the program.</p>
+<p class="tableblock">If the input is not specified, the action will use the standards defined by the environment variable <code>CXXSTD</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default standards as identified by B2.</p>
+<p class="tableblock">B2 will iteratively build and test the specified modules with multiple standards.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>shared</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Build shared libraries.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Determines if the <code>link</code> option should be <code>shared</code> so that it creates shared libraries.</p>
+<p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>BUILD_SHARED_LIBS</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default value as identified by B2.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>toolset</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">B2 toolset name. The toolset is somewhat equivalent to a CMake generator.</p>
+<p class="tableblock">If not specified, the action will use the toolset defined by the environment variable <code>B2_TOOLSET</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default toolset detected by B2.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-variant</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Custom build variants. If the provided variant is a CMake build-type, the
+argument is mapped to the equivalent B2 variant:</p>
+<p class="tableblock">- <code>Release</code> &#8594; <code>release</code></p>
+<p class="tableblock">- <code>Debug</code> &#8594; <code>debug</code></p>
+<p class="tableblock">- <code>RelWithDebInfo</code> &#8594; <code>release</code> with <code>debug-symbols=on</code></p>
+<p class="tableblock">- <code>&lt;other&gt;</code> &#8594; lowercase &lt;other&gt;</p>
+<p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>B2_BUILD_VARIANT</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the value from <code>build-type</code>.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-type</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">An alternative to <code>build-variant</code>, for compatibility with CMake workflows. When <code>build-variant</code> is not provided,
+this input is used to set the build variant.</p>
+<p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>B2_BUILD_TYPE</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default value as identified by B2.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>modules</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The list of modules we should test with B2 in the <code>libs</code> directory of the Boost super-project.</p>
+<p class="tableblock">The directory <code>libs/&lt;module&gt;/test</code> will be provided for each module in the list. ⚠️ This parameter is required.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>address-model</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Valid B2 list of address models.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
@@ -473,18 +506,21 @@ argument is mapped to the equivalent b2 variant:</p>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxstd</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of standards with which b2 will build and test the program.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>threading</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">b2 threading option.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">B2 threading option.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>rtti</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Enables or disables run-time type information.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>jobs</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Number of jobs to use in parallel builds.</p>
+<p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>B2_JOBS</code>.</p>
+<p class="tableblock">If the environment variable is also not specified, the action will use the number of processors available in the
+system.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
