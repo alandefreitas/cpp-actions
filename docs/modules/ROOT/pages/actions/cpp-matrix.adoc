@@ -260,6 +260,7 @@ Other entries will also include this factor as false. |`gcc Asan Shared`
 
 `mingw Shared`
 |`sanitizer-build-type` |Determine the default build type to suggest when testing with sanitizers. |`Release`
+|`x86-build-type` |Determine the default build type to suggest when testing with x86. |`Release`
 |`generate-summary` |Generate summary with the complete matrix. |`true`
 |`trace-commands` |Trace commands executed by the action. |`false`
 |===

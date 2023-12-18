@@ -242,6 +242,12 @@ inputs:
     required: false
     default: 'RelWithDebInfo'
 
+  x86-build-type:
+    description: |
+      Determine the default build type to suggest when testing with x86.
+    required: false
+    default: 'Release'
+
   generate-summary:
     description: 'Generate summary with the complete matrix.'
     required: false

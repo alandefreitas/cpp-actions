@@ -535,7 +535,7 @@ function compilerEmoji(compiler, with_emoji = false) {
     return '🛠️'
 }
 
-function generateMatrix(compilerVersions, standards, max_standards, latest_factors, factors, sanitizer_build_type) {
+function generateMatrix(compilerVersions, standards, max_standards, latest_factors, factors, sanitizer_build_type, x86_build_type) {
     let matrix = []
 
     const allcxxstds = ['1998.0.0', '2003.0.0', '2011.0.0', '2014.0.0', '2017.0.0', '2020.0.0', '2023.0.0', '2026.0.0']
@@ -858,7 +858,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                 entry['cxxflags'] += ' -m32'
                 entry['ccflags'] += ' -m32'
             }
-            entry['build-type'] = 'Debug'
+            entry['build-type'] = x86_build_type ? x86_build_type : 'Release'
         }
         if ('time-trace' in entry && entry['time-trace'] === true) {
             if (entry['compiler'] === 'clang') {
@@ -1213,7 +1213,10 @@ function run() {
         const sanitizer_build_type = core.getInput('sanitizer-build-type').trim()
         log(`sanitizer_build_type: ${sanitizer_build_type}`)
 
-        const matrix = generateMatrix(compiler_versions, standards, max_standards, latest_factors, factors, sanitizer_build_type)
+        const x86_build_type = core.getInput('x86-build-type').trim()
+        log(`x86_build_type: ${x86_build_type}`)
+
+        const matrix = generateMatrix(compiler_versions, standards, max_standards, latest_factors, factors, sanitizer_build_type, x86_build_type)
         core.setOutput('matrix', matrix)
 
         const generate_summary = isTruthy(core.getInput('generate-summary'))
