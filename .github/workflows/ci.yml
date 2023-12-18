@@ -127,7 +127,7 @@ jobs:
           trace-commands: true
 
       - name: B2 Workflow
-        if: ${{ ! matrix.time-trace && ! matrix.coverage }}
+        if: ${{ ! matrix.time-trace && ! matrix.coverage && ! matrix.ubsan }}
         uses: ./b2-workflow
         with:
           source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
