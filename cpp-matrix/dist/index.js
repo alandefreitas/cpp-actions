@@ -813,29 +813,29 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
         entry['install'] = ''
         if ('asan' in entry && entry['asan'] === true) {
             if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
-                entry['cxxflags'] += ' -fsanitize=address'
-                entry['ccflags'] += ' -fsanitize=address'
+                entry['cxxflags'] += ' -fsanitize=address -fno-sanitize-recover=address -fno-omit-frame-pointer'
+                entry['ccflags'] += ' -fsanitize=address -fno-sanitize-recover=address -fno-omit-frame-pointer'
                 entry['build-type'] = sanitizer_build_type ? sanitizer_build_type : 'Release'
             }
         }
         if ('ubsan' in entry && entry['ubsan'] === true) {
             if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
-                entry['cxxflags'] += ' -fsanitize=undefined'
-                entry['ccflags'] += ' -fsanitize=undefined'
+                entry['cxxflags'] += ' -fsanitize=undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer'
+                entry['ccflags'] += ' -fsanitize=undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer'
                 entry['build-type'] = sanitizer_build_type ? sanitizer_build_type : 'Release'
             }
         }
         if ('msan' in entry && entry['msan'] === true) {
             if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
-                entry['cxxflags'] += ' -fsanitize=memory'
-                entry['ccflags'] += ' -fsanitize=memory'
+                entry['cxxflags'] += ' -fsanitize=memory -fno-sanitize-recover=memory -fno-omit-frame-pointer'
+                entry['ccflags'] += ' -fsanitize=memory -fno-sanitize-recover=memory -fno-omit-frame-pointer'
                 entry['build-type'] = sanitizer_build_type ? sanitizer_build_type : 'Release'
             }
         }
         if ('tsan' in entry && entry['tsan'] === true) {
             if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
-                entry['cxxflags'] += ' -fsanitize=thread'
-                entry['ccflags'] += ' -fsanitize=thread'
+                entry['cxxflags'] += ' -fsanitize=thread -fno-sanitize-recover=thread -fno-omit-frame-pointer'
+                entry['ccflags'] += ' -fsanitize=thread -fno-sanitize-recover=thread -fno-omit-frame-pointer'
                 entry['build-type'] = sanitizer_build_type ? sanitizer_build_type : 'Release'
             }
         }
