@@ -550,7 +550,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
         log(`${compilerName} subranges: ${JSON.stringify(subranges)}`)
         for (let i = 0; i < subranges.length; i++) {
             const subrange = subranges[i]
-            let entry = {'compiler': compilerName, 'version': subrange}
+            let entry = {'compiler': compilerName, 'version': subrange, 'env': {}}
 
             // The standards we should test with this compiler
             let compiler_cxxs = []
@@ -823,6 +823,8 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                 entry['cxxflags'] += ' -fsanitize=undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer'
                 entry['ccflags'] += ' -fsanitize=undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer'
                 entry['build-type'] = sanitizer_build_type ? sanitizer_build_type : 'Release'
+                // https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#stack-traces-and-report-symbolization
+                entry['env'] = {'UBSAN_OPTIONS': 'print_stacktrace=1'}
             }
         }
         if ('msan' in entry && entry['msan'] === true) {

@@ -316,6 +316,8 @@ outputs:
       - `cxxflags`: The recommended C++ flags to be used by this entry. It reflects the values of special factors, such
          as sanitizers, coverage, and time-trace.
       
+      - `env`: A dictionary of environment variables to be set for this entry. 
+      
       - `install`: The recommended packages to be installed before running the workflow. This includes packages 
         such as build-essential for ubuntu containers and lcov for coverage entries. 
       
