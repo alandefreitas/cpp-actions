@@ -18,6 +18,7 @@ venv
 cpp_modules
 docs/node_modules
 docs/build
+docs/generated-files
 
 # IDE settings
 .idea

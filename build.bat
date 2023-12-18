@@ -9,4 +9,3 @@ for %%p in (%projects%) do (
     cd ..
 )
 
-call python3 docs/parse_actions.py

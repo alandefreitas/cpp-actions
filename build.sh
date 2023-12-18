@@ -9,4 +9,3 @@ for project in "${projects[@]}"; do
     cd ..
 done
 
-python3 docs/parse_actions.py

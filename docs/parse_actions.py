@@ -51,7 +51,7 @@ def sort_step(d):
 
 
 readme_base = os.path.join('README.base.adoc')
-action_pages_dir = os.path.join('docs', 'modules', 'ROOT', 'pages', 'actions')
+action_pages_dir = os.path.join('docs', 'generated-files', 'modules', 'ROOT', 'pages', 'actions')
 example_path = os.path.join('.github', 'workflows', 'ci.yml')
 actions = ['cpp-matrix', 'setup-cpp', 'package-install', 'cmake-workflow', 'boost-clone', 'b2-workflow',
            'create-changelog', 'flamegraph', 'setup-cmake', 'setup-gcc', 'setup-clang', 'setup-program']
@@ -449,5 +449,7 @@ for action in actions:
 
     # Write the output to a file
     action_page_path = os.path.join(action_pages_dir, f'{action}.adoc')
+    os.makedirs(os.path.dirname(action_page_path), exist_ok=True)
     with open(action_page_path, 'w', encoding='utf-8') as f:
+        print(f'Writing {action_page_path}')
         f.write(output)

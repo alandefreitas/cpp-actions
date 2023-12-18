@@ -8,3 +8,9 @@ asciidoc:
     table-caption: false
 nav:
   - modules/ROOT/nav.adoc
+ext:
+  collector:
+    run:
+      command: python docs/parse_actions.py
+    scan:
+      dir: docs/generated-files
