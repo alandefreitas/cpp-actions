@@ -158,9 +158,12 @@ runs:
         if [ "${{ inputs.build-variant }}" != "" ]; then
             build_variant=$(echo "$build_variant" | tr '[:upper:]' '[:lower:]')
             if [ "$build_variant" == "relwithdebinfo" ]; then
-                build_variant="profile"
+                build_variant="release"
+                B2_ARGS+=("variant=$build_variant")
+                B2_ARGS+=("debug-symbols=on")
+            else
+                B2_ARGS+=("variant=$build_variant")
             fi
-            B2_ARGS+=("variant=$build_variant")
         fi
         
         B2_ARGS+=(${{ (inputs.threading && format('"threading={0}"', inputs.threading)) || '' }})
