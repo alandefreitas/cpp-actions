@@ -36,6 +36,19 @@ inputs:
 
     required: false
     default: '.'
+  build-dir:
+    description: |
+      Changes the build directories for all project roots being built. 
+      
+      When this option is specified, all Jamroot files must declare a project name. 
+      
+      The build directory for the project root will be computed by concatenating the value of the
+      --build-dir option, the project name specified in Jamroot, and the build dir specified in Jamroot
+      (or bin, if none is specified). 
+      
+      The option is primarily useful when building from read-only media, when you can’t modify Jamroot.
+    required: false
+    default: ''
   cxx:
     description: |
       Path to C++ compiler.
@@ -171,6 +184,157 @@ inputs:
   rtti:
     description: |
       Enables or disables run-time type information.
+    required: false
+    default: ''
+  clean:
+    description: |
+      Cleans all targets in the current directory and in any sub-projects. 
+      
+      Note that unlike the `clean` target in make, you can use --clean together with target names to
+      clean specific targets.
+
+    required: false
+    default: 'false'
+  clean-all:
+    description: |
+      Cleans all targets, no matter where they are defined. 
+      
+      In particular, it will clean targets in parent Jamfiles, and targets defined under
+      other project roots.
+    required: false
+    default: 'false'
+  abbreviate-paths:
+    description: |
+      Compresses target paths by abbreviating each component. 
+      
+      This option is useful to keep paths from becoming longer than the filesystem supports. 
+      
+      See also the B2 documentation section  
+      https://www.boost.org/doc/libs/master/tools/build/doc/html/index.html#bbv2.reference.buildprocess.targetpath[“Target Paths”].
+
+    required: false
+    default: 'true'
+  hash:
+    description: |
+      Compresses target paths using an MD5 hash. 
+      
+      This option is useful to keep paths from becoming longer than the filesystem supports. 
+      
+      This option produces shorter paths than --abbreviate-paths does, but at the cost of making them less 
+      understandable. 
+      
+      See also the B2 documentation section  
+      https://www.boost.org/doc/libs/master/tools/build/doc/html/index.html#bbv2.reference.buildprocess.targetpath[“Target Paths”].
+
+    required: false
+    default: 'false'
+  rebuild-all:
+    description: |
+      Equivalent to the `-a` option.
+      
+      Causes all files to be rebuilt.
+
+    required: false
+    default: 'false'
+  dry-run:
+    description: |
+      Equivalent to the `-n` option.
+    
+      Do not execute the commands, only print them.      
+
+    required: false
+    default: 'false'
+  stop-on-error:
+    description: |
+      Equivalent to the `-q` option.
+      
+      Stop at the first error, as opposed to continuing to build targets that don’t depend on the failed ones.
+
+    required: false
+    default: 'false'
+  config:
+    description: |
+      Equivalent to the `--config=filename` option.
+      
+      Override all configuration files
+
+    required: false
+    default: ''
+  site-config:
+    description: |
+      Equivalent to the `--site-config=filename` option.
+      
+      Override the default site-config.jam.
+      
+    required: false
+    default: ''
+  user-config:
+    description: |
+      Equivalent to the `--user-config=filename` option.
+      
+      Override the default user-config.jam.
+      
+      When this option is specified, the action will not generate a `user-config.jam` file with 
+      the `cxx` toolset path.
+
+    required: false
+    default: ''
+  project-config:
+    description: |
+      Equivalent to the `--project-config=filename` option.
+      
+      Override the default project-config.jam    
+
+    required: false
+    default: ''
+  debug-configuration:
+    description: |
+      Equivalent to the `--debug-configuration` option.
+      
+      Produces debug information about the loading of B2 and toolset files.
+      
+      If not specified, the value is inherited from `trace-commands`.
+
+    required: false
+    default: ''
+  debug-building:
+    description: |
+      Equivalent to the `--debug-building` option.
+      
+      Prints what targets are being built and with what properties.
+
+      If not specified, the value is inherited from `trace-commands`.
+
+    required: false
+    default: ''
+  debug-generators:
+    description: |
+      Equivalent to the `--debug-generators` option.
+      
+      Produces debug output from the generator search process. Useful for debugging custom generators.
+
+      If not specified, the value is inherited from `trace-commands`.
+
+    required: false
+    default: ''
+  include:
+    description:
+      Additional include paths for C and C++ compilers.
+    required: false
+    default: ''
+  define:
+    description:
+      Additional macro definitions for C and C++ compilers. 
+      
+      The string should be either SYMBOL or SYMBOL=VALUE.
+    required: false
+    default: ''
+  runtime-link:
+    description: |
+      Equivalent to the `--runtime-link=<shared,static>` option.
+      
+      Determines if shared or static version of C and C++ runtimes should be used.
+      
     required: false
     default: ''
 
