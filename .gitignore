@@ -19,6 +19,7 @@ cpp_modules
 docs/node_modules
 docs/build
 docs/generated-files
+node_modules/
 
 # IDE settings
 .idea
