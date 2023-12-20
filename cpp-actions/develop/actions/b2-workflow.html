@@ -407,6 +407,16 @@ and test the specified modules.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Changes the build directories for all project roots being built.</p>
+<p class="tableblock">When this option is specified, all Jamroot files must declare a project name.</p>
+<p class="tableblock">The build directory for the project root will be computed by concatenating the value of the
+--build-dir option, the project name specified in Jamroot, and the build dir specified in Jamroot
+(or bin, if none is specified).</p>
+<p class="tableblock">The option is primarily useful when building from read-only media, when you can’t modify Jamroot.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Path to C++ compiler.</p>
 <p class="tableblock">If the input is not specified, the action will use the compiler defined by the environment variable <code>CXX</code>.</p>
@@ -513,6 +523,120 @@ this input is used to set the build variant.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>rtti</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Enables or disables run-time type information.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>clean</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Cleans all targets in the current directory and in any sub-projects.</p>
+<p class="tableblock">Note that unlike the <code>clean</code> target in make, you can use --clean together with target names to
+clean specific targets.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>clean-all</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Cleans all targets, no matter where they are defined.</p>
+<p class="tableblock">In particular, it will clean targets in parent Jamfiles, and targets defined under
+other project roots.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>abbreviate-paths</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Compresses target paths by abbreviating each component.</p>
+<p class="tableblock">This option is useful to keep paths from becoming longer than the filesystem supports.</p>
+<p class="tableblock">See also the B2 documentation section
+<a href="https://www.boost.org/doc/libs/master/tools/build/doc/html/index.html#bbv2.reference.buildprocess.targetpath">“Target Paths”</a>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>hash</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Compresses target paths using an MD5 hash.</p>
+<p class="tableblock">This option is useful to keep paths from becoming longer than the filesystem supports.</p>
+<p class="tableblock">This option produces shorter paths than --abbreviate-paths does, but at the cost of making them less
+understandable.</p>
+<p class="tableblock">See also the B2 documentation section
+<a href="https://www.boost.org/doc/libs/master/tools/build/doc/html/index.html#bbv2.reference.buildprocess.targetpath">“Target Paths”</a>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>rebuild-all</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>-a</code> option.</p>
+<p class="tableblock">Causes all files to be rebuilt.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>dry-run</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>-n</code> option.</p>
+<p class="tableblock">Do not execute the commands, only print them.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>stop-on-error</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>-q</code> option.</p>
+<p class="tableblock">Stop at the first error, as opposed to continuing to build targets that don’t depend on the failed ones.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>config</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>--config=filename</code> option.</p>
+<p class="tableblock">Override all configuration files.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>site-config</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>--site-config=filename</code> option.</p>
+<p class="tableblock">Override the default site-config.jam.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>user-config</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>--user-config=filename</code> option.</p>
+<p class="tableblock">Override the default user-config.jam.</p>
+<p class="tableblock">When this option is specified, the action will not generate a <code>user-config.jam</code> file with
+the <code>cxx</code> toolset path.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>project-config</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>--project-config=filename</code> option.</p>
+<p class="tableblock">Override the default project-config.jam.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>debug-configuration</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>--debug-configuration</code> option.</p>
+<p class="tableblock">Produces debug information about the loading of B2 and toolset files.</p>
+<p class="tableblock">If not specified, the value is inherited from <code>trace-commands</code>.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>debug-building</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>--debug-building</code> option.</p>
+<p class="tableblock">Prints what targets are being built and with what properties.</p>
+<p class="tableblock">If not specified, the value is inherited from <code>trace-commands</code>.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>debug-generators</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>--debug-generators</code> option.</p>
+<p class="tableblock">Produces debug output from the generator search process. Useful for debugging custom generators.</p>
+<p class="tableblock">If not specified, the value is inherited from <code>trace-commands</code>.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>include</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Additional include paths for C and C++ compilers.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>define</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Additional macro definitions for C and C++ compilers.
+The string should be either SYMBOL or SYMBOL=VALUE.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>runtime-link</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>--runtime-link=&lt;shared,static&gt;</code> option.</p>
+<p class="tableblock">Determines if shared or static version of C and C++ runtimes should be used.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
