@@ -317,6 +317,18 @@ function numberOfCpus() {
     return result
 }
 
+function makeArgsString(args) {
+    let res = []
+    for (const arg of args) {
+        if (arg.includes(' ')) {
+            res.push(`"${arg.replaceAll('"', '\\"')}"`)
+        } else {
+            res.push(arg)
+        }
+    }
+    return res.join(' ')
+}
+
 async function main(inputs) {
     function fnlog(msg) {
         log('cmake-workflow: ' + msg)
@@ -370,7 +382,7 @@ async function main(inputs) {
     // ----------------------------------------------
     // Look for CMake versions
     // ----------------------------------------------
-    core.startGroup('🔎 Setup CMake')
+    core.startGroup(`🔎 Setup CMake`)
     const setupCMakeInputs = {
         trace_commands: trace_commands,
         version: cmake_version,
@@ -401,7 +413,7 @@ async function main(inputs) {
     // ----------------------------------------------
     // Identify generator features
     // ----------------------------------------------
-    core.startGroup('🎛️ CMake parameters')
+    core.startGroup(`🎛️ CMake parameters`)
     if (!generator) {
         // Execute and get the output of:
         fnlog(`Identifying default generator`)
@@ -485,13 +497,22 @@ async function main(inputs) {
         return (!cur_cxxstd || cur_cxxstd === main_cxxstd) ? package_dir : (package_dir + '-' + cur_cxxstd)
     }
 
-    core.startGroup('⚙️ Configure')
-    for (const cur_cxxstd of cxxstds) {
-        if (cur_cxxstd) {
-            core.info(`⚙️ Configure (C++${cur_cxxstd})`)
-        } else {
-            core.info(`⚙️ Configure (default C++ standard)`)
+    function make_factor_description(cur_cxxstd) {
+        let description = ''
+        if (inputs.extra_args_key) {
+            description = `${inputs.extra_args_key}: `
         }
+        if (cur_cxxstd) {
+            description += `C++${cur_cxxstd}`
+        } else {
+            description += `Default C++ standard`
+        }
+        return description
+    }
+
+    core.startGroup(`⚙️ Configure`)
+    for (const cur_cxxstd of cxxstds) {
+        core.info(`⚙️ Configure (${make_factor_description(cur_cxxstd)})`)
         const std_build_dir = make_build_dir(cur_cxxstd)
 
         let configure_args = []
@@ -607,6 +628,7 @@ async function main(inputs) {
         /*
             Extra arguments
          */
+        fnlog(`Extra arguments: ${JSON.stringify(extra_args)}`)
         for (const extra_arg of extra_args) {
             configure_args.push(extra_arg)
         }
@@ -625,7 +647,7 @@ async function main(inputs) {
         if (!supports_path_to_build) {
             await io.mkdirP(std_build_dir)
         }
-        core.info(`💻 ${std_build_dir}> ${cmake_path} ${configure_args.join(' ')}`)
+        core.info(`💻 ${std_build_dir}> ${cmake_path} ${makeArgsString(configure_args)}`)
         const {exitCode: exitCode, stdout} = await exec.getExecOutput(`"${cmake_path}"`, configure_args, {
             cwd: cmd_dir,
             ignoreReturnCode: true
@@ -642,7 +664,7 @@ async function main(inputs) {
     // ==============================================
     // Build steps
     // ==============================================
-    core.startGroup('🛠️ Build')
+    core.startGroup(`🛠️ Build`)
     if (build_target.length === 0) {
         // null represents the default target
         build_target = [null]
@@ -653,11 +675,7 @@ async function main(inputs) {
         build_target = [build_target.join(' ')]
     }
     for (const cur_cxxstd of cxxstds) {
-        if (cur_cxxstd) {
-            core.info(`🛠️ Build (C++${cur_cxxstd})`)
-        } else {
-            core.info(`🛠️ Build (default C++ standard)`)
-        }
+        core.info(`🛠️ Build (${make_factor_description(cur_cxxstd)})`)
         const std_build_dir = make_build_dir(cur_cxxstd)
 
         /*
@@ -678,7 +696,7 @@ async function main(inputs) {
                     build_args.push(split_build_target)
                 }
             }
-            core.info(`💻 ${source_dir}> ${cmake_path} ${build_args.join(' ')}`)
+            core.info(`💻 ${source_dir}> ${cmake_path} ${makeArgsString(build_args)}`)
             const {exitCode: exitCode, stdout} = await exec.getExecOutput(`"${cmake_path}"`, build_args, {
                 cwd: source_dir,
                 ignoreReturnCode: true
@@ -697,14 +715,10 @@ async function main(inputs) {
     // Test step
     // ==============================================
     if (run_tests !== false) {
-        core.startGroup('🧪 Test')
+        core.startGroup(`🧪 Test`)
         const tests_cxxstd = test_all_cxxstd ? cxxstds : [main_cxxstd]
         for (const cur_cxxstd of tests_cxxstd) {
-            if (cur_cxxstd) {
-                core.info(`🧪 Tests (C++${cur_cxxstd})`)
-            } else {
-                core.info(`🧪 Tests (default C++ standard)`)
-            }
+            core.info(`🧪 Tests (${make_factor_description(cur_cxxstd)})`)
             const std_build_dir = make_build_dir(cur_cxxstd)
 
             /*
@@ -728,7 +742,7 @@ async function main(inputs) {
             /*
                 Run
              */
-            core.info(`💻 ${source_dir}> ${ctest_path} ${test_args.join(' ')}`)
+            core.info(`💻 ${source_dir}> ${ctest_path} ${makeArgsString(test_args)}`)
             const {exitCode: exitCode, stdout} = await exec.getExecOutput(`"${ctest_path}"`, test_args, {
                 cwd: source_dir,
                 ignoreReturnCode: true
@@ -747,14 +761,10 @@ async function main(inputs) {
     // Install step
     // ==============================================
     if (install !== false) {
-        core.startGroup('🚚 Install')
+        core.startGroup(`🚚 Install`)
         const install_cxxstd = install_all_cxxstd ? cxxstds : [main_cxxstd]
         for (const cur_cxxstd of install_cxxstd) {
-            if (cur_cxxstd) {
-                core.info(`🚚 Install (C++${cur_cxxstd})`)
-            } else {
-                core.info(`🚚 Install (default C++ standard)`)
-            }
+            core.info(`🚚 Install (${make_factor_description(cur_cxxstd)})`)
             const std_build_dir = make_build_dir(cur_cxxstd)
             const std_install_dir = make_install_prefix(cur_cxxstd)
 
@@ -786,7 +796,7 @@ async function main(inputs) {
             /*
                 Run
              */
-            core.info(`💻 ${source_dir}> ${cmake_path} ${install_args.join(' ')}`)
+            core.info(`💻 ${source_dir}> ${cmake_path} ${makeArgsString(install_args)}`)
             const {exitCode: exitCode, stdout} = await exec.getExecOutput(`"${cmake_path}"`, install_args, {
                 cwd: source_dir,
                 ignoreReturnCode: true
@@ -802,7 +812,7 @@ async function main(inputs) {
     // Package step
     // ==============================================
     if (do_package) {
-        core.startGroup('📦 Package')
+        core.startGroup(`📦 Package`)
 
         /*
             Determine cpack generators
@@ -846,11 +856,7 @@ async function main(inputs) {
         const package_cxxstd = package_all_cxxstd ? cxxstds : [main_cxxstd]
         let package_files = []
         for (const cur_cxxstd of package_cxxstd) {
-            if (cur_cxxstd) {
-                core.info(`📦 Generating packages (C++${cur_cxxstd})`)
-            } else {
-                core.info(`📦 Generating packages (default C++ standard)`)
-            }
+            core.info(`📦 Package (${make_factor_description(cur_cxxstd)})`)
             const std_build_dir = make_build_dir(cur_cxxstd)
             // const std_install_dir = make_install_prefix(cur_cxxstd)
 
@@ -877,7 +883,7 @@ async function main(inputs) {
                 /*
                     Run
                  */
-                core.info(`💻 ${std_build_dir}> ${cpack_path} ${cpack_args.join(' ')}`)
+                core.info(`💻 ${std_build_dir}> ${cpack_path} ${makeArgsString(cpack_args)}`)
                 const {exitCode: exitCode, stdout} = await exec.getExecOutput(`"${cpack_path}"`, cpack_args, {
                     cwd: std_build_dir,
                     ignoreReturnCode: true
@@ -915,7 +921,7 @@ async function main(inputs) {
         core.endGroup()
 
         if (package_files.length !== 0 && package_artifact) {
-            core.startGroup('⬆️ Upload package artifacts')
+            core.startGroup(`⬆️ Upload package artifacts`)
             /*
                 Generate artifacts
              */
@@ -1060,7 +1066,7 @@ function toIntegerInput(input) {
     }
 }
 
-function parseExtraArgs(extra_args) {
+function parseExtraArgsEntry(extra_args) {
     // The extra_args input is a multiline string. Each element in the array
     // is a line in the string. We need to split each line into arguments
     // and then join them into a single array. It's not as simple as splitting
@@ -1088,6 +1094,70 @@ function parseExtraArgs(extra_args) {
         }
     }
     return args
+}
+
+function parseExtraArgs(extra_args) {
+    function fnlog(msg) {
+        log('parseExtraArgs: ' + msg)
+    }
+
+    // Extra args is a multiline string. It can be parsed as either
+    // a single line representing the arguments or as a map of arguments.
+    // When a map is provided, the workflow will be run for each
+    // key-value pair in the map.
+
+    function getLineKeyValue(line) {
+        // Check if the line has a key-value pair or if it's just
+        // more args. The key is any identifier followed by ":".
+        const regex = /^([^:]+):(.*)$/
+        const match = line.match(regex)
+        if (!match) {
+            return undefined
+        }
+        const key = match[1].trim()
+        const keyIsQuoted =
+            (key.startsWith('"') && key.endsWith('"')) ||
+            (key.startsWith('\'') && key.endsWith('\''))
+        if (keyIsQuoted) {
+            return {key: key.substring(1, key.length - 1), value: match[2]}
+        }
+        const keyIsInvalid = key.trim().includes(' ')
+        if (keyIsInvalid) {
+            return undefined
+        }
+        return {key: key, value: match[2]}
+    }
+
+    const first_line = extra_args[0]
+    let res = getLineKeyValue(first_line)
+    if (!res) {
+        // Parse all lines as a single line of cmake args
+        fnlog('Parsing all lines as a single line of cmake args')
+        return parseExtraArgsEntry(extra_args)
+    } else {
+        // Parse lines as a map of key-value pairs where each value
+        // is one factor we have to test.
+        fnlog('Parsing lines as a map of key-value pairs')
+        let extraArgsMap = {}
+        extraArgsMap[res.key] = [res.value]
+        curKey = res.key
+        for (let i = 1; i < extra_args.length; i++) {
+            const line = extra_args[i]
+            res = getLineKeyValue(line)
+            if (!res) {
+                // Continuation of the previous key
+                extraArgsMap[curKey].push(line)
+            }
+            extraArgsMap[res.key] = [res.value]
+        }
+        fnlog(`Parsed extra args map: ${JSON.stringify(extraArgsMap)}`)
+        // Parse each value in the map as a single line of cmake args
+        for (const key in extraArgsMap) {
+            extraArgsMap[key] = parseExtraArgsEntry(extraArgsMap[key])
+        }
+        fnlog(`Parsed extra args map: ${JSON.stringify(extraArgsMap)}`)
+        return extraArgsMap
+    }
 }
 
 function normalizePath(path) {
@@ -1171,20 +1241,43 @@ async function run() {
         fnlog(`🧩 cmake-workflow.trace_commands: ${trace_commands}`)
         fnlog(`🧩 setup-cmake.trace_commands: ${setup_cmake.trace_commands}`)
         for (const [name, value] of Object.entries(inputs)) {
-            core.info(`🧩 ${name.replaceAll('_', '-')}: ${value ? value : '<empty>'}`)
+            core.info(`🧩 ${name.replaceAll('_', '-')}: ${value ? JSON.stringify(value) : '<empty>'}`)
         }
         core.endGroup()
 
-        try {
+        if (Array.isArray(inputs.extra_args)) {
             await main(inputs)
-        } catch (error) {
-            // Print stack trace
-            fnlog(error.stack)
-            // Print error message
-            core.error(error)
-            core.setFailed(error.message)
+        } else {
+            // Run workflow for each key-value pair in the extra_args map
+            let isFirst = true
+            for (const key in inputs.extra_args) {
+                core.startGroup(`🧩 Running workflow "${key}"`)
+                const value = inputs.extra_args[key]
+                const new_inputs = Object.assign({}, inputs)
+                new_inputs.extra_args = value
+                fnlog(`Running workflow for key "${key}" with args "${value}"`)
+                if (!isFirst) {
+                    const safeKey = key
+                        .replace(/[^a-zA-Z0-9_-]/g, '_')
+                        .replace(/_+/g, '_')
+                    const old_build_dir = new_inputs.build_dir
+                    new_inputs.build_dir = path.join(old_build_dir, safeKey)
+                    fnlog(`build_dir: ${old_build_dir} -> ${new_inputs.build_dir}`)
+                    const old_install_prefix = new_inputs.install_prefix
+                    new_inputs.install_prefix = path.join(old_install_prefix, safeKey)
+                    fnlog(`install_prefix: ${old_install_prefix} -> ${new_inputs.install_prefix}`)
+                    const old_package_dir = new_inputs.package_dir
+                    new_inputs.package_dir = path.join(old_package_dir, safeKey)
+                    fnlog(`package_dir: ${old_package_dir} -> ${new_inputs.package_dir}`)
+                }
+                new_inputs.extra_args_key = key
+                await main(new_inputs)
+                isFirst = false
+                core.endGroup()
+            }
         }
     } catch (error) {
+        fnlog(error.stack)
         core.setFailed(error.message)
     }
 }
