@@ -1191,11 +1191,7 @@ async function run() {
 
 if (require.main === module) {
     run().catch((error) => {
-        core.error('cmake-workflow')
-        core.error(error)
-        core.error(error.message)
-        core.error(error.stack)
-        core.setFailed(error.stack)
+        core.setFailed(error)
     })
 }
 

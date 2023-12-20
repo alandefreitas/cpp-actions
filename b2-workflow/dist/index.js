@@ -419,11 +419,7 @@ async function run() {
 
 if (require.main === require.cache[eval('__filename')]) {
     run().catch((error) => {
-        core.error('b2-workflow')
-        core.error(error)
-        core.error(error.message)
-        core.error(error.stack)
-        core.setFailed(error.stack)
+        core.setFailed(error)
     })
 }
 

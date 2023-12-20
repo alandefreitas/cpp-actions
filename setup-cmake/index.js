@@ -427,11 +427,7 @@ async function run() {
 
 if (require.main === module) {
     run().catch((error) => {
-        core.error('setup-cmake')
-        core.error(error)
-        core.error(error.message)
-        core.error(error.stack)
-        core.setFailed(error.stack)
+        core.setFailed(error)
     })
 }
 
