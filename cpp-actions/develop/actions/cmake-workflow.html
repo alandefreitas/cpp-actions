@@ -488,6 +488,13 @@ the min CMake version that satisfies it.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>build</code></p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>add-path</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A list of directories to add to the PATH environment variable.</p>
+<p class="tableblock">The parameter will add the directories to the PATH environment variable before running the configure step.</p>
+<p class="tableblock">This is useful when the CMake scripts need to locate other tools that are not installed in the system paths.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Path to C compiler.</p>
 <p class="tableblock">If the input is not specified, the action will use the compiler defined by the environment variable <code>CC</code>.</p>
