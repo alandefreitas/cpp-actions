@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+        <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>B2 Workflow :: C++ Actions</title>
+    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/b2-workflow.html">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+    <link rel="stylesheet" href="../../../_/css/vendor/tabs.css">
+    <script>var uiRootPath = '../../../_'</script>
+<link rel="icon" href="../../../_/img/favicon.svg" type="image/svg">
+    <style>
+      .algolia-autocomplete .ds-dropdown-menu:before {
+          display: block;
+          position: absolute;
+          content: "";
+          width: 14px;
+          height: 14px;
+          background: #fff;
+          z-index: 2;
+          top: 9px;
+          left: -7px !important;
+          border-top: 1px solid #d9d9d9;
+          border-right: 1px solid #d9d9d9;
+          -webkit-transform: rotate(-136deg);
+          transform: rotate(-136deg);
+          border-radius: 2px;
+      }
+      .search-result-dropdown-menu:before {
+          display: block;
+          position: absolute;
+          content: "";
+          width: 14px;
+          height: 14px;
+          background: #fff !important;
+          z-index: 2;
+          top: 9px;
+          border-top: 1px solid #d9d9d9;
+          border-right: 1px solid #d9d9d9;
+          -webkit-transform: rotate(-136deg);
+          transform: rotate(-136deg);
+          border-radius: 2px;
+          left: -7px;
+      }
+      .nav-container .search-result-dropdown-menu {
+        position: fixed;
+        top: 65px;
+        left: 13.5rem;
+        width: 50%;
+        overflow: visible;
+        max-height: calc(100vh - 5.25rem);
+        line-height: 1.5;
+        z-index: 9999;
+      }
+      .nav-container .button {
+        padding: 0px 14px;
+        background-color: #FF9F00;
+        color: #fff;
+      }
+      .algolia-autocomplete.algolia-autocomplete-left .ds-dropdown-menu {
+          position: fixed !important;
+          top: 65px !important;
+          left: 13.5rem !important;
+          z-index: 99 !important;
+      }
+      .search-selector {
+        margin-right: 133px;
+        text-transform: none;
+      }
+      @media screen and (max-width: 1024px) {
+        .nav-container .search-result-dropdown-menu {
+          top: 103px;
+          left: 14.5rem;
+        }
+      }
+      @media screen and (max-width: 768px) {
+        .search-result-dropdown-menu:before {
+            top: -6px;
+            -webkit-transform: rotate(-45deg);
+            transform: rotate(-45deg);
+            left: 35px;
+        }
+        .nav-container .search-result-dropdown-menu {
+            top: 100%;
+            left: 0;
+            width: 90vw;
+            position: absolute !important;
+        }
+        .algolia-autocomplete.algolia-autocomplete-left .ds-dropdown-menu {
+          position: absolute !important;
+          top: 100% !important;
+          left: 0px !important;
+          z-index: 99 !important;
+        }
+        .algolia-autocomplete .ds-dropdown-menu:before{
+            top: -6px;
+            -webkit-transform: rotate(-45deg);
+            transform: rotate(-45deg);
+            left: 35px !important;
+        }
+      }
+    </style>
+  </head>
+  <body class="article">
+    <header class="header">
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <a class="navbar-item" href="https://alandefreitas.github.io/cpp-actions/doc/cpp-actions/">
+                <img src="../../../_/img/banner.svg" alt="" width="130">
+                    <div class="navbar-item-nonProduction">
+                        <p>v1.7.0</p>
+                    </div>
+            </a>
+            <button class="navbar-burger" data-target="topbar-nav">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+
+
+        <div id="topbar-nav" class="navbar-menu">
+                <div class="navbar-item is-hoverable">
+                        <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions
+                            : B2 Workflow</a>
+                </div>
+                    <div class="navbar-item is-hoverable">
+                        <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions" target="_blank">GitHub</a>
+                    </div>
+                    <div class="navbar-item is-hoverable">
+                        <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions/releases" target="_blank">Releases</a>
+                    </div>
+
+            <div class="navbar-end">
+                <div class="navbar-item">
+                      <span class="control">
+                        <a class="button is-primary" target="blank_"
+                           href="https://github.com/alandefreitas/cpp-actions/issues/new/choose">Report an Issue</a>
+                      </span>
+                </div>
+            </div>
+        </div>
+    </nav>
+</header>
+    <div class="body">
+<div class="nav-container" data-component="cpp-actions" data-version="v1.7.0">
+  <aside class="nav">
+    <div class="panels">
+    <div class="nav-panel-menu is-active" data-panel="menu">
+        <div class="navbar-item search hide-for-print">
+            <div id="search-field" class="field has-filter">
+                <div style="display: flex; flex-direction: column;">
+                    <div style="display: flex; margin-bottom: 10px; position: relative;">
+                        <input id="search-input" type="text" placeholder="Search the docs" style="flex: 1; padding: 0 0.25em" onkeyup="onSearch()">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <nav class="nav-menu">
+                <h3 class="title"><a href="../index.html">C++ Actions</a></h3>
+            <ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Compilers</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-cpp.html">Setup C++ Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-gcc.html">Setup GCC Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-clang.html">Setup Clang Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Tools</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="package-install.html">Install Packages Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-program.html">Setup Program Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Workflows</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="cmake-workflow.html">CMake Workflow Action</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="b2-workflow.html">B2 Workflow Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Project</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../contribute.html">Contribute</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../license.html">License</a>
+  </li>
+</ul>
+  </li>
+</ul>
+        </nav>
+    </div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">C++ Actions</span>
+    <span class="version">v1.7.0</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../../index.html">C++ Actions</a>
+      <ul class="versions">
+        <li class="version is-latest">
+          <a href="../../index.html">master</a>
+        </li>
+        <li class="version">
+          <a href="../../develop/index.html">develop</a>
+        </li>
+        <li class="version is-current">
+          <a href="../index.html">v1.7.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.6.2/index.html">v1.6.2</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.6.1/index.html">v1.6.1</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.6.0/index.html">v1.6.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.5.0/index.html">v1.5.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.4.1/index.html">v1.4.1</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.4.0/index.html">v1.4.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.3.0/index.html">v1.3.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.2.1/index.html">v1.2.1</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.2.0/index.html">v1.2.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.1.0/index.html">v1.1.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.0.0/index.html">v1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+    <button class="nav-toggle"></button>
+        <a href="../../index.html" class="home-link"></a>
+    <nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">C++ Actions</a></li>
+    <li>Workflows</li>
+    <li><a href="b2-workflow.html">B2 Workflow Action</a></li>
+  </ul>
+</nav>
+    <div class="page-versions">
+  <button class="version-menu-toggle" title="Show other versions of page">v1.7.0</button>
+  <div class="version-menu">
+    <a class="version" href="../../actions/b2-workflow.html">master</a>
+    <a class="version" href="../../develop/actions/b2-workflow.html">develop</a>
+    <a class="version is-current" href="b2-workflow.html">v1.7.0</a>
+    <a class="version" href="../../v1.6.2/actions/b2-workflow.html">v1.6.2</a>
+    <a class="version" href="../../v1.6.1/actions/b2-workflow.html">v1.6.1</a>
+    <a class="version" href="../../v1.6.0/actions/b2-workflow.html">v1.6.0</a>
+    <a class="version" href="../../v1.5.0/actions/b2-workflow.html">v1.5.0</a>
+    <a class="version" href="../../v1.4.1/actions/b2-workflow.html">v1.4.1</a>
+    <a class="version" href="../../v1.4.0/actions/b2-workflow.html">v1.4.0</a>
+    <a class="version" href="../../v1.3.0/actions/b2-workflow.html">v1.3.0</a>
+    <a class="version" href="../../v1.2.1/actions/b2-workflow.html">v1.2.1</a>
+    <a class="version" href="../../v1.2.0/actions/b2-workflow.html">v1.2.0</a>
+    <a class="version" href="../../v1.1.0/actions/b2-workflow.html">v1.1.0</a>
+    <a class="version" href="../../v1.0.0/actions/b2-workflow.html">v1.0.0</a>
+  </div>
+</div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">B2 Workflow</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>This action runs a complete B2 workflow from Boost source files.</p>
+</div>
+<div class="paragraph">
+<p>If you are developing a Boost library, this is usually the next step in your workflow after setting up a C++ compiler
+and fetching dependencies with <a href="package-install.html" class="xref page">Install Packages</a>.</p>
+</div>
+<div class="paragraph">
+<p>It takes the Boost source directory and runs the usual steps to test the specified modules. This includes
+compiling <code>b2</code> if needed and generating a proper <code>user-config.jam</code> file.</p>
+</div>
+<div class="paragraph">
+<p>This action is particularly useful for Boost library proposals, where B2 is mandatory. It assumes
+the library being tested is in the <code>libs</code> directory of the Boost super-project and that
+<code>source-dir</code> is the root of the super-project.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next steps</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>If your library also supports CMake, the next step in your workflow should usually be
+<a href="cmake-workflow.html" class="xref page">CMake Workflow</a>. Otherwise, the next step in your workflow should usually be
+the generation of reports, with tools such as the <a href="flamegraph.html" class="xref page">Create Flamegraph</a> (when <code>matrix.time-trace</code>) and
+<a href="create-changelog.html" class="xref page">Create Changelog</a> (usually in another workflow job). You can also include customs steps to
+upload coverage reports (when <code>matrix.coverage</code>).</p>
+</div>
+<div class="paragraph">
+<p>If your b2 workflow provides CMake installation and configuration scripts, it is also usual to include multiple
+CMake workflow steps as integration tests for CMake.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_example"><a class="anchor" href="#_example"></a>Example</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: B2 Workflow
+  uses: alandefreitas/cpp-actions/b2-workflow@v1.7.0
+  with:
+    source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
+    modules: variant2
+    toolset: ${{ matrix.b2-toolset }}
+    build-variant: ${{ matrix.build-type }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx || '' }}
+    cxxstd: ${{ matrix.cxxstd }}
+    address-model: ${{ (matrix.x86 &amp;&amp; '32') || '64' }}
+    asan: ${{ matrix.asan }}
+    ubsan: ${{ matrix.ubsan }}
+    tsan: ${{ matrix.tsan }}
+    shared: ${{ matrix.shared }}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_input_parameters"><a class="anchor" href="#_input_parameters"></a>Input Parameters</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Parameter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>source-dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The boost source directory.</p>
+<p class="tableblock">This path will be used to build and install <code>B2</code> for the workflow
+and test the specified modules.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Changes the build directories for all project roots being built.</p>
+<p class="tableblock">When this option is specified, all Jamroot files must declare a project name.</p>
+<p class="tableblock">The build directory for the project root will be computed by concatenating the value of the
+--build-dir option, the project name specified in Jamroot, and the build dir specified in Jamroot
+(or bin, if none is specified).</p>
+<p class="tableblock">The option is primarily useful when building from read-only media, when you can’t modify Jamroot.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Path to C++ compiler.</p>
+<p class="tableblock">If the input is not specified, the action will use the compiler defined by the environment variable <code>CXX</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default compiler as identified by B2.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Flags to be used with the C++ compiler.
+If the input is not specified, the action will use the flags defined by the environment variable <code>CXXFLAGS</code>.
+If the environment variable is not specified, the action will use the default flags as identified by B2.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ccflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Flags to be used with the C compiler.</p>
+<p class="tableblock">If the input is not specified, the action will use the flags defined by the environment variable <code>CFLAGS</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default flags as identified by B2.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxstd</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Comma-separated list of standards with which B2 will build and test the program.</p>
+<p class="tableblock">If the input is not specified, the action will use the standards defined by the environment variable <code>CXXSTD</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default standards as identified by B2.</p>
+<p class="tableblock">B2 will iteratively build and test the specified modules with multiple standards.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>shared</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Determines if the <code>link</code> option should be <code>shared</code> so that it creates shared libraries.</p>
+<p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>BUILD_SHARED_LIBS</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default value as identified by B2.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>toolset</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">B2 toolset name. The toolset is somewhat equivalent to a CMake generator.</p>
+<p class="tableblock">If not specified, the action will use the toolset defined by the environment variable <code>B2_TOOLSET</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default toolset detected by B2.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-variant</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Custom build variants. If the provided variant is a CMake build-type, the
+argument is mapped to the equivalent B2 variant:</p>
+<p class="tableblock">- <code>Release</code> &#8594; <code>release</code></p>
+<p class="tableblock">- <code>Debug</code> &#8594; <code>debug</code></p>
+<p class="tableblock">- <code>RelWithDebInfo</code> &#8594; <code>release</code> with <code>debug-symbols=on</code></p>
+<p class="tableblock">- <code>&lt;other&gt;</code> &#8594; lowercase &lt;other&gt;</p>
+<p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>B2_BUILD_VARIANT</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the value from <code>build-type</code>.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-type</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">An alternative to <code>build-variant</code>, for compatibility with CMake workflows. When <code>build-variant</code> is not provided,
+this input is used to set the build variant.</p>
+<p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>B2_BUILD_TYPE</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default value as identified by B2.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>modules</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The list of modules we should test with B2 in the <code>libs</code> directory of the Boost super-project.</p>
+<p class="tableblock">The directory <code>libs/&lt;module&gt;/test</code> will be provided for each module in the list. ⚠️ This parameter is required.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>address-model</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Valid B2 list of address models.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>asan</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enable address-sanitizer.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ubsan</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enable undefined-sanitizer.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>tsan</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enable thread-sanitizer.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>coverage</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enable coverage.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>linkflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extra linker flags.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>threading</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">B2 threading option.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>rtti</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enables or disables run-time type information.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>clean</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Cleans all targets in the current directory and in any sub-projects.</p>
+<p class="tableblock">Note that unlike the <code>clean</code> target in make, you can use --clean together with target names to
+clean specific targets.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>clean-all</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Cleans all targets, no matter where they are defined.</p>
+<p class="tableblock">In particular, it will clean targets in parent Jamfiles, and targets defined under
+other project roots.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>abbreviate-paths</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Compresses target paths by abbreviating each component.</p>
+<p class="tableblock">This option is useful to keep paths from becoming longer than the filesystem supports.</p>
+<p class="tableblock">See also the B2 documentation section
+<a href="https://www.boost.org/doc/libs/master/tools/build/doc/html/index.html#bbv2.reference.buildprocess.targetpath">“Target Paths”</a>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>hash</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Compresses target paths using an MD5 hash.</p>
+<p class="tableblock">This option is useful to keep paths from becoming longer than the filesystem supports.</p>
+<p class="tableblock">This option produces shorter paths than --abbreviate-paths does, but at the cost of making them less
+understandable.</p>
+<p class="tableblock">See also the B2 documentation section
+<a href="https://www.boost.org/doc/libs/master/tools/build/doc/html/index.html#bbv2.reference.buildprocess.targetpath">“Target Paths”</a>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>rebuild-all</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>-a</code> option.</p>
+<p class="tableblock">Causes all files to be rebuilt.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>dry-run</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>-n</code> option.</p>
+<p class="tableblock">Do not execute the commands, only print them.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>stop-on-error</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>-q</code> option.</p>
+<p class="tableblock">Stop at the first error, as opposed to continuing to build targets that don’t depend on the failed ones.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>config</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>--config=filename</code> option.</p>
+<p class="tableblock">Override all configuration files.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>site-config</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>--site-config=filename</code> option.</p>
+<p class="tableblock">Override the default site-config.jam.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>user-config</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>--user-config=filename</code> option.</p>
+<p class="tableblock">Override the default user-config.jam.</p>
+<p class="tableblock">When this option is specified, the action will not generate a <code>user-config.jam</code> file with
+the <code>cxx</code> toolset path.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>project-config</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>--project-config=filename</code> option.</p>
+<p class="tableblock">Override the default project-config.jam.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>debug-configuration</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>--debug-configuration</code> option.</p>
+<p class="tableblock">Produces debug information about the loading of B2 and toolset files.</p>
+<p class="tableblock">If not specified, the value is inherited from <code>trace-commands</code>.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>debug-building</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>--debug-building</code> option.</p>
+<p class="tableblock">Prints what targets are being built and with what properties.</p>
+<p class="tableblock">If not specified, the value is inherited from <code>trace-commands</code>.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>debug-generators</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>--debug-generators</code> option.</p>
+<p class="tableblock">Produces debug output from the generator search process. Useful for debugging custom generators.</p>
+<p class="tableblock">If not specified, the value is inherited from <code>trace-commands</code>.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>include</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Additional include paths for C and C++ compilers.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>define</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Additional macro definitions for C and C++ compilers.
+The string should be either SYMBOL or SYMBOL=VALUE.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>runtime-link</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>--runtime-link=&lt;shared,static&gt;</code> option.</p>
+<p class="tableblock">Determines if shared or static version of C and C++ runtimes should be used.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>jobs</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Number of jobs to use in parallel builds.</p>
+<p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>B2_JOBS</code>.</p>
+<p class="tableblock">If the environment variable is also not specified, the action will use the number of processors available in the
+system.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+    <footer class="footer">
+  <p>This page was built using the Antora UI adapted by <a href="https://github.com/cppalliance/site-docs" target="_blank">cppalliance/site-docs</a>.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+  <p>
+    <a href="https://github.com/alandefreitas/cpp-actions" target="_blank">alandefreitas/cpp-actions</a>
+  </p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+<script async src="../../../_/js/vendor/tabs.js" data-sync-storage-key="preferred-tab"></script>
+    <script>
+      var element = document.querySelector('.search-result-dropdown-menu');
+      if (element) {
+        // Apply styles and additional class to element
+        element.style.display = 'none';
+        var element = document.querySelector('.search-result-dropdown-menu');
+        var arrow = document.createElement('div');
+        arrow.classList.add('search-result-dropdown-menu');
+        element.appendChild(arrow);
+      }
+
+      function onSearch() {
+        var searchInput = document.getElementById('search-input');
+        if (searchInput.value) {
+          element.style.display = 'block';
+        } else {
+          element.style.display = 'none';
+        }
+      }
+
+      function onSearchChange(search_active) {
+        var searchInputAlgolia = document.getElementById('search-input-algolia');
+        var searchInput = document.getElementById('search-input');
+        if (search_active === "algolia") {
+          searchInputAlgolia.style.display = 'block';
+          // searchInputAlgolia.style.lineHeight = '2.001';
+          searchInput.style.display = 'none';
+          setupAlgoliaDocsearch();
+        } else {
+          searchInputAlgolia.style.display = 'none';
+          searchInput.style.display = 'block';
+        }
+      }
+
+      // Add an event listener to the document
+      document.addEventListener("click", function(event) {
+        var searchInput = document.getElementById('search-input');
+        // Check if the click was outside of the modal
+        if (event.target !== element && event.target !== searchInput) {
+
+          // Hide the modal
+          searchInput.value = "";
+          onSearch();
+        }
+      });
+    </script>
+  </body>
+</html>
