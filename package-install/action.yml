@@ -2,18 +2,18 @@ name: 'Install Packages'
 description: |
   This action installs dependencies from multiple package managers for a workflow.
 
-  This is usually the next step in your workflow after setting up a C++ compiler with 
+  This is usually the next step in your workflow after setting up a C++ compiler with
   xref:actions/setup-cpp.adoc[].
-  
+
   If vcpkg dependencies are required and vcpkg is not available, it will be installed.
   Both vcpkg and its dependencies are cached.
-  
+
   When your library depends on vcpkg for dependencies, it's important to run the xref:actions/setup-cpp.adoc[]
   before this step because vcpkg packages are built from source and this allows us to use the compiler
   set up in the previous step.
-  
+
   == Next steps
-  
+
   After setting up the dependencies for your C++ project, the next step in your workflow should usually be
   xref:actions/cmake-workflow.adoc[].
 
@@ -34,10 +34,10 @@ inputs:
   cxx:
     description: |
       C++ compiler used by vcpkg.
-      
-      Setting the compiler is particularly important in Linux workflows that use `clang`, since `clang` might link 
+
+      Setting the compiler is particularly important in Linux workflows that use `clang`, since `clang` might link
       `libc++` or `libstdc++`, while the default compiler used by vcpkg will usually be GCC linking `libstdc++`.
-      
+
       This would cause conflict in workflows that later attempt to use vcpkg dependencies.
 
     required: false
@@ -69,7 +69,7 @@ inputs:
   vcpkg-dir:
     description: |
       The directory where vcpkg should be cloned and installed.
-      
+
       If the directory is unspecified, the runner tool cache is used.
 
     required: false
@@ -95,6 +95,18 @@ inputs:
     description: 'Whether apt-get should ignore missing packages.'
     required: false
     default: 'false'
+  apt-get-add-architecture:
+    description: |
+      Argument to pass to `dpkg` to add an architecture.
+      
+      This is useful when installing packages that require a different architecture than the default one.
+      
+      If this string is not empty, it will be passed to `dpkg` with the `--add-architecture` flag.
+      
+      Common values for this parameter are: `amd64` (64-bit x86), `i386` (32-bit x86),
+      `armhf` (ARM Hard Float), `arm64` (ARM 64-bit), and `ppc64el` (PowerPC 64-bit Little Endian).
+    required: false
+    default: ''
 
   trace-commands:
     description: 'Trace commands executed by the action.'
@@ -120,7 +132,7 @@ runs:
       run: |
         # Install apt-get packages
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
+
         # Determine if apt-get should be called with `sudo`, which is often not the case with containers
         if which sudo >/dev/null 2>&1; then
           sudo -n apt-get -o Acquire::Retries=${{ inputs.apt-get-retries }} update > /dev/null 2>&1
@@ -133,7 +145,7 @@ runs:
         else
           sudo_prefix=""
         fi
-        
+
         # Install sources
         SOURCE_KEYS=(${{ inputs.apt-get-source-keys }})
         for key in "${SOURCE_KEYS[@]}"
@@ -143,7 +155,7 @@ runs:
                 wget -O - "$key" | sudo apt-key add - && break || sleep 2
             done
         done
-        
+
         SOURCES=(${{ inputs.apt-get-sources }})
         if [ ${#SOURCES[@]} -gt 0 ]
         then
@@ -182,10 +194,15 @@ runs:
                 done
             done
         fi
+
+        # Add architecture
+        if [ "${{ inputs.apt-get-add-architecture }}" != "" ]; then
+            $sudo_prefix dpkg --add-architecture "${{ inputs.apt-get-add-architecture }}"
+        fi
         
         # Update and install
         $sudo_prefix apt-get -o Acquire::Retries=${{ inputs.apt-get-retries }} update
-        
+
         # Install packages
         apt_get_packages="${{ inputs.apt-get }}"
         if [ "${{ inputs.vcpkg }}" != "" ]; then
@@ -198,7 +215,7 @@ runs:
               $sudo_prefix apt-get -o Acquire::Retries=${{ inputs.apt-get-retries }} install --ignore-missing -y $package || true
             done
         else
-            $sudo_prefix apt-get -o Acquire::Retries=${{ inputs.apt-get-retries }} install -y $apt_get_packages 
+            $sudo_prefix apt-get -o Acquire::Retries=${{ inputs.apt-get-retries }} install -y $apt_get_packages
         fi
 
     - name: vcpkg environment
@@ -208,30 +225,30 @@ runs:
       run: |
         # Vcpkg Context
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
+
         ${{ (inputs.cxx != '' && format('export CXX="{0}"', inputs.cxx)) || '' }}
         ${{ (inputs.cc != '' && format('export CC="{0}"', inputs.cc)) || '' }}
-        
+
         # vcpkg hash
         vcpkg_hash="$(git ls-remote https://github.com/microsoft/vcpkg.git ${{ inputs.vcpkg-branch }} | awk '{ print $1 }')"
         echo "vcpkg_hash=$vcpkg_hash" >> $GITHUB_OUTPUT
-        
+
         # vcpkg triplet
         default_triplet="${{ (runner.os == 'Windows' && 'x64-windows') || (runner.os == 'Linux' && 'x64-linux') || (runner.os == 'macOS' && 'x64-osx') || '' }}"
         input_triplet=${{ inputs.vcpkg-triplet }}
         if [ "$input_triplet" == "" ]; then
             triplet=$default_triplet
         else
-            triplet=$input_triplet 
+            triplet=$input_triplet
         fi
         echo "triplet=$triplet" >> $GITHUB_OUTPUT
         if [ "$triplet" == "" ]; then
             triplet_suffix=""
         else
-            triplet_suffix=":$triplet" 
+            triplet_suffix=":$triplet"
         fi
         echo "triplet_suffix=$triplet_suffix" >> $GITHUB_OUTPUT
-        
+
         # vcpkg
         vcpkg_dir="${{ inputs.vcpkg-dir }}"
         if [ "$vcpkg_dir" == "" ]; then
@@ -243,19 +260,19 @@ runs:
         fi
         vcpkg_dir=$(echo "$vcpkg_dir" | sed 's/\\/\//g')
         echo -E "vcpkg_dir=$vcpkg_dir" >> $GITHUB_OUTPUT
-        
+
         # vcpkg bootstrap script
         vcpkg_bs_exe="${{ (runner.os == 'Windows' && '$vcpkg_dir/bootstrap-vcpkg.bat') || '$vcpkg_dir/bootstrap-vcpkg.sh' }}"
         echo -E "vcpkg_bs_exe=$vcpkg_bs_exe" >> $GITHUB_OUTPUT
-        
+
         # vcpkg toolchain
         vcpkg_toolchain=$vcpkg_dir/scripts/buildsystems/vcpkg.cmake
         echo -E "vcpkg-toolchain=$vcpkg_toolchain" >> $GITHUB_OUTPUT
-        
+
         # vcpkg executable
         vcpkg_executable=$vcpkg_dir/vcpkg
         echo -E "vcpkg-executable=$vcpkg_executable" >> $GITHUB_OUTPUT
-        
+
         # include compiler version as part of the cache key, even if location is the same
         if command -v sha1sum >/dev/null 2>&1; then
           has_sha1sum=true
@@ -281,11 +298,11 @@ runs:
             cxx_cache_hash=$(echo -n "${concatenated_string}" | shasum -a 1 | awk '{print $1}')
           fi
         fi
-        
+
         # vcpkg cache hash
         os="$(echo "${{ runner.os }}" | tr '[:upper:]' '[:lower:]')"
         vcpkg_cache_key="vcpkg-$triplet_suffix-os:$os-cxx:$cxx_cache_hash"
-        
+
         # add packages to cache_key
         vcpkg_packages="${{ inputs.vcpkg }}"
         for package in ${vcpkg_packages// / }
@@ -310,7 +327,7 @@ runs:
       run: |
         # Vcpkg bootstrap and install packages
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
+
         git clone https://github.com/microsoft/vcpkg.git -b ${{ inputs.vcpkg-branch }} ${{ steps.ctx.outputs.vcpkg_dir }}
         ${{ steps.ctx.outputs.vcpkg_bs_exe }}
         cd ${{ steps.ctx.outputs.vcpkg_dir }}
