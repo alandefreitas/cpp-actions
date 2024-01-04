@@ -529,7 +529,7 @@ function compilerEmoji(compiler, with_emoji = false) {
     return '🛠️'
 }
 
-function generateMatrix(compilerVersions, standards, max_standards, latest_factors, factors, sanitizer_build_type, x86_build_type) {
+function generateMatrix(compilerVersions, standards, max_standards, latest_factors, factors, sanitizer_build_type, x86_build_type, use_containers) {
     let matrix = []
 
     const allcxxstds = ['1998.0.0', '2003.0.0', '2011.0.0', '2014.0.0', '2017.0.0', '2020.0.0', '2023.0.0', '2026.0.0']
@@ -626,8 +626,16 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                     entry['container'] = 'ubuntu:23.04'
                 } else if (semver.satisfies(minSubrangeVersion, '>=9')) {
                     entry['runs-on'] = 'ubuntu-22.04'
+                    if (use_containers) {
+                        entry['container'] = 'ubuntu:22.04'
+                    }
                 } else if (semver.satisfies(minSubrangeVersion, '>=7')) {
-                    entry['runs-on'] = 'ubuntu-20.04'
+                    if (!use_containers) {
+                        entry['runs-on'] = 'ubuntu-20.04'
+                    } else {
+                        entry['runs-on'] = 'ubuntu-22.04'
+                        entry['container'] = 'ubuntu:20.04'
+                    }
                 } else {
                     entry['runs-on'] = 'ubuntu-22.04'
                     entry['container'] = 'ubuntu:18.04'
@@ -641,13 +649,21 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                     entry['container'] = 'ubuntu:23.04'
                 } else if (semver.satisfies(minSubrangeVersion, '>=15')) {
                     entry['runs-on'] = 'ubuntu-22.04'
+                    if (use_containers) {
+                        entry['container'] = 'ubuntu:22.04'
+                    }
                 } else if (semver.satisfies(minSubrangeVersion, '>=12')) {
                     // Clang >=12 <15 require a container to isolate
                     // incompatible libstdc++ versions
                     entry['runs-on'] = 'ubuntu-22.04'
                     entry['container'] = 'ubuntu:22.04'
                 } else if (semver.satisfies(minSubrangeVersion, '>=6')) {
-                    entry['runs-on'] = 'ubuntu-20.04'
+                    if (!use_containers) {
+                        entry['runs-on'] = 'ubuntu-20.04'
+                    } else {
+                        entry['runs-on'] = 'ubuntu-22.04'
+                        entry['container'] = 'ubuntu:20.04'
+                    }
                 } else if (semver.satisfies(minSubrangeVersion, '>=3.9')) {
                     entry['runs-on'] = 'ubuntu-22.04'
                     entry['container'] = 'ubuntu:18.04'
@@ -752,6 +768,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
 
         // Apply latest factors for this compiler
         if (compilerName in latest_factors) {
+            // Duplicate latest entry for each latest factor and set properties
             for (const factor of latest_factors[compilerName]) {
                 let latest_copy = {...matrix[latestIdx]}
                 latest_copy['is-main'] = false
@@ -759,6 +776,8 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                 latest_copy['name'] += ` (${factor})`
                 matrix.push(latest_copy)
             }
+
+            // Set the property to false for all other entries
             for (let i = earliestIdx; i < matrix.length; i++) {
                 for (const factor of latest_factors[compilerName]) {
                     if (!(factor.toLowerCase() in matrix[i])) {
@@ -902,6 +921,11 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
     }
 
     // Sort matrix
+    // 1) Latest
+    // 2) Unique
+    // 3) Earliest
+    // 4) Factors
+    // 5) Intermediary
     const contains_factor = (entry) => {
         let allFactors = []
         if (entry['compiler'] in latest_factors) {
@@ -1221,7 +1245,10 @@ function run() {
         const x86_build_type = core.getInput('x86-build-type').trim()
         log(`x86_build_type: ${x86_build_type}`)
 
-        const matrix = generateMatrix(compiler_versions, standards, max_standards, latest_factors, factors, sanitizer_build_type, x86_build_type)
+        const use_containers = core.getBooleanInput('use-containers')
+        log(`use_containers: ${use_containers}`)
+
+        const matrix = generateMatrix(compiler_versions, standards, max_standards, latest_factors, factors, sanitizer_build_type, x86_build_type, use_containers)
         core.setOutput('matrix', matrix)
 
         const generate_summary = isTruthy(core.getInput('generate-summary'))

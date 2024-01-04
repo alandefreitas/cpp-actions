@@ -248,6 +248,25 @@ inputs:
     required: false
     default: 'Release'
 
+  use-containers:
+    description: |
+      Determine whether to use containers whenever possible to run the tests.
+      
+      By using containers for all jobs, the workflow can be more stable and reproducible. 
+      For instance, without containers an existing workflow cannot start to fail because
+      of a change in the GitHub runner environments. 
+      
+      However, this comes at a cost of initial setup time. Some existing workflows can also break when
+      moving to containers because existing assumptions about tools available in the runner environment 
+      are no longer valid.
+
+      When the value is false, the action will still use containers when needed. This may happen because
+      the compiler is not available in the runner image or when there's a reported conflict between 
+      compilers in the runner image.
+
+    required: false
+    default: 'true'
+
   generate-summary:
     description: 'Generate summary with the complete matrix.'
     required: false
