@@ -621,7 +621,10 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
 
             // runs-on / container
             if (compilerName === 'gcc') {
-                if (semver.satisfies(minSubrangeVersion, '>=9')) {
+                if (semver.satisfies(minSubrangeVersion, '>=13')) {
+                    entry['runs-on'] = 'ubuntu-22.04'
+                    entry['container'] = 'ubuntu:23.04'
+                } else if (semver.satisfies(minSubrangeVersion, '>=9')) {
                     entry['runs-on'] = 'ubuntu-22.04'
                 } else if (semver.satisfies(minSubrangeVersion, '>=7')) {
                     entry['runs-on'] = 'ubuntu-20.04'
@@ -630,7 +633,13 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                     entry['container'] = 'ubuntu:18.04'
                 }
             } else if (compilerName === 'clang') {
-                if (semver.satisfies(minSubrangeVersion, '>=15')) {
+                if (semver.satisfies(minSubrangeVersion, '>=17')) {
+                    entry['runs-on'] = 'ubuntu-22.04'
+                    entry['container'] = 'ubuntu:23.10'
+                } else if (semver.satisfies(minSubrangeVersion, '>=16')) {
+                    entry['runs-on'] = 'ubuntu-22.04'
+                    entry['container'] = 'ubuntu:23.04'
+                } else if (semver.satisfies(minSubrangeVersion, '>=15')) {
                     entry['runs-on'] = 'ubuntu-22.04'
                 } else if (semver.satisfies(minSubrangeVersion, '>=12')) {
                     // Clang >=12 <15 require a container to isolate
