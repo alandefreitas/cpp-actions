@@ -890,6 +890,7 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
                 if (semver.satisfies(v, '>=9')) {
                     entry['cxxflags'] += ' -ftime-trace'
                     entry['ccflags'] += ' -ftime-trace'
+                    entry['install'] += ' wget unzip'
                 }
             }
             if (entry['cxxstd'] !== '') {

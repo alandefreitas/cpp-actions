@@ -207,7 +207,14 @@ runs:
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
         
         if [ -x /usr/bin/perl ]; then
-          wget https://github.com/brendangregg/FlameGraph/archive/d9fcc272b6a08c3e3e5b7919040f0ab5f8952d65.zip
+          if command -v curl &> /dev/null; then
+            curl -L -O https://github.com/brendangregg/FlameGraph/archive/d9fcc272b6a08c3e3e5b7919040f0ab5f8952d65.zip
+          elif command -v wget &> /dev/null; then
+            wget https://github.com/brendangregg/FlameGraph/archive/d9fcc272b6a08c3e3e5b7919040f0ab5f8952d65.zip
+          else
+            echo "::error title:Flamegraph::Flamegraph: neither curl nor wget are available"
+            false
+          fi
           unzip d9fcc272b6a08c3e3e5b7919040f0ab5f8952d65.zip
           mv FlameGraph-d9fcc272b6a08c3e3e5b7919040f0ab5f8952d65 FlameGraph
           python_path="${{ steps.setup-python.outputs.python-path || 'python' }}"
