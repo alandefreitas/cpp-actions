@@ -469,6 +469,15 @@ required by the project.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-add-architecture</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Argument to pass to <code>dpkg</code> to add an architecture.</p>
+<p class="tableblock">This is useful when installing packages that require a different architecture than the default one.</p>
+<p class="tableblock">If this string is not empty, it will be passed to <code>dpkg</code> with the <code>--add-architecture</code> flag.</p>
+<p class="tableblock">Common values for this parameter are: <code>amd64</code> (64-bit x86), <code>i386</code> (32-bit x86),
+<code>armhf</code> (ARM Hard Float), <code>arm64</code> (ARM 64-bit), and <code>ppc64el</code> (PowerPC 64-bit Little Endian).</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the action.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>

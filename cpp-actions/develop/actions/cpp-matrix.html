@@ -653,6 +653,20 @@ will be duplicated with this factor if there are no entries left to inject the f
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>Release</code></p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>use-containers</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Determine whether to use containers whenever possible to run the tests.</p>
+<p class="tableblock">By using containers for all jobs, the workflow can be more stable and reproducible.
+For instance, without containers an existing workflow cannot start to fail because
+of a change in the GitHub runner environments.</p>
+<p class="tableblock">However, this comes at a cost of initial setup time. Some existing workflows can also break when
+moving to containers because existing assumptions about tools available in the runner environment
+are no longer valid.</p>
+<p class="tableblock">When the value is false, the action will still use containers when needed. This may happen because
+the compiler is not available in the runner image or when there&#8217;s a reported conflict between
+compilers in the runner image.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>generate-summary</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Generate summary with the complete matrix.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
