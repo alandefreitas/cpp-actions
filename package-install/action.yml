@@ -8,9 +8,13 @@ description: |
   If vcpkg dependencies are required and vcpkg is not available, it will be installed.
   Both vcpkg and its dependencies are cached.
 
+  [CAUTION]
+  ====
   When your library depends on vcpkg for dependencies, it's important to run the xref:actions/setup-cpp.adoc[]
   before this step because vcpkg packages are built from source and this allows us to use the compiler
   set up in the previous step.
+  ====
+
 
   == Next steps
 
@@ -22,6 +26,9 @@ description: |
   required by the project.
 
 inputs:
+  # --------------------------------
+  # Packages
+  # --------------------------------
   vcpkg:
     description: 'List of packages we should install with vcpkg. (Whitespace-separated)'
     required: false
@@ -31,6 +38,9 @@ inputs:
     required: false
     default: ''
 
+  # --------------------------------
+  # VcPkg options
+  # --------------------------------
   cxx:
     description: |
       C++ compiler used by vcpkg.
@@ -79,6 +89,9 @@ inputs:
     required: false
     default: 'master'
 
+  # --------------------------------
+  # APT Options
+  # --------------------------------
   apt-get-retries:
     description: 'Number of times we should retry when apt-get fails.'
     required: false
@@ -108,6 +121,9 @@ inputs:
     required: false
     default: ''
 
+  # --------------------------------
+  # Extra options
+  # --------------------------------
   trace-commands:
     description: 'Trace commands executed by the action.'
     required: false
