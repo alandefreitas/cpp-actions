@@ -1125,7 +1125,8 @@ function factorEmoji(factor) {
         'tsan': '🕵️‍♂️',
         'coverage': '📊',
         'asan': '🛡️',
-        'time-trace': '⏱️'
+        'time-trace': '⏱️',
+        'fuzz': '🔀'
     }
     if (factor in factor_emojis) {
         return factor_emojis[factor]
