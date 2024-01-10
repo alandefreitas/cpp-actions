@@ -529,398 +529,413 @@ function compilerEmoji(compiler, with_emoji = false) {
     return '🛠️'
 }
 
-function generateMatrix(compilerVersions, standards, max_standards, latest_factors, factors, sanitizer_build_type, x86_build_type, use_containers) {
-    let matrix = []
+function getCompilerCxxStds(entry, inputs, allCompilerVersions, cxxstds, compilerName, minSubrangeVersion) {
+    // The versions of cxxstd we should test with this compiler
+    let compiler_cxxs = []
+    if (allCompilerVersions.length !== 0) {
+        // Identify versions of cxxstd supported by this compiler + version
+        compiler_cxxs = cxxstds.filter(cxxstd => compilerSupportsStd(compilerName, minSubrangeVersion, cxxstd))
 
-    const allcxxstds = ['1998.0.0', '2003.0.0', '2011.0.0', '2014.0.0', '2017.0.0', '2020.0.0', '2023.0.0', '2026.0.0']
-    const cxxstds = allcxxstds.filter(v => semver.satisfies(v, standards)).map(v => semver.parse(v).major)
+        // Set entry values if we found any
+        if (compiler_cxxs.length === 0) {
+            // We know about the compiler versions but this compiler does not
+            // support any of the standards we want to test. Skip it.
+            return undefined
+        }
 
-    for (const [compiler, range] of Object.entries(compilerVersions)) {
-        log(`Generating entry for ${compiler} version ${range}`)
-        const earliestIdx = matrix.length
-        const compilerName = normalizeCompilerName(compiler)
-        const versions = findCompilerVersions(compilerName)
-        const subranges = splitRanges(range, versions, SubrangePolicies.DEFAULT)
-        log(`${compilerName} subranges: ${JSON.stringify(subranges)}`)
-        for (let i = 0; i < subranges.length; i++) {
-            const subrange = subranges[i]
-            let entry = {'compiler': compilerName, 'version': subrange, 'env': {}}
+        if (inputs.max_standards && compiler_cxxs.length > inputs.max_standards) {
+            compiler_cxxs = compiler_cxxs.splice(-inputs.max_standards)
+        }
+        compiler_cxxs = compiler_cxxs.map(v => v.toString().slice(-2))
+        entry['cxxstd'] = compiler_cxxs.join(',')
+        entry['latest-cxxstd'] = compiler_cxxs[compiler_cxxs.length - 1]
+    }
+    // Return list even if it's empty.
+    // An empty list means we want to test this compiler, but we don't know
+    // what versions of cxxstd it supports because there's no compiler version
+    // we know about.
+    return compiler_cxxs
+}
 
-            // The standards we should test with this compiler
-            let compiler_cxxs = []
-            const minSubrangeVersion = semver.parse(semver.minSatisfying(versions, subrange))
-            const maxSubrangeVersion = semver.parse(semver.maxSatisfying(versions, subrange))
-            if (versions.length !== 0) {
-                for (const cxxstd of cxxstds) {
-                    if (compilerSupportsStd(compilerName, minSubrangeVersion, cxxstd)) {
-                        compiler_cxxs.push(cxxstd)
-                    }
-                }
-                if (compiler_cxxs.length === 0) {
-                    // We know this compiler does not support any of the standards
-                    // we want to test. Skip it.
-                    continue
-                }
-                if (max_standards != null && max_standards !== 0 && compiler_cxxs.length > max_standards) {
-                    compiler_cxxs = compiler_cxxs.splice(-max_standards)
-                }
-                compiler_cxxs = compiler_cxxs.map(v => v.toString().slice(-2))
-                entry['cxxstd'] = compiler_cxxs.join(',')
-                entry['latest-cxxstd'] = compiler_cxxs[compiler_cxxs.length - 1]
-            }
-
-            // Extract major, minor, and patch versions from the subrange
-            if (minSubrangeVersion !== null && maxSubrangeVersion !== null) {
-                if (minSubrangeVersion.major === maxSubrangeVersion.major) {
-                    entry['major'] = minSubrangeVersion.major
-                    if (minSubrangeVersion.minor === maxSubrangeVersion.minor) {
-                        entry['minor'] = minSubrangeVersion.minor
-                        if (minSubrangeVersion.patch === maxSubrangeVersion.patch) {
-                            entry['patch'] = minSubrangeVersion.patch
-                        } else {
-                            entry['patch'] = `*`
-                        }
-                    } else {
-                        entry['minor'] = `*`
-                        entry['patch'] = `*`
-                    }
+function setEntrySemverComponents(entry, minSubrangeVersion, maxSubrangeVersion) {
+    // Extract major, minor, and patch versions from the subrange
+    if (minSubrangeVersion !== null && maxSubrangeVersion !== null) {
+        if (minSubrangeVersion.major === maxSubrangeVersion.major) {
+            entry['major'] = minSubrangeVersion.major
+            if (minSubrangeVersion.minor === maxSubrangeVersion.minor) {
+                entry['minor'] = minSubrangeVersion.minor
+                if (minSubrangeVersion.patch === maxSubrangeVersion.patch) {
+                    entry['patch'] = minSubrangeVersion.patch
                 } else {
-                    entry['major'] = `*`
-                    entry['minor'] = `*`
                     entry['patch'] = `*`
                 }
-            }
-
-            // usual cxx/cc names (no name usually needed for msvc)
-            if (compilerName === 'gcc') {
-                if (semver.satisfies(minSubrangeVersion, '>=5')) {
-                    entry['cxx'] = `g++-${minSubrangeVersion.major}`
-                    entry['cc'] = `gcc-${minSubrangeVersion.major}`
-                } else {
-                    entry['cxx'] = `g++-${minSubrangeVersion.major}.${minSubrangeVersion.minor}`
-                    entry['cc'] = `gcc-${minSubrangeVersion.major}.${minSubrangeVersion.minor}`
-                }
-            } else if (compilerName === 'clang') {
-                if (semver.satisfies(minSubrangeVersion, '>=7')) {
-                    entry['cxx'] = `clang++-${minSubrangeVersion.major}`
-                    entry['cc'] = `clang-${minSubrangeVersion.major}`
-                } else {
-                    entry['cxx'] = `clang++-${minSubrangeVersion.major}.${minSubrangeVersion.minor}`
-                    entry['cc'] = `clang-${minSubrangeVersion.major}.${minSubrangeVersion.minor}`
-                }
-            } else if (compilerName === 'apple-clang') {
-                entry['cxx'] = `clang++`
-                entry['cc'] = `clang`
-            } else if (compilerName === 'clang-cl') {
-                entry['cxx'] = `clang++-cl`
-                entry['cc'] = `clang-cl`
-            } else if (compilerName === 'mingw') {
-                entry['cxx'] = `g++`
-                entry['cc'] = `gcc`
-            }
-
-            // runs-on / container
-            if (compilerName === 'gcc') {
-                if (semver.satisfies(minSubrangeVersion, '>=13')) {
-                    entry['runs-on'] = 'ubuntu-22.04'
-                    entry['container'] = 'ubuntu:23.04'
-                } else if (semver.satisfies(minSubrangeVersion, '>=9')) {
-                    entry['runs-on'] = 'ubuntu-22.04'
-                    if (use_containers) {
-                        entry['container'] = 'ubuntu:22.04'
-                    }
-                } else if (semver.satisfies(minSubrangeVersion, '>=7')) {
-                    if (!use_containers) {
-                        entry['runs-on'] = 'ubuntu-20.04'
-                    } else {
-                        entry['runs-on'] = 'ubuntu-22.04'
-                        entry['container'] = 'ubuntu:20.04'
-                    }
-                } else {
-                    entry['runs-on'] = 'ubuntu-22.04'
-                    entry['container'] = 'ubuntu:18.04'
-                }
-            } else if (compilerName === 'clang') {
-                if (semver.satisfies(minSubrangeVersion, '>=17')) {
-                    entry['runs-on'] = 'ubuntu-22.04'
-                    entry['container'] = 'ubuntu:23.10'
-                } else if (semver.satisfies(minSubrangeVersion, '>=16')) {
-                    entry['runs-on'] = 'ubuntu-22.04'
-                    entry['container'] = 'ubuntu:23.04'
-                } else if (semver.satisfies(minSubrangeVersion, '>=15')) {
-                    entry['runs-on'] = 'ubuntu-22.04'
-                    if (use_containers) {
-                        entry['container'] = 'ubuntu:22.04'
-                    }
-                } else if (semver.satisfies(minSubrangeVersion, '>=12')) {
-                    // Clang >=12 <15 require a container to isolate
-                    // incompatible libstdc++ versions
-                    entry['runs-on'] = 'ubuntu-22.04'
-                    entry['container'] = 'ubuntu:22.04'
-                } else if (semver.satisfies(minSubrangeVersion, '>=6')) {
-                    if (!use_containers) {
-                        entry['runs-on'] = 'ubuntu-20.04'
-                    } else {
-                        entry['runs-on'] = 'ubuntu-22.04'
-                        entry['container'] = 'ubuntu:20.04'
-                    }
-                } else if (semver.satisfies(minSubrangeVersion, '>=3.9')) {
-                    entry['runs-on'] = 'ubuntu-22.04'
-                    entry['container'] = 'ubuntu:18.04'
-                } else {
-                    entry['runs-on'] = 'ubuntu-22.04'
-                    entry['container'] = 'ubuntu:16.04'
-                }
-            } else if (compilerName === 'msvc') {
-                if (semver.satisfies(minSubrangeVersion, '>=14.30')) {
-                    entry['runs-on'] = 'windows-2022'
-                } else {
-                    entry['runs-on'] = 'windows-2019'
-                }
-            } else if (compilerName === 'apple-clang') {
-                entry['runs-on'] = 'macos-11'
-            } else if (['mingw', 'clang-cl'].includes(compilerName)) {
-                entry['runs-on'] = 'windows-2022'
-            }
-
-            // Recommended b2-toolset
-            if (['mingw', 'gcc'].includes(compilerName)) {
-                entry['b2-toolset'] = `gcc`
-            } else if (['clang', 'apple-clang'].includes(compilerName)) {
-                entry['b2-toolset'] = `clang`
-            } else if (compilerName === 'msvc') {
-                entry['b2-toolset'] = `msvc`
-            } else if (compilerName === 'clang-cl') {
-                entry['b2-toolset'] = `clang-win`
-            }
-
-            // Recommended cmake generator
-            if (compilerName === 'msvc') {
-                const year = getVisualCppYear(minSubrangeVersion)
-                if (minSubrangeVersion === maxSubrangeVersion || year === getVisualCppYear(maxSubrangeVersion)) {
-                    if (year === '2022') {
-                        entry['generator'] = `Visual Studio 17 ${year}`
-                    } else if (year === '2019') {
-                        entry['generator'] = `Visual Studio 16 ${year}`
-                    } else if (year === '2017') {
-                        entry['generator'] = `Visual Studio 15 ${year}`
-                    } else if (year === '2015') {
-                        entry['generator'] = `Visual Studio 14 ${year}`
-                    } else if (year === '2013') {
-                        entry['generator'] = `Visual Studio 12 ${year}`
-                    } else if (year === '2012') {
-                        entry['generator'] = `Visual Studio 11 ${year}`
-                    } else if (year === '2010') {
-                        entry['generator'] = `Visual Studio 10 ${year}`
-                    } else if (year === '2008') {
-                        entry['generator'] = `Visual Studio 9 ${year}`
-                    } else if (year === '2005') {
-                        entry['generator'] = `Visual Studio 8 ${year}`
-                    }
-                }
-            } else if (compilerName === 'mingw') {
-                entry['generator'] = `MinGW Makefiles`
-            } else if (compilerName === 'clang-cl') {
-                entry['generator-toolset'] = `ClangCL`
-            }
-
-            // Latest flag
-            // subranges are ordered so the latest flag is the last entry
-            // in the matrix for this compiler
-            entry['is-latest'] = i === subranges.length - 1
-            entry['is-main'] = i === subranges.length - 1
-
-            // Earliest flag
-            entry['is-earliest'] = i === 0
-
-            // Indicate if major, minor, or patch are not specified
-            entry['has-major'] = entry['major'] !== '*'
-            entry['has-minor'] = entry['minor'] !== '*'
-            entry['has-patch'] = entry['patch'] !== '*'
-
-            // Flag with the subrange policy used
-            if (entry['has-major'] === false) {
-                entry['subrange-policy'] = 'system-version'
-            } else if (subranges.length === 1 || minSubrangeVersion.major !== maxSubrangeVersion.major) {
-                entry['subrange-policy'] = 'one-per-major'
             } else {
-                entry['subrange-policy'] = 'one-per-minor'
+                entry['minor'] = `*`
+                entry['patch'] = `*`
             }
+        } else {
+            entry['major'] = `*`
+            entry['minor'] = `*`
+            entry['patch'] = `*`
+        }
+    }
+}
 
-            // Come up with a name for this entry
-            let name = `${humanizeCompilerName(compilerName)}`
-            if (subrange !== '*') {
-                name += ` ${subrange}`
+function setCompilerExecutableNames(entry, compilerName, minSubrangeVersion) {
+    // Usual cxx/cc names (no name usually needed for msvc)
+    if (compilerName === 'gcc') {
+        if (semver.satisfies(minSubrangeVersion, '>=5')) {
+            entry['cxx'] = `g++-${minSubrangeVersion.major}`
+            entry['cc'] = `gcc-${minSubrangeVersion.major}`
+        } else {
+            entry['cxx'] = `g++-${minSubrangeVersion.major}.${minSubrangeVersion.minor}`
+            entry['cc'] = `gcc-${minSubrangeVersion.major}.${minSubrangeVersion.minor}`
+        }
+    } else if (compilerName === 'clang') {
+        if (semver.satisfies(minSubrangeVersion, '>=7')) {
+            entry['cxx'] = `clang++-${minSubrangeVersion.major}`
+            entry['cc'] = `clang-${minSubrangeVersion.major}`
+        } else {
+            entry['cxx'] = `clang++-${minSubrangeVersion.major}.${minSubrangeVersion.minor}`
+            entry['cc'] = `clang-${minSubrangeVersion.major}.${minSubrangeVersion.minor}`
+        }
+    } else if (compilerName === 'apple-clang') {
+        entry['cxx'] = `clang++`
+        entry['cc'] = `clang`
+    } else if (compilerName === 'clang-cl') {
+        entry['cxx'] = `clang++-cl`
+        entry['cc'] = `clang-cl`
+    } else if (compilerName === 'mingw') {
+        entry['cxx'] = `g++`
+        entry['cc'] = `gcc`
+    }
+}
+
+function setCompilerContainer(entry, inputs, compilerName, minSubrangeVersion) {
+    // runs-on / container
+    if (compilerName === 'gcc') {
+        if (semver.satisfies(minSubrangeVersion, '>=13')) {
+            entry['runs-on'] = 'ubuntu-22.04'
+            entry['container'] = 'ubuntu:23.04'
+        } else if (semver.satisfies(minSubrangeVersion, '>=9')) {
+            entry['runs-on'] = 'ubuntu-22.04'
+            if (inputs.use_containers) {
+                entry['container'] = 'ubuntu:22.04'
             }
-            if (compiler_cxxs.length !== 0) {
-                if (compiler_cxxs.length > 1) {
-                    name += `: C++${compiler_cxxs[0]}-${compiler_cxxs[compiler_cxxs.length - 1]}`
-                } else {
-                    name += `: C++${compiler_cxxs[0]}`
+        } else if (semver.satisfies(minSubrangeVersion, '>=7')) {
+            if (!inputs.use_containers) {
+                entry['runs-on'] = 'ubuntu-20.04'
+            } else {
+                entry['runs-on'] = 'ubuntu-22.04'
+                entry['container'] = 'ubuntu:20.04'
+            }
+        } else {
+            entry['runs-on'] = 'ubuntu-22.04'
+            entry['container'] = 'ubuntu:18.04'
+        }
+    } else if (compilerName === 'clang') {
+        if (semver.satisfies(minSubrangeVersion, '>=17')) {
+            entry['runs-on'] = 'ubuntu-22.04'
+            entry['container'] = 'ubuntu:23.10'
+        } else if (semver.satisfies(minSubrangeVersion, '>=16')) {
+            entry['runs-on'] = 'ubuntu-22.04'
+            entry['container'] = 'ubuntu:23.04'
+        } else if (semver.satisfies(minSubrangeVersion, '>=15')) {
+            entry['runs-on'] = 'ubuntu-22.04'
+            if (inputs.use_containers) {
+                entry['container'] = 'ubuntu:22.04'
+            }
+        } else if (semver.satisfies(minSubrangeVersion, '>=12')) {
+            // Clang >=12 <15 require a container to isolate
+            // incompatible libstdc++ versions
+            entry['runs-on'] = 'ubuntu-22.04'
+            entry['container'] = 'ubuntu:22.04'
+        } else if (semver.satisfies(minSubrangeVersion, '>=6')) {
+            if (!inputs.use_containers) {
+                entry['runs-on'] = 'ubuntu-20.04'
+            } else {
+                entry['runs-on'] = 'ubuntu-22.04'
+                entry['container'] = 'ubuntu:20.04'
+            }
+        } else if (semver.satisfies(minSubrangeVersion, '>=3.9')) {
+            entry['runs-on'] = 'ubuntu-22.04'
+            entry['container'] = 'ubuntu:18.04'
+        } else {
+            entry['runs-on'] = 'ubuntu-22.04'
+            entry['container'] = 'ubuntu:16.04'
+        }
+    } else if (compilerName === 'msvc') {
+        if (semver.satisfies(minSubrangeVersion, '>=14.30')) {
+            entry['runs-on'] = 'windows-2022'
+        } else {
+            entry['runs-on'] = 'windows-2019'
+        }
+    } else if (compilerName === 'apple-clang') {
+        entry['runs-on'] = 'macos-11'
+    } else if (['mingw', 'clang-cl'].includes(compilerName)) {
+        entry['runs-on'] = 'windows-2022'
+    }
+}
+
+function setCompilerB2Toolset(entry, compilerName) {
+    // Recommended b2-toolset
+    // The b2 toolset never includes the version number
+    if (['mingw', 'gcc'].includes(compilerName)) {
+        entry['b2-toolset'] = `gcc`
+    } else if (['clang', 'apple-clang'].includes(compilerName)) {
+        entry['b2-toolset'] = `clang`
+    } else if (compilerName === 'msvc') {
+        entry['b2-toolset'] = `msvc`
+    } else if (compilerName === 'clang-cl') {
+        entry['b2-toolset'] = `clang-win`
+    }
+}
+
+function setCompilerCMakeGenerator(entry, compilerName, minSubrangeVersion, maxSubrangeVersion) {
+    // Recommended cmake generator
+    if (compilerName === 'msvc') {
+        const year = getVisualCppYear(minSubrangeVersion)
+        if (minSubrangeVersion === maxSubrangeVersion || year === getVisualCppYear(maxSubrangeVersion)) {
+            if (year === '2022') {
+                entry['generator'] = `Visual Studio 17 ${year}`
+            } else if (year === '2019') {
+                entry['generator'] = `Visual Studio 16 ${year}`
+            } else if (year === '2017') {
+                entry['generator'] = `Visual Studio 15 ${year}`
+            } else if (year === '2015') {
+                entry['generator'] = `Visual Studio 14 ${year}`
+            } else if (year === '2013') {
+                entry['generator'] = `Visual Studio 12 ${year}`
+            } else if (year === '2012') {
+                entry['generator'] = `Visual Studio 11 ${year}`
+            } else if (year === '2010') {
+                entry['generator'] = `Visual Studio 10 ${year}`
+            } else if (year === '2008') {
+                entry['generator'] = `Visual Studio 9 ${year}`
+            } else if (year === '2005') {
+                entry['generator'] = `Visual Studio 8 ${year}`
+            }
+        }
+    } else if (compilerName === 'mingw') {
+        entry['generator'] = `MinGW Makefiles`
+    } else if (compilerName === 'clang-cl') {
+        entry['generator-toolset'] = `ClangCL`
+    }
+}
+
+function setEntryVersionFlags(entry, i, subranges, minSubrangeVersion, maxSubrangeVersion) {
+    // Latest/earliest/has-major/has-minor/has-patch/subrange-policy flags
+    // subranges are ordered so the latest flag is the last entry
+    // in the matrix for this compiler
+    entry['is-latest'] = i === subranges.length - 1
+    entry['is-main'] = i === subranges.length - 1
+
+    // Earliest flag
+    entry['is-earliest'] = i === 0
+
+    // Indicate if major, minor, or patch are not specified
+    entry['has-major'] = entry['major'] !== '*'
+    entry['has-minor'] = entry['minor'] !== '*'
+    entry['has-patch'] = entry['patch'] !== '*'
+
+    // Flag with the subrange policy used
+    if (entry['has-major'] === false) {
+        entry['subrange-policy'] = 'system-version'
+    } else if (subranges.length === 1 || minSubrangeVersion.major !== maxSubrangeVersion.major) {
+        entry['subrange-policy'] = 'one-per-major'
+    } else {
+        entry['subrange-policy'] = 'one-per-minor'
+    }
+}
+
+function setEntryName(entry, compilerName, subrange, compiler_cxxs) {
+    // Come up with a name for this entry
+    let name = `${humanizeCompilerName(compilerName)}`
+    if (subrange !== '*') {
+        name += ` ${subrange}`
+    }
+    if (compiler_cxxs.length !== 0) {
+        if (compiler_cxxs.length > 1) {
+            name += `: C++${compiler_cxxs[0]}-${compiler_cxxs[compiler_cxxs.length - 1]}`
+        } else {
+            name += `: C++${compiler_cxxs[0]}`
+        }
+    }
+    entry['name'] = name
+}
+
+function applyLatestFactors(matrix, inputs, latestIdx, earliestIdx, compilerName) {
+    // Apply latest factors for this compiler.
+    // We duplicate the latest entry for each latest factor and set the
+    // property to true for each duplicated entry.
+    if (compilerName in inputs.latest_factors) {
+        // Duplicate latest entry for each latest factor and set properties
+        for (const factor of inputs.latest_factors[compilerName]) {
+            let latest_copy = {...matrix[latestIdx]}
+            latest_copy['is-main'] = false
+            latest_copy[factor.toLowerCase()] = true
+            latest_copy['name'] += ` (${factor})`
+            matrix.push(latest_copy)
+        }
+
+        // Set the property to false for all other entries
+        for (let i = earliestIdx; i < matrix.length; i++) {
+            for (const factor of inputs.latest_factors[compilerName]) {
+                if (!(factor.toLowerCase() in matrix[i])) {
+                    matrix[i][factor.toLowerCase()] = false
                 }
             }
-            entry['name'] = name
-
-            matrix.push(entry)
         }
-        const latestIdx = matrix.length - 1
-        log(`${compilerName}: ${latestIdx - earliestIdx} basic entries`)
+    }
+}
 
-        // Apply latest factors for this compiler
-        if (compilerName in latest_factors) {
-            // Duplicate latest entry for each latest factor and set properties
-            for (const factor of latest_factors[compilerName]) {
+function applyVariantFactors(matrix, inputs, latestIdx, earliestIdx, compilerName) {
+    // Apply variant factors for this compiler
+    // We skip the latest entry and apply the variant factors to the
+    // intermediary entries.
+    let variantIdx = latestIdx
+    if (variantIdx !== earliestIdx) {
+        variantIdx--
+    }
+    if (compilerName in inputs.factors) {
+        // Apply each variant factor to the intermediary entries
+        for (const factor of inputs.factors[compilerName]) {
+            if (variantIdx !== earliestIdx) {
+                matrix[variantIdx][factor.toLowerCase()] = true
+                matrix[variantIdx]['name'] += ` (${factor})`
+                variantIdx--
+            } else {
+                // If we reached the earliest entry by doing that,
+                // we need to duplicate the latest entry to apply new
+                // factors
                 let latest_copy = {...matrix[latestIdx]}
                 latest_copy['is-main'] = false
                 latest_copy[factor.toLowerCase()] = true
                 latest_copy['name'] += ` (${factor})`
                 matrix.push(latest_copy)
             }
-
-            // Set the property to false for all other entries
-            for (let i = earliestIdx; i < matrix.length; i++) {
-                for (const factor of latest_factors[compilerName]) {
-                    if (!(factor.toLowerCase() in matrix[i])) {
-                        matrix[i][factor.toLowerCase()] = false
-                    }
+        }
+        // Set the property to false for all other entries
+        for (let i = earliestIdx; i < matrix.length; i++) {
+            for (const factor of inputs.factors[compilerName]) {
+                if (!(factor.toLowerCase() in matrix[i])) {
+                    matrix[i][factor.toLowerCase()] = false
                 }
             }
         }
+    }
+}
 
-        // Apply variant factors for this compiler
-        let variantIdx = latestIdx
-        if (variantIdx !== earliestIdx) {
-            variantIdx--
+function setRecommendedFlags(entry, inputs) {
+    entry['build-type'] = 'Release'
+    entry['cxxflags'] = ''
+    entry['ccflags'] = ''
+    entry['install'] = ''
+
+    // Flags for asan
+    if ('asan' in entry && entry['asan'] === true) {
+        if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
+            entry['cxxflags'] += ' -fsanitize=address -fno-sanitize-recover=address -fno-omit-frame-pointer'
+            entry['ccflags'] += ' -fsanitize=address -fno-sanitize-recover=address -fno-omit-frame-pointer'
+            entry['build-type'] = inputs.sanitizer_build_type || 'Release'
         }
-        if (compilerName in factors) {
-            for (const factor of factors[compilerName]) {
-                if (variantIdx !== earliestIdx) {
-                    matrix[variantIdx][factor.toLowerCase()] = true
-                    matrix[variantIdx]['name'] += ` (${factor})`
-                    variantIdx--
-                } else {
-                    let latest_copy = {...matrix[latestIdx]}
-                    latest_copy['is-main'] = false
-                    latest_copy[factor.toLowerCase()] = true
-                    latest_copy['name'] += ` (${factor})`
-                    matrix.push(latest_copy)
-                }
-            }
-            for (let i = earliestIdx; i < matrix.length; i++) {
-                for (const factor of factors[compilerName]) {
-                    if (!(factor.toLowerCase() in matrix[i])) {
-                        matrix[i][factor.toLowerCase()] = false
-                    }
-                }
-            }
-        }
-
-        /*
-         * We can look at ci.yml to understand what suggestions would make usage
-         * simpler.
-         *
-         * We have to document all this stuff the action does. There's a lot in
-         * here. We can get started by looking at each key/value in the entries
-         * and ensure they are all documented.
-         */
-
-        log(`${compilerName}: ${latestIdx - earliestIdx} total entries`)
     }
 
-    // Patch with recommended flags for special factors
-    for (let entry of matrix) {
-        entry['build-type'] = 'Release'
-        entry['cxxflags'] = ''
-        entry['ccflags'] = ''
-        entry['install'] = ''
-        if ('asan' in entry && entry['asan'] === true) {
-            if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
-                entry['cxxflags'] += ' -fsanitize=address -fno-sanitize-recover=address -fno-omit-frame-pointer'
-                entry['ccflags'] += ' -fsanitize=address -fno-sanitize-recover=address -fno-omit-frame-pointer'
-                entry['build-type'] = sanitizer_build_type ? sanitizer_build_type : 'Release'
-            }
+    // Flags for ubsan
+    if ('ubsan' in entry && entry['ubsan'] === true) {
+        if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
+            entry['cxxflags'] += ' -fsanitize=undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer'
+            entry['ccflags'] += ' -fsanitize=undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer'
+            entry['build-type'] = inputs.sanitizer_build_type || 'Release'
+            // https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#stack-traces-and-report-symbolization
+            entry['env'] = {'UBSAN_OPTIONS': 'print_stacktrace=1'}
         }
-        if ('ubsan' in entry && entry['ubsan'] === true) {
-            if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
-                entry['cxxflags'] += ' -fsanitize=undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer'
-                entry['ccflags'] += ' -fsanitize=undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer'
-                entry['build-type'] = sanitizer_build_type ? sanitizer_build_type : 'Release'
-                // https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#stack-traces-and-report-symbolization
-                entry['env'] = {'UBSAN_OPTIONS': 'print_stacktrace=1'}
-            }
-        }
-        if ('msan' in entry && entry['msan'] === true) {
-            if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
-                entry['cxxflags'] += ' -fsanitize=memory -fno-sanitize-recover=memory -fno-omit-frame-pointer'
-                entry['ccflags'] += ' -fsanitize=memory -fno-sanitize-recover=memory -fno-omit-frame-pointer'
-                entry['build-type'] = sanitizer_build_type ? sanitizer_build_type : 'Release'
-            }
-        }
-        if ('tsan' in entry && entry['tsan'] === true) {
-            if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
-                entry['cxxflags'] += ' -fsanitize=thread -fno-sanitize-recover=thread -fno-omit-frame-pointer'
-                entry['ccflags'] += ' -fsanitize=thread -fno-sanitize-recover=thread -fno-omit-frame-pointer'
-                entry['build-type'] = sanitizer_build_type ? sanitizer_build_type : 'Release'
-            }
-        }
-        if ('coverage' in entry && entry['coverage'] === true) {
-            if (entry['compiler'] === 'gcc') {
-                entry['cxxflags'] += ' --coverage -fprofile-arcs -ftest-coverage'
-                entry['ccflags'] += ' --coverage -fprofile-arcs -ftest-coverage'
-                entry['install'] += ' lcov'
-            } else if (entry['compiler'] === 'clang') {
-                entry['cxxflags'] += ' -fprofile-instr-generate -fcoverage-mapping'
-                entry['ccflags'] += ' -fprofile-instr-generate -fcoverage-mapping'
-            }
-            entry['build-type'] = 'Debug'
-        }
-        if ('x86' in entry && entry['x86'] === true) {
-            if (entry['compiler'] === 'msvc') {
-                entry['cxxflags'] += ' /m32'
-                entry['ccflags'] += ' /m32'
-            } else if (entry['compiler'] === 'clang') {
-                entry['cxxflags'] += ' -m32'
-                entry['ccflags'] += ' -m32'
-            }
-            entry['build-type'] = x86_build_type ? x86_build_type : 'Release'
-        }
-        if ('time-trace' in entry && entry['time-trace'] === true) {
-            if (entry['compiler'] === 'clang') {
-                const v = semver.minSatisfying(findClangVersions(), entry['version'])
-                if (semver.satisfies(v, '>=9')) {
-                    entry['cxxflags'] += ' -ftime-trace'
-                    entry['ccflags'] += ' -ftime-trace'
-                    entry['install'] += ' wget unzip'
-                }
-            }
-            if (entry['cxxstd'] !== '') {
-                entry['cxxstd'] = entry['latest-cxxstd']
-                entry['name'] = entry['name'].replace(/C\+\+\d+-\d+/g, `C++${entry['latest-cxxstd']}`)
-            }
-        }
-        if ('container' in entry && entry['container'].startsWith('ubuntu')) {
-            // Ubuntu containers need build-essential even to bootstrap other installers
-            entry['install'] += ' build-essential'
-        }
-        entry['install'] = entry['install'].trim()
-        entry['cxxflags'] = entry['cxxflags'].trim()
-        entry['ccflags'] = entry['ccflags'].trim()
     }
+
+    // Flags for msan
+    if ('msan' in entry && entry['msan'] === true) {
+        if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
+            entry['cxxflags'] += ' -fsanitize=memory -fno-sanitize-recover=memory -fno-omit-frame-pointer'
+            entry['ccflags'] += ' -fsanitize=memory -fno-sanitize-recover=memory -fno-omit-frame-pointer'
+            entry['build-type'] = inputs.sanitizer_build_type || 'Release'
+        }
+    }
+
+    // Flags for tsan
+    if ('tsan' in entry && entry['tsan'] === true) {
+        if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
+            entry['cxxflags'] += ' -fsanitize=thread -fno-sanitize-recover=thread -fno-omit-frame-pointer'
+            entry['ccflags'] += ' -fsanitize=thread -fno-sanitize-recover=thread -fno-omit-frame-pointer'
+            entry['build-type'] = inputs.sanitizer_build_type || 'Release'
+        }
+    }
+
+    // Flags for coverage
+    if ('coverage' in entry && entry['coverage'] === true) {
+        if (entry['compiler'] === 'gcc') {
+            entry['cxxflags'] += ' --coverage -fprofile-arcs -ftest-coverage'
+            entry['ccflags'] += ' --coverage -fprofile-arcs -ftest-coverage'
+            entry['install'] += ' lcov'
+        } else if (entry['compiler'] === 'clang') {
+            entry['cxxflags'] += ' -fprofile-instr-generate -fcoverage-mapping'
+            entry['ccflags'] += ' -fprofile-instr-generate -fcoverage-mapping'
+        }
+        entry['build-type'] = 'Debug'
+    }
+
+    // Flags for x86
+    if ('x86' in entry && entry['x86'] === true) {
+        if (entry['compiler'] === 'msvc') {
+            entry['cxxflags'] += ' /m32'
+            entry['ccflags'] += ' /m32'
+        } else if (entry['compiler'] === 'clang') {
+            entry['cxxflags'] += ' -m32'
+            entry['ccflags'] += ' -m32'
+        }
+        entry['build-type'] = inputs.x86_build_type || 'Release'
+    }
+
+    // Flags for time-trace
+    if ('time-trace' in entry && entry['time-trace'] === true) {
+        if (entry['compiler'] === 'clang') {
+            const v = semver.minSatisfying(findClangVersions(), entry['version'])
+            if (semver.satisfies(v, '>=9')) {
+                entry['cxxflags'] += ' -ftime-trace'
+                entry['ccflags'] += ' -ftime-trace'
+                entry['install'] += ' wget unzip'
+            }
+        }
+        if (entry['cxxstd'] !== '') {
+            entry['cxxstd'] = entry['latest-cxxstd']
+            entry['name'] = entry['name'].replace(/C\+\+\d+-\d+/g, `C++${entry['latest-cxxstd']}`)
+        }
+    }
+
+    // Install build-essential for Ubuntu containers
+    if ('container' in entry && entry['container'].startsWith('ubuntu')) {
+        // Ubuntu containers need build-essential even to bootstrap other installers
+        entry['install'] += ' build-essential'
+    }
+
+    // Trim flags
+    entry['install'] = entry['install'].trim()
+    entry['cxxflags'] = entry['cxxflags'].trim()
+    entry['ccflags'] = entry['ccflags'].trim()
 
     // Include vcpkg triplet recommendations (vcpkg help triplet)
-    for (let entry of matrix) {
-        const arch_prefix = entry['x86'] ? 'x86' : 'x64'
-        if (['msvc', 'clang-cl'].includes(entry['compiler'])) {
-            entry['triplet'] = `${arch_prefix}-windows`
-        } else if (entry['compiler'] === 'mingw') {
-            entry['triplet'] = `${arch_prefix}-mingw-static`
-        } else if (entry['compiler'] === 'apple-clang') {
-            entry['triplet'] = `${arch_prefix}-osx`
-        } else {
-            entry['triplet'] = `${arch_prefix}-linux`
-        }
+    const arch_prefix = entry['x86'] ? 'x86' : 'x64'
+    if (['msvc', 'clang-cl'].includes(entry['compiler'])) {
+        entry['triplet'] = `${arch_prefix}-windows`
+    } else if (entry['compiler'] === 'mingw') {
+        entry['triplet'] = `${arch_prefix}-mingw-static`
+    } else if (entry['compiler'] === 'apple-clang') {
+        entry['triplet'] = `${arch_prefix}-osx`
+    } else {
+        entry['triplet'] = `${arch_prefix}-linux`
     }
+}
 
+function sortMatrix(matrix, inputs) {
     // Sort matrix
     // 1) Latest
     // 2) Unique
@@ -929,11 +944,11 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
     // 5) Intermediary
     const contains_factor = (entry) => {
         let allFactors = []
-        if (entry['compiler'] in latest_factors) {
-            allFactors.push(...latest_factors[entry['compiler']])
+        if (entry['compiler'] in inputs.latest_factors) {
+            allFactors.push(...inputs.latest_factors[entry['compiler']])
         }
-        if (entry['compiler'] in factors) {
-            allFactors.push(...factors[entry['compiler']])
+        if (entry['compiler'] in inputs.factors) {
+            allFactors.push(...inputs.factors[entry['compiler']])
         }
         if (allFactors.length === 0) {
             return false
@@ -1009,8 +1024,96 @@ function generateMatrix(compilerVersions, standards, max_standards, latest_facto
             return 0
         }
     })
+}
 
-    log(JSON.stringify(matrix, null, 2))
+async function generateMatrix(inputs) {
+    function fnlog(msg) {
+        log('generateMatrix: ' + msg)
+    }
+
+    let matrix = []
+    const allcxxstds = ['1998.0.0', '2003.0.0', '2011.0.0', '2014.0.0', '2017.0.0', '2020.0.0', '2023.0.0', '2026.0.0']
+    const cxxstds = allcxxstds.filter(v => semver.satisfies(v, inputs.standards)).map(v => semver.parse(v).major)
+
+    core.startGroup('🔄 Generating matrix entries')
+    const compilers = Object.entries(inputs.compiler_versions)
+    for (const [compilerName0, range] of compilers) {
+        fnlog(`Generating entries for ${compilerName0} version ${range}`)
+        const earliestIdx = matrix.length
+        const compilerName = normalizeCompilerName(compilerName0)
+        const allCompilerVersions = findCompilerVersions(compilerName)
+        const subranges = splitRanges(range, allCompilerVersions, SubrangePolicies.DEFAULT)
+        fnlog(`${compilerName} subranges: ${JSON.stringify(subranges)}`)
+
+        // Iterate over subranges and generate an entry for each
+        for (let i = 0; i < subranges.length; i++) {
+            fnlog(`Generating entry for ${compilerName} subrange ${subranges[i]}`)
+            const subrange = subranges[i]
+            let entry = {'compiler': compilerName, 'version': subrange, 'env': {}}
+
+            // The standards we should test with this compiler
+            const minSubrangeVersion = semver.parse(semver.minSatisfying(allCompilerVersions, subrange))
+            const maxSubrangeVersion = semver.parse(semver.maxSatisfying(allCompilerVersions, subrange))
+
+            const compiler_cxxstds = getCompilerCxxStds(
+                entry, inputs, allCompilerVersions, cxxstds, compilerName, minSubrangeVersion)
+            if (compiler_cxxstds === undefined) {
+                // This compiler version does not support any of the standards
+                // we want to test. Skip it.
+                continue
+            }
+            setEntrySemverComponents(entry, minSubrangeVersion, maxSubrangeVersion)
+            setCompilerExecutableNames(compilerName, minSubrangeVersion, entry)
+            setCompilerContainer(entry, inputs, compilerName, minSubrangeVersion)
+            setCompilerB2Toolset(entry, compilerName)
+            setCompilerCMakeGenerator(entry, compilerName, minSubrangeVersion, maxSubrangeVersion)
+            setEntryVersionFlags(entry, i, subranges, minSubrangeVersion, maxSubrangeVersion)
+            setEntryName(entry, compilerName, subrange, compiler_cxxstds)
+            matrix.push(entry)
+            fnlog(`Entry: ${JSON.stringify(entry)}`)
+        }
+        fnlog(`Apply factors for ${compilerName}`)
+        const latestIdx = matrix.length - 1
+        fnlog(`${compilerName}: ${latestIdx - earliestIdx} basic entries`)
+        applyLatestFactors(matrix, inputs, latestIdx, earliestIdx, compilerName)
+        applyVariantFactors(matrix, inputs, latestIdx, earliestIdx, compilerName)
+        fnlog(`${compilerName}: ${latestIdx - earliestIdx} total entries`)
+    }
+
+    function printMatrix() {
+        log(`Matrix (${matrix.length} entries):`)
+        matrix.forEach((obj, index) => {
+            log(`- ${JSON.stringify(obj)}`)
+        })
+    }
+
+    printMatrix()
+    core.endGroup()
+
+    core.startGroup('⚙️ Set recommended flags')
+    // Patch each entry with recommended flags for special factors
+    for (let entry of matrix) {
+        setRecommendedFlags(entry, inputs)
+    }
+    printMatrix()
+    core.endGroup()
+
+    core.startGroup('🔀 Sort matrix')
+    sortMatrix(matrix, inputs)
+    printMatrix()
+    core.endGroup()
+
+    core.startGroup('🏁 Final matrix')
+    if (inputs.log_matrix) {
+        core.info(`Matrix (${matrix.length} entries):`)
+        matrix.forEach((obj, index) => {
+            core.info(`- ${JSON.stringify(obj)}`);
+        });
+    } else {
+        printMatrix()
+    }
+    core.endGroup()
+
     return matrix
 }
 
@@ -1037,7 +1140,7 @@ function buildTypeEmoji(build_type) {
         'relwithdebinfo': '🔍',
         'minsizerel': '💡'
     }
-    lc_build_type = build_type.toLowerCase()
+    const lc_build_type = build_type.toLowerCase()
     if (lc_build_type in build_type_emojis) {
         return build_type_emojis[lc_build_type]
     }
@@ -1053,7 +1156,7 @@ function osEmoji(os) {
         'android': '🤖',
         'ios': '📱'
     }
-    lc_os = os.toLowerCase()
+    const lc_os = os.toLowerCase()
     for (const [key, value] of Object.entries(os_emojis)) {
         if (lc_os.startsWith(key)) {
             return value
@@ -1062,11 +1165,7 @@ function osEmoji(os) {
     return '🖥️'
 }
 
-function generateTable(matrix, latest_factors, factors) {
-    if (matrix.length === 0) {
-        return []
-    }
-
+function getAllFactors(latest_factors, factors) {
     let allFactors = []
     Object.values(latest_factors).forEach(factors => {
         allFactors.push(...factors)
@@ -1074,10 +1173,21 @@ function generateTable(matrix, latest_factors, factors) {
     Object.values(factors).forEach(factors => {
         allFactors.push(...factors)
     })
-    allFactors = [...new Set(allFactors)]
+    return [...new Set(allFactors)]
+}
 
+function generateTable(matrix, inputs) {
+    function fnlog(msg) {
+        log('generateTable: ' + msg)
+    }
+
+    const {latest_factors, factors} = inputs
+    if (matrix.length === 0) {
+        return []
+    }
+
+    let allFactors = getAllFactors(latest_factors, factors)
     const allFactorKeys = allFactors.map(v => v.toLowerCase())
-
     const headerEmojis = ['📋', '🖥️', '🔧', '📚', '🏗️', '🔢', '🔨', '🛠️', '🛠️']
     const headerNames = ['Name', 'Environment', 'Compiler', 'C++ Standard', 'Build Type', 'Factors', 'Generator', 'Toolset', 'Triplet']
     const headerWithEmojis = headerNames.map((element, index) => `${headerEmojis[index]} ${element}`)
@@ -1211,55 +1321,76 @@ function generateTable(matrix, latest_factors, factors) {
         row[0] = `${nameEmojis.join('')} ${row[0]}`
 
         table.push(row)
+
+        fnlog(`- ${JSON.stringify(row)}`)
     }
 
     return table
 }
 
-function run() {
+async function run() {
+    function fnlog(msg) {
+        log('cpp-matrix: ' + msg)
+    }
+
     try {
+        const compilerVersions = parseCompilerRequirements(core.getInput('compilers'))
+        let inputs = {
+            // Configure options
+            compiler_versions: compilerVersions,
+            standards: normalizeCppVersionRequirement(core.getInput('standards')),
+            max_standards: parseInt(core.getInput('max-standards').trim()),
+            latest_factors: parseCompilerFactors(core.getInput('latest-factors'), Object.keys(compilerVersions)),
+            factors: parseCompilerFactors(core.getInput('factors'), Object.keys(compilerVersions)),
+            sanitizer_build_type: core.getInput('sanitizer-build-type').trim() || 'Release',
+            x86_build_type: core.getInput('x86-build-type').trim() || 'Release',
+            use_containers: core.getBooleanInput('use-containers'),
+            // Annotations and tracing
+            log_matrix: core.getBooleanInput('log-matrix'),
+            generate_summary: core.getBooleanInput('generate-summary'),
+            trace_commands: core.getBooleanInput('trace-commands')
+        }
+
         trace_commands = isTruthy(core.getInput('trace-commands'))
         if (process.env['ACTIONS_STEP_DEBUG'] === 'true') {
             // Force trace-commands
             trace_commands = true
         }
 
-        const compiler_versions = parseCompilerRequirements(core.getInput('compilers'))
-        log(`compiler_versions: ${JSON.stringify(compiler_versions)}`)
+        core.startGroup('📥 C++ Matrix Requirements')
+        for (const [name, value] of Object.entries(inputs)) {
+            function valueToString(value) {
+                if (Array.isArray(value)) {
+                    return `[${value.join(', ')}]`
+                } else if (typeof value === 'object') {
+                    return JSON.stringify(value)
+                } else if (typeof value === 'string') {
+                    return `"${value}"`
+                } else if (!value) {
+                    return '<empty>'
+                }
+                return value
+            }
 
-        const standards = normalizeCppVersionRequirement(core.getInput('standards'))
-        log(`standards: ${standards}`)
+            core.info(`🧩 ${name.replaceAll('_', '-')}: ${valueToString(value)}`)
+        }
+        core.endGroup()
 
-        const max_standards = parseInt(core.getInput('max-standards').trim())
-        log(`max_standards: ${max_standards}`)
-
-        compilers = Object.keys(compiler_versions)
-        const latest_factors = parseCompilerFactors(core.getInput('latest-factors'), compilers)
-        log(`latest_factors: ${JSON.stringify(latest_factors)}`)
-
-        const factors = parseCompilerFactors(core.getInput('factors'), compilers)
-        log(`factors: ${JSON.stringify(factors)}`)
-
-        const sanitizer_build_type = core.getInput('sanitizer-build-type').trim()
-        log(`sanitizer_build_type: ${sanitizer_build_type}`)
-
-        const x86_build_type = core.getInput('x86-build-type').trim()
-        log(`x86_build_type: ${x86_build_type}`)
-
-        const use_containers = core.getBooleanInput('use-containers')
-        log(`use_containers: ${use_containers}`)
-
-        const matrix = generateMatrix(compiler_versions, standards, max_standards, latest_factors, factors, sanitizer_build_type, x86_build_type, use_containers)
-        core.setOutput('matrix', matrix)
-
-        const generate_summary = isTruthy(core.getInput('generate-summary'))
-        if (generate_summary) {
-            const table = generateTable(matrix, latest_factors, factors)
-            core.summary.addHeading('C++ Test Matrix').addTable(table).write().then(result => {
-                log('Table generated', result)
-            }).catch(error => {
-                log('An error occurred generating the table:', error)
-            })
+        try {
+            const matrix = await generateMatrix(inputs)
+            core.setOutput('matrix', matrix)
+            if (inputs.generate_summary) {
+                core.startGroup('📋 C++ Matrix Summary')
+                const table = generateTable(matrix, inputs)
+                core.summary.addHeading('C++ Test Matrix').addTable(table).write().then(result => {
+                    log('Table generated', result)
+                }).catch(error => {
+                    log('An error occurred generating the table:', error)
+                })
+                core.endGroup()
+            }
+        } catch (error) {
+            core.setFailed(error)
         }
     } catch (error) {
         core.setFailed(error.message)
@@ -1267,7 +1398,9 @@ function run() {
 }
 
 if (require.main === module) {
-    run()
+    run().catch((error) => {
+        core.setFailed(error)
+    })
 }
 
 module.exports = {

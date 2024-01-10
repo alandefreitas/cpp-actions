@@ -104,8 +104,16 @@ describe('generateMatrix', () => {
     const max_standards = 2
     const latest_factors = {gcc: ['Coverage', 'TSan', 'UBSan']}
     const factors = {gcc: ['Asan', 'Shared'], msvc: ['Shared', 'x86']}
-    const matrix = generateMatrix(compilerVersions, standards, max_standards, latest_factors, factors)
-    expect(matrix.length === 0).toBe(false);
-    const table = generateTable(matrix, latest_factors, factors)
-    expect(table.length === 0).toBe(false);
+    const inputs = {
+        compiler_versions: compilerVersions,
+        standards: standards,
+        max_standards: max_standards,
+        latest_factors: latest_factors,
+        factors: factors
+    }
+    generateMatrix(inputs).then((matrix) => {
+        expect(matrix.length === 0).toBe(false);
+        const table = generateTable(matrix, inputs)
+        expect(table.length === 0).toBe(false);
+    });
 });

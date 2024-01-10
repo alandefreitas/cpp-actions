@@ -267,6 +267,15 @@ inputs:
     required: false
     default: 'true'
 
+  log-matrix:
+    description: |
+      Log the generated matrix as a JSON string.
+      
+      The is useful for debugging purposes and when transitioning to a workflow that uses a hard-coded matrix.
+
+    required: false
+    default: 'true'
+
   generate-summary:
     description: 'Generate summary with the complete matrix.'
     required: false
