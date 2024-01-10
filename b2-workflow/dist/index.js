@@ -66,6 +66,10 @@ async function main(inputs) {
             const user_config_jam_contents = `using ${inputs.toolset} : : "${inputs.cxx}" ;`
             fnlog(`user-config.jam user_config_jam_contents: ${user_config_jam_contents}`)
             fs.writeFileSync(user_config_jam, user_config_jam_contents)
+            core.info(`📝 ${user_config_jam} contents:`)
+            core.info(user_config_jam_contents)
+        } else {
+            core.info('Skipping user-config.jam creation for clang-win')
         }
         core.endGroup()
     }
