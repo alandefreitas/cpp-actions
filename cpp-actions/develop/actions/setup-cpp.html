@@ -390,8 +390,7 @@ version ultimately setup by the action.</p>
   id: setup-cpp
   with:
     compiler: ${{ matrix.compiler }}
-    version: ${{ (matrix.subrange-policy == 'one-per-major' &amp;&amp; matrix.major) || matrix.version
-      }}</code></pre>
+    version: ${{ matrix.version }}</code></pre>
 </div>
 </div>
 </div>

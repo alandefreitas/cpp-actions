@@ -377,18 +377,20 @@ which already calls this action if necessary.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>path</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The cmake executable. We attempt to find cmake at this path first.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Path to the cmake executable. The action attempts to find cmake at this path first.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-path</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The cmake executable. We attempt to find cmake at this path first.
-This option is available for backwards compatibility and has priority over <code>path</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The cmake executable. We attempt to find cmake at this path first.</p>
+<p class="tableblock">This option is available for backwards compatibility and has priority over <code>path</code>.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Used to specify whether the CMake installation should be cached in the case CMake needs to be downloaded.".</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Used to specify whether the CMake installation should be cached in the case CMake needs to be downloaded.</p>
+<p class="tableblock">As binaries are provided for all versions of CMake, this option is deprecated and will be removed in
+a future release.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
