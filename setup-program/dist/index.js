@@ -136,7 +136,8 @@ async function find_program_in_path(paths, version, check_latest) {
         fnlog(`Searching for program version ${version} in "${exec_path}"`)
 
         // Find as a program in path if only basename is provided
-        if (path.basename(exec_path) === exec_path) {
+        const isBasenameOnly = path.basename(exec_path) === exec_path
+        if (isBasenameOnly) {
             const {output_version, output_path} = find_program_in_system_paths([], [exec_path], version, check_latest)
             if (output_path && output_version) {
                 fnlog(`Found program ${exec_path} in system paths (${output_path} - version ${output_version}).`)
@@ -307,6 +308,7 @@ async function find_program_in_system_paths(extra_paths, names, version, check_l
             }
         }
     }
+
     // Merge PATH paths with paths passed as parameter
     for (const path_dir of path_dirs) {
         if (!extra_paths.includes(path_dir)) {
@@ -909,6 +911,11 @@ async function install_program_from_url(names, version, check_latest, url_templa
         const fileStat = fs.statSync(subPath)
         if (fileStat.isDirectory()) {
             fnlog(`${names.join(', ')} ultimately installed in single subdir ${subPath}`)
+            // Create environment variable <tool name>_ROOT with the installation path
+            for (const name of names) {
+                const env_var_name = `${name.toUpperCase()}_ROOT`
+                core.exportVariable(env_var_name, subPath)
+            }
             // List all files in subpath
             const subFiles = fs.readdirSync(subPath)
             fnlog(`Files in ${subPath}: [${subFiles.join(', ')}]`)
@@ -933,6 +940,10 @@ async function install_program_from_url(names, version, check_latest, url_templa
     fnlog(`Installed in ${install_prefix}`)
     if (update_environment) {
         core.addPath(install_prefix)
+        const bin_path = path.join(install_prefix, 'bin')
+        if (fs.existsSync(bin_path)) {
+            core.addPath(bin_path)
+        }
     }
 
     // Recursively iterate subdirectories of extPath looking for ${name} executable

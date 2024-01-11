@@ -35,13 +35,16 @@ inputs:
     default: 'CMakeLists.txt'
 
   path:
-    description: 'The cmake executable. We attempt to find cmake at this path first.'
+    description: |
+      Path to the cmake executable. The action attempts to find cmake at this path first.
+
     required: false
     default: 'cmake'
 
   cmake-path:
     description: |
-      The cmake executable. We attempt to find cmake at this path first. 
+      The cmake executable. We attempt to find cmake at this path first.
+      
       This option is available for backwards compatibility and has priority over `path`.
 
     required: false
@@ -49,7 +52,11 @@ inputs:
 
   cache:
     description: |
-      Used to specify whether the CMake installation should be cached in the case CMake needs to be downloaded."
+      Used to specify whether the CMake installation should be cached in the case CMake needs to be downloaded.
+      
+      As binaries are provided for all versions of CMake, this option is deprecated and will be removed in
+      a future release.
+
     required: false
     default: 'true'
 

@@ -18,6 +18,12 @@ description: |
   for the workflow that are not easily available from package managers or could already be
   available in the environment.
   
+  [INFO]
+  ====
+  This action also serves as a common repository for the logic to find and install programs
+  used by other actions.
+  ====
+  
   == Next steps
   
   After setting up the dependencies for your C++ project, the next step in your workflow should usually be

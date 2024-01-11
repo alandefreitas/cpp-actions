@@ -1,13 +1,9 @@
 const core = require('@actions/core')
+const tc = require('@actions/tool-cache')
 const semver = require('semver')
 const fs = require('fs')
 const setup_program = require('./../setup-program/index')
 const path = require('path')
-// const httpm = require('@actions/http-client')
-// const io = require('@actions/io')
-// const tc = require('@actions/tool-cache')
-// const exec = require('@actions/exec')
-// const github = require('@actions/github')
 
 setup_program.trace_commands = false
 let trace_commands = false
@@ -153,6 +149,65 @@ function update_version_from_file(cmake_file, version, allVersions) {
     return version
 }
 
+function generateCMakeURL(version, architecture, fnlog) {
+    const versionSV = semver.parse(version)
+    const {major, minor} = versionSV
+
+    // Determine path to download
+    const system_os = (process.env['RUNNER_OS'] || process.platform).toLowerCase()
+    let url_os = system_os
+    // Put it in the same format as the GitHub Actions runner
+    if (url_os === 'darwin') {
+        url_os = 'macos'
+    } else if (url_os === 'win32') {
+        url_os = 'windows'
+    } else {
+        url_os = 'linux'
+    }
+
+    let url_arch = (architecture || process.env['RUNNER_ARCH'] || process.arch).toLowerCase()
+    // Put it in the same format as the GitHub Actions runner (X86, X64, ARM, or ARM64)
+    if (url_arch === 'ia32') {
+        url_arch = 'x86'
+    }
+
+    // CMake 3.19.0 and below use a different URL format for OS
+    if (semver.lte(version, '3.19.0')) {
+        if (url_os === 'windows') {
+            if (url_arch === 'x86') {
+                url_os = 'win32'
+            } else {
+                url_os = 'win64'
+            }
+        } else if (url_os === 'linux') {
+            url_os = 'Linux'
+        } else if (url_os === 'macos' && semver.lte(version, '3.18.2')) {
+            url_os = 'Darwin'
+        }
+    }
+
+    // Arch URL format depends on OS
+    if (url_os === 'windows') {
+        url_arch = url_arch.startsWith('arm') ? 'arm64' : 'x86_64'
+    } else if (url_os === 'win32') {
+        url_arch = 'x86'
+    } else if (url_os === 'win64') {
+        url_arch = 'x64'
+    } else if (url_os.toLowerCase() === 'linux') {
+        url_arch = url_arch.startsWith('arm') ? 'aarch64' : 'x86_64'
+    } else if (url_os === 'macos') {
+        url_arch = 'universal'
+    }
+
+    // Form complete URL
+    const url_extension = (system_os === 'windows') ? 'zip' : 'tar.gz'
+    const cmake_basename = `cmake-${version}-${url_os}-${url_arch}`
+    const cmake_filename = `${cmake_basename}.${url_extension}`
+    const cmake_url = `https://cmake.org/files/v${major}.${minor}/${cmake_filename}`
+    fnlog(`CMake URL: ${cmake_url}`)
+    return cmake_url
+}
+
 async function main(inputs, subgroups = true) {
     function fnlog(msg) {
         log('setup-cmake: ' + msg)
@@ -206,30 +261,29 @@ async function main(inputs, subgroups = true) {
         process.env['RUNNER_TOOL_CACHE'] = process.env['AGENT_TOOLSDIRECTORY']
     }
 
-    // ----------------------------------------------
-    // Look for path CMake
-    // ----------------------------------------------
-    if (subgroups) {
-        core.startGroup(`📂 Look for CMake in ${inputPath}`)
-    }
     let output_path
     let output_version
 
-    // Setup from provided path
-    const paths = inputPath.split(/[:;]/).filter((inputPath) => inputPath !== '')
-    if (paths.length === 1) {
-        core.info(`Searching for CMake ${version} in paths [${paths.join(',')}]`)
-    } else {
-        core.info(`Searching for CMake ${version} in path [${path}]`)
-    }
-    let __ret = await setup_program.find_program_in_path(paths, version, check_latest)
-    if (__ret.output_version && __ret.output_path) {
-        core.info(`✅ Found CMake ${__ret.output_version} in ${__ret.output_path}`)
-    }
-    output_version = __ret.output_version
-    output_path = __ret.output_path
-    if (subgroups) {
-        core.endGroup()
+    // ----------------------------------------------
+    // Look for path CMake
+    // ----------------------------------------------
+    let execPaths = inputPath.split(/[:;]/).filter((inputPath) => inputPath !== '')
+    if (execPaths.length !== 0) {
+        if (subgroups) {
+            core.startGroup(`📂 Look for CMake in ${inputPath}`)
+        }
+
+        // Setup from provided path
+        core.info(`Searching for CMake ${version} in path${execPaths.length === 1 ? '' : 's'} [${execPaths.join(',')}]`)
+        let __ret = await setup_program.find_program_in_path(execPaths, version, check_latest)
+        if (__ret.output_version && __ret.output_path) {
+            core.info(`✅ Found CMake ${__ret.output_version} in ${__ret.output_path}`)
+        }
+        output_version = __ret.output_version
+        output_path = __ret.output_path
+        if (subgroups) {
+            core.endGroup()
+        }
     }
 
     // ----------------------------------------------
@@ -240,7 +294,30 @@ async function main(inputs, subgroups = true) {
             core.startGroup('📦 Look for system CMake')
         }
         core.info(`Searching for CMake ${version} in PATH`)
-        const __ret = await setup_program.find_program_in_system_paths(paths, ['cmake'], version, check_latest)
+
+        // Check environment variable $CMAKE_ROOT and include both $CMAKE_ROOT
+        // and $CMAKE_ROOT/bin in paths. This action will also define CMAKE_ROOT
+        // if CMAKE_ROOT ends up being downloaded from a URL in a previous step.
+        let extraPaths = []
+        if (process.env['CMAKE_ROOT']?.trim()) {
+            const cmake_root = process.env['CMAKE_ROOT']
+            if (!extraPaths.includes(cmake_root)) {
+                extraPaths.push(cmake_root)
+            }
+            if (!extraPaths.includes(path.join(cmake_root, 'bin'))) {
+                extraPaths.push(path.join(cmake_root, 'bin'))
+            }
+        }
+
+        // Include all versions potentially cached with tc
+        const tc_paths = tc.findAllVersions('CMake')
+        for (const tc_path of tc_paths) {
+            if (!extraPaths.includes(tc_path)) {
+                extraPaths.push(tc_path)
+            }
+        }
+
+        const __ret = await setup_program.find_program_in_system_paths(extraPaths, ['cmake'], version, check_latest)
         if (__ret.output_path && __ret.output_version) {
             core.info(`✅ Found CMake ${__ret.output_version} in ${__ret.output_path}`)
         }
@@ -262,63 +339,9 @@ async function main(inputs, subgroups = true) {
             semver.maxSatisfying(allVersions, version) :
             semver.minSatisfying(allVersions, version)
         version = semver.coerce(version).toString()
+
         core.info(`Downloading CMake ${version}`)
-        const versionSV = semver.parse(version)
-        const {major, minor} = versionSV
-
-        // Determine path to download
-        const system_os = (process.env['RUNNER_OS'] || process.platform).toLowerCase()
-        let url_os = system_os
-        // Put it in the same format as the GitHub Actions runner
-        if (url_os === 'darwin') {
-            url_os = 'macos'
-        } else if (url_os === 'win32') {
-            url_os = 'windows'
-        } else {
-            url_os = 'linux'
-        }
-
-        let url_arch = (architecture || process.env['RUNNER_ARCH'] || process.arch).toLowerCase()
-        // Put it in the same format as the GitHub Actions runner (X86, X64, ARM, or ARM64)
-        if (url_arch === 'ia32') {
-            url_arch = 'x86'
-        }
-
-        // CMake 3.19.0 and below use a different URL format for OS
-        if (semver.lte(version, '3.19.0')) {
-            if (url_os === 'windows') {
-                if (url_arch === 'x86') {
-                    url_os = 'win32'
-                } else {
-                    url_os = 'win64'
-                }
-            } else if (url_os === 'linux') {
-                url_os = 'Linux'
-            } else if (url_os === 'macos' && semver.lte(version, '3.18.2')) {
-                url_os = 'Darwin'
-            }
-        }
-
-        // Arch URL format depends on OS
-        if (url_os === 'windows') {
-            url_arch = url_arch.startsWith('arm') ? 'arm64' : 'x86_64'
-        } else if (url_os === 'win32') {
-            url_arch = 'x86'
-        } else if (url_os === 'win64') {
-            url_arch = 'x64'
-        } else if (url_os.toLowerCase() === 'linux') {
-            url_arch = url_arch.startsWith('arm') ? 'aarch64' : 'x86_64'
-        } else if (url_os === 'macos') {
-            url_arch = 'universal'
-        }
-
-        // Form complete URL
-        const url_extension = (system_os === 'windows') ? 'zip' : 'tar.gz'
-        const cmake_basename = `cmake-${version}-${url_os}-${url_arch}`
-        const cmake_filename = `${cmake_basename}.${url_extension}`
-        const cmake_url = `https://cmake.org/files/v${major}.${minor}/${cmake_filename}`
-        fnlog(`CMake URL: ${cmake_url}`)
-
+        const cmake_url = generateCMakeURL(version, architecture, fnlog)
         const __ret = await setup_program.install_program_from_url(['cmake'], version, check_latest, cmake_url, update_environment)
         if (__ret.output_version && __ret.output_path) {
             core.info(`✅ Installed CMake ${__ret.output_version} to ${__ret.output_path}`)
@@ -416,12 +439,11 @@ async function run() {
         } catch (error) {
             // Print stack trace
             fnlog(error.stack)
-            // Print error message
-            core.error(error)
-            core.setFailed(error.message)
+            core.setFailed(error)
         }
     } catch (error) {
-        core.setFailed(error.message)
+        fnlog(error.stack)
+        core.setFailed(error)
     }
 }
 
