@@ -259,6 +259,44 @@ inputs:
     required: false
     default: ''
 
+  runs-on:
+    description: |
+      A multi-line list of github runner images to be used with each range of compiler version.
+      Each line has the format:
+      
+      `<compiler-name>[ <compiler-range>]: <github-runner-image>`
+      
+      For instance, `gcc >=13.1: ubuntu-latest` indicates that the runner image `ubuntu-latest` should be used
+      to test `gcc` with any version in the semver range `>=13.1`. 
+      
+      Omitting `<compiler-range>` is equivalent to it being set to `*` and will apply the runner 
+      image to all versions of the compiler.
+      
+      When the runner image is specified, a container is only be suggested for the entries if the `container`
+      option for that compiler version is also specified. 
+      
+      When the runner image is unspecified, the action will infer the runner image and potentially a container
+      from the compiler name and its version. 
+
+  containers:
+    description: |
+      A multi-line list of docker containers to be used with each range of compiler version.
+      Each line has the format:
+      
+      `<compiler-name>[ <compiler-range>]: <docker-container>`
+      
+      For instance, `gcc >=13.1: ubuntu:22.04` indicates that the docker container `ubuntu:22.04` should be used
+      to test `gcc` with any version in the semver range `>=13.1`. 
+      
+      Omitting `<compiler-range>` is equivalent to it being set to `*` and will apply the container 
+      to all versions of the compiler.
+      
+      When the container is specified for that compiler version and the `runs-on` option is not, an ubuntu image
+      is suggested for the entry to run the container. 
+      
+      When the container is unspecified, the action can still infer a container for the compiler version according
+      to the rules defined in the `use-containers` option.
+
   sanitizer-build-type:
     description: |
       Determine the default build type to suggest when testing with sanitizers.

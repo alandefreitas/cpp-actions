@@ -75,6 +75,53 @@ function parseCompilerFactors(inputString, compilers) {
     return compilerFactors
 }
 
+function parseCompilerOptions(inputLines, compilers) {
+    const containerOptions = []
+    for (let line of inputLines) {
+        line = line.trim()
+        if (line === '') {
+            continue
+        }
+
+        // <compiler-name>[ <compiler-range>]: <docker-container>
+        // Split line at first colon. If there are more than one colon, the
+        // second part includes all other colons
+        const colonIndex = line.indexOf(':')
+        if (colonIndex === -1) {
+            core.warning(`Ignoring invalid container option "${line}". Missing ":".`)
+            continue
+        }
+        const compilerPart = line.substring(0, colonIndex).trim()
+        const containerPart = line.substring(colonIndex + 1).trim()
+        // Split compiler part at first space
+        const spaceIndex = compilerPart.indexOf(' ')
+        // If there's no space, version is "*" is the rest is compiler
+        // name. Otherwise, the first part is the compiler name and the
+        // second part is the version range
+        let compilerName = null
+        let compilerRange = null
+        if (spaceIndex === -1) {
+            compilerName = compilerPart
+            compilerRange = '*'
+        } else {
+            compilerName = compilerPart.substring(0, spaceIndex).trim()
+            compilerRange = compilerPart.substring(spaceIndex + 1).trim()
+        }
+        // Check if compiler name matches one of the compilers we know about
+        if (!compilers.includes(compilerName)) {
+            core.warning(`Unknown compiler name "${compilerName}" in container options. Ignoring.`)
+        }
+        // Create entry
+        const entry = {
+            compiler: compilerName,
+            range: compilerRange,
+            value: containerPart
+        }
+        containerOptions.push(entry)
+    }
+    return containerOptions
+}
+
 function normalizeCppVersionRequirement(range) {
     // Regular expression to match two-digit C++ versions
     const regex = /\b(\d{2})\b/g
@@ -616,7 +663,43 @@ function setCompilerExecutableNames(entry, compilerName, minSubrangeVersion) {
     }
 }
 
-function setCompilerContainer(entry, inputs, compilerName, minSubrangeVersion) {
+function isArrayOfObjects(val) {
+    return Array.isArray(val) && val.length > 0 && typeof val[0] === 'object'
+}
+
+function setCompilerContainer(entry, inputs, compilerName, minSubrangeVersion, subrange) {
+    // Check if inputs.runs_on is an array of objects
+    let hasCustomContainer = false
+    if (isArrayOfObjects(inputs.containers)) {
+        for (const container of inputs.containers) {
+            if (container.compiler === compilerName) {
+                if (semver.subset(subrange, container.range)) {
+                    entry['container'] = container.value
+                    entry['runs-on'] = 'ubuntu-22.04'
+                    hasCustomContainer = true
+                    break
+                }
+            }
+        }
+    }
+
+    let hasCustomImage = false
+    if (isArrayOfObjects(inputs.runs_on)) {
+        for (const image of inputs.runs_on) {
+            if (image.compiler === compilerName) {
+                if (semver.subset(subrange, image.range)) {
+                    entry['runs-on'] = image.value
+                    hasCustomImage = true
+                    break
+                }
+            }
+        }
+    }
+
+    if (hasCustomContainer || hasCustomImage) {
+        return
+    }
+
     // runs-on / container
     if (compilerName === 'gcc') {
         if (semver.satisfies(minSubrangeVersion, '>=13')) {
@@ -1123,7 +1206,7 @@ async function generateMatrix(inputs) {
             }
             setEntrySemverComponents(entry, minSubrangeVersion, maxSubrangeVersion)
             setCompilerExecutableNames(compilerName, minSubrangeVersion, entry)
-            setCompilerContainer(entry, inputs, compilerName, minSubrangeVersion)
+            setCompilerContainer(entry, inputs, compilerName, minSubrangeVersion, subrange)
             setCompilerB2Toolset(entry, compilerName)
             setCompilerCMakeGenerator(entry, compilerName, minSubrangeVersion, maxSubrangeVersion)
             setEntryVersionFlags(entry, i, subranges, minSubrangeVersion, maxSubrangeVersion)
@@ -1430,17 +1513,31 @@ function generateTable(matrix, inputs) {
     return table
 }
 
+function normalizeCompilerNameKeys(obj) {
+    for (const [name, value] of Object.entries(obj)) {
+        const newName = normalizeCompilerName(name)
+        if (newName !== name) {
+            obj[newName] = value
+            delete obj[name]
+        }
+    }
+}
+
 async function run() {
     try {
         const compilerVersions = parseCompilerRequirements(core.getInput('compilers'))
         let inputs = {
-            // Configure options
+            // Compilers
             compiler_versions: compilerVersions,
             standards: normalizeCppVersionRequirement(core.getInput('standards')),
             max_standards: parseInt(core.getInput('max-standards').trim()),
+            // Factors
             latest_factors: parseCompilerFactors(core.getInput('latest-factors'), Object.keys(compilerVersions)),
             factors: parseCompilerFactors(core.getInput('factors'), Object.keys(compilerVersions)),
             combinatorial_factors: parseCompilerFactors(core.getInput('combinatorial-factors'), Object.keys(compilerVersions)),
+            // Suggestions
+            runs_on: parseCompilerOptions(core.getMultilineInput('runs-on'), Object.keys(compilerVersions)),
+            containers: parseCompilerOptions(core.getMultilineInput('containers'), Object.keys(compilerVersions)),
             sanitizer_build_type: core.getInput('sanitizer-build-type').trim() || 'Release',
             x86_build_type: core.getInput('x86-build-type').trim() || 'Release',
             use_containers: core.getBooleanInput('use-containers'),
@@ -1456,10 +1553,29 @@ async function run() {
             trace_commands = true
         }
 
+        // Normalize compiler names in the keys of compiler_versions,
+        // latest_factors, factors, combinatorial_factors
+        normalizeCompilerNameKeys(inputs.compiler_versions)
+        normalizeCompilerNameKeys(inputs.latest_factors)
+        normalizeCompilerNameKeys(inputs.factors)
+        normalizeCompilerNameKeys(inputs.combinatorial_factors)
+
+        // Normalize compiler names in the 'compiler' fields of runs_on and
+        // containers. They are arrays of objects.
+        inputs.runs_on.forEach(obj => {
+            obj['compiler'] = normalizeCompilerName(obj['compiler'])
+        })
+        inputs.containers.forEach(obj => {
+            obj['compiler'] = normalizeCompilerName(obj['compiler'])
+        })
+
         core.startGroup('📥 C++ Matrix Requirements')
         for (const [name, value] of Object.entries(inputs)) {
             function valueToString(value) {
                 if (Array.isArray(value)) {
+                    if (isArrayOfObjects(value)) {
+                        return `[${value.map(obj => JSON.stringify(obj)).join(',')}]`
+                    }
                     return `[${value.join(', ')}]`
                 } else if (typeof value === 'object') {
                     return JSON.stringify(value)
