@@ -779,7 +779,9 @@ function applyLatestFactors(matrix, inputs, latestIdx, earliestIdx, compilerName
         for (const factor of inputs.latest_factors[compilerName]) {
             let latest_copy = {...matrix[latestIdx]}
             latest_copy['is-main'] = false
-            latest_copy[factor.toLowerCase()] = true
+            for (const composite_factor of factor.split('+')) {
+                latest_copy[composite_factor.toLowerCase()] = true
+            }
             latest_copy['name'] += ` (${factor})`
             matrix.push(latest_copy)
         }
@@ -787,8 +789,10 @@ function applyLatestFactors(matrix, inputs, latestIdx, earliestIdx, compilerName
         // Set the property to false for all other entries
         for (let i = earliestIdx; i < matrix.length; i++) {
             for (const factor of inputs.latest_factors[compilerName]) {
-                if (!(factor.toLowerCase() in matrix[i])) {
-                    matrix[i][factor.toLowerCase()] = false
+                for (const composite_factor of factor.split('+')) {
+                    if (!(composite_factor.toLowerCase() in matrix[i])) {
+                        matrix[i][composite_factor.toLowerCase()] = false
+                    }
                 }
             }
         }
@@ -807,7 +811,9 @@ function applyVariantFactors(matrix, inputs, latestIdx, earliestIdx, compilerNam
         // Apply each variant factor to the intermediary entries
         for (const factor of inputs.factors[compilerName]) {
             if (variantIdx !== earliestIdx) {
-                matrix[variantIdx][factor.toLowerCase()] = true
+                for (const composite_factor of factor.split('+')) {
+                    matrix[variantIdx][composite_factor.toLowerCase()] = true
+                }
                 matrix[variantIdx]['name'] += ` (${factor})`
                 variantIdx--
             } else {
@@ -816,7 +822,9 @@ function applyVariantFactors(matrix, inputs, latestIdx, earliestIdx, compilerNam
                 // factors
                 let latest_copy = {...matrix[latestIdx]}
                 latest_copy['is-main'] = false
-                latest_copy[factor.toLowerCase()] = true
+                for (const composite_factor of factor.split('+')) {
+                    latest_copy[composite_factor.toLowerCase()] = true
+                }
                 latest_copy['name'] += ` (${factor})`
                 matrix.push(latest_copy)
             }
@@ -824,8 +832,10 @@ function applyVariantFactors(matrix, inputs, latestIdx, earliestIdx, compilerNam
         // Set the property to false for all other entries
         for (let i = earliestIdx; i < matrix.length; i++) {
             for (const factor of inputs.factors[compilerName]) {
-                if (!(factor.toLowerCase() in matrix[i])) {
-                    matrix[i][factor.toLowerCase()] = false
+                for (const composite_factor of factor.split('+')) {
+                    if (!(composite_factor.toLowerCase() in matrix[i])) {
+                        matrix[i][composite_factor.toLowerCase()] = false
+                    }
                 }
             }
         }
@@ -839,20 +849,17 @@ function setRecommendedFlags(entry, inputs) {
     entry['install'] = ''
 
     // Flags for asan
+    let sanitizers = []
     if ('asan' in entry && entry['asan'] === true) {
         if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
-            entry['cxxflags'] += ' -fsanitize=address -fno-sanitize-recover=address -fno-omit-frame-pointer'
-            entry['ccflags'] += ' -fsanitize=address -fno-sanitize-recover=address -fno-omit-frame-pointer'
-            entry['build-type'] = inputs.sanitizer_build_type || 'Release'
+            sanitizers.push('address')
         }
     }
 
     // Flags for ubsan
     if ('ubsan' in entry && entry['ubsan'] === true) {
         if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
-            entry['cxxflags'] += ' -fsanitize=undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer'
-            entry['ccflags'] += ' -fsanitize=undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer'
-            entry['build-type'] = inputs.sanitizer_build_type || 'Release'
+            sanitizers.push('undefined')
             // https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#stack-traces-and-report-symbolization
             entry['env'] = {'UBSAN_OPTIONS': 'print_stacktrace=1'}
         }
@@ -861,19 +868,23 @@ function setRecommendedFlags(entry, inputs) {
     // Flags for msan
     if ('msan' in entry && entry['msan'] === true) {
         if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
-            entry['cxxflags'] += ' -fsanitize=memory -fno-sanitize-recover=memory -fno-omit-frame-pointer'
-            entry['ccflags'] += ' -fsanitize=memory -fno-sanitize-recover=memory -fno-omit-frame-pointer'
-            entry['build-type'] = inputs.sanitizer_build_type || 'Release'
+            sanitizers.push('memory')
         }
     }
 
     // Flags for tsan
     if ('tsan' in entry && entry['tsan'] === true) {
         if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
-            entry['cxxflags'] += ' -fsanitize=thread -fno-sanitize-recover=thread -fno-omit-frame-pointer'
-            entry['ccflags'] += ' -fsanitize=thread -fno-sanitize-recover=thread -fno-omit-frame-pointer'
-            entry['build-type'] = inputs.sanitizer_build_type || 'Release'
+            sanitizers.push('thread')
         }
+    }
+
+    if (sanitizers.length !== 0) {
+        const sanitizers_str = sanitizers.join(',')
+        const sanitizer_flags = ` -fsanitize=${sanitizers_str} -fno-sanitize-recover=${sanitizers_str} -fno-omit-frame-pointer`
+        entry['cxxflags'] += sanitizer_flags
+        entry['ccflags'] += sanitizer_flags
+        entry['build-type'] = inputs.sanitizer_build_type || 'Release'
     }
 
     // Flags for coverage
@@ -1137,6 +1148,15 @@ function factorEmoji(factor) {
     if (factor in factor_emojis) {
         return factor_emojis[factor]
     }
+    // Check if factor contains '+'
+    if (factor.includes('+')) {
+        let factorEmojis = []
+        for (const composite_factor of factor.split('+')) {
+            if (composite_factor in factor_emojis) {
+                return factor_emojis[composite_factor]
+            }
+        }
+    }
     return '🔢'
 }
 
@@ -1175,10 +1195,18 @@ function osEmoji(os) {
 function getAllFactors(latest_factors, factors) {
     let allFactors = []
     Object.values(latest_factors).forEach(factors => {
-        allFactors.push(...factors)
+        for (const factor of factors) {
+            for (const composite_factor of factor.split('+')) {
+                allFactors.push(composite_factor)
+            }
+        }
     })
     Object.values(factors).forEach(factors => {
-        allFactors.push(...factors)
+        for (const factor of factors) {
+            for (const composite_factor of factor.split('+')) {
+                allFactors.push(composite_factor)
+            }
+        }
     })
     return [...new Set(allFactors)]
 }
@@ -1254,22 +1282,6 @@ function generateTable(matrix, inputs) {
         }
 
         // Factors
-        let cxxflags = ''
-        if (entry['cxxflags'] === entry['ccflags']) {
-            if (entry['cxxflags'].length !== 0) {
-                // Split entry['cxxflags'] on whitespaces and join with <code> tags around it
-                cxxflags = `<code>${entry['cxxflags'].split(' ').join('</code> <code>')}</code>`
-            } else {
-                cxxflags = ''
-            }
-        } else {
-            if (entry['cxxflags'].length !== 0 || entry['ccflags'].length !== 0) {
-                cxxflags = `C++: <code>${entry['cxxflags'].split(' ').join('</code> <code>')}</code>, C: <code>${entry['ccflags'].split(' ').join('</code> <code>')}</code>`
-            } else {
-                cxxflags = ''
-            }
-        }
-
         if (entry['is-main'] === true) {
             if (entry['is-earliest'] === true) {
                 // This is latest, earliest, and main
@@ -1304,12 +1316,28 @@ function generateTable(matrix, inputs) {
                 }
             }
             row.push(factors_str)
-            if (cxxflags !== '') {
-                row[row.length - 1] += `<br/>🚩 ${cxxflags}`
+        }
+
+        let cxxflags = ''
+        if (entry['cxxflags'] === entry['ccflags']) {
+            if (entry['cxxflags'].length !== 0) {
+                // Split entry['cxxflags'] on whitespaces and join with <code> tags around it
+                cxxflags = `<code>${entry['cxxflags'].split(' ').join('</code> <code>')}</code>`
+            } else {
+                cxxflags = ''
             }
-            if ('install' in entry && entry['install'] !== '') {
-                row[row.length - 1] += `<br/>🔧 <code>${entry['install'].split(' ').join('</code> <code>')}</code>`
+        } else {
+            if (entry['cxxflags'].length !== 0 || entry['ccflags'].length !== 0) {
+                cxxflags = `C++: <code>${entry['cxxflags'].split(' ').join('</code> <code>')}</code>, C: <code>${entry['ccflags'].split(' ').join('</code> <code>')}</code>`
+            } else {
+                cxxflags = ''
             }
+        }
+        if (cxxflags !== '') {
+            row[row.length - 1] += `<br/>🚩 ${cxxflags}`
+        }
+        if ('install' in entry && entry['install'] !== '') {
+            row[row.length - 1] += `<br/>🔧 <code>${entry['install'].split(' ').join('</code> <code>')}</code>`
         }
 
         // Generator/Toolset/Triplet

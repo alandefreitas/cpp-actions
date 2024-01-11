@@ -48,7 +48,7 @@ jobs:
           factors: |
             gcc Asan Shared No-Deps
             msvc Shared x86
-            clang Time-Trace
+            clang Time-Trace Asan+Ubsan
             mingw Shared
           trace-commands: true
 
@@ -161,7 +161,7 @@ jobs:
           cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
           cxxflags: ${{ matrix.cxxflags }}
           shared: ${{ matrix.shared }}
-          extra-args: | 
+          extra-args: |
             ${{ ( !matrix.no-deps && format('-D BOOST_SRC_DIR="{0}"', steps.boost-clone.outputs.boost-dir) ) || '' }} 
             ${{ ( matrix.no-deps && '-D CPP_ACTIONS_NO_DEPS=ON' ) || '' }}
           export-compile-commands: ${{ matrix.time-trace }}
