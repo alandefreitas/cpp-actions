@@ -786,7 +786,7 @@ function applyLatestFactors(matrix, inputs, latestIdx, earliestIdx, compilerName
         }
 
         // Set the property to false for all other entries
-        for (let i = earliestIdx; i < matrix.length; i++) {
+        for (let i = 0; i < matrix.length; i++) {
             for (const factor of inputs.latest_factors[compilerName]) {
                 for (const composite_factor of factor.split('+')) {
                     if (!(composite_factor.toLowerCase() in matrix[i])) {
@@ -831,8 +831,38 @@ function applyVariantFactors(matrix, inputs, latestIdx, earliestIdx, compilerNam
             }
         }
         // Set the property to false for all other entries
-        for (let i = earliestIdx; i < matrix.length; i++) {
+        for (let i = 0; i < matrix.length; i++) {
             for (const factor of inputs.factors[compilerName]) {
+                for (const composite_factor of factor.split('+')) {
+                    if (!(composite_factor.toLowerCase() in matrix[i])) {
+                        matrix[i][composite_factor.toLowerCase()] = false
+                    }
+                }
+            }
+        }
+    }
+}
+
+function applyCombinatorialFactors(matrix, inputs, latestIdx, earliestIdx, compilerName) {
+    // Apply combinatorial factors for this compiler
+    // For each entry, we create a copy that set that factor to true
+    // Here we go:
+    if (compilerName in inputs.combinatorial_factors) {
+        // Apply each combinatorial factor to each entry
+        for (const factor of inputs.combinatorial_factors[compilerName]) {
+            for (let i = earliestIdx; i < latestIdx + 1; i++) {
+                let entry_copy = {...matrix[i]}
+                for (const composite_factor of factor.split('+')) {
+                    entry_copy[composite_factor.toLowerCase()] = true
+                }
+                entry_copy['name'] += ` (${factor})`
+                entry_copy['has-factors'] = true
+                matrix.push(entry_copy)
+            }
+        }
+        // Set the property to false for all other entries
+        for (let i = 0; i < matrix.length; i++) {
+            for (const factor of inputs.combinatorial_factors[compilerName]) {
                 for (const composite_factor of factor.split('+')) {
                     if (!(composite_factor.toLowerCase() in matrix[i])) {
                         matrix[i][composite_factor.toLowerCase()] = false
@@ -1067,7 +1097,12 @@ async function generateMatrix(inputs) {
         for (let i = 0; i < subranges.length; i++) {
             fnlog(`Generating entry for ${compilerName} subrange ${subranges[i]}`)
             const subrange = subranges[i]
-            let entry = {'compiler': compilerName, 'version': subrange, 'env': {}}
+            let entry = {
+                'name': `${humanizeCompilerName(compilerName)}`,
+                'compiler': compilerName,
+                'version': subrange,
+                'env': {}
+            }
 
             // The standards we should test with this compiler
             const minSubrangeVersion = semver.parse(semver.minSatisfying(allCompilerVersions, subrange, {}))
@@ -1095,6 +1130,7 @@ async function generateMatrix(inputs) {
         fnlog(`${compilerName}: ${latestIdx - earliestIdx} basic entries`)
         applyLatestFactors(matrix, inputs, latestIdx, earliestIdx, compilerName)
         applyVariantFactors(matrix, inputs, latestIdx, earliestIdx, compilerName)
+        applyCombinatorialFactors(matrix, inputs, latestIdx, earliestIdx, compilerName)
         for (let i = earliestIdx; i < matrix.length; i++) {
             if (!('has-factors' in matrix[i])) {
                 matrix[i]['has-factors'] = false
@@ -1103,7 +1139,7 @@ async function generateMatrix(inputs) {
                 matrix[i]['is-no-factor-intermediary'] = true
             }
         }
-        fnlog(`${compilerName}: ${latestIdx - earliestIdx} total entries`)
+        fnlog(`${compilerName}: ${matrix.length - earliestIdx} total entries`)
     }
 
     function printMatrix() {
@@ -1398,6 +1434,7 @@ async function run() {
             max_standards: parseInt(core.getInput('max-standards').trim()),
             latest_factors: parseCompilerFactors(core.getInput('latest-factors'), Object.keys(compilerVersions)),
             factors: parseCompilerFactors(core.getInput('factors'), Object.keys(compilerVersions)),
+            combinatorial_factors: parseCompilerFactors(core.getInput('combinatorial-factors'), Object.keys(compilerVersions)),
             sanitizer_build_type: core.getInput('sanitizer-build-type').trim() || 'Release',
             x86_build_type: core.getInput('x86-build-type').trim() || 'Release',
             use_containers: core.getBooleanInput('use-containers'),

@@ -109,7 +109,8 @@ describe('generateMatrix', () => {
         standards: standards,
         max_standards: max_standards,
         latest_factors: latest_factors,
-        factors: factors
+        factors: factors,
+        combinatorial_factors: {}
     }
     generateMatrix(inputs).then((matrix) => {
         expect(matrix.length === 0).toBe(false);

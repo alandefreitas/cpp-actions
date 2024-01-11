@@ -236,6 +236,29 @@ inputs:
       clang Time-Trace
       mingw Shared
 
+  combinatorial-factors:
+    description: |
+      The factors to be tested with all combinations of other factors. When combinatorial factors are defined, 
+      for each entry in the matrix, a new entry will be created with the factors in this list set to `true`. 
+      
+      For instance, if the library can be built both in "Standalone" mode and with dependencies, the factor 'Standalone'
+      can be added to this list to duplicate all entries. Each copy would include a "Standalone" factor set to
+      `true` or `false`.
+      
+      Typically, it is advisable to steer clear of combinatorial factors to prevent a combinatorial explosion. 
+      It's usually better to only test the combinations that are expected to be used in practice and include an
+      extra steps in the workflow to test any combinatorial factors.
+      
+      For instance, if the library can be built both in "Standalone" mode and with dependencies, its workflow can
+      simply include an extra step to also test the library in "Standalone" mode and keep the step to test the library
+      with dependencies. This is usually safer and cheaper than duplicating the entire matrix to test all 
+      combinations of these factors and also allows steps to be skipped when the library is not expected to be built
+      in a given mode. For instance, testing a library on Standalone mode might not be necessary when the library
+      is being tested with intermediary compilers.
+
+    required: false
+    default: ''
+
   sanitizer-build-type:
     description: |
       Determine the default build type to suggest when testing with sanitizers.
