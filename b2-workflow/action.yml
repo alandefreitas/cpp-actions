@@ -6,7 +6,8 @@ description: |
   and fetching dependencies with xref:actions/package-install.adoc[].
   
   It takes the Boost source directory and runs the usual steps to test the specified modules. This includes 
-  compiling `b2` if needed and generating a proper `user-config.jam` file.
+  compiling `b2` if needed and generating a proper `user-config.jam` file to define the path to the C++ compiler 
+  provided by the `cxx` input. 
   
   This action is particularly useful for Boost library proposals, where B2 is mandatory. It assumes
   the library being tested is in the `libs` directory of the Boost super-project and that
