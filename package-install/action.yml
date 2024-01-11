@@ -11,7 +11,7 @@ description: |
   [CAUTION]
   ====
   When your library depends on vcpkg for dependencies, it's important to run the xref:actions/setup-cpp.adoc[]
-  before this step because vcpkg packages are built from source and this allows us to use the compiler
+  action before this step because vcpkg packages are built from source and this allows us to use the compiler
   set up in the previous step.
   ====
 
