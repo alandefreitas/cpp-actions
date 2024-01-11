@@ -661,6 +661,36 @@ is being tested with intermediary compilers.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>runs-on</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of github runner images to be used with each range of compiler version.
+Each line has the format:</p>
+<p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range&gt;]: &lt;github-runner-image&gt;</code></p>
+<p class="tableblock">For instance, <code>gcc &gt;=13.1: ubuntu-latest</code> indicates that the runner image <code>ubuntu-latest</code> should be used
+to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range&gt;</code> is equivalent to it being set to <code>*</code> and will apply the runner
+image to all versions of the compiler.</p>
+<p class="tableblock">When the runner image is specified, a container is only be suggested for the entries if the <code>container</code>
+option for that compiler version is also specified.</p>
+<p class="tableblock">When the runner image is unspecified, the action will infer the runner image and potentially a container
+from the compiler name and its version.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>containers</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of docker containers to be used with each range of compiler version.
+Each line has the format:</p>
+<p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range&gt;]: &lt;docker-container&gt;</code></p>
+<p class="tableblock">For instance, <code>gcc &gt;=13.1: ubuntu:22.04</code> indicates that the docker container <code>ubuntu:22.04</code> should be used
+to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range&gt;</code> is equivalent to it being set to <code>*</code> and will apply the container
+to all versions of the compiler.</p>
+<p class="tableblock">When the container is specified for that compiler version and the <code>runs-on</code> option is not, an ubuntu image
+is suggested for the entry to run the container.</p>
+<p class="tableblock">When the container is unspecified, the action can still infer a container for the compiler version according
+to the rules defined in the <code>use-containers</code> option.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>sanitizer-build-type</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Determine the default build type to suggest when testing with sanitizers.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RelWithDebInfo</code></p></td>
