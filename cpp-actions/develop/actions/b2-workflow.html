@@ -339,7 +339,8 @@ and fetching dependencies with <a href="package-install.html" class="xref page">
 </div>
 <div class="paragraph">
 <p>It takes the Boost source directory and runs the usual steps to test the specified modules. This includes
-compiling <code>b2</code> if needed and generating a proper <code>user-config.jam</code> file.</p>
+compiling <code>b2</code> if needed and generating a proper <code>user-config.jam</code> file to define the path to the C++ compiler
+provided by the <code>cxx</code> input.</p>
 </div>
 <div class="paragraph">
 <p>This action is particularly useful for Boost library proposals, where B2 is mandatory. It assumes
