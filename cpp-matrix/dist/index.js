@@ -7,7 +7,6 @@ require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 const core = __nccwpck_require__(2186)
 // const github = require('@actions/github');
 const semver = __nccwpck_require__(1383)
-const fs = __nccwpck_require__(7147)
 const {execSync} = __nccwpck_require__(2081)
 const setup_program = __nccwpck_require__(6859)
 
@@ -258,7 +257,7 @@ function findCompilerVersions(compiler) {
 }
 
 function getVisualCppYear(msvc_version) {
-    const v = semver.parse(msvc_version)
+    const v = semver.parse(msvc_version, {})
     if (semver.gte(v, '14.30.0')) {
         return '2022'
     } else if (semver.gte(v, '14.20.0')) {
@@ -324,7 +323,7 @@ function splitRanges(range, versions, policy = SubrangePolicies.DEFAULT) {
         return ['*']
     }
 
-    versions = versions.map(s => semver.parse(s))
+    versions = versions.map(s => semver.parse(s, {}))
     const minVersion = semver.minSatisfying(versions, range)
     const maxVersion = semver.maxSatisfying(versions, range)
     if (minVersion === null || maxVersion === null) {
@@ -520,7 +519,7 @@ function humanizeCompilerName(compiler) {
     return compiler
 }
 
-function compilerEmoji(compiler, with_emoji = false) {
+function compilerEmoji(compiler) {
     const compiler_emojis = {
         'gcc': '🐧',
         'clang': '🐉',
@@ -739,6 +738,11 @@ function setEntryVersionFlags(entry, i, subranges, minSubrangeVersion, maxSubran
     // Earliest flag
     entry['is-earliest'] = i === 0
 
+    // Intermediary flags
+    if (!entry['is-latest'] && !entry['is-earliest']) {
+        entry['is-intermediary'] = true
+    }
+
     // Indicate if major, minor, or patch are not specified
     entry['has-major'] = entry['major'] !== '*'
     entry['has-minor'] = entry['minor'] !== '*'
@@ -782,6 +786,7 @@ function applyLatestFactors(matrix, inputs, latestIdx, earliestIdx, compilerName
             for (const composite_factor of factor.split('+')) {
                 latest_copy[composite_factor.toLowerCase()] = true
             }
+            latest_copy['has-factors'] = true
             latest_copy['name'] += ` (${factor})`
             matrix.push(latest_copy)
         }
@@ -815,6 +820,7 @@ function applyVariantFactors(matrix, inputs, latestIdx, earliestIdx, compilerNam
                     matrix[variantIdx][composite_factor.toLowerCase()] = true
                 }
                 matrix[variantIdx]['name'] += ` (${factor})`
+                matrix[variantIdx]['has-factors'] = true
                 variantIdx--
             } else {
                 // If we reached the earliest entry by doing that,
@@ -826,6 +832,7 @@ function applyVariantFactors(matrix, inputs, latestIdx, earliestIdx, compilerNam
                     latest_copy[composite_factor.toLowerCase()] = true
                 }
                 latest_copy['name'] += ` (${factor})`
+                latest_copy['has-factors'] = true
                 matrix.push(latest_copy)
             }
         }
@@ -1050,7 +1057,7 @@ async function generateMatrix(inputs) {
 
     let matrix = []
     const allcxxstds = ['1998.0.0', '2003.0.0', '2011.0.0', '2014.0.0', '2017.0.0', '2020.0.0', '2023.0.0', '2026.0.0']
-    const cxxstds = allcxxstds.filter(v => semver.satisfies(v, inputs.standards)).map(v => semver.parse(v).major)
+    const cxxstds = allcxxstds.filter(v => semver.satisfies(v, inputs.standards)).map(v => semver.parse(v, {}).major)
 
     core.startGroup('🔄 Generating matrix entries')
     const compilers = Object.entries(inputs.compiler_versions)
@@ -1069,8 +1076,8 @@ async function generateMatrix(inputs) {
             let entry = {'compiler': compilerName, 'version': subrange, 'env': {}}
 
             // The standards we should test with this compiler
-            const minSubrangeVersion = semver.parse(semver.minSatisfying(allCompilerVersions, subrange))
-            const maxSubrangeVersion = semver.parse(semver.maxSatisfying(allCompilerVersions, subrange))
+            const minSubrangeVersion = semver.parse(semver.minSatisfying(allCompilerVersions, subrange, {}))
+            const maxSubrangeVersion = semver.parse(semver.maxSatisfying(allCompilerVersions, subrange, {}))
 
             const compiler_cxxstds = getCompilerCxxStds(
                 entry, inputs, allCompilerVersions, cxxstds, compilerName, minSubrangeVersion)
@@ -1094,12 +1101,20 @@ async function generateMatrix(inputs) {
         fnlog(`${compilerName}: ${latestIdx - earliestIdx} basic entries`)
         applyLatestFactors(matrix, inputs, latestIdx, earliestIdx, compilerName)
         applyVariantFactors(matrix, inputs, latestIdx, earliestIdx, compilerName)
+        for (let i = earliestIdx; i < matrix.length; i++) {
+            if (!('has-factors' in matrix[i])) {
+                matrix[i]['has-factors'] = false
+            }
+            if (matrix[i]['is-intermediary'] && !matrix[i]['has-factors']) {
+                matrix[i]['is-no-factor-intermediary'] = true
+            }
+        }
         fnlog(`${compilerName}: ${latestIdx - earliestIdx} total entries`)
     }
 
     function printMatrix() {
         log(`Matrix (${matrix.length} entries):`)
-        matrix.forEach((obj, index) => {
+        matrix.forEach(obj => {
             log(`- ${JSON.stringify(obj)}`)
         })
     }
@@ -1123,7 +1138,7 @@ async function generateMatrix(inputs) {
     core.startGroup('🏁 Final matrix')
     if (inputs.log_matrix) {
         core.info(`Matrix (${matrix.length} entries):`)
-        matrix.forEach((obj, index) => {
+        matrix.forEach((obj) => {
             core.info(`- ${JSON.stringify(obj)}`)
         })
     } else {
@@ -1150,7 +1165,6 @@ function factorEmoji(factor) {
     }
     // Check if factor contains '+'
     if (factor.includes('+')) {
-        let factorEmojis = []
         for (const composite_factor of factor.split('+')) {
             if (composite_factor in factor_emojis) {
                 return factor_emojis[composite_factor]
@@ -1281,43 +1295,51 @@ function generateTable(matrix, inputs) {
             row.push('')
         }
 
-        // Factors
+        // Description/Factors
+        let descriptionStrs = []
+
+        // - Factors
+        let entryFactors = []
+        for (let i = 0; i < allFactors.length && i < allFactorKeys.length; i++) {
+            const fact = allFactors[i]
+            const key = allFactorKeys[i]
+            if (entry[key] === true) {
+                entryFactors.push(`${factorEmoji(key)} ${fact}`)
+                nameEmojis.push(factorEmoji(key))
+            }
+        }
+        if (entryFactors.length !== 0) {
+            descriptionStrs.push(entryFactors.join(', '))
+        }
+
+        // - Latest/Main/Unique/Earliest
         if (entry['is-main'] === true) {
             if (entry['is-earliest'] === true) {
                 // This is latest, earliest, and main
                 if (entry['version'] === '*') {
-                    row.push(`🧰 System ${humanizeCompilerName(entry['compiler'])} version`)
+                    // Version is *, so any version: the system compiler
+                    descriptionStrs.push(`🧰 System ${humanizeCompilerName(entry['compiler'])} version`)
                     nameEmojis.push('🧰')
                 } else {
-                    row.push(`🎩 Unique ${humanizeCompilerName(entry['compiler'])} version`)
+                    // Both main/latest and earliest, so this is a unique version
+                    descriptionStrs.push(`🎩 Unique ${humanizeCompilerName(entry['compiler'])} version`)
                     nameEmojis.push('🎩')
                 }
             } else {
-                row.push(`🆕 Latest ${humanizeCompilerName(entry['compiler'])} version`)
+                // Main but not earliest: latest
+                descriptionStrs.push(`🆕 Latest ${humanizeCompilerName(entry['compiler'])} version`)
                 nameEmojis.push('🆕')
             }
-        } else {
-            let factors = []
-            for (let i = 0; i < allFactors.length && i < allFactorKeys.length; i++) {
-                const fact = allFactors[i]
-                const key = allFactorKeys[i]
-                if (entry[key] === true) {
-                    factors.push(`${factorEmoji(key)} ${fact}`)
-                    nameEmojis.push(factorEmoji(key))
-                }
-            }
-            let factors_str = factors.join(', ')
-            if (factors_str === '') {
-                if (entry['is-earliest'] === true) {
-                    factors_str = `🕰️ Earliest ${humanizeCompilerName(entry['compiler'])} version`
-                    nameEmojis.push('🕰️')
-                } else {
-                    factors_str = `(Intermediary ${humanizeCompilerName(entry['compiler'])} version)`
-                }
-            }
-            row.push(factors_str)
+        } else if (entry['is-earliest'] === true) {
+            // Earliest but not main: describe as earliest
+            descriptionStrs.push(`🕰️ Earliest ${humanizeCompilerName(entry['compiler'])} version`)
+            nameEmojis.push('🕰️')
+        } else if (entryFactors.length === 0) {
+            // No factors, not main/latest/early: Just an intermediary compiler version
+            descriptionStrs.push(`(Intermediary ${humanizeCompilerName(entry['compiler'])} version)`)
         }
 
+        // - C++ Flags
         let cxxflags = ''
         if (entry['cxxflags'] === entry['ccflags']) {
             if (entry['cxxflags'].length !== 0) {
@@ -1334,11 +1356,14 @@ function generateTable(matrix, inputs) {
             }
         }
         if (cxxflags !== '') {
-            row[row.length - 1] += `<br/>🚩 ${cxxflags}`
+            descriptionStrs.push(`🚩 ${cxxflags}`)
         }
+
+        // - Install
         if ('install' in entry && entry['install'] !== '') {
-            row[row.length - 1] += `<br/>🔧 <code>${entry['install'].split(' ').join('</code> <code>')}</code>`
+            descriptionStrs.push(`🔧 <code>${entry['install'].split(' ').join('</code> <code>')}</code>`)
         }
+        row.push(descriptionStrs.join('<br/>'))
 
         // Generator/Toolset/Triplet
         let generator_str = ''
@@ -1370,10 +1395,6 @@ function generateTable(matrix, inputs) {
 }
 
 async function run() {
-    function fnlog(msg) {
-        log('cpp-matrix: ' + msg)
-    }
-
     try {
         const compilerVersions = parseCompilerRequirements(core.getInput('compilers'))
         let inputs = {

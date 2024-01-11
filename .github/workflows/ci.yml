@@ -48,7 +48,7 @@ jobs:
           factors: |
             gcc Asan Shared No-Deps
             msvc Shared x86
-            clang Time-Trace Asan+Ubsan
+            clang Time-Trace Asan+UBSan
             mingw Shared
           trace-commands: true
 
@@ -128,7 +128,7 @@ jobs:
           trace-commands: true
 
       - name: B2 Workflow
-        if: ${{ ! matrix.time-trace && ! matrix.coverage && ! matrix.ubsan && matrix.compiler != 'clang-cl' }}
+        if: ${{ ! matrix.has-factors && matrix.compiler != 'clang-cl' }}
         uses: ./b2-workflow
         with:
           source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
