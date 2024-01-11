@@ -1113,8 +1113,8 @@ async function generateMatrix(inputs) {
     if (inputs.log_matrix) {
         core.info(`Matrix (${matrix.length} entries):`)
         matrix.forEach((obj, index) => {
-            core.info(`- ${JSON.stringify(obj)}`);
-        });
+            core.info(`- ${JSON.stringify(obj)}`)
+        })
     } else {
         printMatrix()
     }
@@ -1195,12 +1195,16 @@ function generateTable(matrix, inputs) {
 
     let allFactors = getAllFactors(latest_factors, factors)
     const allFactorKeys = allFactors.map(v => v.toLowerCase())
-    const headerEmojis = ['📋', '🖥️', '🔧', '📚', '🏗️', '🔢', '🔨', '🛠️', '🛠️']
-    const headerNames = ['Name', 'Environment', 'Compiler', 'C++ Standard', 'Build Type', 'Factors', 'Generator', 'Toolset', 'Triplet']
-    const headerWithEmojis = headerNames.map((element, index) => `${headerEmojis[index]} ${element}`)
-    const headerRow = headerWithEmojis.map(key => ({data: key, header: true}))
 
-    let table = [headerRow]
+    const headerValues = [
+        '📋 Name',
+        '🖥️ Environment',
+        '🔧 Compiler',
+        '📚 C++ Standard',
+        '🏗️ Build Type',
+        '🔢 Factors<br/>🚩 Flags<br/>🔧 Install',
+        '🔨 Generator<br/>🛠️ Toolset<br/>💻 Triplet']
+    let table = [headerValues.map(key => ({data: key, header: true}))]
 
     function transformStdString(inputString) {
         if (inputString === undefined || inputString === null || inputString === '') {
@@ -1231,14 +1235,14 @@ function generateTable(matrix, inputs) {
 
         // Environment
         if ('container' in entry) {
-            row.push(`${osEmoji(entry['container'])} <code>${entry['container']}</code> on <code>${entry['runs-on']}</code>`)
+            row.push(`${osEmoji(entry['container'])} <code>${entry['container']}</code><br/>on <code>${entry['runs-on']}</code>`)
         } else {
             row.push(`${osEmoji(entry['runs-on'])} <code>${entry['runs-on']}</code>`)
         }
 
         // Compiler
         nameEmojis.push(compilerEmoji(entry['compiler']))
-        row.push(`${compilerEmoji(entry['compiler'])} ${humanizeCompilerName(entry['compiler'])} ${entry['version']}`)
+        row.push(`${compilerEmoji(entry['compiler'])} ${humanizeCompilerName(entry['compiler'])} <i>${entry['version']}</i>`)
         // Standards
         row.push(`${transformStdString(entry['cxxstd'])}`)
 
@@ -1253,13 +1257,14 @@ function generateTable(matrix, inputs) {
         let cxxflags = ''
         if (entry['cxxflags'] === entry['ccflags']) {
             if (entry['cxxflags'].length !== 0) {
-                cxxflags = `<code>${entry['cxxflags']}</code>`
+                // Split entry['cxxflags'] on whitespaces and join with <code> tags around it
+                cxxflags = `<code>${entry['cxxflags'].split(' ').join('</code> <code>')}</code>`
             } else {
                 cxxflags = ''
             }
         } else {
             if (entry['cxxflags'].length !== 0 || entry['ccflags'].length !== 0) {
-                cxxflags = `C++: <code>${entry['cxxflags']}</code>, C: <code>${entry['ccflags']}</code>`
+                cxxflags = `C++: <code>${entry['cxxflags'].split(' ').join('</code> <code>')}</code>, C: <code>${entry['ccflags'].split(' ').join('</code> <code>')}</code>`
             } else {
                 cxxflags = ''
             }
@@ -1300,33 +1305,30 @@ function generateTable(matrix, inputs) {
             }
             row.push(factors_str)
             if (cxxflags !== '') {
-                row[row.length - 1] += ` 🚩 ${cxxflags}`
+                row[row.length - 1] += `<br/>🚩 ${cxxflags}`
             }
             if ('install' in entry && entry['install'] !== '') {
-                row[row.length - 1] += ` 🔧 <code>${entry['install']}</code>`
+                row[row.length - 1] += `<br/>🔧 <code>${entry['install'].split(' ').join('</code> <code>')}</code>`
             }
         }
 
-        // Generator
+        // Generator/Toolset/Triplet
+        let generator_str = ''
         if ('generator' in entry) {
-            let generator_str = entry['generator']
+            generator_str += `<code>${entry['generator']}</code>`
             if ('generator-toolset' in entry) {
-                generator_str += ` (${entry['generator-toolset']})`
+                generator_str += ` (<code>${entry['generator-toolset']}</code>)`
             }
-            row.push(generator_str)
         } else {
-            row.push('System Default')
+            generator_str += 'System Default'
         }
-
-        // Toolset
         if ('b2-toolset' in entry) {
-            row.push(entry['b2-toolset'])
-        } else {
-            row.push('')
+            generator_str += `<br/><code>${entry['b2-toolset']}</code>`
         }
-
-        // Triplet
-        row.push(entry['triplet'])
+        if ('triplet' in entry) {
+            generator_str += `<br/><code>${entry['triplet']}</code>`
+        }
+        row.push(generator_str)
 
         // Apply emojis to name
         row[0] = `${nameEmojis.join('')} ${row[0]}`
