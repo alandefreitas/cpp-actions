@@ -1303,7 +1303,11 @@ function generateTable(matrix, inputs) {
 
         // Generator
         if ('generator' in entry) {
-            row.push(entry['generator'])
+            let generator_str = entry['generator']
+            if ('generator-toolset' in entry) {
+                generator_str += ` (${entry['generator-toolset']})`
+            }
+            row.push(generator_str)
         } else {
             row.push('System Default')
         }

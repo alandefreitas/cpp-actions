@@ -1309,7 +1309,11 @@ function generateTable(matrix, inputs) {
 
         // Generator
         if ('generator' in entry) {
-            row.push(entry['generator'])
+            let generator_str = entry['generator']
+            if ('generator-toolset' in entry) {
+                generator_str += ` (${entry['generator-toolset']})`
+            }
+            row.push(generator_str)
         } else {
             row.push('System Default')
         }
@@ -7660,6 +7664,9 @@ function removeSemverLeadingZeros(version) {
 }
 
 function isSudoRequired() {
+    if (process.platform !== 'linux') {
+        return false
+    }
     return process.getuid() !== 0
 }
 
@@ -7677,7 +7684,7 @@ async function find_program_with_apt(names, version, check_latest) {
 
     fnlog('Checking if APT is available')
     try {
-        const {exitCode: exitCode, stdout: stdout} = await exec.getExecOutput('apt', ['--version'])
+        const {exitCode} = await exec.getExecOutput('apt', ['--version'])
         if (exitCode !== 0) {
             fnlog(`apt --version returned ${exitCode}`)
             return {output_version, output_path}
@@ -7789,7 +7796,7 @@ async function find_program_with_apt(names, version, check_latest) {
             }
 
             // Install the package with the best match for the requirements
-            let apt_get_exit_code = null
+            let apt_get_exit_code
             if (isSudoRequired()) {
                 apt_get_exit_code = await exec.exec(`sudo -n apt-get install -f -y --allow-downgrades ${install_pkg}`, [], opts)
             } else {
@@ -7799,7 +7806,7 @@ async function find_program_with_apt(names, version, check_latest) {
             if (apt_get_exit_code !== 0) {
                 fnlog(`Failed to install ${install_pkg}. Trying aptitude and alternatives packages [${install_matches.join(', ')}]`)
                 // Check if aptitude is available
-                let aptitude_path = null
+                let aptitude_path
                 try {
                     aptitude_path = await io.which('aptitude')
                 } catch (error) {
@@ -8032,6 +8039,7 @@ async function moveWithPermissions(source, destination, copyInstead = false, lev
     function fnlog(msg) {
         log('moveWithPermissions: ' + msg)
     }
+
     const levelPrefix = '  '.repeat(level)
     try {
         // Iterate all files in source directory
@@ -8082,6 +8090,7 @@ async function ensureSudoIsAvailable() {
     function fnlog(msg) {
         log('ensureSudoIsAvailable: ' + msg)
     }
+
     let sudo_path = null
     try {
         sudo_path = await io.which('sudo')
@@ -8100,6 +8109,7 @@ async function ensureAddAptRepositoryIsAvailable() {
     function fnlog(msg) {
         log('ensureAddAptRepositoryIsAvailable: ' + msg)
     }
+
     let add_apt_repository_path = null
     try {
         add_apt_repository_path = await io.which('add-apt-repository')
@@ -8109,7 +8119,7 @@ async function ensureAddAptRepositoryIsAvailable() {
     }
     if (add_apt_repository_path === null || add_apt_repository_path === '') {
         if (isSudoRequired()) {
-            ensureSudoIsAvailable()
+            await ensureSudoIsAvailable()
             await exec.exec(`sudo -n apt-get update`, [], {ignoreReturnCode: true})
             await exec.exec(`sudo -n apt-get install -y software-properties-common`, [], {ignoreReturnCode: true})
         } else {
@@ -8124,6 +8134,7 @@ async function moveWithSudo(source, destination, copyInstead = false, level) {
     function fnlog(msg) {
         log('moveWithSudo: ' + msg)
     }
+
     await ensureSudoIsAvailable()
     const levelPrefix = '  '.repeat(level)
     const files = fs.readdirSync(source)
@@ -8137,7 +8148,7 @@ async function moveWithSudo(source, destination, copyInstead = false, level) {
             const target_path = fs.readlinkSync(source_path)
             fnlog(`${levelPrefix}${count}) Symlink found from ${source_path} to ${target_path}`)
             const ln_command = `sudo ln -sf "${target_path}" "${destination_path}"`
-            const {exitCode: exitCode, stdout: stdout} = await exec.getExecOutput(ln_command)
+            await exec.getExecOutput(ln_command)
             fnlog(`${levelPrefix}${count}) Symlink recreated from ${source_path} to ${destination_path} with target ${target_path}`)
         } else if (fs.statSync(source_path).isDirectory() && fs.existsSync(destination_path)) {
             const ok = await moveWithSudo(source_path, destination_path, copyInstead, level + 1)
@@ -8147,12 +8158,12 @@ async function moveWithSudo(source, destination, copyInstead = false, level) {
         } else {
             const mkdir_command = `sudo mkdir -p "${destination}"`
             if (!fs.existsSync(destination_path)) {
-                const {exitCode: exitCode, stdout: stdout} = await exec.getExecOutput(mkdir_command)
+                await exec.getExecOutput(mkdir_command)
             }
             const mv_command = `sudo mv "${source_path}" "${destination}"`
             const cp_command = `sudo cp -r "${source_path}" "${destination}"`
             const command = copyInstead ? cp_command : mv_command
-            const {exitCode: exitCode, stdout: stdout} = await exec.getExecOutput(command)
+            const {exitCode, stdout} = await exec.getExecOutput(command)
             const sudo_output = stdout.trim()
             if (exitCode !== 0) {
                 core.warning(`${levelPrefix}${count}) Error occurred while moving with sudo: exit code ${exitCode}`)
@@ -8278,6 +8289,7 @@ async function run() {
     function fnlog(msg) {
         log('setup-program: ' + msg)
     }
+
     try {
         // Get trace_commands input first
         trace_commands = core.getBooleanInput('trace-commands')
