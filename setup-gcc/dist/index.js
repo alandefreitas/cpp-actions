@@ -133,6 +133,7 @@ function removeGCCPrefix(version) {
 
 
 async function main(version, paths, check_latest, update_environment) {
+    core.startGroup('Find GCC versions')
     if (process.platform === 'darwin') {
         process.env['AGENT_TOOLSDIRECTORY'] = '/Users/runner/hostedtoolcache'
     }
@@ -146,28 +147,34 @@ async function main(version, paths, check_latest, update_environment) {
     }
 
     const allVersions = await findGCCVersions()
+    core.endGroup()
 
     // Path program version
     let output_path = null
     let output_version = null
 
     // Setup path program
+    core.startGroup('Find GCC in specified paths')
     core.info(`Searching for GCC ${version} in paths [${paths.join(',')}]`)
     const __ret = await setup_program.find_program_in_path(paths, version, check_latest)
     output_version = __ret.output_version
     output_path = __ret.output_path
+    core.endGroup()
 
     // Setup system program
     const names = ['g++']
     if (output_path === null) {
+        core.startGroup('Find GCC in system paths')
         core.info(`Searching for GCC ${version} in PATH`)
         const __ret = await setup_program.find_program_in_system_paths(paths, names, version, check_latest)
         output_version = __ret.output_version
         output_path = __ret.output_path
+        core.endGroup()
     }
 
     // Setup APT program
     if (output_version === null && process.platform === 'linux') {
+        core.startGroup('Find GCC with APT')
         core.info(`Searching for GCC ${version} with APT`)
 
         // Add APT repository
@@ -191,6 +198,7 @@ async function main(version, paths, check_latest, update_environment) {
         const __ret = await setup_program.find_program_with_apt(names, version, check_latest)
         output_version = __ret.output_version
         output_path = __ret.output_path
+        core.endGroup()
     } else {
         if (output_version !== null) {
             log(`Skipping APT step because GCC ${output_version} was already found in ${output_path}`)
@@ -201,6 +209,7 @@ async function main(version, paths, check_latest, update_environment) {
 
     // Install program from a valid URL
     if (output_version === null) {
+        core.startGroup('Download GCC from release binaries')
         core.info(`Fetching GCC ${version} from release binaries`)
         // Determine the release to install and version candidates to fallback to
         log('All GCC versions: ' + allVersions)
@@ -303,6 +312,7 @@ async function main(version, paths, check_latest, update_environment) {
                 }
             }
         }
+        core.endGroup()
     } else {
         if (output_version !== null) {
             log(`Skipping download step because GCC ${output_version} was already found in ${output_path}`)
@@ -310,6 +320,7 @@ async function main(version, paths, check_latest, update_environment) {
     }
 
     // Create outputs
+    core.startGroup('Set outputs')
     let cc = output_path
     let cxx = output_path
     let bindir = ''
@@ -350,6 +361,7 @@ async function main(version, paths, check_latest, update_environment) {
         version_minor = semverV.minor
         version_patch = semverV.patch
     }
+    core.endGroup()
     return {output_path, cc, cxx, bindir, dir, release, version_major, version_minor, version_patch}
 }
 

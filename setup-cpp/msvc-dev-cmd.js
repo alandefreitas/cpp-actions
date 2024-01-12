@@ -150,7 +150,7 @@ function filterPathValue(path) {
 
 /** See https://github.com/ilammy/msvc-dev-cmd#inputs */
 function setupMSVCDevCmd(arch, sdk, toolset, uwp, spectre, vsversion) {
-  if (process.platform != 'win32') {
+  if (process.platform !== 'win32') {
     core.info('This is not a Windows virtual environment, bye!')
     return
   }
@@ -188,6 +188,8 @@ function setupMSVCDevCmd(arch, sdk, toolset, uwp, spectre, vsversion) {
     args.push('-vcvars_spectre_libs=spectre')
   }
 
+
+  core.startGroup('Find vcvarsall.bat')
   const vcvars = `"${findVcvarsall(vsversion)}" ${args.join(' ')}`
   core.debug(`vcvars command-line: ${vcvars}`)
 
@@ -220,6 +222,7 @@ function setupMSVCDevCmd(arch, sdk, toolset, uwp, spectre, vsversion) {
     const [name, value] = string.split('=')
     old_env_vars[name] = value
   }
+  core.endGroup()
 
   // Now look at the new environment and export everything that changed.
   // These are the variables set by vsvars.bat. Also export everything
@@ -246,9 +249,9 @@ function setupMSVCDevCmd(arch, sdk, toolset, uwp, spectre, vsversion) {
       core.exportVariable(name, new_value)
     }
   }
-  core.endGroup()
 
   core.info(`Configured Developer Command Prompt`)
+  core.endGroup()
 }
 
 exports.setupMSVCDevCmd = setupMSVCDevCmd

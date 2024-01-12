@@ -197,6 +197,7 @@ async function install_program_from_clang_urls(ubuntu_versions, version_candidat
 }
 
 async function main(version, paths, check_latest, update_environment) {
+    core.startGroup('Find clang versions')
     if (process.platform === 'darwin') {
         process.env['AGENT_TOOLSDIRECTORY'] = '/Users/runner/hostedtoolcache'
     }
@@ -210,6 +211,7 @@ async function main(version, paths, check_latest, update_environment) {
     }
 
     const allVersions = await findClangVersions()
+    core.endGroup()
 
     // Path program version
     let output_path
@@ -217,23 +219,28 @@ async function main(version, paths, check_latest, update_environment) {
 
     // Setup path program
     if (paths.length > 0) {
+        core.startGroup('Find clang in specified paths')
         core.info(`Searching for Clang ${version} in paths [${paths.join(',')}]`)
         const __ret = await setup_program.find_program_in_path(paths, version, check_latest)
         output_version = __ret.output_version
         output_path = __ret.output_path
+        core.endGroup()
     }
 
     // Setup system program
     if (!output_path) {
+        core.startGroup('Find clang in system paths')
         core.info(`Searching for Clang ${version} in PATH`)
         log(`Arguments: ${paths}, ['clang++'], ${version}, ${check_latest}`)
         const __ret = await setup_program.find_program_in_system_paths(paths, ['clang++'], version, check_latest)
         output_version = __ret.output_version
         output_path = __ret.output_path
+        core.endGroup()
     }
 
     // Setup APT program
     if (!output_version && process.platform === 'linux') {
+        core.startGroup('Find clang with APT')
         core.info(`Searching for Clang ${version} with APT`)
 
         // Add repositories for major clang versions
@@ -284,6 +291,7 @@ async function main(version, paths, check_latest, update_environment) {
         const __ret = await setup_program.find_program_with_apt(['clang'], version, check_latest)
         output_version = __ret.output_version
         output_path = __ret.output_path
+        core.endGroup()
     } else {
         if (output_version !== null) {
             log(`Skipping APT step because Clang ${output_version} was already found in ${output_path}`)
@@ -295,15 +303,18 @@ async function main(version, paths, check_latest, update_environment) {
     // If output_version === null, and it gets installed at all, it will be installed from a URL
     const installed_from_url = output_version === null
     if (output_version === null) {
+        core.startGroup('Download clang')
         let {version_candidates, ubuntu_versions} = clangDownloadCandidates(version, allVersions, check_latest)
         const __ret = await install_program_from_clang_urls(ubuntu_versions, version_candidates, version, check_latest, update_environment, output_version, output_path)
         output_version = __ret.output_version
         output_path = __ret.output_path
+        core.endGroup()
     } else /* output_version !== null */ {
         log(`Skipping download step because Clang ${output_version} was already found in ${output_path}`)
     }
 
     // Create outputs
+    core.startGroup('Set outputs')
     let cc = output_path
     let cxx = output_path
     let bindir = ''
@@ -393,6 +404,7 @@ async function main(version, paths, check_latest, update_environment) {
             }
         }
     }
+    core.endGroup()
     return {output_path, cc, cxx, bindir, dir, release, version_major, version_minor, version_patch}
 }
 

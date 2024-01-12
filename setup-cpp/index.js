@@ -61,6 +61,8 @@ function normalizeCompiler(compiler, version) {
 
 async function run() {
     try {
+        core.startGroup(`📥 Inputs`)
+
         const inputs = [
             ['trace_commands', core.getBooleanInput('trace-commands')],
             ['compiler', core.getInput('compiler') || '*'],
@@ -104,7 +106,7 @@ async function run() {
         const {compiler, version} = normalizeCompiler(getInput(inputs, 'compiler'), getInput(inputs, 'version'))
         setInput(inputs, 'compiler', compiler)
         setInput(inputs, 'version', version)
-
+        core.endGroup()
 
         let output_path = null
         let cc = null
@@ -161,6 +163,7 @@ async function run() {
             version_minor = semverRelease ? semverRelease.minor : 0
             version_patch = semverRelease ? semverRelease.patch : 0
         } else if (['mingw', 'mingw32', 'mingw64', 'gcc', 'clang', 'clang-cl'].includes(compiler)) {
+            core.startGroup(`🔍 Searching for ${compiler}`)
             log(`compiler: ${compiler}... looking for compiler in PATH.`)
             let which_arg
             if (['mingw', 'mingw32', 'mingw64', 'gcc'].includes(compiler)) {
@@ -220,10 +223,12 @@ async function run() {
                     }
                 }
             }
+            core.endGroup()
         }
 
         // Parse Final program / Setup version / Outputs
         if (output_path !== null && output_path !== undefined) {
+            core.startGroup(`📤 Outputs`)
             const outputs = [
                 ['cc', cc],
                 ['cxx', cxx],
@@ -238,6 +243,7 @@ async function run() {
                 core.setOutput(name, value)
                 log(`Setting output ${name} to ${value}`)
             }
+            core.endGroup()
         } else {
             core.setFailed(`Cannot setup ${compiler}`)
         }

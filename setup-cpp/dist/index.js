@@ -197,6 +197,7 @@ async function install_program_from_clang_urls(ubuntu_versions, version_candidat
 }
 
 async function main(version, paths, check_latest, update_environment) {
+    core.startGroup('Find clang versions')
     if (process.platform === 'darwin') {
         process.env['AGENT_TOOLSDIRECTORY'] = '/Users/runner/hostedtoolcache'
     }
@@ -210,6 +211,7 @@ async function main(version, paths, check_latest, update_environment) {
     }
 
     const allVersions = await findClangVersions()
+    core.endGroup()
 
     // Path program version
     let output_path
@@ -217,23 +219,28 @@ async function main(version, paths, check_latest, update_environment) {
 
     // Setup path program
     if (paths.length > 0) {
+        core.startGroup('Find clang in specified paths')
         core.info(`Searching for Clang ${version} in paths [${paths.join(',')}]`)
         const __ret = await setup_program.find_program_in_path(paths, version, check_latest)
         output_version = __ret.output_version
         output_path = __ret.output_path
+        core.endGroup()
     }
 
     // Setup system program
     if (!output_path) {
+        core.startGroup('Find clang in system paths')
         core.info(`Searching for Clang ${version} in PATH`)
         log(`Arguments: ${paths}, ['clang++'], ${version}, ${check_latest}`)
         const __ret = await setup_program.find_program_in_system_paths(paths, ['clang++'], version, check_latest)
         output_version = __ret.output_version
         output_path = __ret.output_path
+        core.endGroup()
     }
 
     // Setup APT program
     if (!output_version && process.platform === 'linux') {
+        core.startGroup('Find clang with APT')
         core.info(`Searching for Clang ${version} with APT`)
 
         // Add repositories for major clang versions
@@ -284,6 +291,7 @@ async function main(version, paths, check_latest, update_environment) {
         const __ret = await setup_program.find_program_with_apt(['clang'], version, check_latest)
         output_version = __ret.output_version
         output_path = __ret.output_path
+        core.endGroup()
     } else {
         if (output_version !== null) {
             log(`Skipping APT step because Clang ${output_version} was already found in ${output_path}`)
@@ -295,15 +303,18 @@ async function main(version, paths, check_latest, update_environment) {
     // If output_version === null, and it gets installed at all, it will be installed from a URL
     const installed_from_url = output_version === null
     if (output_version === null) {
+        core.startGroup('Download clang')
         let {version_candidates, ubuntu_versions} = clangDownloadCandidates(version, allVersions, check_latest)
         const __ret = await install_program_from_clang_urls(ubuntu_versions, version_candidates, version, check_latest, update_environment, output_version, output_path)
         output_version = __ret.output_version
         output_path = __ret.output_path
+        core.endGroup()
     } else /* output_version !== null */ {
         log(`Skipping download step because Clang ${output_version} was already found in ${output_path}`)
     }
 
     // Create outputs
+    core.startGroup('Set outputs')
     let cc = output_path
     let cxx = output_path
     let bindir = ''
@@ -393,6 +404,7 @@ async function main(version, paths, check_latest, update_environment) {
             }
         }
     }
+    core.endGroup()
     return {output_path, cc, cxx, bindir, dir, release, version_major, version_minor, version_patch}
 }
 
@@ -10260,6 +10272,8 @@ function normalizeCompiler(compiler, version) {
 
 async function run() {
     try {
+        core.startGroup(`📥 Inputs`)
+
         const inputs = [
             ['trace_commands', core.getBooleanInput('trace-commands')],
             ['compiler', core.getInput('compiler') || '*'],
@@ -10303,7 +10317,7 @@ async function run() {
         const {compiler, version} = normalizeCompiler(getInput(inputs, 'compiler'), getInput(inputs, 'version'))
         setInput(inputs, 'compiler', compiler)
         setInput(inputs, 'version', version)
-
+        core.endGroup()
 
         let output_path = null
         let cc = null
@@ -10360,6 +10374,7 @@ async function run() {
             version_minor = semverRelease ? semverRelease.minor : 0
             version_patch = semverRelease ? semverRelease.patch : 0
         } else if (['mingw', 'mingw32', 'mingw64', 'gcc', 'clang', 'clang-cl'].includes(compiler)) {
+            core.startGroup(`🔍 Searching for ${compiler}`)
             log(`compiler: ${compiler}... looking for compiler in PATH.`)
             let which_arg
             if (['mingw', 'mingw32', 'mingw64', 'gcc'].includes(compiler)) {
@@ -10419,10 +10434,12 @@ async function run() {
                     }
                 }
             }
+            core.endGroup()
         }
 
         // Parse Final program / Setup version / Outputs
         if (output_path !== null && output_path !== undefined) {
+            core.startGroup(`📤 Outputs`)
             const outputs = [
                 ['cc', cc],
                 ['cxx', cxx],
@@ -10437,6 +10454,7 @@ async function run() {
                 core.setOutput(name, value)
                 log(`Setting output ${name} to ${value}`)
             }
+            core.endGroup()
         } else {
             core.setFailed(`Cannot setup ${compiler}`)
         }
@@ -10615,7 +10633,7 @@ function filterPathValue(path) {
 
 /** See https://github.com/ilammy/msvc-dev-cmd#inputs */
 function setupMSVCDevCmd(arch, sdk, toolset, uwp, spectre, vsversion) {
-  if (process.platform != 'win32') {
+  if (process.platform !== 'win32') {
     core.info('This is not a Windows virtual environment, bye!')
     return
   }
@@ -10653,6 +10671,8 @@ function setupMSVCDevCmd(arch, sdk, toolset, uwp, spectre, vsversion) {
     args.push('-vcvars_spectre_libs=spectre')
   }
 
+
+  core.startGroup('Find vcvarsall.bat')
   const vcvars = `"${findVcvarsall(vsversion)}" ${args.join(' ')}`
   core.debug(`vcvars command-line: ${vcvars}`)
 
@@ -10685,6 +10705,7 @@ function setupMSVCDevCmd(arch, sdk, toolset, uwp, spectre, vsversion) {
     const [name, value] = string.split('=')
     old_env_vars[name] = value
   }
+  core.endGroup()
 
   // Now look at the new environment and export everything that changed.
   // These are the variables set by vsvars.bat. Also export everything
@@ -10711,9 +10732,9 @@ function setupMSVCDevCmd(arch, sdk, toolset, uwp, spectre, vsversion) {
       core.exportVariable(name, new_value)
     }
   }
-  core.endGroup()
 
   core.info(`Configured Developer Command Prompt`)
+  core.endGroup()
 }
 
 exports.setupMSVCDevCmd = setupMSVCDevCmd
@@ -18003,6 +18024,7 @@ function removeGCCPrefix(version) {
 
 
 async function main(version, paths, check_latest, update_environment) {
+    core.startGroup('Find GCC versions')
     if (process.platform === 'darwin') {
         process.env['AGENT_TOOLSDIRECTORY'] = '/Users/runner/hostedtoolcache'
     }
@@ -18016,28 +18038,34 @@ async function main(version, paths, check_latest, update_environment) {
     }
 
     const allVersions = await findGCCVersions()
+    core.endGroup()
 
     // Path program version
     let output_path = null
     let output_version = null
 
     // Setup path program
+    core.startGroup('Find GCC in specified paths')
     core.info(`Searching for GCC ${version} in paths [${paths.join(',')}]`)
     const __ret = await setup_program.find_program_in_path(paths, version, check_latest)
     output_version = __ret.output_version
     output_path = __ret.output_path
+    core.endGroup()
 
     // Setup system program
     const names = ['g++']
     if (output_path === null) {
+        core.startGroup('Find GCC in system paths')
         core.info(`Searching for GCC ${version} in PATH`)
         const __ret = await setup_program.find_program_in_system_paths(paths, names, version, check_latest)
         output_version = __ret.output_version
         output_path = __ret.output_path
+        core.endGroup()
     }
 
     // Setup APT program
     if (output_version === null && process.platform === 'linux') {
+        core.startGroup('Find GCC with APT')
         core.info(`Searching for GCC ${version} with APT`)
 
         // Add APT repository
@@ -18061,6 +18089,7 @@ async function main(version, paths, check_latest, update_environment) {
         const __ret = await setup_program.find_program_with_apt(names, version, check_latest)
         output_version = __ret.output_version
         output_path = __ret.output_path
+        core.endGroup()
     } else {
         if (output_version !== null) {
             log(`Skipping APT step because GCC ${output_version} was already found in ${output_path}`)
@@ -18071,6 +18100,7 @@ async function main(version, paths, check_latest, update_environment) {
 
     // Install program from a valid URL
     if (output_version === null) {
+        core.startGroup('Download GCC from release binaries')
         core.info(`Fetching GCC ${version} from release binaries`)
         // Determine the release to install and version candidates to fallback to
         log('All GCC versions: ' + allVersions)
@@ -18173,6 +18203,7 @@ async function main(version, paths, check_latest, update_environment) {
                 }
             }
         }
+        core.endGroup()
     } else {
         if (output_version !== null) {
             log(`Skipping download step because GCC ${output_version} was already found in ${output_path}`)
@@ -18180,6 +18211,7 @@ async function main(version, paths, check_latest, update_environment) {
     }
 
     // Create outputs
+    core.startGroup('Set outputs')
     let cc = output_path
     let cxx = output_path
     let bindir = ''
@@ -18220,6 +18252,7 @@ async function main(version, paths, check_latest, update_environment) {
         version_minor = semverV.minor
         version_patch = semverV.patch
     }
+    core.endGroup()
     return {output_path, cc, cxx, bindir, dir, release, version_major, version_minor, version_patch}
 }
 
