@@ -1,21 +1,22 @@
 name: 'Install Packages'
 description: |
   This action installs dependencies from multiple package managers for a workflow.
-
   This is usually the next step in your workflow after setting up a C++ compiler with
   xref:actions/setup-cpp.adoc[].
 
-  If vcpkg dependencies are required and vcpkg is not available, it will be installed.
-  Both vcpkg and its dependencies are cached.
+  The action currently supports installing packages with `apt-get` and `vcpkg`.  
+  A number of auxiliary options are available to customize the behavior of both `apt-get` and `vcpkg`.
+  
+  If vcpkg dependencies are required, vcpkg will be installed and related paths are returned from the action.
+  Both vcpkg and its compiled dependencies are cached.
 
-  [CAUTION]
+  [NOTE]
   ====
   When your library depends on vcpkg for dependencies, it's important to run the xref:actions/setup-cpp.adoc[]
   action before this step because vcpkg packages are built from source and this allows us to use the compiler
   set up in the previous step.
   ====
-
-
+  
   == Next steps
 
   After setting up the dependencies for your C++ project, the next step in your workflow should usually be
@@ -30,11 +31,21 @@ inputs:
   # Packages
   # --------------------------------
   vcpkg:
-    description: 'List of packages we should install with vcpkg. (Whitespace-separated)'
+    description: |
+      List of packages we should install with vcpkg.
+      
+      If any package is included in this list, vcpkg will be installed and the vcpkg toolchain file will be returned.
+      
+      Individual packages can define a custom triplet by appending `:<triplet>` to the package name.
+
     required: false
     default: ''
   apt-get:
-    description: 'List of packages we should install with apt-get. (Whitespace-separated)'
+    description: |
+      List of packages we should install with apt-get.
+      
+      Additional options are provided to customize the behavior of apt-get.
+
     required: false
     default: ''
 
@@ -43,37 +54,47 @@ inputs:
   # --------------------------------
   cxx:
     description: |
-      C++ compiler used by vcpkg.
+      C++ compiler to be used by vcpkg. If the compiler is not specified, the value will be retrieved from
+      the environment variable `CXX`.
 
-      Setting the compiler is particularly important in Linux workflows that use `clang`, since `clang` might link
-      `libc++` or `libstdc++`, while the default compiler used by vcpkg will usually be GCC linking `libstdc++`.
-
-      This would cause conflict in workflows that later attempt to use vcpkg dependencies.
+      Setting the compiler is particularly important when the compiler being tested is different from the default
+      compiler used by vcpkg.
 
     required: false
     default: ''
 
   cxxflags:
     description: |
-      C++ flags used by vcpkg.
+      C++ flags used by vcpkg. If the flags are not specified, the value will be retrieved from the environment
+      variable `CXXFLAGS`.
 
     required: false
     default: ''
 
   cc:
-    description: 'C compiler used by vcpkg'
+    description: |
+      C compiler used by vcpkg. If the compiler is not specified, the value will be retrieved from the environment
+      variable `CC`.
+
     required: false
     default: ''
 
   ccflags:
     description: |
-      C flags used by vcpkg.
+      C flags used by vcpkg. If the flags are not specified, the value will be retrieved from the environment
+      variable `CFLAGS`.
 
     required: false
     default: ''
 
   vcpkg-triplet:
-    description: 'The triplet used by vcpkg to install packages.'
+    description: |
+      The triplet used by vcpkg to install packages.
+      
+      If no triplet is specified, a default triplet will be inferred from the platform.
+      
+      Individual packages can override this value by specifying a triplet in the package name.
+
     required: false
     default: ''
   vcpkg-dir:
@@ -84,30 +105,82 @@ inputs:
 
     required: false
     default: ''
+
   vcpkg-branch:
-    description: 'vcpkg branch we should use'
+    description: |
+      vcpkg branch we should use. This is usually the master branch.
+
     required: false
     default: 'master'
+
+  vcpkg-cache:
+    description: |
+      Whether we should cache vcpkg and its built dependencies.
+      
+      This is useful when you want to speed up your workflow by caching vcpkg and its built dependencies
+      for next workflows.
+      
+      You can disable this option when you want to always build vcpkg and its dependencies from scratch
+      or want to save cache storage.
+
+    required: false
+    default: 'true'
+
+  vcpkg-force-install:
+    description: |
+      Whether we should force install vcpkg and even when no vcpkg packages are listed.
+      
+      This is useful when you want to use vcpkg in manifest mode.
+
+    required: false
+    default: 'false'
 
   # --------------------------------
   # APT Options
   # --------------------------------
   apt-get-retries:
-    description: 'Number of times we should retry when apt-get fails.'
+    description: |
+      Number of times we should retry when apt-get fails.
+      
+      This option is useful when apt-get fails due to a temporary network issue.
+      
+      When calling apt-get to install packages, this passes the `-o Acquire::Retries` option
+      to apt-get.
+      
+      For other commands, the command will be called multiple times until it succeeds or
+      the number of retries is exhausted. Each retry will be separated by a delay with an
+      exponential backoff.
+
     required: false
-    default: '1'
+    default: '5'
+
   apt-get-sources:
-    description: 'List of sources for apt-get.'
+    description: |
+      List of sources for apt-get.
+      
+      Sources are installed with `apt-add-repository`.
+
     required: false
     default: ''
+
   apt-get-source-keys:
-    description: 'List of source keys for apt-get.'
+    description: |
+      List of source keys for apt-get.
+      
+      Source keys are installed with `apt-key`.
+
     required: false
     default: ''
+
   apt-get-ignore-missing:
-    description: 'Whether apt-get should ignore missing packages.'
+    description: |
+      Whether apt-get should ignore missing packages.
+      
+      This attempts to install packages one by one and passes the `--ignore-missing` option to apt-get.
+
     required: false
     default: 'false'
+
   apt-get-add-architecture:
     description: |
       Argument to pass to `dpkg` to add an architecture.
@@ -118,8 +191,24 @@ inputs:
       
       Common values for this parameter are: `amd64` (64-bit x86), `i386` (32-bit x86),
       `armhf` (ARM Hard Float), `arm64` (ARM 64-bit), and `ppc64el` (PowerPC 64-bit Little Endian).
+      
+      This parameter can also be a list of architectures.
+
     required: false
     default: ''
+
+  apt-get-bulk-install:
+    description: |
+      This option determines if we should call apt-get once for each package (false) or if we should call apt-get once
+      for all packages (true).
+      
+      This option is useful when installing a large number of packages, since it can speed up the installation process.
+      
+      However, installing libraries individually provides more better information in the logs, which can be useful
+      for debugging.
+
+    required: false
+    default: 'false'
 
   # --------------------------------
   # Extra options
@@ -131,266 +220,18 @@ inputs:
 
 outputs:
   vcpkg-toolchain:
-    description: "vcpkg toolchain file"
-    value: ${{ steps.ctx.outputs.vcpkg-toolchain }}
+    description: |
+      vcpkg toolchain file
+      
+      This output value can be used to configure CMake to use vcpkg.
+
   vcpkg-executable:
-    description: "vcpkg toolchain file"
-    value: ${{ steps.ctx.outputs.vcpkg-executable }}
+    description: "vcpkg executable file"
 
 runs:
-  using: "composite"
-  steps:
-    # Install packages on ubuntu
-    # https://docs.github.com/en/actions/learn-github-actions/contexts#runner-context
-    - name: apt-get packages
-      shell: bash
-      if: ${{ runner.os == 'Linux' && ( inputs.apt-get || inputs.vcpkg ) }}
-      run: |
-        # Install apt-get packages
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-
-        # Determine if apt-get should be called with `sudo`, which is often not the case with containers
-        if which sudo >/dev/null 2>&1; then
-          sudo -n apt-get -o Acquire::Retries=${{ inputs.apt-get-retries }} update > /dev/null 2>&1
-          if [ $? -eq 0 ]
-          then
-            sudo_prefix="sudo "
-          else
-            sudo_prefix=""
-          fi
-        else
-          sudo_prefix=""
-        fi
-
-        # Install sources
-        SOURCE_KEYS=(${{ inputs.apt-get-source-keys }})
-        for key in "${SOURCE_KEYS[@]}"
-        do
-            for i in {1..$NET_RETRY_COUNT}
-            do
-                wget -O - "$key" | sudo apt-key add - && break || sleep 2
-            done
-        done
-
-        SOURCES=(${{ inputs.apt-get-sources }})
-        if [ ${#SOURCES[@]} -gt 0 ]
-        then
-            APT_ADD_REPO_COMMON_ARGS=("-y")
-            APT_ADD_REPO_HAS_SOURCE_ARGS=0
-            SOFTWARE_PROPERTIES_VERSION="$(dpkg-query --showformat='${Version}' --show software-properties-common)"
-            if dpkg --compare-versions "$SOFTWARE_PROPERTIES_VERSION" ge "0.96.24.20"
-            then
-                APT_ADD_REPO_COMMON_ARGS+=("-n")
-            fi
-            if dpkg --compare-versions "$SOFTWARE_PROPERTIES_VERSION" ge "0.98.10"
-            then
-                APT_ADD_REPO_HAS_SOURCE_ARGS=1
-            fi
-            for source in "${SOURCES[@]}"
-            do
-                for i in {1..$NET_RETRY_COUNT}
-                do
-                    APT_ADD_REPO_ARGS=("${APT_ADD_REPO_COMMON_ARGS[@]}")
-                    if [ $APT_ADD_REPO_HAS_SOURCE_ARGS -ne 0 ]
-                    then
-                        case "$source" in
-                        "ppa:"*)
-                            APT_ADD_REPO_ARGS+=("-P")
-                            ;;
-                        "deb "*)
-                            APT_ADD_REPO_ARGS+=("-S")
-                            ;;
-                        *)
-                            APT_ADD_REPO_ARGS+=("-U")
-                            ;;
-                        esac
-                    fi
-                    APT_ADD_REPO_ARGS+=("$source")
-                    $sudo_prefix -E apt-add-repository "${APT_ADD_REPO_ARGS[@]}" && break || sleep 2
-                done
-            done
-        fi
-
-        # Add architecture
-        if [ "${{ inputs.apt-get-add-architecture }}" != "" ]; then
-            $sudo_prefix dpkg --add-architecture "${{ inputs.apt-get-add-architecture }}"
-        fi
-        
-        # Update and install
-        $sudo_prefix apt-get -o Acquire::Retries=${{ inputs.apt-get-retries }} update
-
-        # Install packages
-        apt_get_packages="${{ inputs.apt-get }}"
-        if [ "${{ inputs.vcpkg }}" != "" ]; then
-            # ensure we have git if we are installing vcpkg
-            apt_get_packages+=" git curl zip unzip tar"
-        fi
-        if [ "${{ inputs.apt-get-ignore-missing }}" == "true" ]; then
-            for package in ${apt_get_packages// / }
-            do
-              $sudo_prefix apt-get -o Acquire::Retries=${{ inputs.apt-get-retries }} install --ignore-missing -y $package || true
-            done
-        else
-            $sudo_prefix apt-get -o Acquire::Retries=${{ inputs.apt-get-retries }} install -y $apt_get_packages
-        fi
-
-    - name: vcpkg environment
-      id: ctx
-      if: ${{ inputs.vcpkg }}
-      shell: bash
-      run: |
-        # Vcpkg Context
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-
-        ${{ (inputs.cxx != '' && format('export CXX="{0}"', inputs.cxx)) || '' }}
-        ${{ (inputs.cc != '' && format('export CC="{0}"', inputs.cc)) || '' }}
-
-        # vcpkg hash
-        vcpkg_hash="$(git ls-remote https://github.com/microsoft/vcpkg.git ${{ inputs.vcpkg-branch }} | awk '{ print $1 }')"
-        echo "vcpkg_hash=$vcpkg_hash" >> $GITHUB_OUTPUT
-
-        # vcpkg triplet
-        default_triplet="${{ (runner.os == 'Windows' && 'x64-windows') || (runner.os == 'Linux' && 'x64-linux') || (runner.os == 'macOS' && 'x64-osx') || '' }}"
-        input_triplet=${{ inputs.vcpkg-triplet }}
-        if [ "$input_triplet" == "" ]; then
-            triplet=$default_triplet
-        else
-            triplet=$input_triplet
-        fi
-        echo "triplet=$triplet" >> $GITHUB_OUTPUT
-        if [ "$triplet" == "" ]; then
-            triplet_suffix=""
-        else
-            triplet_suffix=":$triplet"
-        fi
-        echo "triplet_suffix=$triplet_suffix" >> $GITHUB_OUTPUT
-
-        # vcpkg
-        vcpkg_dir="${{ inputs.vcpkg-dir }}"
-        if [ "$vcpkg_dir" == "" ]; then
-            vcpkg_dir="$RUNNER_TOOL_CACHE/vcpkg/${{ inputs.vcpkg-branch }}"
-        elif [[ $vcpkg_dir == /* ]]; then
-            vcpkg_dir=$vcpkg_dir
-        else
-            vcpkg_dir="$(readlink -f "$vcpkg_dir" 2>/dev/null || realpath -e "$vcpkg_dir" 2>/dev/null || echo "$(pwd)/$vcpkg_dir")"
-        fi
-        vcpkg_dir=$(echo "$vcpkg_dir" | sed 's/\\/\//g')
-        echo -E "vcpkg_dir=$vcpkg_dir" >> $GITHUB_OUTPUT
-
-        # vcpkg bootstrap script
-        vcpkg_bs_exe="${{ (runner.os == 'Windows' && '$vcpkg_dir/bootstrap-vcpkg.bat') || '$vcpkg_dir/bootstrap-vcpkg.sh' }}"
-        echo -E "vcpkg_bs_exe=$vcpkg_bs_exe" >> $GITHUB_OUTPUT
-
-        # vcpkg toolchain
-        vcpkg_toolchain=$vcpkg_dir/scripts/buildsystems/vcpkg.cmake
-        echo -E "vcpkg-toolchain=$vcpkg_toolchain" >> $GITHUB_OUTPUT
-
-        # vcpkg executable
-        vcpkg_executable=$vcpkg_dir/vcpkg
-        echo -E "vcpkg-executable=$vcpkg_executable" >> $GITHUB_OUTPUT
-
-        # include compiler version as part of the cache key, even if location is the same
-        if command -v sha1sum >/dev/null 2>&1; then
-          has_sha1sum=true
-        else
-          has_sha1sum=false
-        fi
-        cxx_cache_hash=""
-        cxx="${{ inputs.cxx }}"
-        cxxflags="${{ inputs.cxxflags }}"
-        cc="${{ inputs.cc }}"
-        ccflags="${{ inputs.ccflags }}"
-        if [ "$cxx" != "" ]; then
-          cxx_version_output=$("$cxx" --version || true)
-          if [ "$cxx_version_output" != "" ]; then
-            regex='[0-9]+\.[0-9]+\.[0-9]+'
-            [[ $cxx_version_output =~ $regex ]]
-            cxx_version="${BASH_REMATCH[0]}"
-          fi
-          concatenated_string="cxx:$cxx-flags:$ccflags-cc:$cc-version:$cxx_version"
-          if [ "$has_sha1sum" == "true" ]; then
-            cxx_cache_hash=$(echo -n "${concatenated_string}" | sha1sum | awk '{print $1}')
-          else
-            cxx_cache_hash=$(echo -n "${concatenated_string}" | shasum -a 1 | awk '{print $1}')
-          fi
-        fi
-
-        # vcpkg cache hash
-        os="$(echo "${{ runner.os }}" | tr '[:upper:]' '[:lower:]')"
-        vcpkg_cache_key="vcpkg-$triplet_suffix-os:$os-cxx:$cxx_cache_hash"
-
-        # add packages to cache_key
-        vcpkg_packages="${{ inputs.vcpkg }}"
-        for package in ${vcpkg_packages// / }
-        do
-            vcpkg_cache_key=$vcpkg_cache_key-$package
-        done
-        echo "vcpkg_cache_key=$vcpkg_cache_key" >> $GITHUB_OUTPUT
-
-    # Attempt to get vcpkg with its packages from the cache before cloning it
-    # The cache key includes the vcpkg version, os, packages and triplet
-    - name: vcpkg cache
-      if: ${{ inputs.vcpkg }}
-      id: cache-vcpkg
-      uses: actions/cache@v3
-      with:
-        path: ${{ steps.ctx.outputs.vcpkg_dir }}
-        key: ${{ steps.ctx.outputs.vcpkg_cache_key }}
-
-    - name: vcpkg install
-      if: steps.cache-vcpkg.outputs.cache-hit != 'true' && inputs.vcpkg != ''
-      shell: bash
-      run: |
-        # Vcpkg bootstrap and install packages
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-
-        git clone https://github.com/microsoft/vcpkg.git -b ${{ inputs.vcpkg-branch }} ${{ steps.ctx.outputs.vcpkg_dir }}
-        ${{ steps.ctx.outputs.vcpkg_bs_exe }}
-        cd ${{ steps.ctx.outputs.vcpkg_dir }}
-        packages="${{ inputs.vcpkg }}"
-        ${{ (inputs.cxx != '' && format('export CXX="{0}"', inputs.cxx)) || '' }}
-        ${{ (inputs.cxxflags != '' && format('export CXXFLAGS="{0}"', inputs.cxxflags)) || '' }}
-        ${{ (inputs.cc != '' && format('export CC="{0}"', inputs.cc)) || '' }}
-        for package in ${packages// / }
-        do
-          set +e
-          ${{ steps.ctx.outputs.vcpkg-executable }} install $package${{ steps.ctx.outputs.triplet_suffix }}
-          exit_code=$?
-          set -e
-          if [ $exit_code -ne 0 ]; then
-              ${{ (inputs.trace-commands == 'true' && 'set +x') || '' }}
-              build_types=("rel" "dbg")
-              steps=("config" "build" "install")
-              suffixes=("CMakeCache.txt" "out" "err")
-              prefixes=("detect_compiler" "$package")
-              for prefix in "${prefixes[@]}"; do
-                for build_type in "${build_types[@]}"; do
-                  for step in "${steps[@]}"; do
-                    for suffix in "${suffixes[@]}"; do
-                      log_basename="$step-${{ steps.ctx.outputs.triplet }}-$build_type-$suffix.log"
-                      log_path="${{ steps.ctx.outputs.vcpkg_dir }}/buildtrees/$prefix/$log_basename"
-                      if [ -f "$log_path" ]; then
-                        echo "======================> $log_basename"
-                        cat "$log_path"
-                      fi
-                    done
-                  done
-                  log_basename="${{ steps.ctx.outputs.triplet }}-$build_type/CMakeFiles/CMakeOutput.log"
-                  log_path="${{ steps.ctx.outputs.vcpkg_dir }}/buildtrees/$prefix/$log_basename"
-                  if [ -f "$log_path" ]; then
-                    echo "======================> $log_basename"
-                    cat "$log_path"
-                  fi
-                  log_basename="${{ steps.ctx.outputs.triplet }}-$build_type/CMakeFiles/CMakeError.log"
-                  log_path="${{ steps.ctx.outputs.vcpkg_dir }}/buildtrees/$prefix/$log_basename"
-                  if [ -f "$log_path" ]; then
-                    echo "======================> $log_basename"
-                    cat "$log_path"
-                  fi
-                done
-              done
-              ${{ (inputs.trace-commands == 'true' && 'set -x') || '' }}
-              echo "Error: vcpkg failed to install $package"
-              false
-          fi
-        done
+  using: 'node16'
+  main: 'dist/index.js'
+  post-if: success()
+branding:
+  icon: 'code'
+  color: 'yellow'

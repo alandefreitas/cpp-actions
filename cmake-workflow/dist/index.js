@@ -22287,7 +22287,6 @@ const semver = __nccwpck_require__(3184)
 const fs = __nccwpck_require__(7147)
 const exec = __nccwpck_require__(9850)
 const path = __nccwpck_require__(1017)
-// const github = require('@actions/github')
 
 let trace_commands = false
 
@@ -22611,6 +22610,8 @@ function isSudoRequired() {
     return process.getuid() !== 0
 }
 
+
+
 function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -22625,7 +22626,7 @@ async function find_program_with_apt(names, version, check_latest) {
 
     fnlog('Checking if APT is available')
     try {
-        const {exitCode} = await exec.getExecOutput('apt', ['--version'])
+        const exitCode= await exec.exec('apt', ['--version'])
         if (exitCode !== 0) {
             fnlog(`apt --version returned ${exitCode}`)
             return {output_version, output_path}
