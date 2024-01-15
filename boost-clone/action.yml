@@ -66,6 +66,10 @@ inputs:
     description: 'List of modules that should be ignored in scan-modules'
     required: false
     default: ''
+  cache:
+    description: 'Cache boost source directory'
+    required: false
+    default: 'true'
   trace-commands:
     description: 'Trace commands executed by the workflow.'
     required: false
@@ -304,6 +308,7 @@ runs:
     # Attempt to get boost with the specified modules from the cache before cloning it
     - name: boost cache
       id: cache-boost
+      if: inputs.cache == 'true'
       uses: actions/cache@v3
       with:
         path: ${{ steps.ctx.outputs.boost_dir }}
@@ -311,7 +316,7 @@ runs:
 
     # Clone boost if not found in cache
     - name: boost clone
-      if: steps.cache-boost.outputs.cache-hit != 'true'
+      if: inputs.cache != 'true' || steps.cache-boost.outputs.cache-hit != 'true'
       shell: bash
       run: |
         # Clone Boost Superproject 
@@ -320,7 +325,7 @@ runs:
 
     # Apply patches if boost not found in cache
     - name: boost patches
-      if: steps.cache-boost.outputs.cache-hit != 'true' && inputs.patches != ''
+      if: (inputs.cache != 'true' || steps.cache-boost.outputs.cache-hit != 'true') && inputs.patches != ''
       shell: bash
       working-directory: ${{ ( inputs.boost-dir != '' && inputs.boost-dir ) || steps.ctx.outputs.boost_dir }}/libs
       run: |
@@ -338,7 +343,7 @@ runs:
       id: cpu-cores
 
     - name: Git features
-      if: steps.cache-boost.outputs.cache-hit != 'true'
+      if: inputs.cache != 'true' || steps.cache-boost.outputs.cache-hit != 'true'
       working-directory: ${{ ( inputs.boost-dir != '' && inputs.boost-dir ) || steps.ctx.outputs.boost_dir }}
       shell: bash
       id: features
@@ -388,7 +393,7 @@ runs:
 
     # Initialize all submodules if boost not found in cache and no specific modules were specified
     - name: Initialize all submodules
-      if: (steps.cache-boost.outputs.cache-hit != 'true' && steps.ctx.outputs.all_modules == '')
+      if: ((inputs.cache != 'true' || steps.cache-boost.outputs.cache-hit != 'true') && steps.ctx.outputs.all_modules == '')
       working-directory: ${{ ( inputs.boost-dir != '' && inputs.boost-dir ) || steps.ctx.outputs.boost_dir }}
       shell: bash
       run: |
@@ -401,7 +406,7 @@ runs:
 
     # Initialize specified submodules if boost not found in cache and submodules were specified
     - name: Initialize specified submodules
-      if: (steps.cache-boost.outputs.cache-hit != 'true' && steps.ctx.outputs.all_modules != '')
+      if: ((inputs.cache != 'true' || steps.cache-boost.outputs.cache-hit != 'true') && steps.ctx.outputs.all_modules != '')
       working-directory: ${{ ( inputs.boost-dir != '' && inputs.boost-dir ) || steps.ctx.outputs.boost_dir }}
       shell: bash
       run: |
