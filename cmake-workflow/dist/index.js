@@ -1077,26 +1077,96 @@ function parseExtraArgsEntry(extra_args) {
     // is a line in the string. We need to split each line into arguments
     // and then join them into a single array. It's not as simple as splitting
     // on spaces because arguments can be quoted.
+
+    function extractIdentifier(i, line, char, curArg) {
+        const nextChar = i < line.length - 1 ? line[i + 1] : undefined
+        if (nextChar && nextChar.match(/^[a-zA-Z_]/)) {
+            let identifier = nextChar
+            let j = i + 2
+            for (; j < line.length; j++) {
+                const idChar = line[j]
+                // check if idChar is alphanum or underscore
+                if (idChar.match(/^[a-zA-Z0-9_]/)) {
+                    identifier += char
+                } else {
+                    break
+                }
+            }
+            // Replace $ with the value of the environment variable
+            // if it exists
+            const envValue = process.env[identifier]
+            if (envValue) {
+                curArg += envValue
+            }
+            // Advance i to the last character of the identifier
+            i = j - 1
+        } else {
+            // No valid identifier after $. Just output $.
+            curArg += char
+        }
+        return {i, curArg}
+    }
+
     let args = []
     for (const line of extra_args) {
-        // Split on spaces, but not spaces inside quotes
-        const regex = /(?:[^\s"]+|"[^"]*")+/g
-        let match
-        while (match = regex.exec(line)) {
-            args.push(match[0].trim())
+        let curQuote = undefined
+        let curArg = ''
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i]
+            const inQuote = curQuote !== undefined
+            const curIsQuote = ['"', '\''].includes(char)
+            const curIsEscaped = i > 0 && line[i - 1] === '\\'
+            if (!inQuote) {
+                if (!curIsEscaped) {
+                    if (curIsQuote) {
+                        curQuote = char
+                    } else if (char === ' ') {
+                        if (curArg !== '') {
+                            args.push(curArg)
+                            curArg = ''
+                        }
+                    } else if (char === '$') {
+                        const __ret = extractIdentifier(i, line, char, curArg)
+                        i = __ret.i
+                        curArg = __ret.curArg
+                    } else if (char !== '\\') {
+                        curArg += char
+                    }
+                } else {
+                    curArg += char
+                }
+            } else if (curQuote === '"') {
+                // Preserve the literal value of all characters except for
+                // ($), (`), ("), (\), and the (!) character
+                if (!curIsEscaped) {
+                    if (char === curQuote) {
+                        curQuote = undefined
+                    } else if (char === '$') {
+                        const __ret = extractIdentifier(i, line, char, curArg)
+                        i = __ret.i
+                        curArg = __ret.curArg
+                    } else if (char !== '\\') {
+                        curArg += char
+                    }
+                } else {
+                    if (!['$', '`', '"', '\\'].includes(char)) {
+                        curArg += '\\'
+                    }
+                    curArg += char
+                }
+            } else if (curQuote === '\'') {
+                // Preserve the literal value of each character within the
+                // quotes
+                if (char !== curQuote) {
+                    curArg += char
+                } else {
+                    curQuote = undefined
+                }
+            }
         }
-    }
-    // Sanitize arguments: cmake often includes arguments of the form
-    // "VAR=value" or "VAR="value"". The second form is invalid when
-    // converting to an array because any tool will attempt to include extra
-    // quotes when it sees a space. The internal quotes are not necessary
-    // because external quotes can already handle the problem.
-    for (let i = 0; i < args.length; i++) {
-        const arg = args[i]
-        const regex = /^([^=]+)="([^)]*)"$/
-        const match = arg.match(regex)
-        if (match) {
-            args[i] = `${match[1]}=${match[2]}`
+        if (curArg !== '') {
+            args.push(curArg)
+            curArg = ''
         }
     }
     return args
@@ -1297,6 +1367,7 @@ if (require.main === require.cache[eval('__filename')]) {
 module.exports = {
     trace_commands,
     set_trace_commands,
+    parseExtraArgsEntry,
     main
 }
 
