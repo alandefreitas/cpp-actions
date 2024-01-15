@@ -67,9 +67,36 @@ inputs:
     required: false
     default: ''
   cache:
-    description: 'Cache boost source directory'
+    description: |
+      Cache boost source directory.
+      
+      The cache key will include the boost hash, the modules hash and the patch hashes.
+      When using the cache, the action will not scan for dependencies. This means that if a transitive
+      dependency is updated, the cache will not be invalidated.
+      
+      Note that the cache only includes the source directory and will be reused by other environments.
+      This means binaries should not be included in the boost directory.
+      
+      When testing a boost library, this source directory should be moved to another location
+      before it's the tests are built. 
+
     required: false
     default: 'true'
+
+  optimistic-caching:
+    description: |
+      If this option is set to `true`, the cache key will not include the main boost super-project hash in the
+      cache key. The key will only include the hash of direct module dependencies and patches in the cache key.
+      
+      This means that if this option is `true` and transitive module dependencies are updated, the cache will not
+      be invalidated until transitive dependencies are updated or the current cache expires.
+      
+      On the other hand, if this option is set to `false`, the cache might be invalidated if unrelated modules
+      in the super-project are updated.
+
+    required: false
+    default: 'false'
+
   trace-commands:
     description: 'Trace commands executed by the workflow.'
     required: false
@@ -223,7 +250,7 @@ runs:
         fi
         
         # Add modules hashes to boost cache key
-        cache_hash=""
+        modules_hash=""
         if command -v sha1sum >/dev/null 2>&1; then
           has_sha1sum=true
         else
@@ -251,14 +278,14 @@ runs:
             # Update the cache key with a hash for the module only
             # We only invalidate the cache if one of the modules has changed.
             # Changing only the boost super-project won't invalidate the cache 
-            if [ "$cache_hash" == "" ]; then
-              cache_hash=$module_hash
+            if [ "$modules_hash" == "" ]; then
+              modules_hash=$module_hash
             else
-              concatenated_string="${cache_hash}${module_hash}"
+              concatenated_string="${modules_hash}${module_hash}"
               if [ "$has_sha1sum" == "true" ]; then
-                cache_hash=$(echo -n "${concatenated_string}" | sha1sum | awk '{print $1}')
+                modules_hash=$(echo -n "${concatenated_string}" | sha1sum | awk '{print $1}')
               else
-                cache_hash=$(echo -n "${concatenated_string}" | shasum -a 1 | awk '{print $1}')
+                modules_hash=$(echo -n "${concatenated_string}" | shasum -a 1 | awk '{print $1}')
               fi
             fi
         done
@@ -268,28 +295,27 @@ runs:
         for patch in ${patches//,/ }
         do
             patch_hash=$(git ls-remote $patch ${{ inputs.branch }} | awk '{ print $1 }')
-            if [ "cache_hash" == "" ]; then
-              cache_hash=$patch_hash
+            if [ "modules_hash" == "" ]; then
+              modules_hash=$patch_hash
             else
-              concatenated_string="${cache_hash}${patch_hash}"
+              concatenated_string="${modules_hash}${patch_hash}"
               if [ "$has_sha1sum" == "true" ]; then
-                cache_hash=$(echo -n "${concatenated_string}" | sha1sum | awk '{print $1}')
+                modules_hash=$(echo -n "${concatenated_string}" | sha1sum | awk '{print $1}')
               else
-                cache_hash=$(echo -n "${concatenated_string}" | shasum -a 1 | awk '{print $1}')
+                modules_hash=$(echo -n "${concatenated_string}" | shasum -a 1 | awk '{print $1}')
               fi
             fi
         done
         
         # If there are no modules, then we update the cache key with the boost-hash
         # as we are about to clone all modules
-        # cache_os=${{ runner.os }}
-        # cache_os="$(echo "$cache_os" | tr '[:upper:]' '[:lower:]')"
-        if [ "cache_hash" == "" ]; then
-          # cache_hash=$cache_os-boost-all-$boost_hash
-          cache_hash=boost-source-all-$boost_hash
+        cache_hash=""
+        if [ "modules_hash" == "" ]; then
+          cache_hash=boost-source-$boost_hash
+        elif [ "${{ inputs.optimistic-caching }}" == "true" ]; then
+          cache_hash=boost-source-$modules_hash
         else
-          # cache_hash=$cache_os-boost-$cache_hash
-          cache_hash=boost-source-$cache_hash
+          cache_hash=boost-source-$boost_hash-$modules_hash
         fi
         echo "cache_hash=$cache_hash" >> $GITHUB_OUTPUT
         
