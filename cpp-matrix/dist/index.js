@@ -75,7 +75,7 @@ function parseCompilerFactors(inputString, compilers) {
     return compilerFactors
 }
 
-function parseCompilerOptions(inputLines, compilers) {
+function parseCompilerSuggestions(inputLines, compilers) {
     const containerOptions = []
     for (let line of inputLines) {
         line = line.trim()
@@ -83,7 +83,7 @@ function parseCompilerOptions(inputLines, compilers) {
             continue
         }
 
-        // <compiler-name>[ <compiler-range>]: <docker-container>
+        // <compiler-name>[ <compiler-range|compiler-factor>]: <value>
         // Split line at first colon. If there are more than one colon, the
         // second part includes all other colons
         const colonIndex = line.indexOf(':')
@@ -99,14 +99,17 @@ function parseCompilerOptions(inputLines, compilers) {
         // name. Otherwise, the first part is the compiler name and the
         // second part is the version range
         let compilerName = null
-        let compilerRange = null
+        let compilerDescriptor = null
         if (spaceIndex === -1) {
             compilerName = compilerPart
-            compilerRange = '*'
+            compilerDescriptor = '*'
         } else {
             compilerName = compilerPart.substring(0, spaceIndex).trim()
-            compilerRange = compilerPart.substring(spaceIndex + 1).trim()
+            compilerDescriptor = compilerPart.substring(spaceIndex + 1).trim()
         }
+        // Check if compilerDescriptor is a semver version
+        const descriptorIsSemver = semver.valid(compilerDescriptor, {loose: true})
+
         // Check if compiler name matches one of the compilers we know about
         if (!compilers.includes(compilerName)) {
             core.warning(`Unknown compiler name "${compilerName}" in container options. Ignoring.`)
@@ -114,7 +117,8 @@ function parseCompilerOptions(inputLines, compilers) {
         // Create entry
         const entry = {
             compiler: compilerName,
-            range: compilerRange,
+            range: descriptorIsSemver ? compilerDescriptor : undefined,
+            factor: descriptorIsSemver ? undefined : compilerDescriptor,
             value: containerPart
         }
         containerOptions.push(entry)
@@ -667,39 +671,31 @@ function isArrayOfObjects(val) {
     return Array.isArray(val) && val.length > 0 && typeof val[0] === 'object'
 }
 
+function setSuggestion(entry, key, suggestionMap, subrange) {
+    if (isArrayOfObjects(suggestionMap)) {
+        for (const userSuggestion of suggestionMap) {
+            if (userSuggestion.factor !== undefined && userSuggestion.compiler === entry.compiler) {
+                const factor_key = userSuggestion.factor.toLowerCase()
+                if (entry[factor_key]) {
+                    entry[key] = userSuggestion.value
+                    return true
+                }
+            }
+        }
+        for (const userSuggestion of suggestionMap) {
+            if (userSuggestion.range !== undefined && userSuggestion.compiler === entry.compiler) {
+                if (semver.subset(subrange, userSuggestion.range)) {
+                    entry[key] = userSuggestion.value
+                    return true
+                }
+            }
+        }
+    }
+    return false
+}
+
+
 function setCompilerContainer(entry, inputs, compilerName, minSubrangeVersion, subrange) {
-    // Check if inputs.runs_on is an array of objects
-    let hasCustomContainer = false
-    if (isArrayOfObjects(inputs.containers)) {
-        for (const container of inputs.containers) {
-            if (container.compiler === compilerName) {
-                if (semver.subset(subrange, container.range)) {
-                    entry['container'] = container.value
-                    entry['runs-on'] = 'ubuntu-22.04'
-                    hasCustomContainer = true
-                    break
-                }
-            }
-        }
-    }
-
-    let hasCustomImage = false
-    if (isArrayOfObjects(inputs.runs_on)) {
-        for (const image of inputs.runs_on) {
-            if (image.compiler === compilerName) {
-                if (semver.subset(subrange, image.range)) {
-                    entry['runs-on'] = image.value
-                    hasCustomImage = true
-                    break
-                }
-            }
-        }
-    }
-
-    if (hasCustomContainer || hasCustomImage) {
-        return
-    }
-
     // runs-on / container
     if (compilerName === 'gcc') {
         if (semver.satisfies(minSubrangeVersion, '>=13')) {
@@ -765,7 +761,7 @@ function setCompilerContainer(entry, inputs, compilerName, minSubrangeVersion, s
     }
 }
 
-function setCompilerB2Toolset(entry, compilerName) {
+function setCompilerB2Toolset(entry, inputs, compilerName, subrange) {
     // Recommended b2-toolset
     // The b2 toolset never includes the version number
     if (['mingw', 'gcc'].includes(compilerName)) {
@@ -779,7 +775,7 @@ function setCompilerB2Toolset(entry, compilerName) {
     }
 }
 
-function setCompilerCMakeGenerator(entry, compilerName, minSubrangeVersion, maxSubrangeVersion) {
+function setCompilerCMakeGenerator(entry, inputs, compilerName, minSubrangeVersion, maxSubrangeVersion, subrange) {
     // Recommended cmake generator
     if (compilerName === 'msvc') {
         const year = getVisualCppYear(minSubrangeVersion)
@@ -1207,8 +1203,8 @@ async function generateMatrix(inputs) {
             setEntrySemverComponents(entry, minSubrangeVersion, maxSubrangeVersion)
             setCompilerExecutableNames(compilerName, minSubrangeVersion, entry)
             setCompilerContainer(entry, inputs, compilerName, minSubrangeVersion, subrange)
-            setCompilerB2Toolset(entry, compilerName)
-            setCompilerCMakeGenerator(entry, compilerName, minSubrangeVersion, maxSubrangeVersion)
+            setCompilerCMakeGenerator(entry, inputs, compilerName, minSubrangeVersion, maxSubrangeVersion, subrange)
+            setCompilerB2Toolset(entry, inputs, compilerName, subrange)
             setEntryVersionFlags(entry, i, subranges, minSubrangeVersion, maxSubrangeVersion)
             setEntryName(entry, compilerName, subrange, compiler_cxxstds)
             matrix.push(entry)
@@ -1245,6 +1241,24 @@ async function generateMatrix(inputs) {
     // Patch each entry with recommended flags for special factors
     for (let entry of matrix) {
         setRecommendedFlags(entry, inputs)
+    }
+    printMatrix()
+    core.endGroup()
+
+    core.startGroup('👤 Set custom values')
+    for (let entry of matrix) {
+        if (setSuggestion(entry, 'container', inputs.containers, entry.version)) {
+            entry['runs-on'] = 'ubuntu-22.04'
+        }
+        setSuggestion(entry, 'b2-toolset', inputs.generators, entry.version)
+        setSuggestion(entry, 'generator', inputs.generators, entry.version)
+        setSuggestion(entry, 'generator-toolset', inputs.generator_toolsets, entry.version)
+        setSuggestion(entry, 'runs-on', inputs.runs_on, entry.version)
+        setSuggestion(entry, 'ccflags', inputs.ccflags, entry.version)
+        setSuggestion(entry, 'cxxflags', inputs.cxxflags, entry.version)
+        setSuggestion(entry, 'install', inputs.install, entry.version)
+        setSuggestion(entry, 'triplet', inputs.triplets, entry.version)
+        setSuggestion(entry, 'build-type', inputs.build_types, entry.version)
     }
     printMatrix()
     core.endGroup()
@@ -1523,6 +1537,15 @@ function normalizeCompilerNameKeys(obj) {
     }
 }
 
+function normalizeCompilerNameSuggestions(suggestionMap) {
+    if (isArrayOfObjects(suggestionMap)) {
+        suggestionMap = []
+    }
+    suggestionMap.forEach(obj => {
+        obj['compiler'] = normalizeCompilerName(obj['compiler'])
+    })
+}
+
 async function run() {
     try {
         const compilerVersions = parseCompilerRequirements(core.getInput('compilers'))
@@ -1531,16 +1554,30 @@ async function run() {
             compiler_versions: compilerVersions,
             standards: normalizeCppVersionRequirement(core.getInput('standards')),
             max_standards: parseInt(core.getInput('max-standards').trim()),
+
             // Factors
             latest_factors: parseCompilerFactors(core.getInput('latest-factors'), Object.keys(compilerVersions)),
             factors: parseCompilerFactors(core.getInput('factors'), Object.keys(compilerVersions)),
             combinatorial_factors: parseCompilerFactors(core.getInput('combinatorial-factors'), Object.keys(compilerVersions)),
-            // Suggestions
-            runs_on: parseCompilerOptions(core.getMultilineInput('runs-on'), Object.keys(compilerVersions)),
-            containers: parseCompilerOptions(core.getMultilineInput('containers'), Object.keys(compilerVersions)),
+
+            // Customize suggestions
+            runs_on: parseCompilerSuggestions(core.getMultilineInput('runs-on'), Object.keys(compilerVersions)),
+            containers: parseCompilerSuggestions(core.getMultilineInput('containers'), Object.keys(compilerVersions)),
+            generators: parseCompilerSuggestions(core.getMultilineInput('generators'), Object.keys(compilerVersions)),
+            generator_toolsets: parseCompilerSuggestions(core.getMultilineInput('generator-toolsets'), Object.keys(compilerVersions)),
+            b2_toolsets: parseCompilerSuggestions(core.getMultilineInput('b2-toolsets'), Object.keys(compilerVersions)),
+            ccflags: parseCompilerSuggestions(core.getMultilineInput('ccflags'), Object.keys(compilerVersions)),
+            cxxflags: parseCompilerSuggestions(core.getMultilineInput('cxxflags'), Object.keys(compilerVersions)),
+            install: parseCompilerSuggestions(core.getMultilineInput('install'), Object.keys(compilerVersions)),
+            triplets: parseCompilerSuggestions(core.getMultilineInput('triplets'), Object.keys(compilerVersions)),
+            build_types: parseCompilerSuggestions(core.getMultilineInput('build-types'), Object.keys(compilerVersions)),
+
+            // Customization flags
+            default_build_type: core.getInput('default-build-type').trim() || 'Release',
             sanitizer_build_type: core.getInput('sanitizer-build-type').trim() || 'Release',
             x86_build_type: core.getInput('x86-build-type').trim() || 'Release',
             use_containers: core.getBooleanInput('use-containers'),
+
             // Annotations and tracing
             log_matrix: core.getBooleanInput('log-matrix'),
             generate_summary: core.getBooleanInput('generate-summary'),
@@ -1562,12 +1599,16 @@ async function run() {
 
         // Normalize compiler names in the 'compiler' fields of runs_on and
         // containers. They are arrays of objects.
-        inputs.runs_on.forEach(obj => {
-            obj['compiler'] = normalizeCompilerName(obj['compiler'])
-        })
-        inputs.containers.forEach(obj => {
-            obj['compiler'] = normalizeCompilerName(obj['compiler'])
-        })
+        normalizeCompilerNameSuggestions(inputs.runs_on)
+        normalizeCompilerNameSuggestions(inputs.containers)
+        normalizeCompilerNameSuggestions(inputs.generators)
+        normalizeCompilerNameSuggestions(inputs.generator_toolsets)
+        normalizeCompilerNameSuggestions(inputs.b2_toolsets)
+        normalizeCompilerNameSuggestions(inputs.ccflags)
+        normalizeCompilerNameSuggestions(inputs.cxxflags)
+        normalizeCompilerNameSuggestions(inputs.install)
+        normalizeCompilerNameSuggestions(inputs.triplets)
+        normalizeCompilerNameSuggestions(inputs.build_types)
 
         core.startGroup('📥 C++ Matrix Requirements')
         for (const [name, value] of Object.entries(inputs)) {

@@ -166,6 +166,9 @@ description: |
   xref:actions/setup-cpp.adoc[].
 
 inputs:
+  # -----------------------------------------------------------------
+  # Compilers
+  # -----------------------------------------------------------------
   compilers:
     description: |
       A list of compilers to be tested. Each compiler can be complemented with its semver version requirements
@@ -206,6 +209,9 @@ inputs:
     required: false
     default: '2'
 
+  # -----------------------------------------------------------------
+  # Factors
+  # -----------------------------------------------------------------
   latest-factors:
     description: |
       The factors to be tested with the latest versions of each compiler. For each factor in this list, the
@@ -259,17 +265,20 @@ inputs:
     required: false
     default: ''
 
+  # -----------------------------------------------------------------
+  # Customize suggestions
+  # -----------------------------------------------------------------
   runs-on:
     description: |
       A multi-line list of github runner images to be used with each range of compiler version.
       Each line has the format:
       
-      `<compiler-name>[ <compiler-range>]: <github-runner-image>`
+      `<compiler-name>[ <compiler-range|compiler-factor>]: <github-runner-image>`
       
       For instance, `gcc >=13.1: ubuntu-latest` indicates that the runner image `ubuntu-latest` should be used
       to test `gcc` with any version in the semver range `>=13.1`. 
       
-      Omitting `<compiler-range>` is equivalent to it being set to `*` and will apply the runner 
+      Omitting `<compiler-range|compiler-factor>` is equivalent to it being set to `*` and will apply the runner 
       image to all versions of the compiler.
       
       When the runner image is specified, a container is only be suggested for the entries if the `container`
@@ -277,18 +286,20 @@ inputs:
       
       When the runner image is unspecified, the action will infer the runner image and potentially a container
       from the compiler name and its version. 
+    required: false
+    default: ''
 
   containers:
     description: |
       A multi-line list of docker containers to be used with each range of compiler version.
       Each line has the format:
       
-      `<compiler-name>[ <compiler-range>]: <docker-container>`
+      `<compiler-name>[ <compiler-range|compiler-factor>]: <docker-container>`
       
       For instance, `gcc >=13.1: ubuntu:22.04` indicates that the docker container `ubuntu:22.04` should be used
       to test `gcc` with any version in the semver range `>=13.1`. 
       
-      Omitting `<compiler-range>` is equivalent to it being set to `*` and will apply the container 
+      Omitting `<compiler-range|compiler-factor>` is equivalent to it being set to `*` and will apply the container 
       to all versions of the compiler.
       
       When the container is specified for that compiler version and the `runs-on` option is not, an ubuntu image
@@ -296,7 +307,149 @@ inputs:
       
       When the container is unspecified, the action can still infer a container for the compiler version according
       to the rules defined in the `use-containers` option.
+    required: false
+    default: ''
 
+  generators:
+    description: |
+      A multi-line list of cmake generators to be used with each range of compiler version.
+      Each line has the format:
+      
+      `<compiler-name>[ <compiler-range|compiler-factor>]: <cmake-generator>`
+      
+      For instance, `gcc >=13.1: Ninja` indicates that the cmake generator `Ninja` should be used
+      to test `gcc` with any version in the semver range `>=13.1`. 
+      
+      Omitting `<compiler-range|compiler-factor>` is equivalent to it being set to `*` and will apply the generator 
+      to all versions of the compiler.
+      
+      When the generator is unspecified, the action will infer the generator from the compiler name and its version.
+    required: false
+    default: ''
+
+  generator-toolsets:
+    description: |
+      A multi-line list of cmake generator toolsets to be used with each range of compiler version.
+      Each line has the format:
+      
+      `<compiler-name>[ <compiler-range|compiler-factor>]: <cmake-generator-toolset>`
+      
+      For instance, `clang-cl *: ClangCL` indicates that the cmake generator toolset `ClangCL` should be used
+      to test `clang-cl` with any version.
+      
+      Omitting `<compiler-range|compiler-factor>` is equivalent to it being set to `*` and will apply the generator
+      to all versions of the compiler.
+      
+      When the generator toolset is unspecified, the action will infer the generator toolset from the compiler name
+      and its version.
+    required: false
+    default: ''
+
+  b2-toolsets:
+    description: |
+      A multi-line list of b2 toolsets to be used with each range of compiler version.
+      Each line has the format:
+      
+      `<compiler-name>[ <compiler-range|compiler-factor>]: <b2-toolset>`
+      
+      For instance, `gcc >=13.1: gcc` indicates that the b2 toolset `gcc-13` should be used
+      to test `gcc` with any version in the semver range `>=13.1`. 
+      
+      Omitting `<compiler-range|compiler-factor>` is equivalent to it being set to `*` and will apply the toolset 
+      to all versions of the compiler.
+      
+      When the toolset is unspecified, the action will infer the toolset from the compiler name and its version.
+    required: false
+    default: ''
+
+  ccflags:
+    description: |
+      A multi-line list of C compiler flags to be used with each range of compiler version.
+      Each line has the format:
+      
+      `<compiler-name>[ <compiler-range|compiler-factor>]: <ccflags>`
+      
+      For instance, `gcc >=13.1: -O3` indicates that the C compiler flag `-O3` should be used
+      to test `gcc` with any version in the semver range `>=13.1`. 
+      
+      Omitting `<compiler-range|compiler-factor>` is equivalent to it being set to `*` and will apply the flag 
+      to all versions of the compiler.
+      
+      When the flag is unspecified, the action will infer the flag from the compiler name and its version.
+    required: false
+    default: ''
+
+  cxxflags:
+    description: |
+      A multi-line list of C++ compiler flags to be used with each range of compiler version.
+      Each line has the format:
+      
+      `<compiler-name>[ <compiler-range|compiler-factor>]: <cxxflags>`
+      
+      For instance, `gcc >=13.1: -O3` indicates that the C++ compiler flag `-O3` should be used
+      to test `gcc` with any version in the semver range `>=13.1`. 
+      
+      Omitting `<compiler-range|compiler-factor>` is equivalent to it being set to `*` and will apply the flag 
+      to all versions of the compiler.
+      
+      When the flag is unspecified, the action will infer the flag from the compiler name and its version.
+    required: false
+    default: ''
+
+  install:
+    description: |
+      A multi-line list of packages to be installed with each range of compiler version.
+      Each line has the format:
+      
+      `<compiler-name>[ <compiler-range|compiler-factor>]: <packages>`
+      
+      For instance, `gcc >=13.1: build-essential` indicates that the package `build-essential` should be installed
+      to test `gcc` with any version in the semver range `>=13.1`. 
+      
+      Omitting `<compiler-range|compiler-factor>` is equivalent to it being set to `*` and will apply the package 
+      to all versions of the compiler.
+      
+      When the package is unspecified, the action will infer the package from the compiler name and its version.
+    required: false
+    default: ''
+
+  triplets:
+    description: |
+      A multi-line list of triplets to be used with each range of compiler version.
+      Each line has the format:
+      
+      `<compiler-name>[ <compiler-range|compiler-factor>]: <triplet>`
+      
+      For instance, `gcc >=13.1: x86_64-linux-gnu` indicates that the triplet `x86_64-linux-gnu` should be used
+      to test `gcc` with any version in the semver range `>=13.1`. 
+      
+      Omitting `<compiler-range|compiler-factor>` is equivalent to it being set to `*` and will apply the triplet 
+      to all versions of the compiler.
+      
+      When the triplet is unspecified, the action will infer the triplet from the compiler name and its version.
+    required: false
+    default: ''
+
+  build_types:
+    description: |
+      A multi-line list of build types to be used with each range of compiler version.
+      Each line has the format:
+      
+      `<compiler-name>[ <compiler-range|compiler-factor>]: <build-type>`
+      
+      For instance, `gcc >=13.1: Release` indicates that the build type `Release` should be used
+      to test `gcc` with any version in the semver range `>=13.1`. 
+      
+      Omitting `<compiler-range|compiler-factor>` is equivalent to it being set to `*` and will apply the build type 
+      to all versions of the compiler.
+      
+      When the build type is unspecified, the action will infer the build type from the compiler name and its version.
+    required: false
+    default: ''
+
+  # -----------------------------------------------------------------
+  # Customization flags
+  # -----------------------------------------------------------------
   sanitizer-build-type:
     description: |
       Determine the default build type to suggest when testing with sanitizers.
@@ -328,6 +481,9 @@ inputs:
     required: false
     default: 'true'
 
+  # -----------------------------------------------------------------
+  # Debugging
+  # -----------------------------------------------------------------
   log-matrix:
     description: |
       Log the generated matrix as a JSON string.
