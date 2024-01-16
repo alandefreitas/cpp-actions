@@ -438,6 +438,28 @@ step to be the <a href="b2-workflow.html" class="xref page">B2 Workflow</a>.</p>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Cache boost source directory.</p>
+<p class="tableblock">The cache key will include the boost hash, the modules hash and the patch hashes.
+When using the cache, the action will not scan for dependencies. This means that if a transitive
+dependency is updated, the cache will not be invalidated.</p>
+<p class="tableblock">Note that the cache only includes the source directory and will be reused by other environments.
+This means binaries should not be included in the boost directory.</p>
+<p class="tableblock">When testing a boost library, this source directory should be moved to another location
+before it&#8217;s the tests are built.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>optimistic-caching</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">If this option is set to <code>true</code>, the cache key will not include the main boost super-project hash in the
+cache key. The key will only include the hash of direct module dependencies and patches in the cache key.</p>
+<p class="tableblock">This means that if this option is <code>true</code> and transitive module dependencies are updated, the cache will not
+be invalidated until transitive dependencies are updated or the current cache expires.</p>
+<p class="tableblock">On the other hand, if this option is set to <code>false</code>, the cache might be invalidated if unrelated modules
+in the super-project are updated.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
