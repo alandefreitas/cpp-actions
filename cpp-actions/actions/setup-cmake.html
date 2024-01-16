@@ -160,6 +160,9 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../design.html">Design Rationale</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -209,7 +212,7 @@
   </li>
   <li class="nav-item" data-depth="1">
     <button class="nav-item-toggle"></button>
-    <span class="nav-text">Project</span>
+    <span class="nav-text">Reports</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
@@ -244,6 +247,9 @@
         </li>
         <li class="version">
           <a href="../develop/index.html">develop</a>
+        </li>
+        <li class="version">
+          <a href="../v1.8.0/index.html">v1.8.0</a>
         </li>
         <li class="version">
           <a href="../v1.7.0/index.html">v1.7.0</a>
@@ -304,6 +310,7 @@
   <div class="version-menu">
     <a class="version is-current" href="setup-cmake.html">master</a>
     <a class="version" href="../develop/actions/setup-cmake.html">develop</a>
+    <a class="version" href="../v1.8.0/actions/setup-cmake.html">v1.8.0</a>
     <a class="version" href="../v1.7.0/actions/setup-cmake.html">v1.7.0</a>
     <a class="version" href="../v1.6.2/actions/setup-cmake.html">v1.6.2</a>
     <a class="version" href="../v1.6.1/actions/setup-cmake.html">v1.6.1</a>
@@ -344,9 +351,9 @@ which already calls this action if necessary.</p>
 <div class="sectionbody">
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
-<col style="width: 33.3333%;">
-<col style="width: 33.3333%;">
-<col style="width: 33.3334%;">
+<col style="width: 20%;">
+<col style="width: 60%;">
+<col style="width: 20%;">
 </colgroup>
 <tbody>
 <tr>
@@ -374,18 +381,20 @@ which already calls this action if necessary.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>path</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The cmake executable. We attempt to find cmake at this path first.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Path to the cmake executable. The action attempts to find cmake at this path first.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-path</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The cmake executable. We attempt to find cmake at this path first.
-This option is available for backwards compatibility and has priority over <code>path</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The cmake executable. We attempt to find cmake at this path first.</p>
+<p class="tableblock">This option is available for backwards compatibility and has priority over <code>path</code>.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Used to specify whether the CMake installation should be cached in the case CMake needs to be downloaded.".</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Used to specify whether the CMake installation should be cached in the case CMake needs to be downloaded.</p>
+<p class="tableblock">As binaries are provided for all versions of CMake, this option is deprecated and will be removed in
+a future release.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
@@ -415,8 +424,8 @@ instead.</p></td>
 <div class="sectionbody">
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
-<col style="width: 50%;">
-<col style="width: 50%;">
+<col style="width: 20%;">
+<col style="width: 80%;">
 </colgroup>
 <tbody>
 <tr>

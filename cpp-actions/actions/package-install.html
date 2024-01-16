@@ -160,6 +160,9 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../design.html">Design Rationale</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -209,7 +212,7 @@
   </li>
   <li class="nav-item" data-depth="1">
     <button class="nav-item-toggle"></button>
-    <span class="nav-text">Project</span>
+    <span class="nav-text">Reports</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
@@ -244,6 +247,9 @@
         </li>
         <li class="version">
           <a href="../develop/index.html">develop</a>
+        </li>
+        <li class="version">
+          <a href="../v1.8.0/index.html">v1.8.0</a>
         </li>
         <li class="version">
           <a href="../v1.7.0/index.html">v1.7.0</a>
@@ -304,6 +310,7 @@
   <div class="version-menu">
     <a class="version is-current" href="package-install.html">master</a>
     <a class="version" href="../develop/actions/package-install.html">develop</a>
+    <a class="version" href="../v1.8.0/actions/package-install.html">v1.8.0</a>
     <a class="version" href="../v1.7.0/actions/package-install.html">v1.7.0</a>
     <a class="version" href="../v1.6.2/actions/package-install.html">v1.6.2</a>
     <a class="version" href="../v1.6.1/actions/package-install.html">v1.6.1</a>
@@ -328,20 +335,33 @@
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>This action installs dependencies from multiple package managers for a workflow.</p>
-</div>
-<div class="paragraph">
-<p>This is usually the next step in your workflow after setting up a C++ compiler with
+<p>This action installs dependencies from multiple package managers for a workflow.
+This is usually the next step in your workflow after setting up a C++ compiler with
 <a href="setup-cpp.html" class="xref page">Setup C++</a>.</p>
 </div>
 <div class="paragraph">
-<p>If vcpkg dependencies are required and vcpkg is not available, it will be installed.
-Both vcpkg and its dependencies are cached.</p>
+<p>The action currently supports installing packages with <code>apt-get</code> and <code>vcpkg</code>.
+A number of auxiliary options are available to customize the behavior of both <code>apt-get</code> and <code>vcpkg</code>.</p>
 </div>
 <div class="paragraph">
+<p>If vcpkg dependencies are required, vcpkg will be installed and related paths are returned from the action.
+Both vcpkg and its compiled dependencies are cached.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
 <p>When your library depends on vcpkg for dependencies, it&#8217;s important to run the <a href="setup-cpp.html" class="xref page">Setup C++</a>
-before this step because vcpkg packages are built from source and this allows us to use the compiler
+action before this step because vcpkg packages are built from source and this allows us to use the compiler
 set up in the previous step.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 </div>
 </div>
@@ -386,9 +406,9 @@ required by the project.</p>
 <div class="sectionbody">
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
-<col style="width: 33.3333%;">
-<col style="width: 33.3333%;">
-<col style="width: 33.3334%;">
+<col style="width: 20%;">
+<col style="width: 60%;">
+<col style="width: 20%;">
 </colgroup>
 <tbody>
 <tr>
@@ -398,40 +418,48 @@ required by the project.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of packages we should install with vcpkg. (Whitespace-separated).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">List of packages we should install with vcpkg.</p>
+<p class="tableblock">If any package is included in this list, vcpkg will be installed and the vcpkg toolchain file will be returned.</p>
+<p class="tableblock">Individual packages can define a custom triplet by appending <code>:&lt;triplet&gt;</code> to the package name.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of packages we should install with apt-get. (Whitespace-separated).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">List of packages we should install with apt-get.</p>
+<p class="tableblock">Additional options are provided to customize the behavior of apt-get.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">C compiler used by vcpkg.</p>
-<p class="tableblock">Setting the compiler is particularly important in Linux workflows that use `clang`, since `clang` might link
-`libc` or <code>libstdc`, while the default compiler used by vcpkg will usually be GCC linking `libstdc</code>.</p>
-<p class="tableblock">This would cause conflict in workflows that later attempt to use vcpkg dependencies.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">C++ compiler to be used by vcpkg. If the compiler is not specified, the value will be retrieved from
+the environment variable <code>CXX</code>.</p>
+<p class="tableblock">Setting the compiler is particularly important when the compiler being tested is different from the default
+compiler used by vcpkg.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">C++ flags used by vcpkg.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">C++ flags used by vcpkg. If the flags are not specified, the value will be retrieved from the environment
+variable <code>CXXFLAGS</code>.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">C compiler used by vcpkg.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">C compiler used by vcpkg. If the compiler is not specified, the value will be retrieved from the environment
+variable <code>CC</code>.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>ccflags</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">C flags used by vcpkg.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">C flags used by vcpkg. If the flags are not specified, the value will be retrieved from the environment
+variable <code>CFLAGS</code>.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-triplet</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The triplet used by vcpkg to install packages.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The triplet used by vcpkg to install packages.</p>
+<p class="tableblock">If no triplet is specified, a default triplet will be inferred from the platform.</p>
+<p class="tableblock">Individual packages can override this value by specifying a triplet in the package name.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
@@ -442,27 +470,70 @@ required by the project.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-branch</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">vcpkg branch we should use.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">vcpkg branch we should use. This is usually the master branch.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>master</code></p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-cache</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether we should cache vcpkg and its built dependencies.</p>
+<p class="tableblock">This is useful when you want to speed up your workflow by caching vcpkg and its built dependencies
+for next workflows.</p>
+<p class="tableblock">You can disable this option when you want to always build vcpkg and its dependencies from scratch
+or want to save cache storage.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-force-install</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether we should force install vcpkg and even when no vcpkg packages are listed.</p>
+<p class="tableblock">This is useful when you want to use vcpkg in manifest mode.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-retries</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Number of times we should retry when apt-get fails.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>1</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Number of times we should retry when apt-get fails.</p>
+<p class="tableblock">This option is useful when apt-get fails due to a temporary network issue.</p>
+<p class="tableblock">When calling apt-get to install packages, this passes the <code>-o Acquire::Retries</code> option
+to apt-get.</p>
+<p class="tableblock">For other commands, the command will be called multiple times until it succeeds or
+the number of retries is exhausted. Each retry will be separated by a delay with an
+exponential backoff.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>5</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-sources</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of sources for apt-get.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">List of sources for apt-get.</p>
+<p class="tableblock">Sources are installed with <code>apt-add-repository</code>.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-source-keys</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of source keys for apt-get.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">List of source keys for apt-get.</p>
+<p class="tableblock">Source keys are installed with <code>apt-key</code>.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-ignore-missing</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Whether apt-get should ignore missing packages.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether apt-get should ignore missing packages.</p>
+<p class="tableblock">This attempts to install packages one by one and passes the <code>--ignore-missing</code> option to apt-get.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-add-architecture</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Argument to pass to <code>dpkg</code> to add an architecture.</p>
+<p class="tableblock">This is useful when installing packages that require a different architecture than the default one.</p>
+<p class="tableblock">If this string is not empty, it will be passed to <code>dpkg</code> with the <code>--add-architecture</code> flag.</p>
+<p class="tableblock">Common values for this parameter are: <code>amd64</code> (64-bit x86), <code>i386</code> (32-bit x86),
+<code>armhf</code> (ARM Hard Float), <code>arm64</code> (ARM 64-bit), and <code>ppc64el</code> (PowerPC 64-bit Little Endian).</p>
+<p class="tableblock">This parameter can also be a list of architectures.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-bulk-install</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">This option determines if we should call apt-get once for each package (false) or if we should call apt-get once
+for all packages (true).</p>
+<p class="tableblock">This option is useful when installing a large number of packages, since it can speed up the installation process.</p>
+<p class="tableblock">However, installing libraries individually provides more better information in the logs, which can be useful
+for debugging.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
@@ -479,8 +550,8 @@ required by the project.</p>
 <div class="sectionbody">
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
-<col style="width: 50%;">
-<col style="width: 50%;">
+<col style="width: 20%;">
+<col style="width: 80%;">
 </colgroup>
 <tbody>
 <tr>
@@ -489,11 +560,12 @@ required by the project.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-toolchain</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">vcpkg toolchain file</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">vcpkg toolchain file</p>
+<p class="tableblock">This output value can be used to configure CMake to use vcpkg.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>vcpkg-executable</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">vcpkg toolchain file</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">vcpkg executable file</p></td>
 </tr>
 </tbody>
 </table>
