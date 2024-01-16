@@ -103,7 +103,7 @@
     </style>
   </head>
   <body class="article">
-    <header class="header">
+    <script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true});</script><header class="header">
     <nav class="navbar">
         <div class="navbar-brand">
             <a class="navbar-item" href="https://alandefreitas.github.io/cpp-actions/doc/cpp-actions/">
@@ -162,6 +162,9 @@
             <ul class="nav-list">
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../design.html">Design Rationale</a>
+  </li>
   <li class="nav-item is-current-page" data-depth="1">
     <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
   </li>
@@ -212,7 +215,7 @@
   </li>
   <li class="nav-item" data-depth="1">
     <button class="nav-item-toggle"></button>
-    <span class="nav-text">Project</span>
+    <span class="nav-text">Reports</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
@@ -327,27 +330,7 @@
 </aside>
 <article class="doc">
 <h1 class="page">C++ Matrix</h1>
-<div class="sect1">
-<h2 id="_motivation"><a class="anchor" href="#_motivation"></a>Motivation</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>Testing C++ libraries can be a challenging and time-consuming task, especially when considering the
-various compiler versions, error behaviors, and platform dependencies. A library that works flawlessly
-with one compiler will almost certainly fail to build with a different compiler version, not mention
-different compilers and platforms.</p>
-</div>
-<div class="paragraph">
-<p>This has a viral effect with enormous implications to the C++ ecosystem. If your library doesn&#8217;t
-properly test and support all platforms in its manifest, this support is also broken for any
-projects depending on your library. With some notable exceptions, this is currently the case
-with most small standalone libraries one can find on GitHub. These are libraries that could be
-very useful otherwise, so avoid dependencies altogether is not a reasonable to the problem, since
-we will never get anywhere meaningful if we&#8217;re not able to stand to the shoulder of giants.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_c_test_matrix"><a class="anchor" href="#_c_test_matrix"></a>C++ Test Matrix</h2>
+<div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
 <p>The C Matrix Action is designed to automate the generation of a comprehensive test matrix for your
@@ -426,7 +409,121 @@ and create your workflow as usual with the parameters from the matrix:</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_variable_matrices"><a class="anchor" href="#_variable_matrices"></a>Variable matrices</h2>
+<h2 id="_factors"><a class="anchor" href="#_factors"></a>Factors</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The input parameters allow factors to be defined for each compiler. These factors can be defined
+as latest factors (which are duplicated and applied to the latest version of each compiler) or
+as regular factors (which are injected into intermediary versions of each compiler).</p>
+</div>
+<div class="paragraph">
+<p>See the <a href="../design.html#cpp_actions_matrix_factors" class="xref page" target="_blank" rel="noopener">Factors Section</a> for a better
+understanding of the motivation for these factor types.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_matrix_entries"><a class="anchor" href="#_matrix_entries"></a>Matrix entries</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The values in each matrix entry include a few categories of keys: the main keys, auxiliary keys,
+factor keys, and suggestions.</p>
+</div>
+<div class="paragraph">
+<p>The main keys include information such as the compiler name and version. Auxiliary keys include
+information that is useful for filtering and sorting the matrix, such as information about the
+relative position of an entry in the matrix. Factor keys include information about the factors
+that might have been applied to the entry.</p>
+</div>
+<div class="paragraph">
+<p>Suggestions include opinionated recommendations for other parameters of your workflow as a
+starting point for your test matrix. Some examples of keys including suggestions are
+<code>runs-on</code>, <code>container</code>, generator`, <code>b2-toolset</code>, <code>build-type</code>, <code>ccflags</code>, <code>cxxflags</code>,
+<code>env</code>, and <code>install</code>.</p>
+</div>
+<div class="paragraph">
+<p>These suggestions often need to be customized and this could not be different, since there is
+a myriad of ways in which libraries should be tested. Common ways to customize these
+are:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Ignoring suggestions that are not applicable to your use case</p>
+</li>
+<li>
+<p>Using the corresponding action input to customize the value of these fields (see action input parameters)</p>
+</li>
+<li>
+<p>Use GitHub Actions <a href="https://docs.github.com/en/actions/learn-github-actions/expressions">Expressions</a> to generate new values from existing values</p>
+</li>
+<li>
+<p>Use a custom bash step to generate new values from existing values</p>
+</li>
+<li>
+<p>Create a custom script to read the complete matrix and generate a new matrix with the desired values</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>For instance, if the recommendation of running a workflow in the container <code>ubuntu:22.04</code> is not appropriate
+because you&#8217;re going to use a container that already has your dependencies, you could set the <code>runs-on</code> input
+parameter to:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">- name: Generate Test Matrix
+  # ...
+  with:
+    # ...
+    containers: |
+       gcc: my-ubuntu:22.04-container</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This would replace the recommendation for <code>ubuntu:22.04</code> with <code>my-ubuntu:22.04-container</code> for all entries
+with the compiler <code>gcc</code>.</p>
+</div>
+<div class="paragraph">
+<p>In some cases, you could use a expression directly in the workflow to use a different value for the container:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml"># In your main workflow
+containers: ${{ matrix.runs-on == 'ubuntu-22.04' &amp;&amp; 'my-ubuntu:22.04-container' || matrix.container }}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This would replace the recommendation for <code>ubuntu:22.04</code> with <code>my-ubuntu:22.04-container</code> for all entries.</p>
+</div>
+<div class="paragraph">
+<p>If you&#8217;re familiar with GitHub Actions and bash, you can also use a custom bash step to generate new values
+from existing values or write a complete script to customize the matrix.</p>
+</div>
+<div class="paragraph">
+<p>If none of these options is enough for the library requirements, the action also prints the complete matrix
+in YAML format, so it can be copy/pasted into the workflow as a starting point to be customized.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_semver_ranges"><a class="anchor" href="#_semver_ranges"></a>Semver ranges</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The requirement parameters support semver ranges, including range disjunctions. For instance, consider the default
+compiler range <code>clang &gt;=3.8</code>, which might test your library with too many versions of clang. You could remove
+intermediary versions of clang with the range <code>clang &gt;=3.8 &lt;5 || &gt;=10</code>, which ensure old versions are
+recent versions are covered, while eliminating intermediary versions.</p>
+</div>
+<div class="paragraph">
+<p>Semver ranges can also help when a bug is found in a specific compiler version. Consider someone has reported
+a bug in GCC 8.1, and you want to keep track of that. The semver range <code>gcc &gt;=4.8 &lt;7 || 8.1 || &gt;=10</code> would ensure
+version GCC8.1 specifically, and not any other version is the range <code>&gt;=8.0.0 &lt;9.0.0</code> is tested.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dynamic_matrices"><a class="anchor" href="#_dynamic_matrices"></a>Dynamic matrices</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>In some cases, it might be useful to test different matrices based on the conditions of the workflow.
@@ -445,83 +542,6 @@ GCC versions <code>&gt;=6.0 &lt;10</code> when in push events.</p>
 <div class="paragraph">
 <p>A more powerful strategy to save resources is analyzing files changed in the workflow and considering
 these files to determine what the matrix should be according to project conventions.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_about_matrix_recommendations"><a class="anchor" href="#_about_matrix_recommendations"></a>About matrix recommendations</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The values in each matrix entry very opinionated recommendations as a starting point for your test matrix.
-This could not be different, since there is a myriad of ways in which build parameters can be tested.</p>
-</div>
-<div class="sect2">
-<h3 id="_ignoring_recommendations"><a class="anchor" href="#_ignoring_recommendations"></a>Ignoring recommendations</h3>
-<div class="paragraph">
-<p>If a given recommendation does not apply to your use case, the first option is simply to ignore that
-entry key. For instance, <code>matrix.install</code> includes suggested packages that should be installed, but these
-can be ignored if a custom container with these dependencies is already provided.</p>
-</div>
-<div class="paragraph">
-<p>Some <code>factors</code> always need to be adjusted when basic assumptions about an initial library are not valid.
-For instance, the matrix will include the factor <code>matrix.shared</code> by default. If the only use case for your
-library is as a shared library, then this <code>Shared</code> factor can be removed from the matrix and you can configure
-all workflows to build a shared library.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_adjusting_semver_ranges"><a class="anchor" href="#_adjusting_semver_ranges"></a>Adjusting semver ranges</h3>
-<div class="paragraph">
-<p>The input parameters support semver ranges, including range disjunctions. For instance, consider the default
-compiler range <code>clang &gt;=3.8</code>, which might test your library with too many versions of clang. You could remove
-intermediary versions of clang with the range <code>clang &gt;=3.8 &lt;5 || &gt;=10</code>, which ensure old versions are
-recent versions are covered, while eliminating intermediary versions.</p>
-</div>
-<div class="paragraph">
-<p>Also when a bug is found in a specific version, semver ranges can also help. Consider someone has reported
-a bug in GCC 8.1, and you want to keep track of that. The semver range <code>gcc &gt;=4.8 &lt;7 || 8.1 || &gt;=10</code> would ensure
-version GCC8.1 specifically, and not any other version is the range <code>&gt;=8.0.0 &lt;9.0.0</code> is tested.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_overriding_recommendations"><a class="anchor" href="#_overriding_recommendations"></a>Overriding recommendations</h3>
-<div class="paragraph">
-<p>When the general recommendation does not work, but there&#8217;s a mapping between the recommendation and the expected
-values, you can use github action expressions to directly replace these values. For instance, if the recommendation
-of running a workflow in the runner image <code>ubuntu-22.04</code> is not appropriate because you&#8217;re going to use a container
-that already has your dependencies, you could set the job <code>runs-on</code> property to <code>ubuntu-22.04</code> instead of
-<code>matrix.runs-on</code> and set the <code>container</code> property to
-<code>( matrix.runs-on == 'ubuntu-22.04' &amp;&amp; 'my-ubuntu-22.04-container' ) || matrix.container )</code>, which replaces all
-occurrences of <code>ubuntu-22.04</code> with <code>my-ubuntu-22.04-container</code>.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_auxiliary_keys"><a class="anchor" href="#_auxiliary_keys"></a>Auxiliary keys</h3>
-<div class="paragraph">
-<p>Overriding recommendations can be verbose when there are too many conditions involved. The matrix provides
-auxiliary keys to make this easier. For instance, consider a matrix entry with the factor <code>matrix.cxxstd</code> equal
-to <code>17,20</code>. If you want to have two versions of tests, where one of them does not go through all C++ standards,
-you can use the <code>matrix.latest-cxxstd</code>, which will give you <code>20</code> without having to split <code>matrix.cxxstd</code> and take
-its last value.</p>
-</div>
-<div class="paragraph">
-<p>Other auxiliary keys have broader meaning, so they can be used in more general situations. For instance,
-it&#8217;s common to build release artifacts for a subset of entries in the matrix. This subset usually represents
-the latest version of each compiler without any factors applied. In that case, the factor <code>matrix.is-main</code> can
-be use to determine if the release artifacts should be generated. The factor <code>matrix.is-main</code> determines if
-the current entry is the latest version of a compiler but not one of the replicates of the latest version
-with factors applied.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_use_scripts"><a class="anchor" href="#_use_scripts"></a>Use scripts</h3>
-<div class="paragraph">
-<p>In more complex cases, it might be worth considering that this action only returns a json representation
-of the test matrix. If deeper modifications in the matrix are required, a following step including a script to
-adjust the matrix is always possible. In this scenario, the matrix will still fetch updated information
-about compiler versions and requirements while the script will only adjust local requirements. In most cases,
-this is unnecessary as the approaches above tend to have good results.</p>
-</div>
 </div>
 </div>
 </div>
@@ -581,9 +601,9 @@ this is unnecessary as the approaches above tend to have good results.</p>
 <div class="sectionbody">
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
-<col style="width: 33.3333%;">
-<col style="width: 33.3333%;">
-<col style="width: 33.3334%;">
+<col style="width: 20%;">
+<col style="width: 60%;">
+<col style="width: 20%;">
 </colgroup>
 <tbody>
 <tr>
@@ -707,9 +727,9 @@ to all versions of the compiler.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of cmake generator toolsets to be used with each range of compiler version.
 Each line has the format:</p>
 <p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;cmake-generator-toolset&gt;</code></p>
-<p class="tableblock">For instance, <code>clang-cl <strong>: ClangCL</code> indicates that the cmake generator toolset <code>ClangCL</code> should be used
+<p class="tableblock">For instance, <code>clang-cl *: ClangCL</code> indicates that the cmake generator toolset <code>ClangCL</code> should be used
 to test <code>clang-cl</code> with any version.</p>
-<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code></strong></code> and will apply the generator
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the generator
 to all versions of the compiler.</p>
 <p class="tableblock">When the generator toolset is unspecified, the action will infer the generator toolset from the compiler name
 and its version.</p></td>
@@ -836,8 +856,8 @@ compilers in the runner image.</p></td>
 <div class="sectionbody">
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
-<col style="width: 50%;">
-<col style="width: 50%;">
+<col style="width: 20%;">
+<col style="width: 80%;">
 </colgroup>
 <tbody>
 <tr>
@@ -848,14 +868,17 @@ compilers in the runner image.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>matrix</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The test matrix is an array of dictionaries, where each entry represents a combination of compiler version
 and factors to be tested.</p>
-<p class="tableblock">Each entry in the test matrix dictionary contains the following key-value pairs:</p>
+<p class="tableblock">Each entry in the test matrix dictionary contains key-value pairs in the following categories:</p>
+<p class="tableblock"><strong>Basic fields</strong>:</p>
 <p class="tableblock">- <code>name</code>: A suggested name for the job testing this entry</p>
-<p class="tableblock">- <code>runs-on</code>: A suggested github runner image name for the job testing this entry</p>
-<p class="tableblock">- <code>container</code>: A suggested docker container for the job testing this entry</p>
 <p class="tableblock">- <code>compiler</code>: Specifies the name of the compiler to be used for the test configuration. This can be used as
   input to the setup-cpp action.</p>
 <p class="tableblock">- <code>version</code>: Specifies the version requirements of the compiler to be used for the test configuration. This can
   be used as input to the setup-cpp action.</p>
+<p class="tableblock">- <code>cxxstd</code>: A list of standards that should be tested with this compiler version. This option considers
+  the <code>max-standards</code> latest standards supported by each compiler in its subrange of <code>standards</code>.</p>
+<p class="tableblock">- <code>latest-cxxstd</code>: The last standard listed in <code>cxxstd</code> as a convenience variable</p>
+<p class="tableblock"><strong>Auxiliary</strong>:</p>
 <p class="tableblock">- <code>major</code>, <code>minor</code>, <code>patch</code>: Specifies the version components of the compiler whenever the whole range includes
    a single major, minor, or patch.</p>
 <p class="tableblock">- <code>has_major</code>, <code>has_minor</code>, <code>has_patch</code>: Determines if the corresponding version component of the compiler
@@ -868,13 +891,19 @@ and factors to be tested.</p>
   among the test configurations.</p>
 <p class="tableblock">- <code>has-factors</code>: Specifies whether the entry has any factors applied.</p>
 <p class="tableblock">- <code>is-no-factor-intermediary</code>: Specifies whether the entry is an intermediary version without any factors applied.</p>
+<p class="tableblock"><strong>Factors</strong>:</p>
+<p class="tableblock">- <code>&lt;factors&gt;&#8230;&#8203;</code>: Provides additional factors or attributes associated with the test configuration as defined by
+  the <code>factors</code> inputs. These usually include variant build configurations spread among the
+  entries, such as asan, coverage, and shared libraries. For instance, if the <code>Asan</code> factor is applied to
+  an entry, the entry will define the <code>asan</code> key with the value <code>true</code> and all other entries will
+  define the <code>asan</code> key with the value <code>false</code>.</p>
+<p class="tableblock"><strong>Suggestions</strong>:</p>
+<p class="tableblock">- <code>runs-on</code>: A suggested github runner image name for the job testing this entry</p>
+<p class="tableblock">- <code>container</code>: A suggested docker container for the job testing this entry</p>
 <p class="tableblock">- <code>cxx</code>: The usual name of the C&#43;&#43; compiler executable. If using the <code>setup-cpp</code> action, its output should be used
   instead.</p>
 <p class="tableblock">- <code>cc</code>: The usual name of the C compiler executable. If using the <code>setup-cpp</code> action, its output should be used
   instead.</p>
-<p class="tableblock">- <code>cxxstd</code>: A list of standards that should be tested with this compiler version. This option considers
-  the <code>max-standards</code> latest standards supported by each compiler in its subrange of <code>standards</code>.</p>
-<p class="tableblock">- <code>latest-cxxstd</code>: The last standard listed in <code>cxxstd</code> as a convenience variable</p>
 <p class="tableblock">- <code>b2-toolset</code>: The usual name of the toolset to be used in a b2 workflow.</p>
 <p class="tableblock">- <code>generator</code>: A CMake generator recommended to run the CMake workflow.</p>
 <p class="tableblock">- <code>build-type</code>: A build type recommended to test this entry. This is usually <code>Release</code>, unless some special
@@ -885,10 +914,7 @@ and factors to be tested.</p>
    as sanitizers, coverage, and time-trace.</p>
 <p class="tableblock">- <code>env</code>: A dictionary of environment variables to be set for this entry.</p>
 <p class="tableblock">- <code>install</code>: The recommended packages to be installed before running the workflow. This includes packages
-  such as build-essential for ubuntu containers and lcov for coverage entries.</p>
-<p class="tableblock">- <code>&lt;factors&gt;&#8230;&#8203;</code>: Provides additional factors or attributes associated with the test configuration as defined by
-  the factors and latest-factors inputs. These usually include variant build configurations spread among the
-  entries, such as asan, coverage, and shared libraries.</p></td>
+  such as build-essential for ubuntu containers and lcov for coverage entries.</p></td>
 </tr>
 </tbody>
 </table>

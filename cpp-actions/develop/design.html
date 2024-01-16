@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+        <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Design Rationale :: C++ Actions</title>
+    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/develop/design.html">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../_/css/site.css">
+    <link rel="stylesheet" href="../../_/css/vendor/tabs.css">
+    <script>var uiRootPath = '../../_'</script>
+<link rel="icon" href="../../_/img/favicon.svg" type="image/svg">
+    <style>
+      .algolia-autocomplete .ds-dropdown-menu:before {
+          display: block;
+          position: absolute;
+          content: "";
+          width: 14px;
+          height: 14px;
+          background: #fff;
+          z-index: 2;
+          top: 9px;
+          left: -7px !important;
+          border-top: 1px solid #d9d9d9;
+          border-right: 1px solid #d9d9d9;
+          -webkit-transform: rotate(-136deg);
+          transform: rotate(-136deg);
+          border-radius: 2px;
+      }
+      .search-result-dropdown-menu:before {
+          display: block;
+          position: absolute;
+          content: "";
+          width: 14px;
+          height: 14px;
+          background: #fff !important;
+          z-index: 2;
+          top: 9px;
+          border-top: 1px solid #d9d9d9;
+          border-right: 1px solid #d9d9d9;
+          -webkit-transform: rotate(-136deg);
+          transform: rotate(-136deg);
+          border-radius: 2px;
+          left: -7px;
+      }
+      .nav-container .search-result-dropdown-menu {
+        position: fixed;
+        top: 65px;
+        left: 13.5rem;
+        width: 50%;
+        overflow: visible;
+        max-height: calc(100vh - 5.25rem);
+        line-height: 1.5;
+        z-index: 9999;
+      }
+      .nav-container .button {
+        padding: 0px 14px;
+        background-color: #FF9F00;
+        color: #fff;
+      }
+      .algolia-autocomplete.algolia-autocomplete-left .ds-dropdown-menu {
+          position: fixed !important;
+          top: 65px !important;
+          left: 13.5rem !important;
+          z-index: 99 !important;
+      }
+      .search-selector {
+        margin-right: 133px;
+        text-transform: none;
+      }
+      @media screen and (max-width: 1024px) {
+        .nav-container .search-result-dropdown-menu {
+          top: 103px;
+          left: 14.5rem;
+        }
+      }
+      @media screen and (max-width: 768px) {
+        .search-result-dropdown-menu:before {
+            top: -6px;
+            -webkit-transform: rotate(-45deg);
+            transform: rotate(-45deg);
+            left: 35px;
+        }
+        .nav-container .search-result-dropdown-menu {
+            top: 100%;
+            left: 0;
+            width: 90vw;
+            position: absolute !important;
+        }
+        .algolia-autocomplete.algolia-autocomplete-left .ds-dropdown-menu {
+          position: absolute !important;
+          top: 100% !important;
+          left: 0px !important;
+          z-index: 99 !important;
+        }
+        .algolia-autocomplete .ds-dropdown-menu:before{
+            top: -6px;
+            -webkit-transform: rotate(-45deg);
+            transform: rotate(-45deg);
+            left: 35px !important;
+        }
+      }
+    </style>
+  </head>
+  <body class="article">
+    <script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true});</script><header class="header">
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <a class="navbar-item" href="https://alandefreitas.github.io/cpp-actions/doc/cpp-actions/">
+                <img src="../../_/img/banner.svg" alt="" width="130">
+                    <div class="navbar-item-nonProduction">
+                        <p>develop</p>
+                    </div>
+            </a>
+            <button class="navbar-burger" data-target="topbar-nav">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+
+
+        <div id="topbar-nav" class="navbar-menu">
+                <div class="navbar-item is-hoverable">
+                        <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions
+                            : Design Rationale</a>
+                </div>
+                    <div class="navbar-item is-hoverable">
+                        <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions" target="_blank">GitHub</a>
+                    </div>
+                    <div class="navbar-item is-hoverable">
+                        <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions/releases" target="_blank">Releases</a>
+                    </div>
+
+            <div class="navbar-end">
+                <div class="navbar-item">
+                      <span class="control">
+                        <a class="button is-primary" target="blank_"
+                           href="https://github.com/alandefreitas/cpp-actions/issues/new/choose">Report an Issue</a>
+                      </span>
+                </div>
+            </div>
+        </div>
+    </nav>
+</header>
+    <div class="body">
+<div class="nav-container" data-component="cpp-actions" data-version="develop">
+  <aside class="nav">
+    <div class="panels">
+    <div class="nav-panel-menu is-active" data-panel="menu">
+        <div class="navbar-item search hide-for-print">
+            <div id="search-field" class="field has-filter">
+                <div style="display: flex; flex-direction: column;">
+                    <div style="display: flex; margin-bottom: 10px; position: relative;">
+                        <input id="search-input" type="text" placeholder="Search the docs" style="flex: 1; padding: 0 0.25em" onkeyup="onSearch()">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <nav class="nav-menu">
+                <h3 class="title"><a href="index.html">C++ Actions</a></h3>
+            <ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="design.html">Design Rationale</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="actions/cpp-matrix.html">C++ Matrix Action</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Compilers</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/setup-cpp.html">Setup C++ Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/setup-gcc.html">Setup GCC Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/setup-clang.html">Setup Clang Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Tools</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/package-install.html">Install Packages Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/boost-clone.html">Boost Clone Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/setup-cmake.html">Setup CMake Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/setup-program.html">Setup Program Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Workflows</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/cmake-workflow.html">CMake Workflow Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/b2-workflow.html">B2 Workflow Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Reports</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/flamegraph.html">Create Flamegraph Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/create-changelog.html">Create Changelog Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="contribute.html">Contribute</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="license.html">License</a>
+  </li>
+</ul>
+  </li>
+</ul>
+        </nav>
+    </div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">C++ Actions</span>
+    <span class="version">develop</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../index.html">C++ Actions</a>
+      <ul class="versions">
+        <li class="version is-latest">
+          <a href="../index.html">master</a>
+        </li>
+        <li class="version is-current">
+          <a href="index.html">develop</a>
+        </li>
+        <li class="version">
+          <a href="../v1.7.0/index.html">v1.7.0</a>
+        </li>
+        <li class="version">
+          <a href="../v1.6.2/index.html">v1.6.2</a>
+        </li>
+        <li class="version">
+          <a href="../v1.6.1/index.html">v1.6.1</a>
+        </li>
+        <li class="version">
+          <a href="../v1.6.0/index.html">v1.6.0</a>
+        </li>
+        <li class="version">
+          <a href="../v1.5.0/index.html">v1.5.0</a>
+        </li>
+        <li class="version">
+          <a href="../v1.4.1/index.html">v1.4.1</a>
+        </li>
+        <li class="version">
+          <a href="../v1.4.0/index.html">v1.4.0</a>
+        </li>
+        <li class="version">
+          <a href="../v1.3.0/index.html">v1.3.0</a>
+        </li>
+        <li class="version">
+          <a href="../v1.2.1/index.html">v1.2.1</a>
+        </li>
+        <li class="version">
+          <a href="../v1.2.0/index.html">v1.2.0</a>
+        </li>
+        <li class="version">
+          <a href="../v1.1.0/index.html">v1.1.0</a>
+        </li>
+        <li class="version">
+          <a href="../v1.0.0/index.html">v1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+    <button class="nav-toggle"></button>
+        <a href="../index.html" class="home-link"></a>
+    <nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="index.html">C++ Actions</a></li>
+    <li><a href="design.html">Design Rationale</a></li>
+  </ul>
+</nav>
+    <div class="page-versions">
+  <button class="version-menu-toggle" title="Show other versions of page">develop</button>
+  <div class="version-menu">
+    <a class="version is-missing" href="../index.html">master</a>
+    <a class="version is-current" href="design.html">develop</a>
+    <a class="version is-missing" href="../v1.7.0/index.html">v1.7.0</a>
+    <a class="version is-missing" href="../v1.6.2/index.html">v1.6.2</a>
+    <a class="version is-missing" href="../v1.6.1/index.html">v1.6.1</a>
+    <a class="version is-missing" href="../v1.6.0/index.html">v1.6.0</a>
+    <a class="version is-missing" href="../v1.5.0/index.html">v1.5.0</a>
+    <a class="version is-missing" href="../v1.4.1/index.html">v1.4.1</a>
+    <a class="version is-missing" href="../v1.4.0/index.html">v1.4.0</a>
+    <a class="version is-missing" href="../v1.3.0/index.html">v1.3.0</a>
+    <a class="version is-missing" href="../v1.2.1/index.html">v1.2.1</a>
+    <a class="version is-missing" href="../v1.2.0/index.html">v1.2.0</a>
+    <a class="version is-missing" href="../v1.1.0/index.html">v1.1.0</a>
+    <a class="version is-missing" href="../v1.0.0/index.html">v1.0.0</a>
+  </div>
+</div>
+        <div class="edit-this-page"><a href="https://github.com/alandefreitas/cpp-actions/edit/develop/docs/modules/ROOT/pages/design.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Design Rationale</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>This document describes the design rationale behind the C&#43;&#43; actions.
+We will start by describing the <a href="#continuous-integration">motivation</a> for the project and the <a href="#challenges_in_cpp_testing">challenges</a> in testing C&#43;&#43; libraries.
+We will then describe the <a href="#cpp_actions">solution</a> proposed by this project.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="continuous-integration"><a class="anchor" href="#continuous-integration"></a>Continuous Integration</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Continuous Integration (CI) is a development practice that involves automatically testing and integrating code changes into a shared repository multiple times a day.
+The primary goal of CI is to detect and address integration issues early in the development process by automating the process of building, testing, and integrating code changes.
+This helps ensure that the codebase remains consistent, reliable, and readily deployable.</p>
+</div>
+<div class="paragraph">
+<p>In the context of open source projects, CI becomes particularly crucial, as early defect detection facilitates the smooth integration of changes from various contributors, enabling a more collaborative and efficient development environment.</p>
+</div>
+<div id="ci-pipeline-diagram" class="imageblock"><div class="mermaid content" style=" ">graph TD
+  A[Code Changes] -->|Commit| B[CI Server]
+  B -->|Automated Build| C[Run Tests]
+  C -->|Test Results| D[Deploy/Integrate]
+  D -->|Deployment Status| E[Notify Team]
+  E -->|Feedback| A</div><div class="title">Figure 1. Continuous Integration Pipeline</div></div>
+<div class="paragraph">
+<p>Maintaining a robust CI pipeline fosters a culture of reliability and trust in open source projects:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Contributors can confidently submit changes.</p>
+</li>
+<li>
+<p>Maintainers can quickly review and integrate contributions.</p>
+</li>
+<li>
+<p>Users can rely on the project to deliver high-quality software.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Continuous integration aligns with the collaborative spirit of open source development, allowing projects to embrace change, iterate rapidly, and deliver high-quality software.
+In the dynamic open source landscape, CI is indispensable, ensuring projects remain agile, reliable, and responsive to the evolving needs of developers and users.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="challenges_in_cpp_testing"><a class="anchor" href="#challenges_in_cpp_testing"></a>Challenges in C++ Testing</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Testing C&#43;&#43; libraries is a challenging task: there are various factors to consider such as the different compilers, compiler versions, standard library versions, C&#43;&#43; features, operating systems, and architectures that the library may need to support.
+These factors make it difficult to write comprehensive tests that cover all possible scenarios.
+On top of that, each C&#43;&#43; workflow tends to have longer compile times due to the language&#8217;s nature.</p>
+</div>
+<div class="sect2">
+<h3 id="_a_small_comparison"><a class="anchor" href="#_a_small_comparison"></a>A Small Comparison</h3>
+<div class="paragraph">
+<p>When compared to projects like <a href="https://github.com/vuejs/core" target="_blank" rel="noopener">Vue.js</a> and <a href="https://github.com/numpy/numpy" target="_blank" rel="noopener">NumPy</a>, huge projects that primarily focus on JavaScript and Python, the differences become evident.
+Vue.js and NumPy can use simple CI setups to test their main workflows with a Windows job and a Linux job, where each of these jobs takes approximately 1 minute and 30 seconds:</p>
+</div>
+<div id="js-python-ci-diagram" class="imageblock"><div class="mermaid content" style="width: 100%; ">graph LR
+  A[Matrix] -->|Windows| C1[Tests]
+  A[Matrix] -->|Linux| C2[Tests]
+  C1 --> D[Results]
+  C2 --> D[Results]
+  D --> F[Deploy/Integrate]
+  D --> G[Notify Team]</div><div class="title">Figure 2. A typical CI workflow for a JavaScript or Python project</div></div>
+<div class="paragraph">
+<p>Although the environment can always affect how the code behaves, these languages are at such a level of abstraction that projects can get away without testing their main workflows on all possible versions of Windows, Linux, and macOS.
+After this point, their level of abstraction allows them to rely on diminishing returns unless counter-evidence is provided.
+In other words: the library is innocent until proven guilty.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_c_factors"><a class="anchor" href="#_c_factors"></a>C++ Factors</h3>
+<div class="paragraph">
+<p>When testing a C&#43;&#43; library, however, the situation is very different.
+A large C&#43;&#43; project that works flawlessly with one compiler will almost certainly fail to build with a different compiler version and environment.
+C&#43;&#43; is a systems programming language where code is interacting directly with the hardware and OS libraries.
+This makes the code more sensitive to the environment and a C&#43;&#43; library is guilty until proven innocent.</p>
+</div>
+<div class="paragraph">
+<p>To make matters worse, C&#43;&#43; developers can&#8217;t test these libraries locally in all possible environments for practical reasons.
+Some environments are proprietary, some are not available for free, and some are not available for all platforms.
+This means developers are often relying on the CI pipeline as the only way to ensure these libraries work in all reasonable environments.</p>
+</div>
+<div class="paragraph">
+<p>Thus, a typical C&#43;&#43; workflow would include a matrix describing a combination of factors such as:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 66.6667%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Factor</th>
+<th class="tableblock halign-left valign-top">Values</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Compiler</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">GCC, Clang, MSVC, MinGW, clang-cl, Apple Clang</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Compiler Version</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">GCC 4, GCC 5, GCC 6, &#8230;&#8203;, Clang 4, Clang 5, &#8230;&#8203;, MSVC 2017, MSVC 2019, &#8230;&#8203;</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Standard Library</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">libstdc++, libc++, MSVC 2017</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">C++ Standard</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">C++11, C++14, C++17, C++20, &#8230;&#8203;, latest</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Operating System</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Windows, Linux, macOS</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Architecture</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">x86, x64, ARM</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Build Type</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Debug, Release</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Linking</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Static / Dynamic</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Address Sanitizer</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code> / <code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Undefined Behavior Sanitizer</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code> / <code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Memory Sanitizer</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code> / <code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Thread Sanitizer</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code> / <code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">...</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code> / <code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Optional Dependency A</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code> / <code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Optional Dependency B</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code> / <code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">...</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">...</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Optional Feature A</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code> / <code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Optional Feature B</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code> / <code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">...</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">...</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>It&#8217;s easy to see that not <em>all</em> combinations of factors are valid or relevant:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>A compiler factor can only match a version of the same compiler</p>
+</li>
+<li>
+<p>Most compilers (except Clang) should only be tested with its corresponding standard library implementation</p>
+</li>
+<li>
+<p>Each compiler will match a specific operating system</p>
+</li>
+<li>
+<p>...</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>However, in this simple example, after filtering out invalid or irrelevant combinations of factors, the CI pipeline would still need to run 866,304 jobs.
+This is a combinatorial explosion.
+Throwing more hardware, time, or money at the problem cannot solve the problem.</p>
+</div>
+<div class="paragraph">
+<p>Filtering out a few extra invalid or irrelevant combinations of factors is also not enough.
+Even if we get to a small combination of factors, the lack of a systematic approach to reducing these combinations will keep us from testing all the combinations we need.</p>
+</div>
+<div class="paragraph">
+<p>The solution must be able to handle the combinatorial explosion in a systematic manner so that the total number of tests only grows linearly with the number of tests, redundancy is minimized, and all relevant combinations are tested.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_effects_on_the_ecosystem"><a class="anchor" href="#_effects_on_the_ecosystem"></a>Effects on the Ecosystem</h3>
+<div class="paragraph">
+<p>This difficulty to test C&#43;&#43; libraries has a viral effect with enormous implications to the C++ ecosystem:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Libraries don&#8217;t properly test and support all platforms they claim to support</p>
+</li>
+<li>
+<p>Transitively, this support also becomes broken for any projects depending on the library</p>
+</li>
+<li>
+<p>Users end up avoiding dependencies altogether, so they can reliably support the platforms they need</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>With some notable exceptions, this is currently the case with most small standalone libraries one can find on GitHub.
+These are libraries that could be very useful otherwise, so avoiding dependencies altogether is not a reasonable solution to the problem.
+We will never get anywhere meaningful if we’re not able to stand on the shoulders of giants.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_replicating_workflows"><a class="anchor" href="#_replicating_workflows"></a>Replicating Workflows</h3>
+<div class="paragraph">
+<p>One common alternative C&#43;&#43; developers use to come up with reasonable CI workflows for their projects is to copy/paste the CI configuration from other projects.
+This is a very common practice, but it&#8217;s not a stable solution for the problem:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>First, the workflow being copied is often not testing all relevant environments or the relevant cases are different for the library being tested.
+In this case, the CI workflow ends up relying on luck, but this doesn&#8217;t work well for C&#43;&#43; projects due to its sensitivity to the environment.</p>
+</li>
+<li>
+<p>Second, copy/pasting and adapting workflows doesn&#8217;t scale well.
+C++ workflows tend to be complex, best practices are constantly being developed, and new tools and compiler versions are being released.
+For instance, if the main workflow pattern changes once a month and the developer is maintaining this pattern for 20 small projects, this means the developer will need to adapt the pattern 240 times a year: that&#8217;s one commit that needs to be written, tested and merged every business day.
+In practice, most projects just won&#8217;t catch up with the changes and best practices.</p>
+</li>
+<li>
+<p>C&#43;&#43; requires customization, which makes replicating patterns costly.
+While the workflows for other languages are often the very same commands to test the library, C&#43;&#43; projects are very different from each other.
+CI workflows are never the same procedure: dependencies need to be installed from different sources and integrated differently depending on the environment.
+Copy/pasting cannot be easily automated and the pattern needs to be adapted and retested.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>There&#8217;s also a conflict in how CI workflow patterns handle edge cases in individual projects.
+These patterns often include logic to handle edge cases for which other developers copying the pattern don&#8217;t understand the motivation.
+For instance, workflow patterns might include extra steps required by a less common compiler.
+Developers often accumulate the logic they don&#8217;t understand even though it&#8217;s not relevant to their tests or remove the logic they don&#8217;t understand even though it&#8217;s relevant to their tests.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cpp_actions"><a class="anchor" href="#cpp_actions"></a>C++ Actions</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This project aims to address the challenges in testing C&#43;&#43; libraries by providing a collection of GitHub actions that are specifically designed to test C&#43;&#43; libraries in a variety of environments.
+GitHub actions were chosen as the platform for these tools because they are easy to use and are well-integrated with GitHub, where most open source projects are hosted.</p>
+</div>
+<div class="paragraph">
+<p>Instead of providing a single action that attempts to test a C&#43;&#43; project, the C&#43;&#43;-actions provide a collection of actions that can be combined to create a comprehensive CI pipeline for testing C&#43;&#43; libraries.
+Users can select the actions that are most relevant to their project and combine them to create a customized CI pipeline that meets their needs.
+Each action includes features to improve the efficiency and reliability of the CI pipeline, such as caching, parallelization, and cross-compilation.</p>
+</div>
+<div class="paragraph">
+<p>The actions can be composed in reused in new or existing C&#43;&#43; projects.
+New projects can use a combination of all actions to focus on writing high-quality code and delivering great software to your users.
+Actions include best practices are have a stable API, so they can be easily reused in existing projects and users can inherit the best practices from the actions by simply updating their version.</p>
+</div>
+<div class="sect2">
+<h3 id="cpp_actions_matrix"><a class="anchor" href="#cpp_actions_matrix"></a>From matrices to requirements</h3>
+<div class="paragraph">
+<p>If you&#8217;ve ever read the documentation of a C&#43;&#43; library, you&#8217;ve probably seen a requirements section such as the following:</p>
+</div>
+<div class="exampleblock">
+<div class="content">
+<div class="paragraph">
+<p>The library requires a compiler supporting at least C++11.</p>
+</div>
+<div class="paragraph">
+<p>The library has been tested with the following compilers:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>clang &gt;=3.8</p>
+</li>
+<li>
+<p>gcc &gt;=4.8</p>
+</li>
+<li>
+<p>msvc &gt;=14.1</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>In other words, the requirements of the library, or its contract, is defined in terms of compiler and feature requirements.
+Ensuring the library works whenever these requirements are met is the responsibility of the library, and this is what should be ultimately tested.</p>
+</div>
+<div class="paragraph">
+<p>The <a href="actions/cpp-matrix.html" class="xref page">C&#43;&#43; Matrix Action</a> is designed to automate the generation of a comprehensive test matrix for your C&#43;&#43; libraries given their requirements.
+It simplifies the process of defining the contract of what platforms your library supports and testing your project across a proper selected subset of relevant compiler versions and platforms.</p>
+</div>
+<div class="paragraph">
+<p>This means the usual CI workflow for a C&#43;&#43; library would be:</p>
+</div>
+<div id="cpp-ci-diagram" class="imageblock"><div class="mermaid content" style="width: 100%; ">graph LR
+  R[Requirements] -->|Contract| A[Matrix]
+  A[Matrix] -->|Environment 1| B1[Install Dependencies]
+  A[Matrix] -->|Environment 2| B2[Install Dependencies]
+  A[Matrix] -->|...| B3[Install Dependencies]
+  B1 --> C1[Tests]
+  B2 --> C2[Tests]
+  B3 --> C3[Tests]
+  C1 --> D[Reports]
+  C2 --> D[Reports]
+  C3 --> D[Reports]
+  D --> F[Deploy/Integrate]
+  D --> G[Notify Team]
+
+  style A fill:#cccccc,stroke:#000000,stroke-width:2px</div><div class="title">Figure 3. A typical C++ Actions workflow</div></div>
+<div class="paragraph">
+<p>When a new version of a compiler is released within the range of supported versions, the CI pipeline will automatically test the new version.
+Best practices are constantly being developed, and these best practices can be inherited by simply updating the version of the action being used.</p>
+</div>
+<div class="paragraph">
+<p>Although this solves part of the problem, we still need to solve the combinatorial explosion of factors.
+The <a href="actions/cpp-matrix.html" class="xref page">C&#43;&#43; Matrix Action</a> handles this with <a href="#cpp_actions_matrix_factors">requirement factors</a> that can be used to create a fractional factorial experiment design and ensure all relevant factor combinations are tested in a systematic manner.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="cpp_actions_matrix_factors"><a class="anchor" href="#cpp_actions_matrix_factors"></a>Factors</h3>
+<div class="paragraph">
+<p>The main problem with C&#43;&#43; projects is the combinatorial explosion of factors.
+Formally, we have a <a href="https://en.wikipedia.org/wiki/Factorial_experiment" target="_blank" rel="noopener">Factorial Experiment</a> for which we need a <a href="https://en.wikipedia.org/wiki/Fractional_factorial_design" target="_blank" rel="noopener">Fractional Factorial Design</a> to reduce the number of tests to a manageable number.</p>
+</div>
+<div class="paragraph">
+<p>As with any fractional factorial design, we need feedback on the relevance of each factor to explore the <a href="https://en.wikipedia.org/wiki/Sparsity-of-effects_principle" target="_blank" rel="noopener">Sparsity-of-effects principle</a>.
+In other words, we need procedurally know which combinations of factors aggregate most information and which combinations of factors are irrelevant.</p>
+</div>
+<div class="paragraph">
+<p>An automated search for the best fractional factorial design is not desirable, since the relevance of factors is not and cannot be stochastic.
+Instead, we provide categories of factors that can be used to define the requirements of a library: Latest factors, Variant factors, Combinatorial factors, and Combined factors.</p>
+</div>
+<div class="paragraph">
+<p>For instance, let&#8217;s assume we define the following requirements for a library:</p>
+</div>
+<div class="exampleblock">
+<div class="content">
+<div class="ulist">
+<ul>
+<li>
+<p>The library requires a compiler supporting at least C&#43;&#43;17.</p>
+</li>
+<li>
+<p>The library should be tested with the following compilers:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>gcc &gt;=4.8</p>
+</li>
+<li>
+<p>clang &gt;=3.8</p>
+</li>
+<li>
+<p>msvc &gt;=14.1</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>The <a href="actions/cpp-matrix.html" class="xref page">C&#43;&#43; Matrix Action</a> will generate matrix entries for all versions of GCC above 4.8 that support C&#43;&#43;17. Let&#8217;s say it generates entries for GCC 7, GCC 8, GCC 9, GCC 10, GCC 11, GCC 12, GCC 13. Here&#8217;s how each type of factor will affect the matrix:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 16.6666%;">
+<col style="width: 83.3334%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Factor</th>
+<th class="tableblock halign-left valign-top">Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Latest Factor</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Now suppose we define the "latest" factor <code>gcc Coverage</code>.
+This mean the entry "GCC 13" will be duplicated.
+The action will generate the original entry "GCC 13" and a new entry "GCC 13 (Coverage)" with the <code>"coverage"</code> key set to <code>true</code>.
+The <code>"coverage"</code> key will be set to <code>false</code> in all other entries.
+This is useful when we want to test the latest version of a compiler with a specific feature and know repeating the test with other combinations of compilers has no significant benefit.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Variant Factor</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">For variant factors, suppose we define the "variant" factor <code>gcc Asan Shared</code>.
+These variant factors don&#8217;t duplicate entries.
+Instead, these factors are included in existing intermediary compiler entries.
+In this case, the entries "GCC 12" and "GCC 11" will be replaced by the "GCC 12 (Asan)" and "GCC 11 (Shared)" entries.
+This is useful when we need to ensure a factor works at least once in the matrix, but testing it with all combinations of factors has diminishing returns and it doesn&#8217;t affect usual library behavior to justify duplicating an entry.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Combinatorial Factor</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Finally, for combinatorial factors, suppose we define the "combinatorial" factor <code>gcc Standalone</code> to test a version of the library without dependencies.
+These combinatorial factors will generate a new entry in the matrix for each combination of factors.
+Although the matrix provides this option, it&#8217;s not recommended to use this type of factor unless it&#8217;s absolutely necessary for 2 reasons: first, it will contribute to a combinatorial explosion of factors, which is precisely what we&#8217;re trying to avoid; second, the same result can be achieved by including extra steps in the workflow.
+These extra steps can then be enabled or disabled by other factors with much better precision and allows the job to reuse the environment.
+This kind of factor is only useful when there is a reasonably small number of jobs, and we want to execute them in parallel.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Combined Factor</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Combined factors can be used as a shorthand for a combination of factors.
+They can be included as latest, variant, or combinatorial factors.
+For instance, the combined factor <code>gcc Asan+Ubsan</code> will generate an entry with the factors <code>Asan</code> and <code>Ubsan</code> set to <code>true</code>.
+This is useful whenever testing a combination of factors at once is acceptable.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_matrix_entries"><a class="anchor" href="#_matrix_entries"></a>Matrix entries</h3>
+<div class="sect3">
+<h4 id="_basic_fields"><a class="anchor" href="#_basic_fields"></a>Basic fields</h4>
+<div class="paragraph">
+<p>Each entry in the matrix generated by the <a href="actions/cpp-matrix.html" class="xref page">C&#43;&#43; Matrix Action</a> will contain the entry name, the compiler name, its version, and a list of C&#43;&#43; standards.
+These are the basic fields in each entry.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_auxiliary_flags"><a class="anchor" href="#_auxiliary_flags"></a>Auxiliary flags</h4>
+<div class="paragraph">
+<p>A number of auxiliary flags are defined in each entry to provide easy access to version components (e.g.: <code>major</code>, <code>minor</code>, <code>patch</code>), factors (one boolean value is set for each factor key), and its relative position in the test matrix (e.g.: <code>is-latest</code>, <code>is-main</code>, <code>is-earliest</code>, <code>is-intermediary</code>, <code>has-factors</code>).
+All these auxiliary flags can be used to filter steps in the workflow.
+For instance, if there&#8217;s a recommended way to install the library, this can be tested in all jobs and alternatives ways to install the library can be tested in a subset of jobs: for instance, skipping this step when the entry <code>is-intermediary</code>.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="cpp_actions_matrix_suggestions"><a class="anchor" href="#cpp_actions_matrix_suggestions"></a>Suggestions</h4>
+<div class="paragraph">
+<p>Each matrix entry also contains a number of other fields that can be considered suggestions for that combination of factors: <code>runs-on</code>, <code>container</code>, generator`, <code>b2-toolset</code>, <code>build-type</code>, <code>ccflags</code>, <code>cxxflags</code>, <code>env</code>, <code>install</code>.
+Factors also influence suggestions: the value of these fields are also impacted if the entry includes a factor whose lowercase version is one of <code>asan</code>, <code>ubsan</code>, <code>msan</code>, <code>tsan</code>, <code>coverage</code>, <code>x86</code>, <code>time-trace</code>.</p>
+</div>
+<div class="paragraph">
+<p>Combined factors also influence the value of these fields.
+For instance, the factor <code>gcc Asan</code> might set <code>cxxflags</code> to something like <code>-fsanitize=address</code>, while the combined factor <code>gcc Asan+Ubsan</code> might set <code>cxxflags</code> to <code>-fsanitize=address,undefined</code>.</p>
+</div>
+<div class="paragraph">
+<p>All these extra fields should be considered suggestions, since they are not enforced by the action.
+All these suggestions can be completely ignored by the user, but they can also be customized by the user to fit the needs of the project.</p>
+</div>
+<div class="paragraph">
+<p>Common ways to customize these suggestions include (from the simplest to the most complex):</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Using the corresponding <a href="actions/cpp-matrix.html" class="xref page">C&#43;&#43; Matrix Action</a> input to customize the value of these fields (see the action reference)</p>
+</li>
+<li>
+<p>Use GitHub Actions <a href="https://docs.github.com/en/actions/learn-github-actions/expressions">Expressions</a> to generate new values from existing values</p>
+</li>
+<li>
+<p>Use a custom bash step to generate new values from existing values</p>
+</li>
+<li>
+<p>Create a custom script to read the complete matrix and generate a new matrix with the desired values</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>If none of these options is enough for the library requirements, the <a href="actions/cpp-matrix.html" class="xref page">C&#43;&#43; Matrix Action</a> also prints the complete matrix in YAML format, so it can be copy/pasted into the workflow as a starting point to be customized.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_independent_actions"><a class="anchor" href="#_independent_actions"></a>Independent Actions</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The project also includes a number of independent actions that represent common steps in a C&#43;&#43; CI workflow.
+These include steps for setting up the compiler, installing dependencies, building the project, running tests, and generating reports.</p>
+</div>
+<div class="paragraph">
+<p>Although these actions are meant to integrate well with entries from the <a href="actions/cpp-matrix.html" class="xref page">C&#43;&#43; Matrix Action</a>, they can also be used independently in any existing project.</p>
+</div>
+<div class="paragraph">
+<p>With these actions, long scripts to test library workflows can be replaced by a few lines of YAML:</p>
+</div>
+<div id="ci-actions-workflow-diagram" class="imageblock"><div class="mermaid content" style="width: 100%; ">graph LR
+  subgraph For Each Entry
+    B
+    C
+    D
+    E
+  end
+
+  R[Requirements] --> A[Matrix]
+  A[Matrix] --> B
+  B[Setup C++] --> C
+  C[Install Dependencies] --> D
+  D[Workflows] --> E
+  E[Reports] -->|success| F[Deploy/Integrate]
+  E -->|failure| H[Notify Team]
+
+  style A fill:#cccccc,stroke:#000000,stroke-width:2px</div><div class="title">Figure 4. CI workflow using the C++ Actions</div></div>
+<div class="paragraph">
+<p>The actions also abstract away the complexity of best practices or setting up environments that represent corner cases without polluting the main workflow with unnecessary details.
+For instance, workflows with less common compilers might require extra flags in CMake, but these flags are not relevant to the main workflow.</p>
+</div>
+<div class="sect2">
+<h3 id="_compilers"><a class="anchor" href="#_compilers"></a>Compilers</h3>
+<div class="paragraph">
+<p>The <a href="actions/setup-cpp.html" class="xref page">Setup C++</a> action is used to set up a C&#43;&#43; compiler.
+Analogous actions are included for individual compilers.
+These actions are analogous to the well-known actions such as <a href="https://github.com/actions/setup-node" target="_blank" rel="noopener">actions/setup-node</a> and <a href="https://github.com/actions/setup-python" target="_blank" rel="noopener">actions/setup-python</a>.</p>
+</div>
+<div class="paragraph">
+<p>The main difference is that the C&#43;&#43;-actions attempt to replicate the environment most likely to be used by users of the library by trying to find the compiler or install it from the system package manager before downloading the binaries for a specific version.
+This is useful to increase the value of the specific combinations being tested in the matrix.</p>
+</div>
+<div class="paragraph">
+<p>For instance, if the user is testing a library with GCC 10, the action will first try to find GCC 10 in the system, then install it from the system package manager (<code>gcc-10</code> in APT), and install the binaries directly only if the previous steps fail.
+The ensures the GCC version being test is the one most likely to be used by the user.</p>
+</div>
+<div class="paragraph">
+<p>The compiler path and version are returned as outputs, so they can be used in subsequent steps.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_packages"><a class="anchor" href="#_packages"></a>Packages</h3>
+<div class="paragraph">
+<p>After setting up the compiler defined by the entry, C&#43;&#43; workflows usually continue by installing dependencies from various sources.
+A second set of actions are designed to set up these dependencies.</p>
+</div>
+<div class="paragraph">
+<p>These <code>setup-*</code> actions are also analogous to the first set of compiler actions.
+They attempt to provide simple steps that can be used to set up APT packages, vcpkg packages, Boost modules, or download and install arbitrary packages from a URL.</p>
+</div>
+<div class="paragraph">
+<p>They have the same logic as the compiler actions: they first try to find the package in the system, then in the system package manager, and install the binaries directly only if the previous steps fail.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_workflows"><a class="anchor" href="#_workflows"></a>Workflows</h3>
+<div class="paragraph">
+<p>Workflow actions are used to configure, build, test, install, and package the library in a single step.
+This is a common step in all C&#43;&#43; CI workflows.</p>
+</div>
+<div class="paragraph">
+<p>In particular, the <a href="actions/cmake-workflow.html" class="xref page">CMake Workflow Action</a> is designed to be used with CMake projects.
+It&#8217;s common for C&#43;&#43; projects to run a complete CMake workflow to test the library and another conditionally enabled CMake workflow step for the integration tests.
+This way, the integration instructions for the library are always up-to-date.</p>
+</div>
+<div class="paragraph">
+<p>Besides simplifying the workflow, the action allows the user to customize the specific CMake version used for the test.
+This is useful to ensure libraries don&#8217;t break their CMake <a href="https://cmake.org/cmake/help/latest/command/cmake_minimum_required.html" target="_blank" rel="noopener"><code>cmake_minimum_required</code></a> contract declarations.
+The action can even extract the minimum CMake version from the <code>CMakeLists.txt</code> file and use it to set up the environment.</p>
+</div>
+<div class="paragraph">
+<p>CMake best practices and features tend to change with new CMake versions.
+When multiple CMake versions are being tested by different entries and steps, the action also adapts how the inputs should be passed as arguments to CMake account for the features supported by that CMake version.
+This abstraction can both simplify the workflow while still taking advantage of CMake features not available in all CMake versions and ensuring the library works according to best practices for each version of CMake.</p>
+</div>
+<div class="paragraph">
+<p>A <a href="https://www.boost.org/doc/libs/master/tools/build/doc/html/index.html">B2</a> workflow action is also provided for Boost library projects.
+This action is analogous to the CMake workflow action and is particularly useful for Boost library proposals.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_analysis_and_reports"><a class="anchor" href="#_analysis_and_reports"></a>Analysis and Reports</h3>
+<div class="paragraph">
+<p>Workflows typically end with conditionally enabled steps to analyze the results of the tests.
+These reports usually include an analysis of compilation time, coverage reports, and extra information about the project relative to the latest commit.
+This project includes another set of actions to help users generate these reports.</p>
+</div>
+<div class="paragraph">
+<p>Note that these steps are usually conditionally enabled according to a factor in the matrix entry.
+For instance, a <code>time-trace</code> factor can be created to include something like <code>-ftime-trace</code> in the C&#43;&#43; flags and to conditionally enable the <a href="actions/flamegraph.html" class="xref page">time-trace</a> step in the workflow.</p>
+</div>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+    <footer class="footer">
+  <p>This page was built using the Antora UI adapted by <a href="https://github.com/cppalliance/site-docs" target="_blank">cppalliance/site-docs</a>.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+  <p>
+    <a href="https://github.com/alandefreitas/cpp-actions" target="_blank">alandefreitas/cpp-actions</a>
+  </p>
+</footer>
+<script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
+<script async src="../../_/js/vendor/highlight.js"></script>
+<script src="../../_/js/vendor/lunr.js"></script>
+<script src="../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../.." data-snippet-length="100" data-stylesheet="../../_/css/search.css"></script>
+<script async src="../../search-index.js"></script>
+<script async src="../../_/js/vendor/tabs.js" data-sync-storage-key="preferred-tab"></script>
+    <script>
+      var element = document.querySelector('.search-result-dropdown-menu');
+      if (element) {
+        // Apply styles and additional class to element
+        element.style.display = 'none';
+        var element = document.querySelector('.search-result-dropdown-menu');
+        var arrow = document.createElement('div');
+        arrow.classList.add('search-result-dropdown-menu');
+        element.appendChild(arrow);
+      }
+
+      function onSearch() {
+        var searchInput = document.getElementById('search-input');
+        if (searchInput.value) {
+          element.style.display = 'block';
+        } else {
+          element.style.display = 'none';
+        }
+      }
+
+      function onSearchChange(search_active) {
+        var searchInputAlgolia = document.getElementById('search-input-algolia');
+        var searchInput = document.getElementById('search-input');
+        if (search_active === "algolia") {
+          searchInputAlgolia.style.display = 'block';
+          // searchInputAlgolia.style.lineHeight = '2.001';
+          searchInput.style.display = 'none';
+          setupAlgoliaDocsearch();
+        } else {
+          searchInputAlgolia.style.display = 'none';
+          searchInput.style.display = 'block';
+        }
+      }
+
+      // Add an event listener to the document
+      document.addEventListener("click", function(event) {
+        var searchInput = document.getElementById('search-input');
+        // Check if the click was outside of the modal
+        if (event.target !== element && event.target !== searchInput) {
+
+          // Hide the modal
+          searchInput.value = "";
+          onSearch();
+        }
+      });
+    </script>
+  </body>
+</html>
