@@ -1,0 +1,438 @@
+= Design Rationale
+Alan Freitas <alandefreitas@gmail.com>
+:url-repo: https://github.com/alandefreitas/cpp-actions
+:page-tags: cpp-actions
+:navtitle: Design Rationale
+
+This document describes the design rationale behind the {cpp} actions.
+We will start by describing the <<continuous-integration,motivation>> for the project and the <<challenges_in_cpp_testing,challenges>> in testing {cpp} libraries.
+We will then describe the <<cpp_actions,solution>> proposed by this project.
+
+[#continuous-integration]
+== Continuous Integration
+
+Continuous Integration (CI) is a development practice that involves automatically testing and integrating code changes into a shared repository multiple times a day.
+The primary goal of CI is to detect and address integration issues early in the development process by automating the process of building, testing, and integrating code changes.
+This helps ensure that the codebase remains consistent, reliable, and readily deployable.
+
+In the context of open source projects, CI becomes particularly crucial, as early defect detection facilitates the smooth integration of changes from various contributors, enabling a more collaborative and efficient development environment.
+
+[[ci-pipeline-diagram]]
+.Continuous Integration Pipeline
+[mermaid]
+----
+graph TD
+  A[Code Changes] -->|Commit| B[CI Server]
+  B -->|Automated Build| C[Run Tests]
+  C -->|Test Results| D[Deploy/Integrate]
+  D -->|Deployment Status| E[Notify Team]
+  E -->|Feedback| A
+----
+
+Maintaining a robust CI pipeline fosters a culture of reliability and trust in open source projects:
+
+- Contributors can confidently submit changes.
+- Maintainers can quickly review and integrate contributions.
+- Users can rely on the project to deliver high-quality software.
+
+Continuous integration aligns with the collaborative spirit of open source development, allowing projects to embrace change, iterate rapidly, and deliver high-quality software.
+In the dynamic open source landscape, CI is indispensable, ensuring projects remain agile, reliable, and responsive to the evolving needs of developers and users.
+
+[#challenges_in_cpp_testing]
+== Challenges in C++ Testing
+
+Testing {cpp} libraries is a challenging task: there are various factors to consider such as the different compilers, compiler versions, standard library versions, {cpp} features, operating systems, and architectures that the library may need to support.
+These factors make it difficult to write comprehensive tests that cover all possible scenarios.
+On top of that, each {cpp} workflow tends to have longer compile times due to the language's nature.
+
+=== A Small Comparison
+
+When compared to projects like https://github.com/vuejs/core[Vue.js,window=_blank] and https://github.com/numpy/numpy[NumPy,window=_blank], huge projects that primarily focus on JavaScript and Python, the differences become evident.
+Vue.js and NumPy can use simple CI setups to test their main workflows with a Windows job and a Linux job, where each of these jobs takes approximately 1 minute and 30 seconds:
+
+[[js-python-ci-diagram]]
+.A typical CI workflow for a JavaScript or Python project
+[mermaid,width=100%]
+----
+graph LR
+  A[Matrix] -->|Windows| C1[Tests]
+  A[Matrix] -->|Linux| C2[Tests]
+  C1 --> D[Results]
+  C2 --> D[Results]
+  D --> F[Deploy/Integrate]
+  D --> G[Notify Team]
+----
+
+Although the environment can always affect how the code behaves, these languages are at such a level of abstraction that projects can get away without testing their main workflows on all possible versions of Windows, Linux, and macOS.
+After this point, their level of abstraction allows them to rely on diminishing returns unless counter-evidence is provided.
+In other words: the library is innocent until proven guilty.
+
+=== C++ Factors
+
+When testing a {cpp} library, however, the situation is very different.
+A large {cpp} project that works flawlessly with one compiler will almost certainly fail to build with a different compiler version and environment.
+{cpp} is a systems programming language where code is interacting directly with the hardware and OS libraries.
+This makes the code more sensitive to the environment and a {cpp} library is guilty until proven innocent.
+
+To make matters worse, {cpp} developers can't test these libraries locally in all possible environments for practical reasons.
+Some environments are proprietary, some are not available for free, and some are not available for all platforms.
+This means developers are often relying on the CI pipeline as the only way to ensure these libraries work in all reasonable environments.
+
+Thus, a typical {cpp} workflow would include a matrix describing a combination of factors such as:
+
+[cols="1,2"]
+|===
+| Factor | Values
+
+| Compiler
+| GCC, Clang, MSVC, MinGW, clang-cl, Apple Clang
+
+| Compiler Version
+| GCC 4, GCC 5, GCC 6, ..., Clang 4, Clang 5, ..., MSVC 2017, MSVC 2019, ...
+
+| Standard Library
+| pass:[libstdc++], pass:[libc++], MSVC 2017
+
+| C++ Standard
+| pass:[C++]11, pass:[C++]14, pass:[C++]17, pass:[C++]20, ..., latest
+
+| Operating System
+| Windows, Linux, macOS
+
+| Architecture
+| x86, x64, ARM
+
+| Build Type
+| Debug, Release
+
+| Linking
+| Static / Dynamic
+
+| Address Sanitizer
+| `true` / `false`
+
+| Undefined Behavior Sanitizer
+| `true` / `false`
+
+| Memory Sanitizer
+| `true` / `false`
+
+| Thread Sanitizer
+| `true` / `false`
+
+| pass:[...]
+| `true` / `false`
+
+| Optional Dependency A
+| `true` / `false`
+
+| Optional Dependency B
+| `true` / `false`
+
+| pass:[...]
+| pass:[...]
+
+| Optional Feature A
+| `true` / `false`
+
+| Optional Feature B
+| `true` / `false`
+
+| pass:[...]
+| pass:[...]
+|===
+
+It's easy to see that not _all_ combinations of factors are valid or relevant:
+
+- A compiler factor can only match a version of the same compiler
+- Most compilers (except Clang) should only be tested with its corresponding standard library implementation
+- Each compiler will match a specific operating system
+- pass:[...]
+
+However, in this simple example, after filtering out invalid or irrelevant combinations of factors, the CI pipeline would still need to run 866,304 jobs.
+This is a combinatorial explosion.
+Throwing more hardware, time, or money at the problem cannot solve the problem.
+
+Filtering out a few extra invalid or irrelevant combinations of factors is also not enough.
+Even if we get to a small combination of factors, the lack of a systematic approach to reducing these combinations will keep us from testing all the combinations we need.
+
+The solution must be able to handle the combinatorial explosion in a systematic manner so that the total number of tests only grows linearly with the number of tests, redundancy is minimized, and all relevant combinations are tested.
+
+=== Effects on the Ecosystem
+
+This difficulty to test {cpp} libraries has a viral effect with enormous implications to the C++ ecosystem:
+
+- Libraries don't properly test and support all platforms they claim to support
+- Transitively, this support also becomes broken for any projects depending on the library
+- Users end up avoiding dependencies altogether, so they can reliably support the platforms they need
+
+With some notable exceptions, this is currently the case with most small standalone libraries one can find on GitHub.
+These are libraries that could be very useful otherwise, so avoiding dependencies altogether is not a reasonable solution to the problem.
+We will never get anywhere meaningful if we’re not able to stand on the shoulders of giants.
+
+=== Replicating Workflows
+
+One common alternative {cpp} developers use to come up with reasonable CI workflows for their projects is to copy/paste the CI configuration from other projects.
+This is a very common practice, but it's not a stable solution for the problem:
+
+- First, the workflow being copied is often not testing all relevant environments or the relevant cases are different for the library being tested.
+In this case, the CI workflow ends up relying on luck, but this doesn't work well for {cpp} projects due to its sensitivity to the environment.
+
+- Second, copy/pasting and adapting workflows doesn't scale well.
+C++ workflows tend to be complex, best practices are constantly being developed, and new tools and compiler versions are being released.
+For instance, if the main workflow pattern changes once a month and the developer is maintaining this pattern for 20 small projects, this means the developer will need to adapt the pattern 240 times a year: that's one commit that needs to be written, tested and merged every business day.
+In practice, most projects just won't catch up with the changes and best practices.
+
+- {cpp} requires customization, which makes replicating patterns costly.
+While the workflows for other languages are often the very same commands to test the library, {cpp} projects are very different from each other.
+CI workflows are never the same procedure: dependencies need to be installed from different sources and integrated differently depending on the environment.
+Copy/pasting cannot be easily automated and the pattern needs to be adapted and retested.
+
+There's also a conflict in how CI workflow patterns handle edge cases in individual projects.
+These patterns often include logic to handle edge cases for which other developers copying the pattern don't understand the motivation.
+For instance, workflow patterns might include extra steps required by a less common compiler.
+Developers often accumulate the logic they don't understand even though it's not relevant to their tests or remove the logic they don't understand even though it's relevant to their tests.
+
+[#cpp_actions]
+== C++ Actions
+
+This project aims to address the challenges in testing {cpp} libraries by providing a collection of GitHub actions that are specifically designed to test {cpp} libraries in a variety of environments.
+GitHub actions were chosen as the platform for these tools because they are easy to use and are well-integrated with GitHub, where most open source projects are hosted.
+
+Instead of providing a single action that attempts to test a {cpp} project, the {cpp}-actions provide a collection of actions that can be combined to create a comprehensive CI pipeline for testing {cpp} libraries.
+Users can select the actions that are most relevant to their project and combine them to create a customized CI pipeline that meets their needs.
+Each action includes features to improve the efficiency and reliability of the CI pipeline, such as caching, parallelization, and cross-compilation.
+
+The actions can be composed in reused in new or existing {cpp} projects.
+New projects can use a combination of all actions to focus on writing high-quality code and delivering great software to your users.
+Actions include best practices are have a stable API, so they can be easily reused in existing projects and users can inherit the best practices from the actions by simply updating their version.
+
+[#cpp_actions_matrix]
+=== From matrices to requirements
+
+If you've ever read the documentation of a {cpp} library, you've probably seen a requirements section such as the following:
+
+[source]
+====
+The library requires a compiler supporting at least C++11.
+
+The library has been tested with the following compilers:
+
+* clang >=3.8
+* gcc >=4.8
+* msvc >=14.1
+====
+
+In other words, the requirements of the library, or its contract, is defined in terms of compiler and feature requirements.
+Ensuring the library works whenever these requirements are met is the responsibility of the library, and this is what should be ultimately tested.
+
+The xref:actions/cpp-matrix.adoc[{cpp} Matrix Action] is designed to automate the generation of a comprehensive test matrix for your {cpp} libraries given their requirements.
+It simplifies the process of defining the contract of what platforms your library supports and testing your project across a proper selected subset of relevant compiler versions and platforms.
+
+This means the usual CI workflow for a {cpp} library would be:
+
+[[cpp-ci-diagram]]
+.A typical C++ Actions workflow
+[mermaid,width=100%]
+----
+graph LR
+  R[Requirements] -->|Contract| A[Matrix]
+  A[Matrix] -->|Environment 1| B1[Install Dependencies]
+  A[Matrix] -->|Environment 2| B2[Install Dependencies]
+  A[Matrix] -->|...| B3[Install Dependencies]
+  B1 --> C1[Tests]
+  B2 --> C2[Tests]
+  B3 --> C3[Tests]
+  C1 --> D[Reports]
+  C2 --> D[Reports]
+  C3 --> D[Reports]
+  D --> F[Deploy/Integrate]
+  D --> G[Notify Team]
+
+  style A fill:#cccccc,stroke:#000000,stroke-width:2px
+----
+
+When a new version of a compiler is released within the range of supported versions, the CI pipeline will automatically test the new version.
+Best practices are constantly being developed, and these best practices can be inherited by simply updating the version of the action being used.
+
+Although this solves part of the problem, we still need to solve the combinatorial explosion of factors.
+The xref:actions/cpp-matrix.adoc[{cpp} Matrix Action] handles this with <<cpp_actions_matrix_factors,requirement factors>> that can be used to create a fractional factorial experiment design and ensure all relevant factor combinations are tested in a systematic manner.
+
+[#cpp_actions_matrix_factors]
+=== Factors
+
+The main problem with {cpp} projects is the combinatorial explosion of factors.
+Formally, we have a https://en.wikipedia.org/wiki/Factorial_experiment[Factorial Experiment,window=_blank] for which we need a https://en.wikipedia.org/wiki/Fractional_factorial_design[Fractional Factorial Design,window=_blank] to reduce the number of tests to a manageable number.
+
+As with any fractional factorial design, we need feedback on the relevance of each factor to explore the https://en.wikipedia.org/wiki/Sparsity-of-effects_principle[Sparsity-of-effects principle,window=_blank].
+In other words, we need procedurally know which combinations of factors aggregate most information and which combinations of factors are irrelevant.
+
+An automated search for the best fractional factorial design is not desirable, since the relevance of factors is not and cannot be stochastic.
+Instead, we provide categories of factors that can be used to define the requirements of a library: Latest factors, Variant factors, Combinatorial factors, and Combined factors.
+
+For instance, let's assume we define the following requirements for a library:
+
+[source]
+====
+* The library requires a compiler supporting at least {cpp}17.
+* The library should be tested with the following compilers:
+** gcc >=4.8
+** clang >=3.8
+** msvc >=14.1
+====
+
+The xref:actions/cpp-matrix.adoc[{cpp} Matrix Action] will generate matrix entries for all versions of GCC above 4.8 that support {cpp}17. Let's say it generates entries for GCC 7, GCC 8, GCC 9, GCC 10, GCC 11, GCC 12, GCC 13. Here's how each type of factor will affect the matrix:
+
+[cols="1,5"]
+|===
+| Factor | Effect
+
+| Latest Factor
+| Now suppose we define the "latest" factor `gcc Coverage`.
+This mean the entry "GCC 13" will be duplicated.
+The action will generate the original entry "GCC 13" and a new entry "GCC 13 (Coverage)" with the `"coverage"` key set to `true`.
+The `"coverage"` key will be set to `false` in all other entries.
+This is useful when we want to test the latest version of a compiler with a specific feature and know repeating the test with other combinations of compilers has no significant benefit.
+
+| Variant Factor
+| For variant factors, suppose we define the "variant" factor `gcc Asan Shared`.
+These variant factors don't duplicate entries.
+Instead, these factors are included in existing intermediary compiler entries.
+In this case, the entries "GCC 12" and "GCC 11" will be replaced by the "GCC 12 (Asan)" and "GCC 11 (Shared)" entries.
+This is useful when we need to ensure a factor works at least once in the matrix, but testing it with all combinations of factors has diminishing returns and it doesn't affect usual library behavior to justify duplicating an entry.
+
+| Combinatorial Factor
+| Finally, for combinatorial factors, suppose we define the "combinatorial" factor `gcc Standalone` to test a version of the library without dependencies.
+These combinatorial factors will generate a new entry in the matrix for each combination of factors.
+Although the matrix provides this option, it's not recommended to use this type of factor unless it's absolutely necessary for 2 reasons: first, it will contribute to a combinatorial explosion of factors, which is precisely what we're trying to avoid; second, the same result can be achieved by including extra steps in the workflow.
+These extra steps can then be enabled or disabled by other factors with much better precision and allows the job to reuse the environment.
+This kind of factor is only useful when there is a reasonably small number of jobs, and we want to execute them in parallel.
+
+| Combined Factor
+| Combined factors can be used as a shorthand for a combination of factors.
+They can be included as latest, variant, or combinatorial factors.
+For instance, the combined factor `gcc Asan+Ubsan` will generate an entry with the factors `Asan` and `Ubsan` set to `true`.
+This is useful whenever testing a combination of factors at once is acceptable.
+|===
+
+=== Matrix entries
+
+==== Basic fields
+
+Each entry in the matrix generated by the xref:actions/cpp-matrix.adoc[{cpp} Matrix Action] will contain the entry name, the compiler name, its version, and a list of {cpp} standards.
+These are the basic fields in each entry.
+
+==== Auxiliary flags
+
+A number of auxiliary flags are defined in each entry to provide easy access to version components (e.g.: `major`, `minor`, `patch`), factors (one boolean value is set for each factor key), and its relative position in the test matrix (e.g.: `is-latest`, `is-main`, `is-earliest`, `is-intermediary`, `has-factors`).
+All these auxiliary flags can be used to filter steps in the workflow.
+For instance, if there's a recommended way to install the library, this can be tested in all jobs and alternatives ways to install the library can be tested in a subset of jobs: for instance, skipping this step when the entry `is-intermediary`.
+
+[#cpp_actions_matrix_suggestions]
+==== Suggestions
+
+Each matrix entry also contains a number of other fields that can be considered suggestions for that combination of factors: `runs-on`, `container`, generator`, `b2-toolset`, `build-type`, `ccflags`, `cxxflags`, `env`, `install`.
+Factors also influence suggestions: the value of these fields are also impacted if the entry includes a factor whose lowercase version is one of `asan`, `ubsan`, `msan`, `tsan`, `coverage`, `x86`, `time-trace`.
+
+Combined factors also influence the value of these fields.
+For instance, the factor `gcc Asan` might set `cxxflags` to something like `-fsanitize=address`, while the combined factor `gcc Asan+Ubsan` might set `cxxflags` to `-fsanitize=address,undefined`.
+
+All these extra fields should be considered suggestions, since they are not enforced by the action.
+All these suggestions can be completely ignored by the user, but they can also be customized by the user to fit the needs of the project.
+
+Common ways to customize these suggestions include (from the simplest to the most complex):
+
+* Using the corresponding xref:actions/cpp-matrix.adoc[{cpp} Matrix Action] input to customize the value of these fields (see the action reference)
+* Use GitHub Actions https://docs.github.com/en/actions/learn-github-actions/expressions[Expressions] to generate new values from existing values
+* Use a custom bash step to generate new values from existing values
+* Create a custom script to read the complete matrix and generate a new matrix with the desired values
+
+If none of these options is enough for the library requirements, the xref:actions/cpp-matrix.adoc[{cpp} Matrix Action] also prints the complete matrix in YAML format, so it can be copy/pasted into the workflow as a starting point to be customized.
+
+== Independent Actions
+
+The project also includes a number of independent actions that represent common steps in a {cpp} CI workflow.
+These include steps for setting up the compiler, installing dependencies, building the project, running tests, and generating reports.
+
+Although these actions are meant to integrate well with entries from the xref:actions/cpp-matrix.adoc[{cpp} Matrix Action], they can also be used independently in any existing project.
+
+With these actions, long scripts to test library workflows can be replaced by a few lines of YAML:
+
+[[ci-actions-workflow-diagram]]
+.CI workflow using the C++ Actions
+[mermaid,width=100%]
+----
+graph LR
+  subgraph For Each Entry
+    B
+    C
+    D
+    E
+  end
+
+  R[Requirements] --> A[Matrix]
+  A[Matrix] --> B
+  B[Setup C++] --> C
+  C[Install Dependencies] --> D
+  D[Workflows] --> E
+  E[Reports] -->|success| F[Deploy/Integrate]
+  E -->|failure| H[Notify Team]
+
+  style A fill:#cccccc,stroke:#000000,stroke-width:2px
+----
+
+The actions also abstract away the complexity of best practices or setting up environments that represent corner cases without polluting the main workflow with unnecessary details.
+For instance, workflows with less common compilers might require extra flags in CMake, but these flags are not relevant to the main workflow.
+
+=== Compilers
+
+The xref:actions/setup-cpp.adoc[Setup C++] action is used to set up a {cpp} compiler.
+Analogous actions are included for individual compilers.
+These actions are analogous to the well-known actions such as https://github.com/actions/setup-node[actions/setup-node,window=_blank] and https://github.com/actions/setup-python[actions/setup-python,window=_blank].
+
+The main difference is that the {cpp}-actions attempt to replicate the environment most likely to be used by users of the library by trying to find the compiler or install it from the system package manager before downloading the binaries for a specific version.
+This is useful to increase the value of the specific combinations being tested in the matrix.
+
+For instance, if the user is testing a library with GCC 10, the action will first try to find GCC 10 in the system, then install it from the system package manager (`gcc-10` in APT), and install the binaries directly only if the previous steps fail.
+The ensures the GCC version being test is the one most likely to be used by the user.
+
+The compiler path and version are returned as outputs, so they can be used in subsequent steps.
+
+=== Packages
+
+After setting up the compiler defined by the entry, {cpp} workflows usually continue by installing dependencies from various sources.
+A second set of actions are designed to set up these dependencies.
+
+These `setup-*` actions are also analogous to the first set of compiler actions.
+They attempt to provide simple steps that can be used to set up APT packages, vcpkg packages, Boost modules, or download and install arbitrary packages from a URL.
+
+They have the same logic as the compiler actions: they first try to find the package in the system, then in the system package manager, and install the binaries directly only if the previous steps fail.
+
+=== Workflows
+
+Workflow actions are used to configure, build, test, install, and package the library in a single step.
+This is a common step in all {cpp} CI workflows.
+
+In particular, the xref:actions/cmake-workflow.adoc[CMake Workflow Action] is designed to be used with CMake projects.
+It's common for {cpp} projects to run a complete CMake workflow to test the library and another conditionally enabled CMake workflow step for the integration tests.
+This way, the integration instructions for the library are always up-to-date.
+
+Besides simplifying the workflow, the action allows the user to customize the specific CMake version used for the test.
+This is useful to ensure libraries don't break their CMake https://cmake.org/cmake/help/latest/command/cmake_minimum_required.html[`cmake_minimum_required`,window=_blank] contract declarations.
+The action can even extract the minimum CMake version from the `CMakeLists.txt` file and use it to set up the environment.
+
+CMake best practices and features tend to change with new CMake versions.
+When multiple CMake versions are being tested by different entries and steps, the action also adapts how the inputs should be passed as arguments to CMake account for the features supported by that CMake version.
+This abstraction can both simplify the workflow while still taking advantage of CMake features not available in all CMake versions and ensuring the library works according to best practices for each version of CMake.
+
+A https://www.boost.org/doc/libs/master/tools/build/doc/html/index.html[B2] workflow action is also provided for Boost library projects.
+This action is analogous to the CMake workflow action and is particularly useful for Boost library proposals.
+
+=== Analysis and Reports
+
+Workflows typically end with conditionally enabled steps to analyze the results of the tests.
+These reports usually include an analysis of compilation time, coverage reports, and extra information about the project relative to the latest commit.
+This project includes another set of actions to help users generate these reports.
+
+Note that these steps are usually conditionally enabled according to a factor in the matrix entry.
+For instance, a `time-trace` factor can be created to include something like `-ftime-trace` in the {cpp} flags and to conditionally enable the xref:actions/flamegraph.adoc[time-trace] step in the workflow.

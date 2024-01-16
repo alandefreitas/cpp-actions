@@ -1,21 +1,5 @@
 name: "C++ Matrix"
 description: |
-  == Motivation
-  
-  Testing C++ libraries can be a challenging and time-consuming task, especially when considering the
-  various compiler versions, error behaviors, and platform dependencies. A library that works flawlessly 
-  with one compiler will almost certainly fail to build with a different compiler version, not mention
-  different compilers and platforms. 
-  
-  This has a viral effect with enormous implications to the C++ ecosystem. If your library doesn't
-  properly test and support all platforms in its manifest, this support is also broken for any
-  projects depending on your library. With some notable exceptions, this is currently the case
-  with most small standalone libraries one can find on GitHub. These are libraries that could be
-  very useful otherwise, so avoid dependencies altogether is not a reasonable to the problem, since
-  we will never get anywhere meaningful if we're not able to stand to the shoulder of giants.
-  
-  == C++ Test Matrix
-  
   The C++ Matrix Action is designed to automate the generation of a comprehensive test matrix for your 
   C++ libraries given their requirements. It simplifies the process of defining the contract of what
   platforms your library supports and testing your project across a proper selected subset of revelant 
@@ -83,7 +67,85 @@ description: |
         # And you've safely tested your C++ library just like that...
   ----
   
-  == Variable matrices
+  == Factors
+  
+  The input parameters allow factors to be defined for each compiler. These factors can be defined
+  as latest factors (which are duplicated and applied to the latest version of each compiler) or 
+  as regular factors (which are injected into intermediary versions of each compiler).
+  
+  See the xref:design.adoc#cpp_actions_matrix_factors[Factors Section,window=_blank] for a better 
+  understanding of the motivation for these factor types.
+  
+  == Matrix entries
+  
+  The values in each matrix entry include a few categories of keys: the main keys, auxiliary keys, 
+  factor keys, and suggestions.
+  
+  The main keys include information such as the compiler name and version. Auxiliary keys include
+  information that is useful for filtering and sorting the matrix, such as information about the
+  relative position of an entry in the matrix. Factor keys include information about the factors
+  that might have been applied to the entry. 
+  
+  Suggestions include opinionated recommendations for other parameters of your workflow as a
+  starting point for your test matrix. Some examples of keys including suggestions are
+  `runs-on`, `container`, generator`, `b2-toolset`, `build-type`, `ccflags`, `cxxflags`, 
+  `env`, and `install`.
+  
+  These suggestions often need to be customized and this could not be different, since there is
+  a myriad of ways in which libraries should be tested. Common ways to customize these
+  are:
+  
+  * Ignoring suggestions that are not applicable to your use case
+  * Using the corresponding action input to customize the value of these fields (see action input parameters)
+  * Use GitHub Actions https://docs.github.com/en/actions/learn-github-actions/expressions[Expressions] to generate new values from existing values
+  * Use a custom bash step to generate new values from existing values
+  * Create a custom script to read the complete matrix and generate a new matrix with the desired values
+
+  For instance, if the recommendation of running a workflow in the container `ubuntu:22.04` is not appropriate
+  because you're going to use a container that already has your dependencies, you could set the `runs-on` input
+  parameter to:
+  
+  [source,yml]
+  ----
+  - name: Generate Test Matrix
+    # ...
+    with:
+      # ...
+      containers: |
+         gcc: my-ubuntu:22.04-container
+  ----
+  
+  This would replace the recommendation for `ubuntu:22.04` with `my-ubuntu:22.04-container` for all entries
+  with the compiler `gcc`.
+  
+  In some cases, you could use a expression directly in the workflow to use a different value for the container:
+  
+  [source,yml]
+  ----
+  # In your main workflow
+  containers: $\{{ matrix.runs-on == 'ubuntu-22.04' && 'my-ubuntu:22.04-container' || matrix.container }}
+  ----
+  
+  This would replace the recommendation for `ubuntu:22.04` with `my-ubuntu:22.04-container` for all entries.
+  
+  If you're familiar with GitHub Actions and bash, you can also use a custom bash step to generate new values
+  from existing values or write a complete script to customize the matrix.
+  
+  If none of these options is enough for the library requirements, the action also prints the complete matrix
+  in YAML format, so it can be copy/pasted into the workflow as a starting point to be customized.
+  
+  == Semver ranges
+  
+  The requirement parameters support semver ranges, including range disjunctions. For instance, consider the default
+  compiler range `clang >=3.8`, which might test your library with too many versions of clang. You could remove
+  intermediary versions of clang with the range `clang >=3.8 <5 || >=10`, which ensure old versions are 
+  recent versions are covered, while eliminating intermediary versions.
+  
+  Semver ranges can also help when a bug is found in a specific compiler version. Consider someone has reported 
+  a bug in GCC 8.1, and you want to keep track of that. The semver range `gcc >=4.8 <7 || 8.1 || >=10` would ensure
+  version GCC8.1 specifically, and not any other version is the range `>=8.0.0 <9.0.0` is tested.
+  
+  == Dynamic matrices
   
   In some cases, it might be useful to test different matrices based on the conditions of the workflow. 
   These conditions might be the event_type and the types of files changed in the commit triggering the workflow.
@@ -99,66 +161,6 @@ description: |
   
   A more powerful strategy to save resources is analyzing files changed in the workflow and considering
   these files to determine what the matrix should be according to project conventions. 
-  
-  == About matrix recommendations
-  
-  The values in each matrix entry very opinionated recommendations as a starting point for your test matrix. 
-  This could not be different, since there is a myriad of ways in which build parameters can be tested. 
-  
-  === Ignoring recommendations
-  
-  If a given recommendation does not apply to your use case, the first option is simply to ignore that
-  entry key. For instance, `matrix.install` includes suggested packages that should be installed, but these
-  can be ignored if a custom container with these dependencies is already provided.
-  
-  Some `factors` always need to be adjusted when basic assumptions about an initial library are not valid.
-  For instance, the matrix will include the factor `matrix.shared` by default. If the only use case for your
-  library is as a shared library, then this `Shared` factor can be removed from the matrix and you can configure
-  all workflows to build a shared library.
-  
-  === Adjusting semver ranges
-  
-  The input parameters support semver ranges, including range disjunctions. For instance, consider the default
-  compiler range `clang >=3.8`, which might test your library with too many versions of clang. You could remove
-  intermediary versions of clang with the range `clang >=3.8 <5 || >=10`, which ensure old versions are 
-  recent versions are covered, while eliminating intermediary versions.
-  
-  Also when a bug is found in a specific version, semver ranges can also help. Consider someone has reported 
-  a bug in GCC 8.1, and you want to keep track of that. The semver range `gcc >=4.8 <7 || 8.1 || >=10` would ensure
-  version GCC8.1 specifically, and not any other version is the range `>=8.0.0 <9.0.0` is tested.
-  
-  === Overriding recommendations
-  
-  When the general recommendation does not work, but there's a mapping between the recommendation and the expected
-  values, you can use github action expressions to directly replace these values. For instance, if the recommendation
-  of running a workflow in the runner image `ubuntu-22.04` is not appropriate because you're going to use a container
-  that already has your dependencies, you could set the job `runs-on` property to `ubuntu-22.04` instead of 
-  `matrix.runs-on` and set the `container` property to 
-  `( matrix.runs-on == 'ubuntu-22.04' && 'my-ubuntu-22.04-container' ) || matrix.container )`, which replaces all
-  occurrences of `ubuntu-22.04` with `my-ubuntu-22.04-container`.
-  
-  === Auxiliary keys
-  
-  Overriding recommendations can be verbose when there are too many conditions involved. The matrix provides
-  auxiliary keys to make this easier. For instance, consider a matrix entry with the factor `matrix.cxxstd` equal
-  to `17,20`. If you want to have two versions of tests, where one of them does not go through all C++ standards,
-  you can use the `matrix.latest-cxxstd`, which will give you `20` without having to split `matrix.cxxstd` and take
-  its last value.
-  
-  Other auxiliary keys have broader meaning, so they can be used in more general situations. For instance,
-  it's common to build release artifacts for a subset of entries in the matrix. This subset usually represents
-  the latest version of each compiler without any factors applied. In that case, the factor `matrix.is-main` can
-  be use to determine if the release artifacts should be generated. The factor `matrix.is-main` determines if
-  the current entry is the latest version of a compiler but not one of the replicates of the latest version
-  with factors applied. 
-  
-  === Use scripts
-  
-  In more complex cases, it might be worth considering that this action only returns a json representation
-  of the test matrix. If deeper modifications in the matrix are required, a following step including a script to
-  adjust the matrix is always possible. In this scenario, the matrix will still fetch updated information 
-  about compiler versions and requirements while the script will only adjust local requirements. In most cases,
-  this is unnecessary as the approaches above tend to have good results. 
   
   == Next steps
   
@@ -334,7 +336,7 @@ inputs:
       
       `<compiler-name>[ <compiler-range|compiler-factor>]: <cmake-generator-toolset>`
       
-      For instance, `clang-cl *: ClangCL` indicates that the cmake generator toolset `ClangCL` should be used
+      For instance, `clang-cl \*: ClangCL` indicates that the cmake generator toolset `ClangCL` should be used
       to test `clang-cl` with any version.
       
       Omitting `<compiler-range|compiler-factor>` is equivalent to it being set to `*` and will apply the generator
@@ -510,19 +512,24 @@ outputs:
       The test matrix is an array of dictionaries, where each entry represents a combination of compiler version
       and factors to be tested. 
       
-      Each entry in the test matrix dictionary contains the following key-value pairs:
+      Each entry in the test matrix dictionary contains key-value pairs in the following categories:
+      
+      *Basic fields*:
 
       - `name`: A suggested name for the job testing this entry
-      
-      - `runs-on`: A suggested github runner image name for the job testing this entry
-      
-      - `container`: A suggested docker container for the job testing this entry
       
       - `compiler`: Specifies the name of the compiler to be used for the test configuration. This can be used as
         input to the setup-cpp action.
       
       - `version`: Specifies the version requirements of the compiler to be used for the test configuration. This can
         be used as input to the setup-cpp action.
+
+      - `cxxstd`: A list of standards that should be tested with this compiler version. This option considers
+        the `max-standards` latest standards supported by each compiler in its subrange of `standards`.
+      
+      - `latest-cxxstd`: The last standard listed in `cxxstd` as a convenience variable 
+      
+      *Auxiliary*:
       
       - `major`, `minor`, `patch`: Specifies the version components of the compiler whenever the whole range includes
          a single major, minor, or patch.
@@ -543,17 +550,26 @@ outputs:
       - `has-factors`: Specifies whether the entry has any factors applied.
 
       - `is-no-factor-intermediary`: Specifies whether the entry is an intermediary version without any factors applied.
+
+      *Factors*:
+      
+      - `<factors>...`: Provides additional factors or attributes associated with the test configuration as defined by
+        the `factors` inputs. These usually include variant build configurations spread among the
+        entries, such as asan, coverage, and shared libraries. For instance, if the `Asan` factor is applied to
+        an entry, the entry will define the `asan` key with the value `true` and all other entries will 
+        define the `asan` key with the value `false`.
+
+      *Suggestions*:
+
+      - `runs-on`: A suggested github runner image name for the job testing this entry
+      
+      - `container`: A suggested docker container for the job testing this entry
       
       - `cxx`: The usual name of the C++ compiler executable. If using the `setup-cpp` action, its output should be used 
         instead. 
       
       - `cc`: The usual name of the C compiler executable. If using the `setup-cpp` action, its output should be used 
         instead. 
-      
-      - `cxxstd`: A list of standards that should be tested with this compiler version. This option considers
-        the `max-standards` latest standards supported by each compiler in its subrange of `standards`.
-      
-      - `latest-cxxstd`: The last standard listed in `cxxstd` as a convenience variable 
       
       - `b2-toolset`: The usual name of the toolset to be used in a b2 workflow.
 
@@ -572,10 +588,7 @@ outputs:
       
       - `install`: The recommended packages to be installed before running the workflow. This includes packages 
         such as build-essential for ubuntu containers and lcov for coverage entries. 
-      
-      - `<factors>...`: Provides additional factors or attributes associated with the test configuration as defined by
-        the factors and latest-factors inputs. These usually include variant build configurations spread among the
-        entries, such as asan, coverage, and shared libraries.
+
 
 runs:
   using: 'node16'

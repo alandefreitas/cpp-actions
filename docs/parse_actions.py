@@ -324,7 +324,8 @@ def replace_inputs(template, matrix_entry):
 
 
 for action in actions:
-    with open(os.path.join(action, 'action.yml'), 'r') as f:
+    print(f'Parsing {action}')
+    with open(os.path.join(action, 'action.yml'), 'r', encoding='utf-8') as f:
         data = yaml.load(f, Loader=yaml.FullLoader)
 
     # Extract the data from the YAML file
@@ -413,6 +414,7 @@ for action in actions:
             output += f'[source,yml,subs="attributes+"]\n----\n{yaml_output}----\n\n'
 
     output += f'== Input Parameters\n\n'
+    output += f'[cols="1,3,1"]\n'
     output += f'|===\n|Parameter |Description |Default\n'
     for parameter, details in inputs.items():
         description = details['description'].strip()
@@ -441,6 +443,7 @@ for action in actions:
 
     if outputs:
         output += f'== Outputs\n\n'
+        output += f'[cols="1,4"]\n'
         output += f'|===\n|Output |Description\n'
         for parameter, details in outputs.items():
             description = details['description'].replace("C++", "{cpp}")

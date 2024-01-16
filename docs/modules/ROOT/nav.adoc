@@ -1,3 +1,4 @@
+* xref:design.adoc[]
 * xref:actions/cpp-matrix.adoc[]
 * Compilers
 ** xref:actions/setup-cpp.adoc[]
@@ -11,7 +12,7 @@
 * Workflows
 ** xref:actions/cmake-workflow.adoc[]
 ** xref:actions/b2-workflow.adoc[]
-* Project
+* Reports
 ** xref:actions/flamegraph.adoc[]
 ** xref:actions/create-changelog.adoc[]
 * xref:contribute.adoc[]
