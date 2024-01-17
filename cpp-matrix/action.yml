@@ -134,6 +134,19 @@ description: |
   If none of these options is enough for the library requirements, the action also prints the complete matrix
   in YAML format, so it can be copy/pasted into the workflow as a starting point to be customized.
   
+  == Ordering entries
+  
+  Entries are ordered in the matrix according to the following criteria:
+  
+  1) Latest versions of each compiler
+  2) Compilers with single versions
+  3) Oldest versions of each compiler
+  4) Entries with factors
+  5) Intermediary versions of each compiler
+  
+  The input parameter `generate-summary` can be used to generate a summary of the matrix with the
+  entries ordered according to these criteria.
+  
   == Semver ranges
   
   The requirement parameters support semver ranges, including range disjunctions. For instance, consider the default
