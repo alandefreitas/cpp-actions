@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+        <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>C++ Matrix :: C++ Actions</title>
+    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/cpp-matrix.html">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+    <link rel="stylesheet" href="../../../_/css/vendor/tabs.css">
+    <script>var uiRootPath = '../../../_'</script>
+<link rel="icon" href="../../../_/img/favicon.svg" type="image/svg">
+    <style>
+      .algolia-autocomplete .ds-dropdown-menu:before {
+          display: block;
+          position: absolute;
+          content: "";
+          width: 14px;
+          height: 14px;
+          background: #fff;
+          z-index: 2;
+          top: 9px;
+          left: -7px !important;
+          border-top: 1px solid #d9d9d9;
+          border-right: 1px solid #d9d9d9;
+          -webkit-transform: rotate(-136deg);
+          transform: rotate(-136deg);
+          border-radius: 2px;
+      }
+      .search-result-dropdown-menu:before {
+          display: block;
+          position: absolute;
+          content: "";
+          width: 14px;
+          height: 14px;
+          background: #fff !important;
+          z-index: 2;
+          top: 9px;
+          border-top: 1px solid #d9d9d9;
+          border-right: 1px solid #d9d9d9;
+          -webkit-transform: rotate(-136deg);
+          transform: rotate(-136deg);
+          border-radius: 2px;
+          left: -7px;
+      }
+      .nav-container .search-result-dropdown-menu {
+        position: fixed;
+        top: 65px;
+        left: 13.5rem;
+        width: 50%;
+        overflow: visible;
+        max-height: calc(100vh - 5.25rem);
+        line-height: 1.5;
+        z-index: 9999;
+      }
+      .nav-container .button {
+        padding: 0px 14px;
+        background-color: #FF9F00;
+        color: #fff;
+      }
+      .algolia-autocomplete.algolia-autocomplete-left .ds-dropdown-menu {
+          position: fixed !important;
+          top: 65px !important;
+          left: 13.5rem !important;
+          z-index: 99 !important;
+      }
+      .search-selector {
+        margin-right: 133px;
+        text-transform: none;
+      }
+      @media screen and (max-width: 1024px) {
+        .nav-container .search-result-dropdown-menu {
+          top: 103px;
+          left: 14.5rem;
+        }
+      }
+      @media screen and (max-width: 768px) {
+        .search-result-dropdown-menu:before {
+            top: -6px;
+            -webkit-transform: rotate(-45deg);
+            transform: rotate(-45deg);
+            left: 35px;
+        }
+        .nav-container .search-result-dropdown-menu {
+            top: 100%;
+            left: 0;
+            width: 90vw;
+            position: absolute !important;
+        }
+        .algolia-autocomplete.algolia-autocomplete-left .ds-dropdown-menu {
+          position: absolute !important;
+          top: 100% !important;
+          left: 0px !important;
+          z-index: 99 !important;
+        }
+        .algolia-autocomplete .ds-dropdown-menu:before{
+            top: -6px;
+            -webkit-transform: rotate(-45deg);
+            transform: rotate(-45deg);
+            left: 35px !important;
+        }
+      }
+    </style>
+  </head>
+  <body class="article">
+    <script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true});</script><header class="header">
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <a class="navbar-item" href="https://alandefreitas.github.io/cpp-actions/doc/cpp-actions/">
+                <img src="../../../_/img/banner.svg" alt="" width="130">
+                    <div class="navbar-item-nonProduction">
+                        <p>v1.8.1</p>
+                    </div>
+            </a>
+            <button class="navbar-burger" data-target="topbar-nav">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+
+
+        <div id="topbar-nav" class="navbar-menu">
+                <div class="navbar-item is-hoverable">
+                        <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions
+                            : C++ Matrix</a>
+                </div>
+                    <div class="navbar-item is-hoverable">
+                        <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions" target="_blank">GitHub</a>
+                    </div>
+                    <div class="navbar-item is-hoverable">
+                        <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions/releases" target="_blank">Releases</a>
+                    </div>
+
+            <div class="navbar-end">
+                <div class="navbar-item">
+                      <span class="control">
+                        <a class="button is-primary" target="blank_"
+                           href="https://github.com/alandefreitas/cpp-actions/issues/new/choose">Report an Issue</a>
+                      </span>
+                </div>
+            </div>
+        </div>
+    </nav>
+</header>
+    <div class="body">
+<div class="nav-container" data-component="cpp-actions" data-version="v1.8.1">
+  <aside class="nav">
+    <div class="panels">
+    <div class="nav-panel-menu is-active" data-panel="menu">
+        <div class="navbar-item search hide-for-print">
+            <div id="search-field" class="field has-filter">
+                <div style="display: flex; flex-direction: column;">
+                    <div style="display: flex; margin-bottom: 10px; position: relative;">
+                        <input id="search-input" type="text" placeholder="Search the docs" style="flex: 1; padding: 0 0.25em" onkeyup="onSearch()">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <nav class="nav-menu">
+                <h3 class="title"><a href="../index.html">C++ Actions</a></h3>
+            <ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../design.html">Design Rationale</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Compilers</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-cpp.html">Setup C++ Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-gcc.html">Setup GCC Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-clang.html">Setup Clang Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Tools</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="package-install.html">Install Packages Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-program.html">Setup Program Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Workflows</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="cmake-workflow.html">CMake Workflow Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="b2-workflow.html">B2 Workflow Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Reports</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../contribute.html">Contribute</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../license.html">License</a>
+  </li>
+</ul>
+  </li>
+</ul>
+        </nav>
+    </div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">C++ Actions</span>
+    <span class="version">v1.8.1</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../../index.html">C++ Actions</a>
+      <ul class="versions">
+        <li class="version is-latest">
+          <a href="../../index.html">master</a>
+        </li>
+        <li class="version">
+          <a href="../../develop/index.html">develop</a>
+        </li>
+        <li class="version is-current">
+          <a href="../index.html">v1.8.1</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.8.0/index.html">v1.8.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.7.0/index.html">v1.7.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.6.2/index.html">v1.6.2</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.6.1/index.html">v1.6.1</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.6.0/index.html">v1.6.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.5.0/index.html">v1.5.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.4.1/index.html">v1.4.1</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.4.0/index.html">v1.4.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.3.0/index.html">v1.3.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.2.1/index.html">v1.2.1</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.2.0/index.html">v1.2.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.1.0/index.html">v1.1.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.0.0/index.html">v1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+    <button class="nav-toggle"></button>
+        <a href="../../index.html" class="home-link"></a>
+    <nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">C++ Actions</a></li>
+    <li><a href="cpp-matrix.html">C++ Matrix Action</a></li>
+  </ul>
+</nav>
+    <div class="page-versions">
+  <button class="version-menu-toggle" title="Show other versions of page">v1.8.1</button>
+  <div class="version-menu">
+    <a class="version" href="../../actions/cpp-matrix.html">master</a>
+    <a class="version" href="../../develop/actions/cpp-matrix.html">develop</a>
+    <a class="version is-current" href="cpp-matrix.html">v1.8.1</a>
+    <a class="version" href="../../v1.8.0/actions/cpp-matrix.html">v1.8.0</a>
+    <a class="version" href="../../v1.7.0/actions/cpp-matrix.html">v1.7.0</a>
+    <a class="version" href="../../v1.6.2/actions/cpp-matrix.html">v1.6.2</a>
+    <a class="version" href="../../v1.6.1/actions/cpp-matrix.html">v1.6.1</a>
+    <a class="version" href="../../v1.6.0/actions/cpp-matrix.html">v1.6.0</a>
+    <a class="version" href="../../v1.5.0/actions/cpp-matrix.html">v1.5.0</a>
+    <a class="version" href="../../v1.4.1/actions/cpp-matrix.html">v1.4.1</a>
+    <a class="version" href="../../v1.4.0/actions/cpp-matrix.html">v1.4.0</a>
+    <a class="version" href="../../v1.3.0/actions/cpp-matrix.html">v1.3.0</a>
+    <a class="version is-missing" href="../../v1.2.1/index.html">v1.2.1</a>
+    <a class="version is-missing" href="../../v1.2.0/index.html">v1.2.0</a>
+    <a class="version is-missing" href="../../v1.1.0/index.html">v1.1.0</a>
+    <a class="version is-missing" href="../../v1.0.0/index.html">v1.0.0</a>
+  </div>
+</div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">C++ Matrix</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>The C Matrix Action is designed to automate the generation of a comprehensive test matrix for your
+C libraries given their requirements. It simplifies the process of defining the contract of what
+platforms your library supports and testing your project across a proper selected subset of revelant
+compiler versions and platforms.</p>
+</div>
+<div class="paragraph">
+<p>With this action, you can define a set of requirements to test your C++ library. It will then generate
+a test matrix by combining the specified requirements into a fractional factorial design to ensure all
+proper combinations are tested in a systematic manner. This approach significantly increases the chances
+of catching compatibility issues early on and helps in delivering a robust and reliable library to users.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_usage"><a class="anchor" href="#_usage"></a>Usage</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The action should be run as extra initial &#8220;setup&#8221; job in your workflow. The job will run the action and
+output <code>matrix</code>, which is a JSON string containing the whole matrix. This matrix should be output of your
+first <code>setup</code> job.</p>
+</div>
+<div class="paragraph">
+<p>In your second <code>build</code> job, you can attribute the entire matrix to the <code>strategy.matrix.include</code> parameter
+and create your workflow as usual with the parameters from the matrix:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">jobs:
+  cpp-matrix:
+    runs-on: ubuntu-latest
+    name: Generate Test Matrix
+    outputs:
+      matrix: ${{ steps.cpp-matrix.outputs.matrix }}
+    steps:
+      - name: Generate Test Matrix
+        uses: alandefreitas/cpp-actions/cpp-matrix@v1.8.1
+        id: cpp-matrix
+        with:
+          standards: '&gt;=11'
+  build:
+    needs: cpp-matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        include: fromJSON(needs.cpp-matrix.outputs.matrix)
+
+    # use matrix entries
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runs-on }}
+    container: ${{ matrix.container }}
+
+    steps:
+      - name: Clone library
+        uses: actions/checkout@v3
+
+      - name: Setup C++ Compiler
+        uses: alandefreitas/cpp-actions/setup-cpp@v1.8.1
+        id: setup-cpp
+        with:
+          compiler: ${{ matrix.compiler }}
+          version: ${{ matrix.version }}
+
+      - name: CMake Workflow
+        uses: ./cmake-workflow
+        with:
+          cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
+          cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
+          cxxstd: ${{ matrix.cxxstd }}
+          cxxflags: ${{ matrix.cxxstd }}
+
+      # And you've safely tested your C++ library just like that...</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_factors"><a class="anchor" href="#_factors"></a>Factors</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The input parameters allow factors to be defined for each compiler. These factors can be defined
+as latest factors (which are duplicated and applied to the latest version of each compiler) or
+as regular factors (which are injected into intermediary versions of each compiler).</p>
+</div>
+<div class="paragraph">
+<p>See the <a href="../design.html#cpp_actions_matrix_factors" class="xref page" target="_blank" rel="noopener">Factors Section</a> for a better
+understanding of the motivation for these factor types.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_matrix_entries"><a class="anchor" href="#_matrix_entries"></a>Matrix entries</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The values in each matrix entry include a few categories of keys: the main keys, auxiliary keys,
+factor keys, and suggestions.</p>
+</div>
+<div class="paragraph">
+<p>The main keys include information such as the compiler name and version. Auxiliary keys include
+information that is useful for filtering and sorting the matrix, such as information about the
+relative position of an entry in the matrix. Factor keys include information about the factors
+that might have been applied to the entry.</p>
+</div>
+<div class="paragraph">
+<p>Suggestions include opinionated recommendations for other parameters of your workflow as a
+starting point for your test matrix. Some examples of keys including suggestions are
+<code>runs-on</code>, <code>container</code>, generator`, <code>b2-toolset</code>, <code>build-type</code>, <code>ccflags</code>, <code>cxxflags</code>,
+<code>env</code>, and <code>install</code>.</p>
+</div>
+<div class="paragraph">
+<p>These suggestions often need to be customized and this could not be different, since there is
+a myriad of ways in which libraries should be tested. Common ways to customize these
+are:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Ignoring suggestions that are not applicable to your use case</p>
+</li>
+<li>
+<p>Using the corresponding action input to customize the value of these fields (see action input parameters)</p>
+</li>
+<li>
+<p>Use GitHub Actions <a href="https://docs.github.com/en/actions/learn-github-actions/expressions">Expressions</a> to generate new values from existing values</p>
+</li>
+<li>
+<p>Use a custom bash step to generate new values from existing values</p>
+</li>
+<li>
+<p>Create a custom script to read the complete matrix and generate a new matrix with the desired values</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>For instance, if the recommendation of running a workflow in the container <code>ubuntu:22.04</code> is not appropriate
+because you&#8217;re going to use a container that already has your dependencies, you could set the <code>runs-on</code> input
+parameter to:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">- name: Generate Test Matrix
+  # ...
+  with:
+    # ...
+    containers: |
+       gcc: my-ubuntu:22.04-container</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This would replace the recommendation for <code>ubuntu:22.04</code> with <code>my-ubuntu:22.04-container</code> for all entries
+with the compiler <code>gcc</code>.</p>
+</div>
+<div class="paragraph">
+<p>In some cases, you could use a expression directly in the workflow to use a different value for the container:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml"># In your main workflow
+containers: ${{ matrix.runs-on == 'ubuntu-22.04' &amp;&amp; 'my-ubuntu:22.04-container' || matrix.container }}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This would replace the recommendation for <code>ubuntu:22.04</code> with <code>my-ubuntu:22.04-container</code> for all entries.</p>
+</div>
+<div class="paragraph">
+<p>If you&#8217;re familiar with GitHub Actions and bash, you can also use a custom bash step to generate new values
+from existing values or write a complete script to customize the matrix.</p>
+</div>
+<div class="paragraph">
+<p>If none of these options is enough for the library requirements, the action also prints the complete matrix
+in YAML format, so it can be copy/pasted into the workflow as a starting point to be customized.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_ordering_entries"><a class="anchor" href="#_ordering_entries"></a>Ordering entries</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Entries are ordered in the matrix according to the following criteria:</p>
+</div>
+<div class="paragraph">
+<p>1) Latest versions of each compiler
+2) Compilers with single versions
+3) Oldest versions of each compiler
+4) Entries with factors
+5) Intermediary versions of each compiler</p>
+</div>
+<div class="paragraph">
+<p>The input parameter <code>generate-summary</code> can be used to generate a summary of the matrix with the
+entries ordered according to these criteria.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_semver_ranges"><a class="anchor" href="#_semver_ranges"></a>Semver ranges</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The requirement parameters support semver ranges, including range disjunctions. For instance, consider the default
+compiler range <code>clang &gt;=3.8</code>, which might test your library with too many versions of clang. You could remove
+intermediary versions of clang with the range <code>clang &gt;=3.8 &lt;5 || &gt;=10</code>, which ensure old versions are
+recent versions are covered, while eliminating intermediary versions.</p>
+</div>
+<div class="paragraph">
+<p>Semver ranges can also help when a bug is found in a specific compiler version. Consider someone has reported
+a bug in GCC 8.1, and you want to keep track of that. The semver range <code>gcc &gt;=4.8 &lt;7 || 8.1 || &gt;=10</code> would ensure
+version GCC8.1 specifically, and not any other version is the range <code>&gt;=8.0.0 &lt;9.0.0</code> is tested.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dynamic_matrices"><a class="anchor" href="#_dynamic_matrices"></a>Dynamic matrices</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In some cases, it might be useful to test different matrices based on the conditions of the workflow.
+These conditions might be the event_type and the types of files changed in the commit triggering the workflow.
+The workflows might vary between disabling tests for changes that don&#8217;t affect these certain files, running
+a reduced subset of tests for less important changes, or enabling extra tests, such as documentation tests in case
+only these files have been changed. This might be useful in terms of performance, costs, and safety.</p>
+</div>
+<div class="paragraph">
+<p>While this is hard to achieve with hard-coded matrices, this action makes variable matrices very easy to achieve.
+Simply define a previous step to determine the matrix parameters and use it to generate the matrix.
+For instance, the <code>compilers</code> parameters could be replaced from <code>gcc &gt;=4.8</code> to
+<code>gcc &gt;=4.8 &lt;6.0 ${{ github.event_name == 'push' &amp;&amp; '|| &gt;=6.0 &lt;10' }} || &gt;=11</code> to only test intermediary
+GCC versions <code>&gt;=6.0 &lt;10</code> when in push events.</p>
+</div>
+<div class="paragraph">
+<p>A more powerful strategy to save resources is analyzing files changed in the workflow and considering
+these files to determine what the matrix should be according to project conventions.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next steps</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>After setting creating the test matrix, the next step in your workflow should usually be
+<a href="setup-cpp.html" class="xref page">Setup C++</a>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_example"><a class="anchor" href="#_example"></a>Example</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Generate Test Matrix
+  uses: alandefreitas/cpp-actions/cpp-matrix@v1.8.1
+  id: cpp-matrix
+  with:
+    standards: '&gt;=11'
+    compilers: 'gcc &gt;=4.8 &lt;6 || &gt;=9
+
+      clang &gt;=3.8 &lt;6 || &gt;11
+
+      msvc &gt;=14
+
+      apple-clang *
+
+      mingw *
+
+      clang-cl *
+
+      '
+    latest-factors: 'gcc Coverage TSan UBSan Fetch-Content
+
+      clang Fetch-Content
+
+      '
+    factors: 'gcc Asan Shared No-Deps
+
+      msvc Shared x86
+
+      clang Time-Trace Asan+UBSan
+
+      mingw Shared
+
+      '</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_input_parameters"><a class="anchor" href="#_input_parameters"></a>Input Parameters</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 60%;">
+<col style="width: 20%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Parameter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>compilers</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A list of compilers to be tested. Each compiler can be complemented with its semver version requirements
+to be tested.</p>
+<p class="tableblock">When the compiler version requirements are provided, the action will break the requirements into
+subsets of major versions to be tested. When no version is provided, the '*' semver requirement
+is assumed. The action can identifies subsets of compiler versions for GCC, Clang, and MSVC.
+For any other compilers, the version requirements will passthrough to the output.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc &gt;=4.8</code></p>
+<p class="tableblock"><code>clang &gt;=3.8</code></p>
+<p class="tableblock"><code>msvc &gt;=14</code></p>
+<p class="tableblock"><code>apple-clang *</code></p>
+<p class="tableblock"><code>mingw *</code></p>
+<p class="tableblock"><code>clang-cl *</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>standards</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A semver range describing what C standards should be tested.</p>
+<p class="tableblock">The compiler ranges are adjusted to only include compilers that support any subrange of these requirements.</p>
+<p class="tableblock">These requirements can include C standards as 2 or 4 digits versions, such as 11, 2011, 98, or 1998.
+2 digit versions are normalized into the 4 digits form so that 11 &gt; 98 (2011 &gt; 1998).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>&gt;=11</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>max-standards</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The maximum number of standards to be tested with each compiler.</p>
+<p class="tableblock">For instance, if 'max-standards' is 2 and the compiler supports '11,14,17,20,23' given the in the standard
+requirements, the standards 20,23 will be tested by this compiler.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>2</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>latest-factors</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The factors to be tested with the latest versions of each compiler. For each factor in this list, the
+entry with the latest version of a compiler will be duplicated with an entry that sets this factor to true.</p>
+<p class="tableblock">Other entries will also include this factor as false.</p>
+<p class="tableblock">The following factors are considered special: 'asan', 'ubsan', 'msan', 'tsan', and 'coverage'.
+When these factors are defined in an entry, its 'ccflags', 'cxxflags', and 'linkflags' value are
+also modified to include the suggested flags for factor.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc Coverage TSan UBSan</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>factors</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The factors to be tested with other versions of each compiler. Each factor in this list will be injected
+into a version of the compiler that is not the latest version. An entry with the latest version of the compiler
+will be duplicated with this factor if there are no entries left to inject the factor.</p>
+<p class="tableblock">Other entries will also include this factor as false.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc Asan Shared</code></p>
+<p class="tableblock"><code>msvc Shared x86</code></p>
+<p class="tableblock"><code>clang Time-Trace</code></p>
+<p class="tableblock"><code>mingw Shared</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>combinatorial-factors</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The factors to be tested with all combinations of other factors. When combinatorial factors are defined,
+for each entry in the matrix, a new entry will be created with the factors in this list set to <code>true</code>.</p>
+<p class="tableblock">For instance, if the library can be built both in "Standalone" mode and with dependencies, the factor 'Standalone'
+can be added to this list to duplicate all entries. Each copy would include a "Standalone" factor set to
+<code>true</code> or <code>false</code>.</p>
+<p class="tableblock">Typically, it is advisable to steer clear of combinatorial factors to prevent a combinatorial explosion.
+It&#8217;s usually better to only test the combinations that are expected to be used in practice and include an
+extra steps in the workflow to test any combinatorial factors.</p>
+<p class="tableblock">For instance, if the library can be built both in "Standalone" mode and with dependencies, its workflow can
+simply include an extra step to also test the library in "Standalone" mode and keep the step to test the library
+with dependencies. This is usually safer and cheaper than duplicating the entire matrix to test all
+combinations of these factors and also allows steps to be skipped when the library is not expected to be built
+in a given mode. For instance, testing a library on Standalone mode might not be necessary when the library
+is being tested with intermediary compilers.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>runs-on</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of github runner images to be used with each range of compiler version.
+Each line has the format:</p>
+<p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;github-runner-image&gt;</code></p>
+<p class="tableblock">For instance, <code>gcc &gt;=13.1: ubuntu-latest</code> indicates that the runner image <code>ubuntu-latest</code> should be used
+to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the runner
+image to all versions of the compiler.</p>
+<p class="tableblock">When the runner image is specified, a container is only be suggested for the entries if the <code>container</code>
+option for that compiler version is also specified.</p>
+<p class="tableblock">When the runner image is unspecified, the action will infer the runner image and potentially a container
+from the compiler name and its version.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>containers</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of docker containers to be used with each range of compiler version.
+Each line has the format:</p>
+<p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;docker-container&gt;</code></p>
+<p class="tableblock">For instance, <code>gcc &gt;=13.1: ubuntu:22.04</code> indicates that the docker container <code>ubuntu:22.04</code> should be used
+to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the container
+to all versions of the compiler.</p>
+<p class="tableblock">When the container is specified for that compiler version and the <code>runs-on</code> option is not, an ubuntu image
+is suggested for the entry to run the container.</p>
+<p class="tableblock">When the container is unspecified, the action can still infer a container for the compiler version according
+to the rules defined in the <code>use-containers</code> option.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>generators</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of cmake generators to be used with each range of compiler version.
+Each line has the format:</p>
+<p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;cmake-generator&gt;</code></p>
+<p class="tableblock">For instance, <code>gcc &gt;=13.1: Ninja</code> indicates that the cmake generator <code>Ninja</code> should be used
+to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the generator
+to all versions of the compiler.</p>
+<p class="tableblock">When the generator is unspecified, the action will infer the generator from the compiler name and its version.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>generator-toolsets</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of cmake generator toolsets to be used with each range of compiler version.
+Each line has the format:</p>
+<p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;cmake-generator-toolset&gt;</code></p>
+<p class="tableblock">For instance, <code>clang-cl *: ClangCL</code> indicates that the cmake generator toolset <code>ClangCL</code> should be used
+to test <code>clang-cl</code> with any version.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the generator
+to all versions of the compiler.</p>
+<p class="tableblock">When the generator toolset is unspecified, the action will infer the generator toolset from the compiler name
+and its version.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>b2-toolsets</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of b2 toolsets to be used with each range of compiler version.
+Each line has the format:</p>
+<p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;b2-toolset&gt;</code></p>
+<p class="tableblock">For instance, <code>gcc &gt;=13.1: gcc</code> indicates that the b2 toolset <code>gcc-13</code> should be used
+to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the toolset
+to all versions of the compiler.</p>
+<p class="tableblock">When the toolset is unspecified, the action will infer the toolset from the compiler name and its version.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ccflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of C compiler flags to be used with each range of compiler version.
+Each line has the format:</p>
+<p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;ccflags&gt;</code></p>
+<p class="tableblock">For instance, <code>gcc &gt;=13.1: -O3</code> indicates that the C compiler flag <code>-O3</code> should be used
+to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the flag
+to all versions of the compiler.</p>
+<p class="tableblock">When the flag is unspecified, the action will infer the flag from the compiler name and its version.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of C compiler flags to be used with each range of compiler version.
+Each line has the format:</p>
+<p class="tableblock">`&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;cxxflags&gt;`</p>
+<p class="tableblock">For instance, `gcc &gt;=13.1: -O3` indicates that the C compiler flag <code>-O3</code> should be used
+to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the flag
+to all versions of the compiler.</p>
+<p class="tableblock">When the flag is unspecified, the action will infer the flag from the compiler name and its version.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>install</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of packages to be installed with each range of compiler version.
+Each line has the format:</p>
+<p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;packages&gt;</code></p>
+<p class="tableblock">For instance, <code>gcc &gt;=13.1: build-essential</code> indicates that the package <code>build-essential</code> should be installed
+to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the package
+to all versions of the compiler.</p>
+<p class="tableblock">When the package is unspecified, the action will infer the package from the compiler name and its version.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>triplets</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of triplets to be used with each range of compiler version.
+Each line has the format:</p>
+<p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;triplet&gt;</code></p>
+<p class="tableblock">For instance, <code>gcc &gt;=13.1: x86_64-linux-gnu</code> indicates that the triplet <code>x86_64-linux-gnu</code> should be used
+to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the triplet
+to all versions of the compiler.</p>
+<p class="tableblock">When the triplet is unspecified, the action will infer the triplet from the compiler name and its version.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build_types</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of build types to be used with each range of compiler version.
+Each line has the format:</p>
+<p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;build-type&gt;</code></p>
+<p class="tableblock">For instance, <code>gcc &gt;=13.1: Release</code> indicates that the build type <code>Release</code> should be used
+to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the build type
+to all versions of the compiler.</p>
+<p class="tableblock">When the build type is unspecified, the action will infer the build type from the compiler name and its version.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>sanitizer-build-type</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Determine the default build type to suggest when testing with sanitizers.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RelWithDebInfo</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>x86-build-type</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Determine the default build type to suggest when testing with x86.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>Release</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>use-containers</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Determine whether to use containers whenever possible to run the tests.</p>
+<p class="tableblock">By using containers for all jobs, the workflow can be more stable and reproducible.
+For instance, without containers an existing workflow cannot start to fail because
+of a change in the GitHub runner environments.</p>
+<p class="tableblock">However, this comes at a cost of initial setup time. Some existing workflows can also break when
+moving to containers because existing assumptions about tools available in the runner environment
+are no longer valid.</p>
+<p class="tableblock">When the value is false, the action will still use containers when needed. This may happen because
+the compiler is not available in the runner image or when there&#8217;s a reported conflict between
+compilers in the runner image.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>log-matrix</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Log the generated matrix as a JSON string.</p>
+<p class="tableblock">The is useful for debugging purposes and when transitioning to a workflow that uses a hard-coded matrix.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>generate-summary</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Generate summary with the complete matrix.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the action.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_outputs"><a class="anchor" href="#_outputs"></a>Outputs</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 80%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Output</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>matrix</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The test matrix is an array of dictionaries, where each entry represents a combination of compiler version
+and factors to be tested.</p>
+<p class="tableblock">Each entry in the test matrix dictionary contains key-value pairs in the following categories:</p>
+<p class="tableblock"><strong>Basic fields</strong>:</p>
+<p class="tableblock">- <code>name</code>: A suggested name for the job testing this entry</p>
+<p class="tableblock">- <code>compiler</code>: Specifies the name of the compiler to be used for the test configuration. This can be used as
+  input to the setup-cpp action.</p>
+<p class="tableblock">- <code>version</code>: Specifies the version requirements of the compiler to be used for the test configuration. This can
+  be used as input to the setup-cpp action.</p>
+<p class="tableblock">- <code>cxxstd</code>: A list of standards that should be tested with this compiler version. This option considers
+  the <code>max-standards</code> latest standards supported by each compiler in its subrange of <code>standards</code>.</p>
+<p class="tableblock">- <code>latest-cxxstd</code>: The last standard listed in <code>cxxstd</code> as a convenience variable</p>
+<p class="tableblock"><strong>Auxiliary</strong>:</p>
+<p class="tableblock">- <code>major</code>, <code>minor</code>, <code>patch</code>: Specifies the version components of the compiler whenever the whole range includes
+   a single major, minor, or patch.</p>
+<p class="tableblock">- <code>has_major</code>, <code>has_minor</code>, <code>has_patch</code>: Determines if the corresponding version component of the compiler
+   is available representing all versions in the range.</p>
+<p class="tableblock">- <code>is-latest</code>: Specifies whether the entry version requirement is the latest version among the test configurations.</p>
+<p class="tableblock">- <code>is-main</code>: Specifies whether the entry version requirement is the latest version among the test configurations
+  without any factors applied.</p>
+<p class="tableblock">- <code>is-earliest</code>: Specifies whether the entry version requirement is the earliest version among the test configurations.</p>
+<p class="tableblock">- <code>is-intermediary</code>: Specifies whether the entry version requirement is neither the earliest nor the latest version
+  among the test configurations.</p>
+<p class="tableblock">- <code>has-factors</code>: Specifies whether the entry has any factors applied.</p>
+<p class="tableblock">- <code>is-no-factor-intermediary</code>: Specifies whether the entry is an intermediary version without any factors applied.</p>
+<p class="tableblock"><strong>Factors</strong>:</p>
+<p class="tableblock">- <code>&lt;factors&gt;&#8230;&#8203;</code>: Provides additional factors or attributes associated with the test configuration as defined by
+  the <code>factors</code> inputs. These usually include variant build configurations spread among the
+  entries, such as asan, coverage, and shared libraries. For instance, if the <code>Asan</code> factor is applied to
+  an entry, the entry will define the <code>asan</code> key with the value <code>true</code> and all other entries will
+  define the <code>asan</code> key with the value <code>false</code>.</p>
+<p class="tableblock"><strong>Suggestions</strong>:</p>
+<p class="tableblock">- <code>runs-on</code>: A suggested github runner image name for the job testing this entry</p>
+<p class="tableblock">- <code>container</code>: A suggested docker container for the job testing this entry</p>
+<p class="tableblock">- <code>cxx</code>: The usual name of the C&#43;&#43; compiler executable. If using the <code>setup-cpp</code> action, its output should be used
+  instead.</p>
+<p class="tableblock">- <code>cc</code>: The usual name of the C compiler executable. If using the <code>setup-cpp</code> action, its output should be used
+  instead.</p>
+<p class="tableblock">- <code>b2-toolset</code>: The usual name of the toolset to be used in a b2 workflow.</p>
+<p class="tableblock">- <code>generator</code>: A CMake generator recommended to run the CMake workflow.</p>
+<p class="tableblock">- <code>build-type</code>: A build type recommended to test this entry. This is usually <code>Release</code>, unless some special
+  factor that requires <code>Debug</code> is defined.</p>
+<p class="tableblock">- <code>ccflags</code>: The recommended C flags to be used by this entry. It reflects the values of special factors, such
+   as sanitizers, coverage, and time-trace.</p>
+<p class="tableblock">- <code>cxxflags</code>: The recommended C&#43;&#43; flags to be used by this entry. It reflects the values of special factors, such
+   as sanitizers, coverage, and time-trace.</p>
+<p class="tableblock">- <code>env</code>: A dictionary of environment variables to be set for this entry.</p>
+<p class="tableblock">- <code>install</code>: The recommended packages to be installed before running the workflow. This includes packages
+  such as build-essential for ubuntu containers and lcov for coverage entries.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+    <footer class="footer">
+  <p>This page was built using the Antora UI adapted by <a href="https://github.com/cppalliance/site-docs" target="_blank">cppalliance/site-docs</a>.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+  <p>
+    <a href="https://github.com/alandefreitas/cpp-actions" target="_blank">alandefreitas/cpp-actions</a>
+  </p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+<script async src="../../../_/js/vendor/tabs.js" data-sync-storage-key="preferred-tab"></script>
+    <script>
+      var element = document.querySelector('.search-result-dropdown-menu');
+      if (element) {
+        // Apply styles and additional class to element
+        element.style.display = 'none';
+        var element = document.querySelector('.search-result-dropdown-menu');
+        var arrow = document.createElement('div');
+        arrow.classList.add('search-result-dropdown-menu');
+        element.appendChild(arrow);
+      }
+
+      function onSearch() {
+        var searchInput = document.getElementById('search-input');
+        if (searchInput.value) {
+          element.style.display = 'block';
+        } else {
+          element.style.display = 'none';
+        }
+      }
+
+      function onSearchChange(search_active) {
+        var searchInputAlgolia = document.getElementById('search-input-algolia');
+        var searchInput = document.getElementById('search-input');
+        if (search_active === "algolia") {
+          searchInputAlgolia.style.display = 'block';
+          // searchInputAlgolia.style.lineHeight = '2.001';
+          searchInput.style.display = 'none';
+          setupAlgoliaDocsearch();
+        } else {
+          searchInputAlgolia.style.display = 'none';
+          searchInput.style.display = 'block';
+        }
+      }
+
+      // Add an event listener to the document
+      document.addEventListener("click", function(event) {
+        var searchInput = document.getElementById('search-input');
+        // Check if the click was outside of the modal
+        if (event.target !== element && event.target !== searchInput) {
+
+          // Hide the modal
+          searchInput.value = "";
+          onSearch();
+        }
+      });
+    </script>
+  </body>
+</html>
