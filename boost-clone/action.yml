@@ -164,7 +164,7 @@ runs:
       if: (inputs.modules != '' || inputs.scan-modules-dir != '') && steps.find-python.outputs.supports_scan_scripts != 'true'
       id: setup-python
       with:
-        python-version: 3.11
+        python-version: "3.11.7"
 
     - name: Ensure curl is available for scan module step in containers
       if: inputs.scan-modules-dir != ''
