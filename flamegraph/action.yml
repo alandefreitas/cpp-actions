@@ -110,7 +110,21 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: Find python
+      shell: bash
+      id: find-python
+      run: |
+        # Find python
+        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
+        python_path="$(command -v python3 || command -v python)"
+        if [ -z "$python_path" ]; then
+          echo -E "python_path=" >> $GITHUB_OUTPUT
+        else
+          echo -E "python_path=$python_path" >> $GITHUB_OUTPUT
+        fi
+
     - uses: actions/setup-python@v5.0.0
+      if: ${{ steps.find-python.outputs.python_path == '' }}
       id: setup-python
       with:
         python-version: "3.11.7"
@@ -184,7 +198,7 @@ runs:
       run: |
         # Merge time-traces and generate report
         ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        python_path="${{ steps.setup-python.outputs.python-path || 'python' }}"
+        python_path="${{ steps.find-python.outputs.python_path || steps.setup-python.outputs.python-path || 'python' }}"
         verbose_arg="${{ (inputs.trace-commands && '--verbose') || '' }}"
         $python_path "$GITHUB_ACTION_PATH/combine-traces.py" --source-dir "${{ inputs.source-dir }}" --build-dir "${{ inputs.build-dir }}" --output "${{ inputs.output-path }}" --report-output "${{ inputs.report-path }}" $verbose_arg
         
@@ -217,7 +231,7 @@ runs:
           fi
           unzip d9fcc272b6a08c3e3e5b7919040f0ab5f8952d65.zip
           mv FlameGraph-d9fcc272b6a08c3e3e5b7919040f0ab5f8952d65 FlameGraph
-          python_path="${{ steps.setup-python.outputs.python-path || 'python' }}"
+          python_path="${{ steps.find-python.outputs.python_path || steps.setup-python.outputs.python-path || 'python' }}"
           output_path="${{ steps.ctx.outputs.output_path }}"
           $python_path ./FlameGraph/stackcollapse-chrome-tracing.py "$output_path" > "$output_path.folded"
           ./FlameGraph/flamegraph.pl "$output_path.folded" > "$output_path.svg"
