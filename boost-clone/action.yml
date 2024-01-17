@@ -160,11 +160,11 @@ runs:
       with:
         apt-get: libssl-dev
 
-    - uses: actions/setup-python@v4
+    - uses: actions/setup-python@v5.0.0
       if: (inputs.modules != '' || inputs.scan-modules-dir != '') && steps.find-python.outputs.supports_scan_scripts != 'true'
       id: setup-python
       with:
-        python-version: '3.5'
+        python-version: 3.11
 
     - name: Ensure curl is available for scan module step in containers
       if: inputs.scan-modules-dir != ''
