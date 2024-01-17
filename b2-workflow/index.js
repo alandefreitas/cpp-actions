@@ -43,7 +43,7 @@ async function main(inputs) {
     // equivalent to the CMAKE_CXX_COMPILER cache variable in CMake.
     // The user is responsible for setting this configuration properly
     // if providing its own user-config.jam file.
-    if (!inputs.user_config && inputs.cxx) {
+    if (!inputs.user_config && inputs.cxx && inputs.toolset && inputs.toolset !== 'clang-win') {
         core.startGroup('🔧 Create user-config.jam')
         if (inputs.cxx && path.basename(inputs.cxx) === inputs.cxx) {
             try {
@@ -54,22 +54,18 @@ async function main(inputs) {
         }
         core.info(`🧩 cxx: ${inputs.cxx}`)
         inputs.cxx = inputs.cxx.replaceAll('\\', '\\\\')
-        if (inputs.toolset) {
-            // toolset_basename is toolset up to first '-'
-            // For instance, for the toolset `gcc-13`, we should include the
-            // path to `gcc` in user-config.jam. For `clang-win`, we should
-            // include the path to `clang`.
-            const toolset_basename = inputs.toolset.split('-')[0]
-            const user_config_jam = path.join(os.homedir(), 'user-config.jam')
-            fnlog(`user-config.jam: ${user_config_jam}`)
-            const user_config_jam_contents = `using ${toolset_basename} : : "${inputs.cxx}" ;`
-            fnlog(`user-config.jam contents: ${user_config_jam_contents}`)
-            fs.writeFileSync(user_config_jam, user_config_jam_contents)
-            core.info(`📝 ${user_config_jam} contents:`)
-            core.info(user_config_jam_contents)
-        } else {
-            core.info('Skipping user-config.jam creation for clang-win')
-        }
+        // toolset_basename is toolset up to first '-'
+        // For instance, for the toolset `gcc-13`, we should include the
+        // path to `gcc` in user-config.jam. For `clang-win`, we should
+        // include the path to `clang`.
+        const toolset_basename = inputs.toolset.split('-')[0]
+        const user_config_jam = path.join(os.homedir(), 'user-config.jam')
+        fnlog(`user-config.jam: ${user_config_jam}`)
+        const user_config_jam_contents = `using ${toolset_basename} : : "${inputs.cxx}" ;`
+        fnlog(`user-config.jam contents: ${user_config_jam_contents}`)
+        fs.writeFileSync(user_config_jam, user_config_jam_contents)
+        core.info(`📝 ${user_config_jam} contents:`)
+        core.info(user_config_jam_contents)
         core.endGroup()
     }
 
