@@ -812,9 +812,7 @@ function setEntryVersionFlags(entry, i, subranges, minSubrangeVersion, maxSubran
     entry['is-earliest'] = i === 0
 
     // Intermediary flags
-    if (!entry['is-latest'] && !entry['is-earliest']) {
-        entry['is-intermediary'] = true
-    }
+    entry['is-intermediary'] = !entry['is-latest'] && !entry['is-earliest']
 
     // Indicate if major, minor, or patch are not specified
     entry['has-major'] = entry['major'] !== '*'
@@ -1214,9 +1212,7 @@ async function generateMatrix(inputs) {
             if (!('has-factors' in matrix[i])) {
                 matrix[i]['has-factors'] = false
             }
-            if (matrix[i]['is-intermediary'] && !matrix[i]['has-factors']) {
-                matrix[i]['is-no-factor-intermediary'] = true
-            }
+            matrix[i]['is-no-factor-intermediary'] = matrix[i]['is-intermediary'] && !matrix[i]['has-factors']
         }
         fnlog(`${compilerName}: ${matrix.length - earliestIdx} total entries`)
     }
