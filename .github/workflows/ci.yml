@@ -128,7 +128,7 @@ jobs:
           trace-commands: true
 
       - name: B2 Workflow
-        if: ${{ ! matrix.has-factors && matrix.compiler != 'clang-cl' }}
+        if: ${{ ! matrix.has-factors }}
         uses: ./b2-workflow
         with:
           source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
