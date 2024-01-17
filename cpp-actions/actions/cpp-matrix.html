@@ -249,6 +249,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.8.1/index.html">v1.8.1</a>
+        </li>
+        <li class="version">
           <a href="../v1.8.0/index.html">v1.8.0</a>
         </li>
         <li class="version">
@@ -309,6 +312,7 @@
   <div class="version-menu">
     <a class="version is-current" href="cpp-matrix.html">master</a>
     <a class="version" href="../develop/actions/cpp-matrix.html">develop</a>
+    <a class="version" href="../v1.8.1/actions/cpp-matrix.html">v1.8.1</a>
     <a class="version" href="../v1.8.0/actions/cpp-matrix.html">v1.8.0</a>
     <a class="version" href="../v1.7.0/actions/cpp-matrix.html">v1.7.0</a>
     <a class="version" href="../v1.6.2/actions/cpp-matrix.html">v1.6.2</a>
@@ -504,6 +508,25 @@ from existing values or write a complete script to customize the matrix.</p>
 <div class="paragraph">
 <p>If none of these options is enough for the library requirements, the action also prints the complete matrix
 in YAML format, so it can be copy/pasted into the workflow as a starting point to be customized.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_ordering_entries"><a class="anchor" href="#_ordering_entries"></a>Ordering entries</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Entries are ordered in the matrix according to the following criteria:</p>
+</div>
+<div class="paragraph">
+<p>1) Latest versions of each compiler
+2) Compilers with single versions
+3) Oldest versions of each compiler
+4) Entries with factors
+5) Intermediary versions of each compiler</p>
+</div>
+<div class="paragraph">
+<p>The input parameter <code>generate-summary</code> can be used to generate a summary of the matrix with the
+entries ordered according to these criteria.</p>
 </div>
 </div>
 </div>
