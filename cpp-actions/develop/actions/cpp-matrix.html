@@ -511,6 +511,25 @@ in YAML format, so it can be copy/pasted into the workflow as a starting point t
 </div>
 </div>
 <div class="sect1">
+<h2 id="_ordering_entries"><a class="anchor" href="#_ordering_entries"></a>Ordering entries</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Entries are ordered in the matrix according to the following criteria:</p>
+</div>
+<div class="paragraph">
+<p>1) Latest versions of each compiler
+2) Compilers with single versions
+3) Oldest versions of each compiler
+4) Entries with factors
+5) Intermediary versions of each compiler</p>
+</div>
+<div class="paragraph">
+<p>The input parameter <code>generate-summary</code> can be used to generate a summary of the matrix with the
+entries ordered according to these criteria.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_semver_ranges"><a class="anchor" href="#_semver_ranges"></a>Semver ranges</h2>
 <div class="sectionbody">
 <div class="paragraph">
