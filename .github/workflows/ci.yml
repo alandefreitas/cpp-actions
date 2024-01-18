@@ -43,13 +43,13 @@ jobs:
             mingw *
             clang-cl *
           latest-factors: |
-            msvc Asan
+            msvc ASan
             gcc Coverage TSan UBSan Fetch-Content
             clang Fetch-Content
           factors: |
-            gcc Asan Shared No-Deps
+            gcc ASan Shared No-Deps
             msvc Shared x86
-            clang Time-Trace Asan+UBSan
+            clang Time-Trace ASan+UBSan
             mingw Shared
           trace-commands: true
 
