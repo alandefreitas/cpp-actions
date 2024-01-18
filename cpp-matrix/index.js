@@ -959,14 +959,14 @@ function setRecommendedFlags(entry, inputs) {
     // Flags for asan
     let sanitizers = []
     if ('asan' in entry && entry['asan'] === true) {
-        if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
+        if (['gcc', 'clang', 'msvc'].includes(entry['compiler'])) {
             sanitizers.push('address')
         }
     }
 
     // Flags for ubsan
     if ('ubsan' in entry && entry['ubsan'] === true) {
-        if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
+        if (['gcc', 'clang'].includes(entry['compiler'])) {
             sanitizers.push('undefined')
             // https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#stack-traces-and-report-symbolization
             entry['env'] = {'UBSAN_OPTIONS': 'print_stacktrace=1'}
@@ -975,21 +975,23 @@ function setRecommendedFlags(entry, inputs) {
 
     // Flags for msan
     if ('msan' in entry && entry['msan'] === true) {
-        if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
+        if (['gcc', 'clang'].includes(entry['compiler'])) {
             sanitizers.push('memory')
         }
     }
 
     // Flags for tsan
     if ('tsan' in entry && entry['tsan'] === true) {
-        if (entry['compiler'] === 'gcc' || entry['compiler'] === 'clang') {
+        if (['gcc', 'clang'].includes(entry['compiler'])) {
             sanitizers.push('thread')
         }
     }
 
     if (sanitizers.length !== 0) {
         const sanitizers_str = sanitizers.join(',')
-        const sanitizer_flags = ` -fsanitize=${sanitizers_str} -fno-sanitize-recover=${sanitizers_str} -fno-omit-frame-pointer`
+        const sanitizer_flags = entry['compiler'] === 'msvc' ?
+            ` /fsanitize=${sanitizers_str}` :
+            ` -fsanitize=${sanitizers_str} -fno-sanitize-recover=${sanitizers_str} -fno-omit-frame-pointer`
         entry['cxxflags'] += sanitizer_flags
         entry['ccflags'] += sanitizer_flags
         entry['build-type'] = inputs.sanitizer_build_type || 'Release'
