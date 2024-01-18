@@ -173,7 +173,9 @@ async function main(inputs) {
      */
     if (inputs.warnings_as_errors !== undefined) {
         if (typeof inputs.warnings_as_errors === 'string') {
-            b2_args.push(`warnings-as-errors=${inputs.warnings_as_errors}`)
+            if (inputs.warnings_as_errors !== '') {
+                b2_args.push(`warnings-as-errors=${inputs.warnings_as_errors}`)
+            }
         } else if (inputs.warnings_as_errors) {
             b2_args.push(`warnings-as-errors=${inputs.warnings_as_errors ? 'on' : 'off'}`)
         }
@@ -183,7 +185,9 @@ async function main(inputs) {
     }
     if (inputs.rtti !== undefined) {
         if (typeof inputs.rtti === 'string') {
-            b2_args.push(`rtti=${inputs.rtti}`)
+            if (inputs.rtti !== '') {
+                b2_args.push(`rtti=${inputs.rtti}`)
+            }
         } else if (inputs.rtti) {
             b2_args.push(`rtti=${inputs.rtti ? 'on' : 'off'}`)
         }
@@ -193,28 +197,36 @@ async function main(inputs) {
     }
     if (inputs.runtime_link) {
         if (typeof inputs.runtime_link === 'string') {
-            b2_args.push(`runtime-link=${inputs.runtime_link}`)
+            if (inputs.runtime_link !== '') {
+                b2_args.push(`runtime-link=${inputs.runtime_link}`)
+            }
         } else if (inputs.runtime_link) {
             b2_args.push('runtime-link=shared')
         }
     }
     if (inputs.asan !== undefined) {
         if (typeof inputs.asan === 'string') {
-            b2_args.push(`address-sanitizer=${inputs.asan}`)
+            if (inputs.asan !== '') {
+                b2_args.push(`address-sanitizer=${inputs.asan}`)
+            }
         } else if (inputs.asan) {
             b2_args.push('address-sanitizer=norecover')
         }
     }
     if (inputs.ubsan !== undefined) {
         if (typeof inputs.ubsan === 'string') {
-            b2_args.push(`undefined-sanitizer=${inputs.ubsan}`)
+            if (inputs.ubsan !== '') {
+                b2_args.push(`undefined-sanitizer=${inputs.ubsan}`)
+            }
         } else if (inputs.ubsan) {
             b2_args.push('undefined-sanitizer=norecover')
         }
     }
     if (inputs.tsan !== undefined) {
         if (typeof inputs.tsan === 'string') {
-            b2_args.push(`thread-sanitizer=${inputs.tsan}`)
+            if (inputs.tsan !== '') {
+                b2_args.push(`thread-sanitizer=${inputs.tsan}`)
+            }
         } else if (inputs.tsan) {
             b2_args.push('thread-sanitizer=norecover')
         }
@@ -465,29 +477,29 @@ async function run() {
             modules: (core.getInput('modules') || '').split(/[,; ]/).filter((input) => input !== ''),
             extra_args: parseExtraArgs(core.getMultilineInput('extra-args')),
             // B2-specific options
-            warnings_as_errors: toTriboolOrStringInput(core.getInput('warnings-as-errors') || undefined),
+            warnings_as_errors: toTriboolOrStringInput(core.getInput('warnings-as-errors')),
             address_model: core.getInput('address-model') || undefined,
-            asan: toTriboolOrStringInput(core.getInput('asan') || undefined),
-            ubsan: toTriboolOrStringInput(core.getInput('ubsan') || undefined),
-            tsan: toTriboolOrStringInput(core.getInput('tsan') || undefined),
+            asan: toTriboolOrStringInput(core.getInput('asan')),
+            ubsan: toTriboolOrStringInput(core.getInput('ubsan')),
+            tsan: toTriboolOrStringInput(core.getInput('tsan')),
             coverage: core.getInput('coverage') || undefined,
             linkflags: core.getInput('linkflags') || undefined,
             threading: core.getInput('threading') || undefined,
-            rtti: toTriboolOrStringInput(core.getInput('rtti')) || undefined,
-            clean: toTriboolInput(core.getInput('clean')) || undefined,
-            clean_all: toTriboolInput(core.getInput('clean-all')) || undefined,
-            abbreviate_paths: toTriboolInput(core.getInput('abbreviate-paths')) || undefined,
-            hash: toTriboolInput(core.getInput('hash')) || undefined,
-            rebuild_all: toTriboolInput(core.getInput('rebuild-all')) || undefined,
-            dry_run: toTriboolInput(core.getInput('dry-run')) || undefined,
-            stop_on_error: toTriboolInput(core.getInput('stop-on-error')) || undefined,
+            rtti: toTriboolOrStringInput(core.getInput('rtti')),
+            clean: toTriboolInput(core.getInput('clean')),
+            clean_all: toTriboolInput(core.getInput('clean-all')),
+            abbreviate_paths: toTriboolInput(core.getInput('abbreviate-paths')),
+            hash: toTriboolInput(core.getInput('hash')),
+            rebuild_all: toTriboolInput(core.getInput('rebuild-all')),
+            dry_run: toTriboolInput(core.getInput('dry-run')),
+            stop_on_error: toTriboolInput(core.getInput('stop-on-error')),
             config: normalizePath(core.getInput('config')),
             site_config: normalizePath(core.getInput('site-config')),
             user_config: normalizePath(core.getInput('user-config')),
             project_config: normalizePath(core.getInput('project-config')),
-            debug_configuration: toTriboolInput(core.getInput('debug-configuration')) || undefined,
-            debug_building: toTriboolInput(core.getInput('debug-building')) || undefined,
-            debug_generators: toTriboolInput(core.getInput('debug-generators')) || undefined,
+            debug_configuration: toTriboolInput(core.getInput('debug-configuration')),
+            debug_building: toTriboolInput(core.getInput('debug-building')),
+            debug_generators: toTriboolInput(core.getInput('debug-generators')),
             include: normalizePath(core.getInput('include')),
             'define': core.getInput('define'),
             runtime_link: toTriboolOrStringInput(core.getInput('runtime-link')),
@@ -510,7 +522,7 @@ async function run() {
         core.startGroup('📥 Workflow Inputs')
         fnlog(`🧩 b2-workflow.trace_commands: ${trace_commands}`)
         for (const [name, value] of Object.entries(inputs)) {
-            core.info(`🧩 ${name.replaceAll('_', '-')}: ${value ? (typeof value === 'string' ? `"${value}"` : value) : '<empty>'}`)
+            core.info(`🧩 ${name.replaceAll('_', '-')}: ${JSON.stringify(value)}`)
         }
         core.endGroup()
 

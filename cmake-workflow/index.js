@@ -1311,7 +1311,7 @@ async function run() {
         fnlog(`🧩 cmake-workflow.trace_commands: ${trace_commands}`)
         fnlog(`🧩 setup-cmake.trace_commands: ${setup_cmake.trace_commands}`)
         for (const [name, value] of Object.entries(inputs)) {
-            core.info(`🧩 ${name.replaceAll('_', '-')}: ${value ? JSON.stringify(value) : '<empty>'}`)
+            core.info(`🧩 ${name.replaceAll('_', '-')}: ${JSON.stringify(value)}`)
         }
         core.endGroup()
 
