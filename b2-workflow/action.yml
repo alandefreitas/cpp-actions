@@ -151,9 +151,19 @@ inputs:
     required: true
     default: ''
 
+  extra-args:
+    description: 'Extra arguments.'
+    required: false
+    default: ''
+
   # ======================================
   # B2-specific options
   # ======================================
+  warnings-as-errors:
+    description: |
+      Treat warnings as errors.
+    required: false
+    default: ''
   address-model:
     description: 'Valid B2 list of address models.'
     required: false

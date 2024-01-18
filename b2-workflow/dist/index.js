@@ -157,6 +157,9 @@ async function main(inputs) {
             b2_args.push(`variant=${lc_build_type}`)
         }
     }
+    if (inputs.extra_args) {
+        b2_args = b2_args.concat(inputs.extra_args)
+    }
 
     /*
         Flags
@@ -174,6 +177,13 @@ async function main(inputs) {
     /*
         B2-specific options
      */
+    if (inputs.warnings_as_errors !== undefined) {
+        if (typeof inputs.warnings_as_errors === 'string') {
+            b2_args.push(`warnings-as-errors=${inputs.warnings_as_errors}`)
+        } else if (inputs.warnings_as_errors) {
+            b2_args.push(`warnings-as-errors=${inputs.warnings_as_errors ? 'on' : 'off'}`)
+        }
+    }
     if (inputs.threading) {
         b2_args.push(`threading=${inputs.threading}`)
     }
@@ -341,6 +351,106 @@ function normalizePath(path) {
     return path
 }
 
+function parseExtraArgs(extra_args) {
+    // The extra_args input is a multiline string. Each element in the array
+    // is a line in the string. We need to split each line into arguments
+    // and then join them into a single array. It's not as simple as splitting
+    // on spaces because arguments can be quoted.
+
+    function extractIdentifier(i, line, char, curArg) {
+        const nextChar = i < line.length - 1 ? line[i + 1] : undefined
+        if (nextChar && nextChar.match(/^[a-zA-Z_]/)) {
+            let identifier = nextChar
+            let j = i + 2
+            for (; j < line.length; j++) {
+                const idChar = line[j]
+                // check if idChar is alphanum or underscore
+                if (idChar.match(/^[a-zA-Z0-9_]/)) {
+                    identifier += char
+                } else {
+                    break
+                }
+            }
+            // Replace $ with the value of the environment variable
+            // if it exists
+            const envValue = process.env[identifier]
+            if (envValue) {
+                curArg += envValue
+            }
+            // Advance i to the last character of the identifier
+            i = j - 1
+        } else {
+            // No valid identifier after $. Just output $.
+            curArg += char
+        }
+        return {i, curArg}
+    }
+
+    let args = []
+    for (const line of extra_args) {
+        let curQuote = undefined
+        let curArg = ''
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i]
+            const inQuote = curQuote !== undefined
+            const curIsQuote = ['"', '\''].includes(char)
+            const curIsEscaped = i > 0 && line[i - 1] === '\\'
+            if (!inQuote) {
+                if (!curIsEscaped) {
+                    if (curIsQuote) {
+                        curQuote = char
+                    } else if (char === ' ') {
+                        if (curArg !== '') {
+                            args.push(curArg)
+                            curArg = ''
+                        }
+                    } else if (char === '$') {
+                        const __ret = extractIdentifier(i, line, char, curArg)
+                        i = __ret.i
+                        curArg = __ret.curArg
+                    } else if (char !== '\\') {
+                        curArg += char
+                    }
+                } else {
+                    curArg += char
+                }
+            } else if (curQuote === '"') {
+                // Preserve the literal value of all characters except for
+                // ($), (`), ("), (\), and the (!) character
+                if (!curIsEscaped) {
+                    if (char === curQuote) {
+                        curQuote = undefined
+                    } else if (char === '$') {
+                        const __ret = extractIdentifier(i, line, char, curArg)
+                        i = __ret.i
+                        curArg = __ret.curArg
+                    } else if (char !== '\\') {
+                        curArg += char
+                    }
+                } else {
+                    if (!['$', '`', '"', '\\'].includes(char)) {
+                        curArg += '\\'
+                    }
+                    curArg += char
+                }
+            } else if (curQuote === '\'') {
+                // Preserve the literal value of each character within the
+                // quotes
+                if (char !== curQuote) {
+                    curArg += char
+                } else {
+                    curQuote = undefined
+                }
+            }
+        }
+        if (curArg !== '') {
+            args.push(curArg)
+            curArg = ''
+        }
+    }
+    return args
+}
+
 async function run() {
     function fnlog(msg) {
         log('b2-workflow: ' + msg)
@@ -359,7 +469,9 @@ async function run() {
             toolset: core.getInput('toolset') || process.env['B2_TOOLSET'] || '',
             build_type: (core.getInput('build-variant') || process.env['B2_BUILD_VARIANT'] || core.getInput('build-type') || process.env['B2_BUILD_TYPE'] || '').toLowerCase(),
             modules: (core.getInput('modules') || '').split(/[,; ]/).filter((input) => input !== ''),
+            extra_args: parseExtraArgs(core.getMultilineInput('extra-args')),
             // B2-specific options
+            warnings_as_errors: toTriboolOrStringInput(core.getInput('warnings-as-errors') || undefined),
             address_model: core.getInput('address-model') || undefined,
             asan: toTriboolOrStringInput(core.getInput('asan') || undefined),
             ubsan: toTriboolOrStringInput(core.getInput('ubsan') || undefined),
