@@ -1285,6 +1285,7 @@ function factorEmoji(factor) {
         'x86': '💻',
         'shared': '📚',
         'ubsan': '🔬',
+        'msan': '🧹',
         'tsan': '🕵️‍♂️',
         'coverage': '📊',
         'asan': '🛡️',

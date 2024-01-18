@@ -176,6 +176,10 @@ inputs:
     description: 'Enable undefined-sanitizer.'
     required: false
     default: ''
+  msan:
+    description: 'Enable memory-sanitizer.'
+    required: false
+    default: ''
   tsan:
     description: 'Enable thread-sanitizer.'
     required: false

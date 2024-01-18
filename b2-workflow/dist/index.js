@@ -177,66 +177,41 @@ async function main(inputs) {
     /*
         B2-specific options
      */
-    if (inputs.warnings_as_errors !== undefined) {
-        if (typeof inputs.warnings_as_errors === 'string') {
-            if (inputs.warnings_as_errors !== '') {
-                b2_args.push(`warnings-as-errors=${inputs.warnings_as_errors}`)
-            }
-        } else if (inputs.warnings_as_errors) {
-            b2_args.push(`warnings-as-errors=${inputs.warnings_as_errors ? 'on' : 'off'}`)
-        }
-    }
     if (inputs.threading) {
         b2_args.push(`threading=${inputs.threading}`)
-    }
-    if (inputs.rtti !== undefined) {
-        if (typeof inputs.rtti === 'string') {
-            if (inputs.rtti !== '') {
-                b2_args.push(`rtti=${inputs.rtti}`)
-            }
-        } else if (inputs.rtti) {
-            b2_args.push(`rtti=${inputs.rtti ? 'on' : 'off'}`)
-        }
     }
     if (inputs.shared) {
         b2_args.push('link=shared')
     }
-    if (inputs.runtime_link) {
-        if (typeof inputs.runtime_link === 'string') {
-            if (inputs.runtime_link !== '') {
-                b2_args.push(`runtime-link=${inputs.runtime_link}`)
+
+    // The user can provide these options as a boolean (true/false) or as any
+    // string. If the user provides a string, we pass it as-is to B2.
+    // An empty string or undefined value is ignored.
+    const boolOrStringOptions = [
+        {key: 'warnings_as_errors', b2_key: 'warnings-as-errors', true_value: 'on', false_value: 'off'},
+        {key: 'rtti', b2_key: 'rtti', true_value: 'on', false_value: 'off'},
+        {key: 'asan', b2_key: 'address-sanitizer', true_value: 'norecover', false_value: undefined},
+        {key: 'ubsan', b2_key: 'undefined-sanitizer', true_value: 'norecover', false_value: undefined},
+        {key: 'msan', b2_key: 'memory-sanitizer', true_value: 'norecover', false_value: undefined},
+        {key: 'tsan', b2_key: 'thread-sanitizer', true_value: 'norecover', false_value: undefined},
+        {key: 'runtime_link', b2_key: 'runtime-link', true_value: 'shared', false_value: 'static'}
+    ]
+    for (const option of boolOrStringOptions) {
+        const inputVal = inputs[option.key]
+        if (typeof inputVal === 'string') {
+            if (inputVal !== '') {
+                b2_args.push(`${option.b2_key}=${inputVal}`)
             }
-        } else if (inputs.runtime_link) {
-            b2_args.push('runtime-link=shared')
+        } else if (inputVal || typeof inputVal === 'boolean') {
+            if (option.false_value !== undefined) {
+                b2_args.push(`${option.b2_key}=${inputVal ? option.true_value : option.false_value}`)
+            } else if (inputVal) {
+                b2_args.push(`${option.b2_key}=${option.true_value}`)
+            }
+
         }
     }
-    if (inputs.asan !== undefined) {
-        if (typeof inputs.asan === 'string') {
-            if (inputs.asan !== '') {
-                b2_args.push(`address-sanitizer=${inputs.asan}`)
-            }
-        } else if (inputs.asan) {
-            b2_args.push('address-sanitizer=norecover')
-        }
-    }
-    if (inputs.ubsan !== undefined) {
-        if (typeof inputs.ubsan === 'string') {
-            if (inputs.ubsan !== '') {
-                b2_args.push(`undefined-sanitizer=${inputs.ubsan}`)
-            }
-        } else if (inputs.ubsan) {
-            b2_args.push('undefined-sanitizer=norecover')
-        }
-    }
-    if (inputs.tsan !== undefined) {
-        if (typeof inputs.tsan === 'string') {
-            if (inputs.tsan !== '') {
-                b2_args.push(`thread-sanitizer=${inputs.tsan}`)
-            }
-        } else if (inputs.tsan) {
-            b2_args.push('thread-sanitizer=norecover')
-        }
-    }
+
     if (inputs.coverage) {
         b2_args.push('coverage=on')
     }
@@ -487,6 +462,7 @@ async function run() {
             address_model: core.getInput('address-model') || undefined,
             asan: toTriboolOrStringInput(core.getInput('asan')),
             ubsan: toTriboolOrStringInput(core.getInput('ubsan')),
+            msan: toTriboolOrStringInput(core.getInput('msan')),
             tsan: toTriboolOrStringInput(core.getInput('tsan')),
             coverage: core.getInput('coverage') || undefined,
             linkflags: core.getInput('linkflags') || undefined,
