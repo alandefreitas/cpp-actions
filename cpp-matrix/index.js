@@ -102,7 +102,7 @@ function parseCompilerSuggestions(inputLines, compilers) {
             compilerDescriptor = compilerPart.substring(spaceIndex + 1).trim()
         }
         // Check if compilerDescriptor is a semver version
-        const descriptorIsSemver = semver.valid(compilerDescriptor, {loose: true})
+        const descriptorIsSemver = semver.validRange(compilerDescriptor, {loose: true})
 
         // Check if compiler name matches one of the compilers we know about
         if (!compilers.includes(compilerName)) {
@@ -1655,6 +1655,7 @@ if (require.main === module) {
 module.exports = {
     isTruthy,
     parseCompilerRequirements,
+    parseCompilerSuggestions,
     normalizeCppVersionRequirement,
     parseCompilerFactors,
     normalizeCompilerName,
