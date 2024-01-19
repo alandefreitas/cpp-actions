@@ -208,7 +208,6 @@ async function main(inputs) {
             } else if (inputVal) {
                 b2_args.push(`${option.b2_key}=${option.true_value}`)
             }
-
         }
     }
 

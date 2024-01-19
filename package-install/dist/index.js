@@ -538,8 +538,9 @@ async function run() {
             const outputs = await main(inputs)
             core.startGroup('📤 Workflow Outputs')
             for (const [name, value] of Object.entries(outputs)) {
-                core.info(`🧩 ${name.replaceAll('_', '-')}: ${value ? (typeof value === 'string' ? `"${value}"` : value) : '<empty>'}`)
-                core.setOutput(name, value)
+                const outputKey = name.replaceAll('_', '-')
+                core.info(`🧩 ${outputKey}: ${value ? (typeof value === 'string' ? `"${value}"` : value) : '<empty>'}`)
+                core.setOutput(outputKey, value)
             }
             core.endGroup()
         } catch (error) {
