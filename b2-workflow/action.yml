@@ -9,9 +9,12 @@ description: |
   compiling `b2` if needed and generating a proper `user-config.jam` file to define the path to the C++ compiler 
   provided by the `cxx` input. 
   
-  This action is particularly useful for Boost library proposals, where B2 is mandatory. It assumes
+  [NOTE]
+  ====
+  This action is useful for Boost library proposals, where B2 support is mandatory. It assumes
   the library being tested is in the `libs` directory of the Boost super-project and that
   `source-dir` is the root of the super-project.
+  ====
   
   == Next steps
   
@@ -254,7 +257,7 @@ inputs:
   dry-run:
     description: |
       Equivalent to the `-n` option.
-    
+      
       Do not execute the commands, only print them.      
 
     required: false
@@ -280,7 +283,7 @@ inputs:
       Equivalent to the `--site-config=filename` option.
       
       Override the default site-config.jam.
-      
+
     required: false
     default: ''
   user-config:
@@ -339,7 +342,7 @@ inputs:
     default: ''
   define:
     description:
-      Additional macro definitions for C and C++ compilers. 
+      Additional macro definitions for C and C++ compilers.
       
       The string should be either SYMBOL or SYMBOL=VALUE.
     required: false
@@ -349,7 +352,7 @@ inputs:
       Equivalent to the `--runtime-link=<shared,static>` option.
       
       Determines if shared or static version of C and C++ runtimes should be used.
-      
+
     required: false
     default: ''
 
