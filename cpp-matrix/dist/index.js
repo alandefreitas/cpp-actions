@@ -1611,23 +1611,7 @@ async function run() {
 
         core.startGroup('📥 C++ Matrix Requirements')
         for (const [name, value] of Object.entries(inputs)) {
-            function valueToString(value) {
-                if (Array.isArray(value)) {
-                    if (isArrayOfObjects(value)) {
-                        return `[${value.map(obj => JSON.stringify(obj)).join(',')}]`
-                    }
-                    return `[${value.join(', ')}]`
-                } else if (typeof value === 'object') {
-                    return JSON.stringify(value)
-                } else if (typeof value === 'string') {
-                    return `"${value}"`
-                } else if (!value) {
-                    return '<empty>'
-                }
-                return value
-            }
-
-            core.info(`🧩 ${name.replaceAll('_', '-')}: ${valueToString(value)}`)
+            core.info(`🧩 ${name.replaceAll('_', '-')}: ${JSON.stringify(value)}`)
         }
         core.endGroup()
 

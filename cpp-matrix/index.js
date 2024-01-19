@@ -104,7 +104,7 @@ function parseCompilerSuggestions(inputLines, compilers) {
         // Check if compilerDescriptor is a semver version
         const descriptorIsSemver = semver.validRange(compilerDescriptor, {loose: true})
 
-        // Check if compiler name matches one of the compilers we know about
+        // Check if the compiler name matches one of the compilers we know about
         if (!compilers.includes(compilerName)) {
             core.warning(`Unknown compiler name "${compilerName}" in container options. Ignoring.`)
         }
@@ -1605,23 +1605,7 @@ async function run() {
 
         core.startGroup('📥 C++ Matrix Requirements')
         for (const [name, value] of Object.entries(inputs)) {
-            function valueToString(value) {
-                if (Array.isArray(value)) {
-                    if (isArrayOfObjects(value)) {
-                        return `[${value.map(obj => JSON.stringify(obj)).join(',')}]`
-                    }
-                    return `[${value.join(', ')}]`
-                } else if (typeof value === 'object') {
-                    return JSON.stringify(value)
-                } else if (typeof value === 'string') {
-                    return `"${value}"`
-                } else if (!value) {
-                    return '<empty>'
-                }
-                return value
-            }
-
-            core.info(`🧩 ${name.replaceAll('_', '-')}: ${valueToString(value)}`)
+            core.info(`🧩 ${name.replaceAll('_', '-')}: ${JSON.stringify(value)}`)
         }
         core.endGroup()
 
