@@ -176,6 +176,18 @@ function generateClangUrlsFor(version_candidate, ubuntu_version) {
     return {llvm_project_url, llvm_releases_url, old_llvm_releases_url}
 }
 
+async function urlExists(url) {
+    const http_client = new httpm.HttpClient('setup-clang', [], {
+        allowRetries: true, maxRetries: 3
+    })
+    try {
+        const res = await http_client.head(url)
+        return res.message.statusCode === 200
+    } catch (error) {
+        return false
+    }
+}
+
 async function install_program_from_clang_urls(ubuntu_versions, version_candidates, version, check_latest, update_environment, output_version, output_path) {
     // Try URLs considering ubuntu versions
     const http_client = new httpm.HttpClient('setup-clang', [], {
@@ -191,8 +203,7 @@ async function install_program_from_clang_urls(ubuntu_versions, version_candidat
                 old_llvm_releases_url
             } = generateClangUrlsFor(version_candidate, ubuntu_version)
             for (const clang_url of [llvm_project_url, llvm_releases_url, old_llvm_releases_url]) {
-                let res = await http_client.head(clang_url)
-                if (res.message.statusCode !== 200) {
+                if (!await urlExists(clang_url)) {
                     log(`Skipping ${clang_url} because it does not exist`)
                 } else {
                     const __ret = await setup_program.install_program_from_url(['clang'], version_candidate, check_latest, clang_url, update_environment, '/usr/local')
@@ -293,8 +304,14 @@ async function main(version, paths, check_latest, update_environment) {
             // Add APT repositories
             if (add_apt_repository_path !== null && add_apt_repository_path !== '') {
                 for (const major of allVersionMajors) {
+                    const ReleaseFileURL = `https://apt.llvm.org/${ubuntuName}/dists/llvm-toolchain-${ubuntuName}-${major}/Release`
+                    log(`Checking if ${ReleaseFileURL} exists`)
+                    if (!await urlExists(ReleaseFileURL)) {
+                        log(`Skipping repository for major version ${major} because ${ReleaseFileURL} does not exist`)
+                        continue
+                    }
                     await setup_program.ensureAddAptRepositoryIsAvailable()
-                    const repo = `deb http://apt.llvm.org/${ubuntuName}/ llvm-toolchain-${ubuntuName}-${major} main`
+                    const repo = `deb https://apt.llvm.org/${ubuntuName}/ llvm-toolchain-${ubuntuName}-${major} main`
                     log(`Adding repository "${repo}"`)
                     if (setup_program.isSudoRequired()) {
                         await exec.exec(`sudo -n add-apt-repository -y "${repo}"`, [], {ignoreReturnCode: true})
