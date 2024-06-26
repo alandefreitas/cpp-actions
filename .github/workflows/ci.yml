@@ -67,13 +67,28 @@ jobs:
 
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.runs-on }}
-    container: ${{matrix.container}}
+    container: ${{ matrix.container }}
+
     env: ${{ matrix.env }}
     timeout-minutes: 30
     permissions:
       contents: write
 
     steps:
+      # GitHub Actions no longer support older containers.
+      # The workaround is to install our own Node.js for the actions.
+      - name: Patch Node
+        # The containers that need Node.js 20 will have volumes set up so that
+        # the Node.js 20 installation can go there.
+        if: ${{ matrix.container.volumes }}
+        run: |
+          set -x
+          apt-get update
+          apt-get install -y curl xz-utils
+          curl -LO https://unofficial-builds.nodejs.org/download/release/v20.9.0/node-v20.9.0-linux-x64-glibc-217.tar.xz
+          tar -xf node-v20.9.0-linux-x64-glibc-217.tar.xz --strip-components 1 -C /node20217
+          ldd /__e/node20/bin/node
+          
       - name: Clone cpp-actions
         uses: actions/checkout@v4
 
