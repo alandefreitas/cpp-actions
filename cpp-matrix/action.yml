@@ -174,6 +174,18 @@ description: |
   
   A more powerful strategy to save resources is analyzing files changed in the workflow and considering
   these files to determine what the matrix should be according to project conventions. 
+
+  == Patching Node on old containers
+  
+  If you need to run tests on old compilers, the matrix entries might include old containers.
+  GitHub Actions stopped supporting many old container since it moved to Node 20. 
+  
+  A https://github.com/actions/runner/issues/2906#issuecomment-2109514798[workaround] is to set
+  the `volumes` key of the container object so that the user can provide its own Node installation.
+  
+  This action will provide theses suggestions in the `container` key of the matrix entries.
+  However, the user should still include a step in the workflow to install the required Node version
+  in the `/__e/node20` directory.
   
   == Next steps
   

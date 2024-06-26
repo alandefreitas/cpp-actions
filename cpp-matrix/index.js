@@ -753,6 +753,22 @@ function setCompilerContainer(entry, inputs, compilerName, minSubrangeVersion, s
     } else if (['mingw', 'clang-cl'].includes(compilerName)) {
         entry['runs-on'] = 'windows-2022'
     }
+
+    // Set the volumes for the compiler
+    if (entry.container) {
+        const image = entry.container
+        if (image.startsWith('ubuntu')) {
+            const version = entry.container.split(':')[1]
+            const versionNumbers = version.split('.').map(s => parseInt(s))
+            const versionMajor = versionNumbers[0]
+            if (versionMajor < 20) {
+                entry.container = {
+                    image: image,
+                    volumes: ['/node20217:/node20217:rw,rshared', '/node20217:/__e/node20:ro,rshared']
+                }
+            }
+        }
+    }
 }
 
 function setCompilerB2Toolset(entry, inputs, compilerName, subrange) {
@@ -1039,9 +1055,19 @@ function setRecommendedFlags(entry, inputs) {
     }
 
     // Install build-essential for Ubuntu containers
-    if ('container' in entry && entry['container'].startsWith('ubuntu')) {
-        // Ubuntu containers need build-essential even to bootstrap other installers
-        entry['install'] += ' build-essential'
+    if ('container' in entry) {
+        // Check if it's a string
+        if (typeof entry['container'] === 'string') {
+            if (entry['container'].startsWith('ubuntu')) {
+                entry['install'] += ' build-essential'
+            }
+        }
+        // Check if it's an object with the "image" key
+        if (typeof entry['container'] === 'object' && 'image' in entry['container']) {
+            if (entry['container']['image'].startsWith('ubuntu')) {
+                entry['install'] += ' build-essential'
+            }
+        }
     }
 
     // Trim flags
@@ -1403,8 +1429,16 @@ function generateTable(matrix, inputs) {
 
         // Environment
         if ('container' in entry) {
-            row.push(`${osEmoji(entry['container'])} <code>${entry['container']}</code><br/>on <code>${entry['runs-on']}</code>`)
+            // Check if it's a string
+            if (typeof entry['container'] === 'string') {
+                row.push(`${osEmoji(entry['container'])} <code>${entry['container']}</code><br/>on <code>${entry['runs-on']}</code>`)
+            }
+            // Check if it's an object with the "image" key
+            else if (typeof entry['container'] === 'object' && 'image' in entry['container']) {
+                row.push(`${osEmoji(entry['container']['image'])} <code>${entry['container']['image']}</code><br/>on <code>${entry['runs-on']}</code>`)
+            }
         } else {
+            // No container: directly on runner image
             row.push(`${osEmoji(entry['runs-on'])} <code>${entry['runs-on']}</code>`)
         }
 
