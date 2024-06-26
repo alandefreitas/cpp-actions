@@ -129,20 +129,29 @@ function clangDownloadCandidates(version, allVersions, check_latest) {
     // to have a valid URL
     const cur_ubuntu_version = setup_program.getCurrentUbuntuVersion()
     log(`Ubuntu version: ${cur_ubuntu_version}`)
-    let ubuntu_versions
-    if (cur_ubuntu_version === '20.04') {
-        ubuntu_versions = ['20.04', '22.04', '18.04', '16.04', '14.04', '12.04', '10.04']
-    } else if (cur_ubuntu_version === '18.04') {
-        ubuntu_versions = ['18.04', '20.04', '16.04', '22.04', '14.04', '12.04', '10.04']
-    } else if (cur_ubuntu_version === '16.04') {
-        ubuntu_versions = ['16.04', '18.04', '14.04', '20.04', '12.04', '22.04', '10.04']
-    } else if (cur_ubuntu_version === '12.04') {
-        ubuntu_versions = ['12.04', '14.04', '10.04', '16.04', '18.04', '20.04', '22.04']
-    } else if (cur_ubuntu_version === '10.04') {
-        ubuntu_versions = ['10.04', '12.04', '14.04', '16.04', '18.04', '20.04', '22.04']
-    } else {
-        ubuntu_versions = ['22.04', '20.04', '18.04', '16.04', '14.04', '12.04', '10.04']
+
+    // Get list of all ubuntu version candidates in order of preference
+    // based on distance from the current ubuntu version
+    let ubuntu_versions = []
+    for (ubuntuMajor of ['10', '12', '14', '16', '18', '20', '21', '22', '23']) {
+        for (ubuntuMinor of ['04', '10']) {
+            ubuntu_versions.push(`${ubuntuMajor}.${ubuntuMinor}`)
+        }
     }
+
+    // Sort the ubuntu versions based on the distance from the current ubuntu
+    // version
+    ubuntu_versions = ubuntu_versions.sort((a, b) => {
+        const aMajor = parseInt(a.split('.')[0])
+        const aMinor = parseInt(a.split('.')[1])
+        const bMajor = parseInt(b.split('.')[0])
+        const bMinor = parseInt(b.split('.')[1])
+        const curMajor = parseInt(cur_ubuntu_version.split('.')[0])
+        const curMinor = parseInt(cur_ubuntu_version.split('.')[1])
+        const distA = Math.abs(aMajor - curMajor) * 100 + Math.abs(aMinor - curMinor)
+        const distB = Math.abs(bMajor - curMajor) * 100 + Math.abs(bMinor - curMinor)
+        return distA - distB
+    })
     log(`Ubuntu version binaries: [${ubuntu_versions.join(', ')}]`)
     return {version_candidates, ubuntu_versions}
 }
@@ -157,10 +166,13 @@ function generateClangUrlsFor(version_candidate, ubuntu_version) {
     log(`Clang filename: ${clang_filename}`)
 
     const llvm_project_url = `https://github.com/llvm/llvm-project/releases/download/llvmorg-${version_candidate}/${clang_filename}`
-    const llvm_releases_url = `https://releases.llvm.org/$version_candidate/${clang_filename}`
+
+    const llvm_releases_url = `https://releases.llvm.org/${version_candidate}/${clang_filename}`
+
     const old_clang_basename = `clang+llvm-${version_candidate}-linux-x86_64-ubuntu${ubuntu_version}`
     const old_clang_filename = `${old_clang_basename}.tar.xz`
-    const old_llvm_releases_url = `https://releases.llvm.org/$version_candidate/${old_clang_filename}`
+    const old_llvm_releases_url = `https://releases.llvm.org/${version_candidate}/${old_clang_filename}`
+
     return {llvm_project_url, llvm_releases_url, old_llvm_releases_url}
 }
 
@@ -254,7 +266,10 @@ async function main(version, paths, check_latest, update_environment) {
 
         const ubuntuName = setup_program.getCurrentUbuntuName()
         log(`Ubuntu version name: ${ubuntuName}`)
-        if (ubuntuName !== null && allVersionMajors.length !== 0 && ['bionic', 'focal', 'jammy', 'kinetic', 'lunar'].includes(ubuntuName)) {
+        if (ubuntuName !== null && allVersionMajors.length !== 0 && ['bionic', 'focal', 'jammy', 'kinetic', 'lunar', 'mantic'].includes(ubuntuName)) {
+            // Adding a key requires gnupg
+            await setup_program.find_program_with_apt(['gnupg'], '*', true)
+
             // Download repo key
             const gpg_key_url = 'https://apt.llvm.org/llvm-snapshot.gpg.key'
             const keyPath = await tc.downloadTool(gpg_key_url)
@@ -265,6 +280,8 @@ async function main(version, paths, check_latest, update_environment) {
                 await exec.exec(`apt-key add "${keyPath}"`, [], {ignoreReturnCode: true})
             }
 
+            // add-apt-repository requires installing software-properties-common
+            await setup_program.find_program_with_apt(['software-properties-common'], '*', true)
             let add_apt_repository_path = null
             try {
                 add_apt_repository_path = await io.which('add-apt-repository')
@@ -10545,7 +10562,6 @@ function isSudoRequired() {
 }
 
 
-
 function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -10560,7 +10576,7 @@ async function find_program_with_apt(names, version, check_latest) {
 
     fnlog('Checking if APT is available')
     try {
-        const exitCode= await exec.exec('apt', ['--version'])
+        const exitCode = await exec.exec('apt', ['--version'])
         if (exitCode !== 0) {
             fnlog(`apt --version returned ${exitCode}`)
             return {output_version, output_path}
@@ -10896,8 +10912,13 @@ function getCurrentUbuntuName() {
             return 'kinetic'
         } else if (version === '23.04') {
             return 'lunar'
+        } else if (version === '23.10') {
+            return 'mantic'
+        } else if (version === '24.04') {
+            return 'noble'
         }
     }
+    log(`setup-program::getCurrentUbuntuName: Ubuntu name for version ${version} not supported`)
     return null
 }
 

@@ -329,7 +329,6 @@ function isSudoRequired() {
 }
 
 
-
 function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -344,7 +343,7 @@ async function find_program_with_apt(names, version, check_latest) {
 
     fnlog('Checking if APT is available')
     try {
-        const exitCode= await exec.exec('apt', ['--version'])
+        const exitCode = await exec.exec('apt', ['--version'])
         if (exitCode !== 0) {
             fnlog(`apt --version returned ${exitCode}`)
             return {output_version, output_path}
@@ -680,8 +679,13 @@ function getCurrentUbuntuName() {
             return 'kinetic'
         } else if (version === '23.04') {
             return 'lunar'
+        } else if (version === '23.10') {
+            return 'mantic'
+        } else if (version === '24.04') {
+            return 'noble'
         }
     }
+    log(`setup-program::getCurrentUbuntuName: Ubuntu name for version ${version} not supported`)
     return null
 }
 
