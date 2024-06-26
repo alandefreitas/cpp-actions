@@ -28,7 +28,7 @@ jobs:
       matrix: ${{ steps.cpp-matrix.outputs.matrix }}
     steps:
       - name: Clone cpp-actions
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Generate Test Matrix
         uses: ./cpp-matrix
@@ -75,7 +75,7 @@ jobs:
 
     steps:
       - name: Clone cpp-actions
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Set up the compiler before package-install in case one of the packages needs a compiler
       - name: Setup C++
@@ -222,7 +222,7 @@ jobs:
 
     steps:
       - name: Clone cpp-actions
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
