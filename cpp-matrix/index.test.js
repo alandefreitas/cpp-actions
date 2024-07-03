@@ -96,11 +96,11 @@ describe('findClangVersions', () => {
     expect(findClangVersions()).toContain('16.0.0')
 })
 
-describe('findClangVersions', () => {
+describe('splitRanges', () => {
     expect(splitRanges('9.2 - 11', findGCCVersions())).toStrictEqual(['^9.2', '10', '11'])
     expect(splitRanges('9.2 - 9.4 || 11', findGCCVersions())).toStrictEqual(['9.2 - 9.4', '11'])
     expect(splitRanges('>=8 <9.100', findGCCVersions())).toStrictEqual(['8', '9'])
-    expect(splitRanges('>=14 <14.40', findMSVCVersions())).toStrictEqual(['14.29', '14.34'])
+    expect(splitRanges('>=14 <14.50', findMSVCVersions())).toStrictEqual(['14.29', '14.40'])
     expect(splitRanges('<=9.2', ['9.1.0', '9.2.0', '9.3.0', '9.4.0', '9.5.0'], SubrangePolicies.ONE_PER_MAJOR)).toStrictEqual(['9 - 9.2'])
     expect(splitRanges('>14.29.4 <14.40', ['14.29.30139', '14.29.30140'])).toStrictEqual(['14.29'])
     expect(splitRanges('>14.29.30140 <14.40', ['14.29.30139', '14.29.30150'])).toStrictEqual(['~14.29.30150'])
