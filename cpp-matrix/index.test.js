@@ -5,6 +5,7 @@ const process = require('process')
 const cp = require('child_process')
 const path = require('path')
 const {parseCompilerRequirements, parseCompilerSuggestions} = require('./index')
+const core = require('@actions/core')
 
 test('isTruthy', async () => {
     expect(isTruthy('true')).toBe(true)
@@ -124,7 +125,8 @@ describe('generateMatrix', () => {
         max_standards: max_standards,
         latest_factors: latest_factors,
         factors: factors,
-        combinatorial_factors: {}
+        combinatorial_factors: {},
+        cxxflags: parseCompilerSuggestions(['gcc >=10 <12: -static'], Object.keys(compilerVersions))
     }
     generateMatrix(inputs).then((matrix) => {
         expect(matrix.length === 0).toBe(false)
