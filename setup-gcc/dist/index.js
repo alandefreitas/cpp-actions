@@ -178,6 +178,7 @@ async function main(version, paths, check_latest, update_environment) {
         core.info(`Searching for GCC ${version} with APT`)
 
         // Add APT repository
+        await setup_program.find_program_with_apt(['software-properties-common'], '*', true)
         let add_apt_repository_path = null
         try {
             add_apt_repository_path = await io.which('add-apt-repository')
