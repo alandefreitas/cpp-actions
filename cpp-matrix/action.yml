@@ -297,6 +297,26 @@ inputs:
     required: false
     default: ''
 
+  force-factors:
+    description: |
+      A multi-line list of factor flags to be injected with each range of compiler version
+      even if the entry doesn't have the usual requirements to have that factor.
+      
+      Each line has the format:
+      
+      `<compiler-name>[ <compiler-range|compiler-factor>]: <build-type>`
+      
+      For instance, `gcc >=13 <14: Asan` indicates that the flag `asan` will be included with
+      any version of `gcc` in that range, even if the entry doesn't have the usual requirements 
+      to have the `Asan` factor. 
+      
+      Omitting `<compiler-range|compiler-factor>` is equivalent to it being set to `*` and will apply the build type 
+      to all versions of the compiler.
+      
+      When the build type is unspecified, the action will infer the build type from the compiler name and its version.
+    required: false
+    default: ''
+
   # -----------------------------------------------------------------
   # Customize suggestions
   # -----------------------------------------------------------------
@@ -462,7 +482,7 @@ inputs:
     required: false
     default: ''
 
-  build_types:
+  build-types:
     description: |
       A multi-line list of build types to be used with each range of compiler version.
       Each line has the format:
@@ -619,8 +639,7 @@ outputs:
       - `env`: A dictionary of environment variables to be set for this entry. 
       
       - `install`: The recommended packages to be installed before running the workflow. This includes packages 
-        such as build-essential for ubuntu containers and lcov for coverage entries. 
-
+        such as build-essential for ubuntu containers and lcov for coverage entries.  
 
 runs:
   using: 'node20'

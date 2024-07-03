@@ -694,6 +694,33 @@ function setSuggestion(entry, key, suggestionMap, subrange) {
     return false
 }
 
+function applyForcedFactors(entry, suggestionMap, subrange) {
+    if (isArrayOfObjects(suggestionMap)) {
+        for (const userSuggestion of suggestionMap) {
+            if (userSuggestion.factor !== undefined && userSuggestion.compiler === entry.compiler) {
+                const factor_key = userSuggestion.factor.toLowerCase()
+                if (entry[factor_key]) {
+                    const forced_factor = userSuggestion.value
+                    const lc_forced_factor = forced_factor.toLowerCase()
+                    entry[lc_forced_factor] = true
+                    return true
+                }
+            }
+        }
+        for (const userSuggestion of suggestionMap) {
+            if (userSuggestion.range !== undefined && userSuggestion.compiler === entry.compiler) {
+                if (semver.subset(subrange, userSuggestion.range)) {
+                    const forced_factor = userSuggestion.value
+                    const lc_forced_factor = forced_factor.toLowerCase()
+                    entry[lc_forced_factor] = true
+                    return true
+                }
+            }
+        }
+    }
+    return false
+}
+
 
 function setCompilerContainer(entry, inputs, compilerName, minSubrangeVersion, subrange) {
     // runs-on / container
@@ -1199,6 +1226,7 @@ async function generateMatrix(inputs) {
 
     core.startGroup('🔄 Generating matrix entries')
     const compilers = Object.entries(inputs.compiler_versions)
+
     for (const [compilerName0, range] of compilers) {
         fnlog(`Generating entries for ${compilerName0} version ${range}`)
         const earliestIdx = matrix.length
@@ -1287,6 +1315,7 @@ async function generateMatrix(inputs) {
         setSuggestion(entry, 'install', inputs.install, entry.version)
         setSuggestion(entry, 'triplet', inputs.triplets, entry.version)
         setSuggestion(entry, 'build-type', inputs.build_types, entry.version)
+        applyForcedFactors(entry, inputs.force_factors, entry.version)
     }
     printMatrix()
     core.endGroup()
@@ -1596,6 +1625,7 @@ async function run() {
             latest_factors: parseCompilerFactors(core.getInput('latest-factors'), Object.keys(compilerVersions)),
             factors: parseCompilerFactors(core.getInput('factors'), Object.keys(compilerVersions)),
             combinatorial_factors: parseCompilerFactors(core.getInput('combinatorial-factors'), Object.keys(compilerVersions)),
+            force_factors: parseCompilerSuggestions(core.getMultilineInput('force-factors'), Object.keys(compilerVersions)),
 
             // Customize suggestions
             runs_on: parseCompilerSuggestions(core.getMultilineInput('runs-on'), Object.keys(compilerVersions)),

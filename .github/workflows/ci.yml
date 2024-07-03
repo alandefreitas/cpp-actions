@@ -51,6 +51,8 @@ jobs:
             msvc Shared x86
             clang Time-Trace ASan+UBSan
             mingw Shared
+          force-factors: |
+            mingw: No-Deps
           trace-commands: true
 
   build:
