@@ -1062,13 +1062,13 @@ function setRecommendedFlags(entry, inputs) {
         // Check if it's a string
         if (typeof entry['container'] === 'string') {
             if (entry['container'].startsWith('ubuntu')) {
-                entry['install'] += ' build-essential'
+                entry['install'] += ' build-essential pkg-config'
             }
         }
         // Check if it's an object with the "image" key
         if (typeof entry['container'] === 'object' && 'image' in entry['container']) {
             if (entry['container']['image'].startsWith('ubuntu')) {
-                entry['install'] += ' build-essential'
+                entry['install'] += ' build-essential pkg-config'
             }
         }
     }
