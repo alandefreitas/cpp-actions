@@ -752,7 +752,7 @@ function setCompilerContainer(entry, inputs, compilerName, minSubrangeVersion, s
             entry['runs-on'] = 'windows-2019'
         }
     } else if (compilerName === 'apple-clang') {
-        entry['runs-on'] = 'macos-11'
+        entry['runs-on'] = 'macos-14'
     } else if (['mingw', 'clang-cl'].includes(compilerName)) {
         entry['runs-on'] = 'windows-2022'
     }
