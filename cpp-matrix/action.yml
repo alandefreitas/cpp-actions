@@ -158,6 +158,11 @@ description: |
   a bug in GCC 8.1, and you want to keep track of that. The semver range `gcc >=4.8 <7 || 8.1 || >=10` would ensure
   version GCC8.1 specifically, and not any other version is the range `>=8.0.0 <9.0.0` is tested.
   
+  NOTE: The action still accepts open ranges to test the latest versions of a compiler. However, additional actions
+  might be needed to test the latest compilers, which may not be implemented in this version of the project. 
+  Therefore, users are still recommended to avoid open ranges or to update the action's version to support the 
+  latest compiler versions.
+
   == Dynamic matrices
   
   In some cases, it might be useful to test different matrices based on the conditions of the workflow. 
