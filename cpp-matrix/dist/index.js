@@ -698,7 +698,10 @@ function setSuggestion(entry, key, suggestionMap, subrange) {
 function setCompilerContainer(entry, inputs, compilerName, minSubrangeVersion, subrange) {
     // runs-on / container
     if (compilerName === 'gcc') {
-        if (semver.satisfies(minSubrangeVersion, '>=13')) {
+        if (semver.satisfies(minSubrangeVersion, '>=14')) {
+            entry['runs-on'] = 'ubuntu-22.04'
+            entry['container'] = 'ubuntu:24.04'
+        } else if (semver.satisfies(minSubrangeVersion, '>=13')) {
             entry['runs-on'] = 'ubuntu-22.04'
             entry['container'] = 'ubuntu:23.04'
         } else if (semver.satisfies(minSubrangeVersion, '>=9')) {
