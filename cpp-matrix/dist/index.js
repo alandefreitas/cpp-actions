@@ -1250,6 +1250,7 @@ async function generateMatrix(inputs) {
                 matrix[i]['has-factors'] = false
             }
             matrix[i]['is-no-factor-intermediary'] = matrix[i]['is-intermediary'] && !matrix[i]['has-factors']
+            matrix[i]['is-container'] = 'container' in matrix[i]
         }
         fnlog(`${compilerName}: ${matrix.length - earliestIdx} total entries`)
     }

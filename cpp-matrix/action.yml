@@ -580,6 +580,8 @@ outputs:
       - `has-factors`: Specifies whether the entry has any factors applied.
 
       - `is-no-factor-intermediary`: Specifies whether the entry is an intermediary version without any factors applied.
+      
+      - `is-container`: Specifies whether the entry has a container suggested.
 
       *Factors*:
       

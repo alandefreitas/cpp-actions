@@ -126,7 +126,7 @@ jobs:
           vcpkg: ${{ (!matrix.fetch-content && 'fmt') || '' }}
           vcpkg-triplet: ${{ matrix.triplet }}
           apt-get: ${{ matrix.install }}
-          apt-get-ignore-missing: ${{ matrix.container }}
+          apt-get-ignore-missing: ${{ matrix.is-container }}
           cc: ${{ steps.setup-cpp.outputs.cc }}
           ccflags: ${{ matrix.ccflags }}
           cxx: ${{ steps.setup-cpp.outputs.cxx }}
