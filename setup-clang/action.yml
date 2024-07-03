@@ -74,7 +74,7 @@ outputs:
     description: "The installed Clang version patch. Useful when given a version range as input."
 
 runs:
-  using: 'node16'
+  using: 'node20'
   main: 'dist/index.js'
   post-if: success()
 branding:

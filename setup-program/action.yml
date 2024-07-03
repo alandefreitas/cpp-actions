@@ -129,7 +129,7 @@ outputs:
     description: "Whether the program was found."
 
 runs:
-  using: 'node16'
+  using: 'node20'
   main: 'dist/index.js'
   post-if: success()
 branding:

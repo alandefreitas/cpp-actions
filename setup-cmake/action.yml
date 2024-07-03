@@ -105,7 +105,7 @@ outputs:
     description: "Whether CMake supports the cmake --install"
 
 runs:
-  using: 'node16'
+  using: 'node20'
   main: 'dist/index.js'
   post-if: success()
 branding:
