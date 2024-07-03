@@ -125,11 +125,11 @@ jobs:
         with:
           vcpkg: ${{ (!matrix.fetch-content && 'fmt') || '' }}
           vcpkg-triplet: ${{ matrix.triplet }}
-          apt-get: ${{ matrix.install }} ${{ matrix.container && 'pkg-config' }}
-          apt-get-ignore-missing: ${{ matrix.container && 'true' }}
-          cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
+          apt-get: ${{ matrix.install }}
+          apt-get-ignore-missing: ${{ matrix.container }}
+          cc: ${{ steps.setup-cpp.outputs.cc }}
           ccflags: ${{ matrix.ccflags }}
-          cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
+          cxx: ${{ steps.setup-cpp.outputs.cxx }}
           cxxflags: ${{ matrix.cxxflags }}
           trace-commands: true
 
@@ -151,7 +151,7 @@ jobs:
           modules: variant2
           toolset: ${{ matrix.b2-toolset }}
           build-variant: ${{ matrix.build-type }}
-          cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx || '' }}
+          cxx: ${{ steps.setup-cpp.outputs.cxx || '' }}
           cxxstd: ${{ matrix.cxxstd }}
           address-model: ${{ (matrix.x86 && '32') || '64' }}
           asan: ${{ matrix.asan }}
@@ -172,9 +172,9 @@ jobs:
           run-tests: true
           install-prefix: .local
           cxxstd: ${{ matrix.cxxstd }}
-          cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
+          cc: ${{ steps.setup-cpp.outputs.cc }}
           ccflags: ${{ matrix.ccflags }}
-          cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
+          cxx: ${{ steps.setup-cpp.outputs.cxx }}
           cxxflags: ${{ matrix.cxxflags }}
           shared: ${{ matrix.shared }}
           extra-args: |
