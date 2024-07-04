@@ -249,6 +249,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.8.3/index.html">v1.8.3</a>
+        </li>
+        <li class="version">
           <a href="../v1.8.2/index.html">v1.8.2</a>
         </li>
         <li class="version">
@@ -315,6 +318,7 @@
   <div class="version-menu">
     <a class="version is-current" href="cpp-matrix.html">master</a>
     <a class="version" href="../develop/actions/cpp-matrix.html">develop</a>
+    <a class="version" href="../v1.8.3/actions/cpp-matrix.html">v1.8.3</a>
     <a class="version" href="../v1.8.2/actions/cpp-matrix.html">v1.8.2</a>
     <a class="version" href="../v1.8.1/actions/cpp-matrix.html">v1.8.1</a>
     <a class="version" href="../v1.8.0/actions/cpp-matrix.html">v1.8.0</a>
@@ -548,6 +552,21 @@ recent versions are covered, while eliminating intermediary versions.</p>
 a bug in GCC 8.1, and you want to keep track of that. The semver range <code>gcc &gt;=4.8 &lt;7 || 8.1 || &gt;=10</code> would ensure
 version GCC8.1 specifically, and not any other version is the range <code>&gt;=8.0.0 &lt;9.0.0</code> is tested.</p>
 </div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+The action still accepts open ranges to test the latest versions of a compiler. However, additional actions
+might be needed to test the latest compilers, which may not be implemented in this version of the project.
+Therefore, users are still recommended to avoid open ranges or to update the action&#8217;s version to support the
+latest compiler versions.
+</td>
+</tr>
+</table>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -570,6 +589,24 @@ GCC versions <code>&gt;=6.0 &lt;10</code> when in push events.</p>
 <div class="paragraph">
 <p>A more powerful strategy to save resources is analyzing files changed in the workflow and considering
 these files to determine what the matrix should be according to project conventions.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_patching_node_on_old_containers"><a class="anchor" href="#_patching_node_on_old_containers"></a>Patching Node on old containers</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>If you need to run tests on old compilers, the matrix entries might include old containers.
+GitHub Actions stopped supporting many old container since it moved to Node 20.</p>
+</div>
+<div class="paragraph">
+<p>A <a href="https://github.com/actions/runner/issues/2906#issuecomment-2109514798">workaround</a> is to set
+the <code>volumes</code> key of the container object so that the user can provide its own Node installation.</p>
+</div>
+<div class="paragraph">
+<p>This action will provide theses suggestions in the <code>container</code> key of the matrix entries.
+However, the user should still include a step in the workflow to install the required Node version
+in the <code>/__e/node20</code> directory.</p>
 </div>
 </div>
 </div>
@@ -620,6 +657,9 @@ these files to determine what the matrix should be according to project conventi
       clang Time-Trace ASan+UBSan
 
       mingw Shared
+
+      '
+    force-factors: 'mingw: No-Deps
 
       '</code></pre>
 </div>
@@ -708,6 +748,20 @@ with dependencies. This is usually safer and cheaper than duplicating the entire
 combinations of these factors and also allows steps to be skipped when the library is not expected to be built
 in a given mode. For instance, testing a library on Standalone mode might not be necessary when the library
 is being tested with intermediary compilers.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>force-factors</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of factor flags to be injected with each range of compiler version
+even if the entry doesn&#8217;t have the usual requirements to have that factor.</p>
+<p class="tableblock">Each line has the format:</p>
+<p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;build-type&gt;</code></p>
+<p class="tableblock">For instance, <code>gcc &gt;=13 &lt;14: Asan</code> indicates that the flag <code>asan</code> will be included with
+any version of <code>gcc</code> in that range, even if the entry doesn&#8217;t have the usual requirements
+to have the <code>Asan</code> factor.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the build type
+to all versions of the compiler.</p>
+<p class="tableblock">When the build type is unspecified, the action will infer the build type from the compiler name and its version.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
@@ -826,7 +880,7 @@ to all versions of the compiler.</p>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build_types</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-types</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of build types to be used with each range of compiler version.
 Each line has the format:</p>
 <p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;build-type&gt;</code></p>
@@ -921,6 +975,7 @@ and factors to be tested.</p>
   among the test configurations.</p>
 <p class="tableblock">- <code>has-factors</code>: Specifies whether the entry has any factors applied.</p>
 <p class="tableblock">- <code>is-no-factor-intermediary</code>: Specifies whether the entry is an intermediary version without any factors applied.</p>
+<p class="tableblock">- <code>is-container</code>: Specifies whether the entry has a container suggested.</p>
 <p class="tableblock"><strong>Factors</strong>:</p>
 <p class="tableblock">- <code>&lt;factors&gt;&#8230;&#8203;</code>: Provides additional factors or attributes associated with the test configuration as defined by
   the <code>factors</code> inputs. These usually include variant build configurations spread among the

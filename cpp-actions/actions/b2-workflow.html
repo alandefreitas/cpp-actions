@@ -249,6 +249,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.8.3/index.html">v1.8.3</a>
+        </li>
+        <li class="version">
           <a href="../v1.8.2/index.html">v1.8.2</a>
         </li>
         <li class="version">
@@ -316,6 +319,7 @@
   <div class="version-menu">
     <a class="version is-current" href="b2-workflow.html">master</a>
     <a class="version" href="../develop/actions/b2-workflow.html">develop</a>
+    <a class="version" href="../v1.8.3/actions/b2-workflow.html">v1.8.3</a>
     <a class="version" href="../v1.8.2/actions/b2-workflow.html">v1.8.2</a>
     <a class="version" href="../v1.8.1/actions/b2-workflow.html">v1.8.1</a>
     <a class="version" href="../v1.8.0/actions/b2-workflow.html">v1.8.0</a>
@@ -354,10 +358,21 @@ and fetching dependencies with <a href="package-install.html" class="xref page">
 compiling <code>b2</code> if needed and generating a proper <code>user-config.jam</code> file to define the path to the C++ compiler
 provided by the <code>cxx</code> input.</p>
 </div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>This action is particularly useful for Boost library proposals, where B2 is mandatory. It assumes
+<p>This action is useful for Boost library proposals, where B2 support is mandatory. It assumes
 the library being tested is in the <code>libs</code> directory of the Boost super-project and that
 <code>source-dir</code> is the root of the super-project.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 </div>
 </div>
@@ -390,7 +405,7 @@ CMake workflow steps as integration tests for CMake.</p>
     modules: variant2
     toolset: ${{ matrix.b2-toolset }}
     build-variant: ${{ matrix.build-type }}
-    cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx || '' }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx || '' }}
     cxxstd: ${{ matrix.cxxstd }}
     address-model: ${{ (matrix.x86 &amp;&amp; '32') || '64' }}
     asan: ${{ matrix.asan }}

@@ -249,6 +249,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.8.3/index.html">v1.8.3</a>
+        </li>
+        <li class="version">
           <a href="../v1.8.2/index.html">v1.8.2</a>
         </li>
         <li class="version">
@@ -316,6 +319,7 @@
   <div class="version-menu">
     <a class="version is-current" href="package-install.html">master</a>
     <a class="version" href="../develop/actions/package-install.html">develop</a>
+    <a class="version" href="../v1.8.3/actions/package-install.html">v1.8.3</a>
     <a class="version" href="../v1.8.2/actions/package-install.html">v1.8.2</a>
     <a class="version" href="../v1.8.1/actions/package-install.html">v1.8.1</a>
     <a class="version" href="../v1.8.0/actions/package-install.html">v1.8.0</a>
@@ -399,11 +403,11 @@ required by the project.</p>
   with:
     vcpkg: ${{ (!matrix.fetch-content &amp;&amp; 'fmt') || '' }}
     vcpkg-triplet: ${{ matrix.triplet }}
-    apt-get: ${{ matrix.install }} ${{ matrix.container &amp;&amp; 'pkg-config' }}
-    apt-get-ignore-missing: ${{ matrix.container &amp;&amp; 'true' }}
-    cc: ${{ steps.setup-cpp.outputs.cc || matrix.cc }}
+    apt-get: ${{ matrix.install }}
+    apt-get-ignore-missing: ${{ matrix.is-container }}
+    cc: ${{ steps.setup-cpp.outputs.cc }}
     ccflags: ${{ matrix.ccflags }}
-    cxx: ${{ steps.setup-cpp.outputs.cxx || matrix.cxx }}
+    cxx: ${{ steps.setup-cpp.outputs.cxx }}
     cxxflags: ${{ matrix.cxxflags }}</code></pre>
 </div>
 </div>
