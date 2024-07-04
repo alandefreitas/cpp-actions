@@ -1010,33 +1010,27 @@ function setRecommendedFlags(entry, inputs) {
 
     // Flags for asan
     let sanitizers = []
-    if ('asan' in entry && entry['asan'] === true) {
-        if (['gcc', 'clang', 'msvc'].includes(entry['compiler'])) {
-            sanitizers.push('address')
-        }
+    let supportsAsan = ['gcc', 'clang', 'msvc'].includes(entry['compiler'])
+    if ('asan' in entry && entry['asan'] === true && supportsAsan) {
+        sanitizers.push('address')
     }
 
     // Flags for ubsan
-    if ('ubsan' in entry && entry['ubsan'] === true) {
-        if (['gcc', 'clang'].includes(entry['compiler'])) {
-            sanitizers.push('undefined')
-            // https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#stack-traces-and-report-symbolization
-            entry['env'] = {'UBSAN_OPTIONS': 'print_stacktrace=1'}
-        }
+    let supportsSanitizers = ['gcc', 'clang'].includes(entry['compiler'])
+    if ('ubsan' in entry && entry['ubsan'] === true && supportsSanitizers) {
+        sanitizers.push('undefined')
+        // https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#stack-traces-and-report-symbolization
+        entry['env'] = {'UBSAN_OPTIONS': 'print_stacktrace=1'}
     }
 
     // Flags for msan
-    if ('msan' in entry && entry['msan'] === true) {
-        if (['gcc', 'clang'].includes(entry['compiler'])) {
-            sanitizers.push('memory')
-        }
+    if ('msan' in entry && entry['msan'] === true && supportsSanitizers) {
+        sanitizers.push('memory')
     }
 
     // Flags for tsan
-    if ('tsan' in entry && entry['tsan'] === true) {
-        if (['gcc', 'clang'].includes(entry['compiler'])) {
-            sanitizers.push('thread')
-        }
+    if ('tsan' in entry && entry['tsan'] === true && supportsSanitizers) {
+        sanitizers.push('thread')
     }
 
     if (sanitizers.length !== 0) {
