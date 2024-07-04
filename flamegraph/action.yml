@@ -241,7 +241,7 @@ runs:
           false
         fi
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4.3.3
       if: ${{ inputs.upload-artifact == 'true' }}
       with:
         name: time-traces

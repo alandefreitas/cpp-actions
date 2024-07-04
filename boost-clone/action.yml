@@ -335,7 +335,7 @@ runs:
     - name: boost cache
       id: cache-boost
       if: inputs.cache == 'true'
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ steps.ctx.outputs.boost_dir }}
         key: ${{ steps.ctx.outputs.cache_hash }}
@@ -365,7 +365,7 @@ runs:
         done
 
     - name: Get CPU cores
-      uses: SimenB/github-actions-cpu-cores@v1
+      uses: SimenB/github-actions-cpu-cores@v2.0.0
       id: cpu-cores
 
     - name: Git features
