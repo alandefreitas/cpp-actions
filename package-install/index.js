@@ -166,6 +166,14 @@ async function apt_get_main(inputs) {
                 ['-o', 'Acquire::Retries=' + inputs.apt_get_retries, '--ignore-missing', 'install', '-y', pkg] :
                 ['-o', 'Acquire::Retries=' + inputs.apt_get_retries, 'install', '-y', pkg]
             const exitCode = await exec.exec(`${sudoPrefix} apt-get`, args, {
+                env: {
+                    // set the DEBIAN_FRONTEND environment variable to
+                    // noninteractive so that the tzdata package
+                    // doesn't prompt for input
+                    DEBIAN_FRONTEND: 'noninteractive',
+                    TZ: 'Etc/UTC',
+                    PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+                },
                 ignoreReturnCode: true
             })
             if (exitCode !== 0 && !inputs.apt_get_ignore_missing) {
