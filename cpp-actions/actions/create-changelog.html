@@ -249,6 +249,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.8.4/index.html">v1.8.4</a>
+        </li>
+        <li class="version">
           <a href="../v1.8.3/index.html">v1.8.3</a>
         </li>
         <li class="version">
@@ -319,6 +322,7 @@
   <div class="version-menu">
     <a class="version is-current" href="create-changelog.html">master</a>
     <a class="version" href="../develop/actions/create-changelog.html">develop</a>
+    <a class="version" href="../v1.8.4/actions/create-changelog.html">v1.8.4</a>
     <a class="version" href="../v1.8.3/actions/create-changelog.html">v1.8.3</a>
     <a class="version" href="../v1.8.2/actions/create-changelog.html">v1.8.2</a>
     <a class="version" href="../v1.8.1/actions/create-changelog.html">v1.8.1</a>
@@ -448,6 +452,9 @@ perform a shallow clone and the Changelog will only include the latest commit.</
 <td class="tableblock halign-left valign-top"><p class="tableblock">A regex pattern used to identify if a commit is a version delimiter.</p>
 <p class="tableblock">When a commit has a message that matches this pattern, the list of
 commits considered in the notes is complete.</p>
+<p class="tableblock">For instance, assuming the pattern '(Bump|Set)\s+version', when
+we find a commit subject such as 'Bump version to 1.0.0', the list
+of commits considered in the notes is complete.</p>
 <p class="tableblock">This constraint does not apply to the current and latest commit.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>(Bump|Set)\s+version</code></p></td>
 </tr>
@@ -457,49 +464,90 @@ commits considered in the notes is complete.</p>
 <p class="tableblock">When a commit has the same hash has the commit associated with a
 tag whose name matches this pattern, the list of commits considered
 in the notes is complete.</p>
+<p class="tableblock">For instance, assuming the pattern 'v.<strong>\..</strong>\..*', when we find
+a commit with the same hash as the commit associated with the tag
+'v1.0.0', the list of commits considered in the notes is complete.</p>
+<p class="tableblock">This tag is then associated as the parent version of the
+current release, and this information is included at the
+end of the changelog.</p>
 <p class="tableblock">This constraint does not apply to the current and latest commit.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>v.<strong>\..</strong>\..*</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>output-path</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The path where the changelog will be stored.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The path where the changelog will be stored.</p>
+<p class="tableblock">Relative paths are resolved from the source directory.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>CHANGELOG.md</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>limit</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The limit on the number of commits considered in the Changelog.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The limit on the number of commits considered in the Changelog.</p>
+<p class="tableblock">If the limit is set to 0 or undefined, all commits are considered.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>0</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>thank-non-regular</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Thank non-regular contributors.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Thank non-regular contributors.</p>
+<p class="tableblock">The action will attempt to identify non-regular contributors by
+analyzing the commit history and the GitHub token provided.</p>
+<p class="tableblock">Non-regular contributors are contributors that do not have a
+are not part of the repository&#8217;s collaborators and have
+a small number of commits.</p>
+<p class="tableblock">The changelog will include a thank you message to these
+contributors, including a tag to their GitHub profile.</p>
+<p class="tableblock">When the Changelog is used in a release, this tag
+will usually be used by GitHub to notify these contributors
+of the new release with their contribution and the
+thank you message.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>check-unconventional</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Check for commits that do not follow the conventional commit format.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Check for commits that do not follow the conventional commit format.</p>
+<p class="tableblock">If one of the new commits in a PR does not follow the conventional commit format,
+the action will create a warning so that the user can fix the commit message.</p>
+<p class="tableblock">This helps ensure all commit messages can be used in the changelog so
+that it&#8217;s consistent and that the release notes are clear and concise.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>link-commits</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Link commit ids in the changelog to the repository commit.</p>
+<p class="tableblock">For instance, if the changelog includes a commit id such as '471aec5',
+instead of including "#471aec5" next to the commit message, it will
+include the full version with the link:</p>
+<p class="tableblock"><a href="https://github.com/boostorg/url/commit/471aec59401fb973e325cd50e7d61f613357e4ad">#471aec5</a></p>
 <p class="tableblock">This is usually unnecessary because GitHub flavored markdown automatically links commits id in
 text to the commits in the same repository. Thus, including explicit links would often make the
 output more verbose and remove any extra GitHub functionality, such as pop ups associated with
 these ids.</p>
 <p class="tableblock">However, when the outputs is only going to be used as an action summary or in any other context
-outside GitHub, these automatic links do not exist and it&#8217;s often a good idea to include them
-to allow the reader to navigate to these repository commits.</p></td>
+outside GitHub, these automatic links do not exist and it&#8217;s often a good idea to explicitly
+include them to allow the reader to navigate to these repository commits.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>github-token</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Github token to identify non-regular contributors. Usually secrets.GITHUB_TOKEN.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Github token to identify information about the project.</p>
+<p class="tableblock">This is currently used to:</p>
+<p class="tableblock">- Fetch the commit history to compare with the proposed changes
+  and create a full changelog including the changes proposed in a
+  PR and the changes that are already in the main branch.
+- Fetch the list of collaborators to identify non-regular contributors.</p>
+<p class="tableblock">The reason we need to fetch the commit history is because the
+checkout action only fetches the latest commit so the information
+about existing commits is not readily available to the workflow.</p>
+<p class="tableblock">The value for this token is usually set as the value of
+<code>secrets.GITHUB_TOKEN</code>.</p>
+<p class="tableblock">Although the action does not require this token to work, it will
+be limited in the number of requests it can make to the GitHub API
+and might be forced to work with limited information.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>update-summary</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Update action summary with the changelog.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">When set to <code>true</code>, this action will update the workflow summary
+with the current changelog.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
