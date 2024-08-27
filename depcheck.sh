@@ -1,5 +1,3 @@
-# Description: Build all the javascript projects in the repository
-
 projects_with_package=()
 projects_with_action=()
 
@@ -24,8 +22,7 @@ done
 echo "Javascript projects:"
 for project in "${projects_with_package[@]}"; do
     cd "$project" || exit
-    echo "==== Building $project ===="
-    npm install
-    npm run all
+    echo "==== Checking dependencies for $project ===="
+    npx depcheck
     cd ..
 done
