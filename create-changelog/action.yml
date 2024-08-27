@@ -62,6 +62,10 @@ inputs:
       When a commit has a message that matches this pattern, the list of
       commits considered in the notes is complete.
       
+      For instance, assuming the pattern '(Bump|Set)\s+version', when
+      we find a commit subject such as 'Bump version to 1.0.0', the list
+      of commits considered in the notes is complete.
+      
       This constraint does not apply to the current and latest commit.
 
     required: false
@@ -74,31 +78,76 @@ inputs:
       tag whose name matches this pattern, the list of commits considered
       in the notes is complete.
       
+      For instance, assuming the pattern 'v.*\..*\..*', when we find 
+      a commit with the same hash as the commit associated with the tag
+      'v1.0.0', the list of commits considered in the notes is complete.
+      
+      This tag is then associated as the parent version of the 
+      current release, and this information is included at the
+      end of the changelog.
+      
       This constraint does not apply to the current and latest commit.
 
     required: false
     default: 'v.*\..*\..*'
   output-path:
     description: |
-      The path where the changelog will be stored
+      The path where the changelog will be stored.
+      
+      Relative paths are resolved from the source directory.
+
     required: false
     default: 'CHANGELOG.md'
   limit:
     description: |
-      The limit on the number of commits considered in the Changelog
+      The limit on the number of commits considered in the Changelog.
+      
+      If the limit is set to 0 or undefined, all commits are considered.
+
     required: false
     default: '0'
   thank-non-regular:
-    description: 'Thank non-regular contributors.'
+    description: |
+      Thank non-regular contributors.
+      
+      The action will attempt to identify non-regular contributors by
+      analyzing the commit history and the GitHub token provided.
+      
+      Non-regular contributors are contributors that do not have a
+      are not part of the repository's collaborators and have 
+      a small number of commits.
+      
+      The changelog will include a thank you message to these
+      contributors, including a tag to their GitHub profile.
+      
+      When the Changelog is used in a release, this tag
+      will usually be used by GitHub to notify these contributors
+      of the new release with their contribution and the 
+      thank you message.
+
     required: false
     default: 'true'
   check-unconventional:
-    description: 'Check for commits that do not follow the conventional commit format.'
+    description: |
+      Check for commits that do not follow the conventional commit format.
+      
+      If one of the new commits in a PR does not follow the conventional commit format,
+      the action will create a warning so that the user can fix the commit message.
+      
+      This helps ensure all commit messages can be used in the changelog so
+      that it's consistent and that the release notes are clear and concise.
+
     required: false
     default: 'true'
   link-commits:
     description: |
       Link commit ids in the changelog to the repository commit.
+      
+      For instance, if the changelog includes a commit id such as '471aec5',
+      instead of including "#471aec5" next to the commit message, it will
+      include the full version with the link:
+      
+      https://github.com/boostorg/url/commit/471aec59401fb973e325cd50e7d61f613357e4ad[#471aec5]
       
       This is usually unnecessary because GitHub flavored markdown automatically links commits id in
       text to the commits in the same repository. Thus, including explicit links would often make the
@@ -106,16 +155,40 @@ inputs:
       these ids.
       
       However, when the outputs is only going to be used as an action summary or in any other context
-      outside GitHub, these automatic links do not exist and it's often a good idea to include them
-      to allow the reader to navigate to these repository commits.
+      outside GitHub, these automatic links do not exist and it's often a good idea to explicitly 
+      include them to allow the reader to navigate to these repository commits.
+
     required: false
     default: 'false'
   github-token:
-    description: 'Github token to identify non-regular contributors. Usually secrets.GITHUB_TOKEN.'
+    description: |
+      Github token to identify information about the project.
+      
+      This is currently used to:
+      
+      - Fetch the commit history to compare with the proposed changes
+        and create a full changelog including the changes proposed in a 
+        PR and the changes that are already in the main branch.
+      - Fetch the list of collaborators to identify non-regular contributors.
+      
+      The reason we need to fetch the commit history is because the 
+      checkout action only fetches the latest commit so the information
+      about existing commits is not readily available to the workflow.
+      
+      The value for this token is usually set as the value of 
+      `secrets.GITHUB_TOKEN`.
+      
+      Although the action does not require this token to work, it will
+      be limited in the number of requests it can make to the GitHub API
+      and might be forced to work with limited information.
+
     required: false
     default: ''
   update-summary:
-    description: 'Update action summary with the changelog'
+    description: |
+      When set to `true`, this action will update the workflow summary
+      with the current changelog.
+
     required: false
     default: 'true'
   trace-commands:
@@ -124,29 +197,11 @@ inputs:
     default: 'false'
 
 runs:
-  using: "composite"
-  steps:
-    - uses: actions/setup-python@v5.0.0
-      id: setup-python
-      with:
-        python-version: "3.11.7"
+  using: 'node20'
+  main: 'dist/index.js'
+  post-if: success()
+branding:
+  icon: 'code'
+  color: 'yellow'
 
-    - name: Generate changelog
-      shell: bash
-      run: |
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        python_path="${{ steps.setup-python.outputs.python-path || 'python' }}"
-        pip3 install requests
-        thank_arg="${{ (inputs.thank-non-regular == 'true' && '--thank-non-regular') || '' }}"
-        link_commits_arg="${{ (inputs.link-commits == 'true' && '--link-commits') || '' }}"
-        check_unconventional_arg="${{ (inputs.check-unconventional == 'true' && '--check-unconventional') || '' }}"
-        token_arg="${{ (inputs.github-token && format('--github-token "{0}"', inputs.github-token)) || '' }}"
-        $python_path "$GITHUB_ACTION_PATH/create-changelog.py" --dir "${{ inputs.source-dir }}" --version-pattern "${{ inputs.version-pattern }}" --tag-pattern "${{ inputs.tag-pattern }}" --output "${{ inputs.output-path }}" --limit "${{ inputs.limit }}" $thank_arg $token_arg $link_commits_arg $check_unconventional_arg
 
-    - name: Changelog summary
-      shell: bash
-      if: "${{ inputs.update-summary == 'true' }}"
-      run: |
-        echo "# Changelog" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        cat "${{ inputs.output-path }}" >> $GITHUB_STEP_SUMMARY

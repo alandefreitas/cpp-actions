@@ -4,6 +4,10 @@
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 #
+
+# This is the python script we previously used for this
+# action.
+
 import argparse
 import os
 import subprocess
@@ -832,7 +836,7 @@ if __name__ == "__main__":
     # - The footer keywords recognized by github:
     # https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue
 
-    # Create dictionary of changes by type and scope
+    # Create a dictionary of changes by type and scope
     parent_release = None
     changes = {}
     for c in reversed(commits):
