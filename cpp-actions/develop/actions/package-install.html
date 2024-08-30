@@ -408,7 +408,7 @@ required by the project.</p>
   uses: alandefreitas/cpp-actions/package-install@develop
   id: package-install
   with:
-    vcpkg: ${{ (!matrix.fetch-content &amp;&amp; 'fmt') || '' }}
+    vcpkg: ${{ matrix.vcpkg-packages }}
     vcpkg-triplet: ${{ matrix.triplet }}
     apt-get: ${{ matrix.install }}
     apt-get-ignore-missing: ${{ matrix.is-container }}

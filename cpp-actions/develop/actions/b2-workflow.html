@@ -414,7 +414,7 @@ CMake workflow steps as integration tests for CMake.</p>
     build-variant: ${{ matrix.build-type }}
     cxx: ${{ steps.setup-cpp.outputs.cxx || '' }}
     cxxstd: ${{ matrix.cxxstd }}
-    address-model: ${{ (matrix.x86 &amp;&amp; '32') || '64' }}
+    address-model: ${{ matrix.address-model }}
     asan: ${{ matrix.asan }}
     ubsan: ${{ matrix.ubsan }}
     tsan: ${{ matrix.tsan }}
