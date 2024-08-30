@@ -249,6 +249,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.8.5/index.html">v1.8.5</a>
+        </li>
+        <li class="version">
           <a href="../v1.8.4/index.html">v1.8.4</a>
         </li>
         <li class="version">
@@ -321,6 +324,7 @@
   <div class="version-menu">
     <a class="version is-current" href="cpp-matrix.html">master</a>
     <a class="version" href="../develop/actions/cpp-matrix.html">develop</a>
+    <a class="version" href="../v1.8.5/actions/cpp-matrix.html">v1.8.5</a>
     <a class="version" href="../v1.8.4/actions/cpp-matrix.html">v1.8.4</a>
     <a class="version" href="../v1.8.3/actions/cpp-matrix.html">v1.8.3</a>
     <a class="version" href="../v1.8.2/actions/cpp-matrix.html">v1.8.2</a>
@@ -524,6 +528,39 @@ in YAML format, so it can be copy/pasted into the workflow as a starting point t
 </div>
 </div>
 <div class="sect1">
+<h2 id="_extra_values_in_entries"><a class="anchor" href="#_extra_values_in_entries"></a>Extra values in entries</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In many cases, we need to reuse GitHub expressions to generate new values based on
+existing values in the matrix. For instance, consider an entry in the matrix that has
+the <code>x86</code> factor set to true.</p>
+</div>
+<div class="paragraph">
+<p>When using <code>b2</code>, we should set <code>address-model=32</code> for this entry. Otherwise, we should set
+<code>address-model=64</code>. With GitHub expressions, we can generate this value based on the <code>x86</code> factor:</p>
+</div>
+<div class="paragraph">
+<p><code>b2 address-model={{ matrix.x86 &amp;&amp; '32' || '64' }}</code></p>
+</div>
+<div class="paragraph">
+<p>If this pattern needs to be repeated in many entries, this pattern might become cumbersome.
+In this case, the action allows the user to define extra values to be injected in each entry
+of the matrix. These values can be used to generate new values based on existing values in
+the matrix with handlebars. You could set the following extra values in each entry of the matrix:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">extra-values: |
+    address-model: {{#if x86}}32{{else}}64{{/if}}
+
+# ...
+run: |
+  b2 address-model={{ matrix.address-model }}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_ordering_entries"><a class="anchor" href="#_ordering_entries"></a>Ordering entries</h2>
 <div class="sectionbody">
 <div class="paragraph">
@@ -665,6 +702,11 @@ in the <code>/__e/node20</code> directory.</p>
       '
     force-factors: 'mingw: No-Deps
 
+      '
+    extra-values: 'vcpkg-packages: {{#if fetch-content}}fmt{{/if}}
+
+      address-model: {{#if x86}}32{{else}}64{{/if}}
+
       '</code></pre>
 </div>
 </div>
@@ -766,6 +808,21 @@ to have the <code>Asan</code> factor.</p>
 <p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the build type
 to all versions of the compiler.</p>
 <p class="tableblock">When the build type is unspecified, the action will infer the build type from the compiler name and its version.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>extra-values</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of key-value pairs to be injected in each entry of the matrix.</p>
+<p class="tableblock">Each line has the format:</p>
+<p class="tableblock"><code>&lt;key&gt;: &lt;value&gt;</code></p>
+<p class="tableblock">For instance, <code>hash-key: value</code> includes the hash-key with the value <code>value</code> in each entry of the matrix.
+This means it can later be accessed more easily via the <code>matrix</code> output of the action.</p>
+<p class="tableblock">The values also support Handlebars expressions, which can be used to generate values based on other values
+in the entry. For instance,</p>
+<p class="tableblock"><code>hash-key: {{ compiler }}-{{ version }}</code></p>
+<p class="tableblock">would generate a hash-key with the value <code>gcc-11.1</code> for an entry with the compiler <code>gcc</code> and version <code>11.1</code>.
+Previous extra values in the entry can also be accessed via the <code>matrix</code> output of the action. For instance:</p>
+<p class="tableblock"><code>cache-key: cache-{{ hash-key }}</code>.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
@@ -918,6 +975,14 @@ are no longer valid.</p>
 the compiler is not available in the runner image or when there&#8217;s a reported conflict between
 compilers in the runner image.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>output-file</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The file to output the matrix as a JSON string.</p>
+<p class="tableblock">This is useful when the matrix is too large to be printed in the logs or when the matrix needs to be
+saved for later use.</p>
+<p class="tableblock">The file will be saved in the current working directory of the action.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>matrix.json</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>log-matrix</code></p></td>
