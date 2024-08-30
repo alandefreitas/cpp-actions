@@ -976,6 +976,14 @@ compilers in the runner image.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>output-file</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The file to output the matrix as a JSON string.</p>
+<p class="tableblock">This is useful when the matrix is too large to be printed in the logs or when the matrix needs to be
+saved for later use.</p>
+<p class="tableblock">The file will be saved in the current working directory of the action.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>matrix.json</code></p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>log-matrix</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Log the generated matrix as a JSON string.</p>
 <p class="tableblock">The is useful for debugging purposes and when transitioning to a workflow that uses a hard-coded matrix.</p></td>
