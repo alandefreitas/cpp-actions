@@ -54,6 +54,9 @@ jobs:
           force-factors: |
             mingw: No-Deps
           trace-commands: true
+          extra-values: |
+            vcpkg-packages: {{#if fetch-content}}fmt{{/if}}
+            address-model: {{#if x86}}32{{else}}64{{/if}}
 
   build:
     needs: cpp-matrix
@@ -125,7 +128,7 @@ jobs:
         uses: ./package-install
         id: package-install
         with:
-          vcpkg: ${{ (!matrix.fetch-content && 'fmt') || '' }}
+          vcpkg: ${{ matrix.vcpkg-packages }}
           vcpkg-triplet: ${{ matrix.triplet }}
           apt-get: ${{ matrix.install }}
           apt-get-ignore-missing: ${{ matrix.is-container }}
@@ -155,7 +158,7 @@ jobs:
           build-variant: ${{ matrix.build-type }}
           cxx: ${{ steps.setup-cpp.outputs.cxx || '' }}
           cxxstd: ${{ matrix.cxxstd }}
-          address-model: ${{ (matrix.x86 && '32') || '64' }}
+          address-model: ${{ matrix.address-model }}
           asan: ${{ matrix.asan }}
           ubsan: ${{ matrix.ubsan }}
           tsan: ${{ matrix.tsan }}

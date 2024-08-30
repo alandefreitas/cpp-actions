@@ -3,6 +3,7 @@ const core = require('@actions/core')
 const semver = require('semver')
 const {execSync} = require('child_process')
 const setup_program = require('./../setup-program/index')
+const Handlebars = require('handlebars')
 
 let trace_commands = false
 
@@ -1083,13 +1084,13 @@ function setRecommendedFlags(entry, inputs) {
         // Check if it's a string
         if (typeof entry['container'] === 'string') {
             if (entry['container'].startsWith('ubuntu')) {
-                entry['install'] += ' build-essential pkg-config'
+                entry['install'] += ' build-essential pkg-config git curl'
             }
         }
         // Check if it's an object with the "image" key
         if (typeof entry['container'] === 'object' && 'image' in entry['container']) {
             if (entry['container']['image'].startsWith('ubuntu')) {
-                entry['install'] += ' build-essential pkg-config'
+                entry['install'] += ' build-essential pkg-config git curl'
             }
         }
     }
@@ -1203,6 +1204,111 @@ function sortMatrix(matrix, inputs) {
     })
 }
 
+function registerHelpers() {
+    Handlebars.registerHelper('lowercase', function(value) {
+        return value.toLowerCase()
+    })
+    Handlebars.registerHelper('uppercase', function(value) {
+        return value.toUpperCase()
+    })
+    Handlebars.registerHelper('contains', function(str, substr) {
+        return str.includes(substr)
+    })
+    for (const key of ['startsWith', 'starts-with']) {
+        Handlebars.registerHelper(key, function(str, substr) {
+            return str.startsWith(substr)
+        })
+    }
+    for (const key of ['endsWith', 'ends-with']) {
+        Handlebars.registerHelper(key, function(str, substr) {
+            return str.endsWith(substr)
+        })
+    }
+    Handlebars.registerHelper('substr', function(str, start, end) {
+        return str.substring(start, end)
+    })
+
+    Handlebars.registerHelper('and', function(...args) {
+        const numArgs = args.length
+        if (numArgs === 3) return args[0] && args[1]
+        if (numArgs < 3) throw new Error('{{and}} helper expects at least 2 arguments')
+        args.pop()
+        return args.every((it) => it)
+    })
+    Handlebars.registerHelper('eq', function(a, b) {
+        return a === b
+    })
+    Handlebars.registerHelper('ieq', function(a, b) {
+        return a.toLowerCase() === b.toLowerCase()
+    })
+    Handlebars.registerHelper('ne', function(a, b) {
+        return a !== b
+    })
+    Handlebars.registerHelper('ine', function(a, b) {
+        return a.toLowerCase() !== b.toLowerCase()
+    })
+    Handlebars.registerHelper('or', function(...args) {
+        const numArgs = args.length
+        if (numArgs === 3) return args[0] || args[1]
+        if (numArgs < 3) throw new Error('{{or}} helper expects at least 2 arguments')
+        args.pop()
+        return args.some((it) => it)
+    })
+    Handlebars.registerHelper('not', function(value) {
+        return !value
+    })
+}
+
+
+function injectExtraValues(matrix, extraValues) {
+    if (!extraValues) {
+        return
+    }
+
+    registerHelpers()
+
+    // Use Object.entries to iterate over the key-value pairs of extraValues
+    const compiledTemplates = extraValues.map(({key, value}) => ({
+        key,
+        template: Handlebars.compile(value)
+    }))
+
+    let warnedKeys = []
+    for (const entry of matrix) {
+        for (const {key, template} of compiledTemplates) {
+            const fail = key in entry
+            if (fail) {
+                if (!warnedKeys.includes(key)) {
+                    core.warning(`Extra entry key "${key}" already exists in the matrix`)
+                }
+                // Add to the list of keys we already warned about
+                warnedKeys.push(key)
+                continue
+            }
+            entry[key] = template(entry)
+        }
+    }
+}
+
+function setOS(matrix) {
+    for (const entry of matrix) {
+        if (entry.container) {
+            entry.os = 'Linux'
+        } else if (entry['runs-on']) {
+            const runsOn = entry['runs-on'].toLowerCase()
+            if (runsOn.startsWith('windows')) {
+                entry.os = 'Windows'
+            } else if (runsOn.startsWith('macos')) {
+                entry.os = 'macOS'
+            } else {
+                entry.os = 'Linux'
+            }
+        } else {
+            entry.os = 'Linux'
+        }
+    }
+}
+
 async function generateMatrix(inputs) {
     function fnlog(msg) {
         log('generateMatrix: ' + msg)
@@ -1308,6 +1414,17 @@ async function generateMatrix(inputs) {
     printMatrix()
     core.endGroup()
 
+    // Set entry OS
+    core.startGroup('🖥️ Set OS')
+    setOS(matrix)
+    core.endGroup()
+
+    if (inputs.extra_values) {
+        core.startGroup('🔧 Add extra values')
+        injectExtraValues(matrix, inputs.extra_values)
+        core.endGroup()
+    }
+
     core.startGroup('🔀 Sort matrix')
     sortMatrix(matrix, inputs)
     printMatrix()
@@ -1323,6 +1440,18 @@ async function generateMatrix(inputs) {
         printMatrix()
     }
     core.endGroup()
+
+    if (inputs.generate_summary) {
+        core.startGroup('📋 C++ Matrix Summary')
+        const table = generateTable(matrix, inputs)
+        core.summary.addHeading('C++ Test Matrix').addTable(table).write().then(result => {
+            log('Table generated', result)
+        }).catch(error => {
+            log('An error occurred generating the table:', error)
+        })
+        core.info('Summary table generated')
+        core.endGroup()
+    }
 
     return matrix
 }
@@ -1600,6 +1729,17 @@ function normalizeCompilerNameSuggestions(suggestionMap) {
     })
 }
 
+function parseKeyValues(lines) {
+    const keyValues = []
+    for (const line of lines) {
+        const [key, value] = line.split(':').map(part => part.trim())
+        if (key && value) {
+            keyValues.push({key, value: value.trim()})
+        }
+    }
+    return keyValues
+}
+
 async function run() {
     try {
         const compilerVersions = parseCompilerRequirements(core.getInput('compilers'))
@@ -1614,6 +1754,7 @@ async function run() {
             factors: parseCompilerFactors(core.getInput('factors'), Object.keys(compilerVersions)),
             combinatorial_factors: parseCompilerFactors(core.getInput('combinatorial-factors'), Object.keys(compilerVersions)),
             force_factors: parseCompilerSuggestions(core.getMultilineInput('force-factors'), Object.keys(compilerVersions)),
+            extra_values: parseKeyValues(core.getMultilineInput('extra-values')),
 
             // Customize suggestions
             runs_on: parseCompilerSuggestions(core.getMultilineInput('runs-on'), Object.keys(compilerVersions)),
@@ -1674,16 +1815,7 @@ async function run() {
         try {
             const matrix = await generateMatrix(inputs)
             core.setOutput('matrix', matrix)
-            if (inputs.generate_summary) {
-                core.startGroup('📋 C++ Matrix Summary')
-                const table = generateTable(matrix, inputs)
-                core.summary.addHeading('C++ Test Matrix').addTable(table).write().then(result => {
-                    log('Table generated', result)
-                }).catch(error => {
-                    log('An error occurred generating the table:', error)
-                })
-                core.endGroup()
-            }
+
         } catch (error) {
             core.setFailed(error)
         }

@@ -13,6 +13,7 @@
   "license": "Boost Software License 1.0",
   "dependencies": {
     "@actions/core": "^1.10.0",
+    "handlebars": "^4.7.8",
     "semver": "^7.5.1"
   },
   "devDependencies": {

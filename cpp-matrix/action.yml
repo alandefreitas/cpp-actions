@@ -134,6 +134,32 @@ description: |
   If none of these options is enough for the library requirements, the action also prints the complete matrix
   in YAML format, so it can be copy/pasted into the workflow as a starting point to be customized.
   
+  == Extra values in entries
+  
+  In many cases, we need to reuse GitHub expressions to generate new values based on
+  existing values in the matrix. For instance, consider an entry in the matrix that has
+  the `x86` factor set to true. 
+  
+  When using `b2`, we should set `address-model=32` for this entry. Otherwise, we should set
+  `address-model=64`. With GitHub expressions, we can generate this value based on the `x86` factor:
+  
+  `b2 address-model={{ matrix.x86 && '32' || '64' }}`
+  
+  If this pattern needs to be repeated in many entries, this pattern might become cumbersome.
+  In this case, the action allows the user to define extra values to be injected in each entry
+  of the matrix. These values can be used to generate new values based on existing values in 
+  the matrix with handlebars. You could set the following extra values in each entry of the matrix:
+  
+  [source,yml]
+  ----
+  extra-values: |
+      address-model: {{#if x86}}32{{else}}64{{/if}}
+  
+  # ...
+  run: |
+    b2 address-model={{ matrix.address-model }}
+  ----
+  
   == Ordering entries
   
   Entries are ordered in the matrix according to the following criteria:
@@ -315,6 +341,32 @@ inputs:
       
       When the build type is unspecified, the action will infer the build type from the compiler name and its version.
     required: false
+    default: ''
+
+  # Allow the user to provide extra, hard-coded values for each entry in the matrix.
+  # These are values to be injected in each entry and not new entries for the matrix.
+  extra-values:
+    description: |
+      A multi-line list of key-value pairs to be injected in each entry of the matrix.
+
+      Each line has the format:
+
+      `<key>: <value>`
+
+      For instance, `hash-key: value` includes the hash-key with the value `value` in each entry of the matrix.
+      This means it can later be accessed more easily via the `matrix` output of the action.
+      
+      The values also support Handlebars expressions, which can be used to generate values based on other values
+      in the entry. For instance, 
+      
+      `hash-key: {{ compiler }}-{{ version }}` 
+      
+      would generate a hash-key with the value `gcc-11.1` for an entry with the compiler `gcc` and version `11.1`.
+      Previous extra values in the entry can also be accessed via the `matrix` output of the action. For instance:
+      
+      `cache-key: cache-{{ hash-key }}`
+    
+
     default: ''
 
   # -----------------------------------------------------------------
