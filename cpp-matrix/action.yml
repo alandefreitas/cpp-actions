@@ -586,6 +586,20 @@ inputs:
     default: 'true'
 
   # -----------------------------------------------------------------
+  # Output
+  # -----------------------------------------------------------------
+  output-file:
+    description: |
+      The file to output the matrix as a JSON string.
+      
+      This is useful when the matrix is too large to be printed in the logs or when the matrix needs to be
+      saved for later use. 
+      
+      The file will be saved in the current working directory of the action.
+    required: false
+    default: 'matrix.json'
+
+  # -----------------------------------------------------------------
   # Debugging
   # -----------------------------------------------------------------
   log-matrix:

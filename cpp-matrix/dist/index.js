@@ -10,6 +10,8 @@ const semver = __nccwpck_require__(1383)
 const {execSync} = __nccwpck_require__(2081)
 const setup_program = __nccwpck_require__(6859)
 const Handlebars = __nccwpck_require__(7492)
+const fs = __nccwpck_require__(7147)
+const path = __nccwpck_require__(1017)
 
 let trace_commands = false
 
@@ -1459,6 +1461,15 @@ async function generateMatrix(inputs) {
         core.endGroup()
     }
 
+    if (inputs.output_file) {
+        core.startGroup('📄 Write matrix to file')
+        const filename = path.resolve(inputs.output_file)
+        const content = JSON.stringify(matrix, null, 2)
+        fs.writeFileSync(filename, content)
+        core.info(`Matrix written to ${filename}`)
+        core.endGroup()
+    }
+
     return matrix
 }
 
@@ -1746,6 +1757,14 @@ function parseKeyValues(lines) {
     return keyValues
 }
 
+function normalizePath(path) {
+    const pathIsString = typeof path === 'string' || path instanceof String
+    if (pathIsString && process.platform === 'win32') {
+        return path.replace(/\\/g, '/')
+    }
+    return path
+}
+
 async function run() {
     try {
         const compilerVersions = parseCompilerRequirements(core.getInput('compilers'))
@@ -1779,6 +1798,9 @@ async function run() {
             sanitizer_build_type: core.getInput('sanitizer-build-type').trim() || 'Release',
             x86_build_type: core.getInput('x86-build-type').trim() || 'Release',
             use_containers: core.getBooleanInput('use-containers'),
+
+            // Output file
+            output_file: normalizePath(core.getInput('output-file')),
 
             // Annotations and tracing
             log_matrix: core.getBooleanInput('log-matrix'),
