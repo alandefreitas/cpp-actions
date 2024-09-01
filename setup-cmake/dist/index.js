@@ -10778,34 +10778,41 @@ function copySymlink(sourcePath, destinationPath, level = 0) {
     log(`${levelPrefix}Symlink recreated from ${sourcePath} to ${destinationPath} with target ${targetPath}`)
 }
 
-const fetchGitTags = async (repo) => {
+async function findGit() {
+    let git_path = undefined
     try {
-        // Find git in path
-        let git_path
-        try {
-            git_path = await io.which('git')
-        } catch (error) {
-            git_path = null
+        git_path = await io.which('git')
+    } catch (error) {
+        git_path = null
+    }
+    if (git_path === null || git_path === '') {
+        if (isSudoRequired()) {
+            await exec.exec(`sudo -n apt-get update`, [], {ignoreReturnCode: true})
+            await exec.exec(`sudo -n apt-get install -y git`, [], {ignoreReturnCode: true})
+        } else {
+            await exec.exec(`apt-get update`, [], {ignoreReturnCode: true})
+            await exec.exec(`apt-get install -y git`, [], {ignoreReturnCode: true})
         }
-        if (git_path === null || git_path === '') {
-            if (isSudoRequired()) {
-                await exec.exec(`sudo -n apt-get update`, [], {ignoreReturnCode: true})
-                await exec.exec(`sudo -n apt-get install -y git`, [], {ignoreReturnCode: true})
-            } else {
-                await exec.exec(`apt-get update`, [], {ignoreReturnCode: true})
-                await exec.exec(`apt-get install -y git`, [], {ignoreReturnCode: true})
-            }
-            git_path = await io.which('git')
-        }
+        git_path = await io.which('git')
+    }
+    return git_path
+}
 
+async function fetchGitTags(repo) {
+    try {
+        // Find git in PATH
+        const git_path = await findGit()
+        if (!git_path) {
+            throw new Error('Git not found')
+        }
         const {
-            exitCode: exitCode, stdout: out
+            exitCode, stdout
         } = await exec.getExecOutput(`"${git_path}" ls-remote --tags ` + repo, [], {silent: true})
         if (exitCode !== 0) {
             throw new Error('Git exited with non-zero exit code: ' + exitCode)
         }
-        const stdout = out.trim()
-        const tags = stdout.split('\n').filter(tag => tag.trim() !== '')
+        const stdoutTrimmed = stdout.trim()
+        const tags = stdoutTrimmed.split('\n').filter(tag => tag.trim() !== '')
         let gitTags = []
         for (const tag of tags) {
             const parts = tag.split('\t')
@@ -10820,6 +10827,35 @@ const fetchGitTags = async (repo) => {
         return gitTags
     } catch (error) {
         throw new Error('Error fetching Git tags: ' + error.message)
+    }
+}
+
+async function cloneGitRepo(repo, destPath, ref = undefined, options = {shallow: true}) {
+    try {
+        const git_path = await findGit()
+        if (!git_path) {
+            throw new Error('Git not found')
+        }
+        // Clean the destPath
+        if (await fs.exists(destPath)) {
+            await io.rmRF(destPath)
+        }
+        // Clone the repository
+        let args = []
+        args.push('clone')
+        args.push(repo)
+        args.push(destPath)
+        if (options.shallow) {
+            args.push('--depth')
+            args.push('1')
+        }
+        if (ref) {
+            args.push('--branch')
+            args.push(ref)
+        }
+        await exec.exec(`"${git_path}"`, args)
+    } catch (error) {
+        throw new Error('Error cloning Git repository: ' + error.message)
     }
 }
 
@@ -11043,6 +11079,68 @@ async function moveWithSudo(source, destination, copyInstead = false, level) {
     return true
 }
 
+async function downloadAndExtract(url, destPath = undefined) {
+    function fnlog(msg) {
+        log('downloadAndExtract: ' + msg)
+    }
+
+    let extPath = undefined
+    try {
+        const toolPath = await tc.downloadTool(url)
+        fnlog(`Downloaded ${url} to ${toolPath}`)
+        // Extract
+        if (url.endsWith('.zip')) {
+            extPath = await tc.extractZip(toolPath, destPath)
+        } else if (url.endsWith('.tar.gz')) {
+            extPath = await tc.extractTar(toolPath, destPath)
+        } else if (url.endsWith('.tar.xz')) {
+            extPath = await tc.extractTar(toolPath, destPath, 'xJ')
+        } else if (url.endsWith('.tar.bz2')) {
+            extPath = await tc.extractTar(toolPath, destPath, 'xj')
+        } else if (url.endsWith('.7z')) {
+            extPath = await tc.extract7z(toolPath, destPath)
+        } else if (process.platform === 'darwin' && url.endsWith('.pkg')) {
+            extPath = await tc.extractXar(toolPath, destPath)
+        } else {
+            fnlog(`Unsupported archive format: ${path.basename(url)}`)
+            return extPath
+        }
+        fnlog(`Extracted ${toolPath} to ${extPath}`)
+    } catch (error) {
+        fnlog(error.message)
+        extPath = undefined
+    }
+    return extPath
+}
+
+async function stripSingleDirectoryFromPath(dirPath) {
+    function fnlog(msg) {
+        log('stripSingleDirectoryFromPath: ' + msg)
+    }
+
+    fnlog(`Checking if ${dirPath} contains a single directory`)
+    const files = fs.readdirSync(dirPath)
+    if (files.length === 1) {
+        fnlog(`Single file found in ${dirPath}`)
+        const subPath = path.join(dirPath, files[0])
+        const fileStat = fs.statSync(subPath)
+        if (fileStat.isDirectory()) {
+            // List all files in subpath
+            const subFiles = fs.readdirSync(subPath)
+            fnlog(`Files in ${subPath}: [${subFiles.join(', ')}]`)
+
+            // Move everything to the parent directory
+            for (const file of subFiles) {
+                const sourcePath = path.join(subPath, file)
+                const destPath = path.join(dirPath, file)
+                await io.mv(sourcePath, destPath)
+            }
+            return true
+        }
+    }
+    return false
+}
+
 async function install_program_from_url(names, version, check_latest, url_template, update_environment, install_prefix = null) {
     function fnlog(msg) {
         log('install_program_from_url: ' + msg)
@@ -11076,52 +11174,25 @@ async function install_program_from_url(names, version, check_latest, url_templa
 
 
     // Download and extract archive to temporary directory
-    let extPath = null
-    try {
-        const toolPath = await tc.downloadTool(url)
-        fnlog(`Downloaded ${url} to ${toolPath}`)
-        // Extract
-        if (url.endsWith('.zip')) {
-            extPath = await tc.extractZip(toolPath)
-        } else if (url.endsWith('.tar.gz')) {
-            extPath = await tc.extractTar(toolPath)
-        } else if (url.endsWith('.tar.xz')) {
-            extPath = await tc.extractTar(toolPath, undefined, 'xJ')
-        } else if (url.endsWith('.tar.bz2')) {
-            extPath = await tc.extractTar(toolPath, undefined, 'xj')
-        } else if (url.endsWith('.7z')) {
-            extPath = await tc.extract7z(toolPath)
-        } else if (process.platform === 'darwin' && url.endsWith('.pkg')) {
-            extPath = await tc.extractXar(toolPath)
-        } else {
-            fnlog(`Unsupported archive format: ${path.basename(url)}`)
-            return {output_version, output_path}
-        }
-        fnlog(`Extracted ${toolPath} to ${extPath}`)
-    } catch (error) {
-        fnlog(error.message)
+    const extPath = await downloadAndExtract(url)
+    fnlog(`Downloaded and extracted ${url} to ${extPath}`)
+    if (!extPath) {
         return {output_version, output_path}
     }
 
-    // Identify if extPath has a single directory and use it instead
-    // This should be true for most archives, where the real directory to be
-    // installed is one level down
-    const files = fs.readdirSync(extPath)
-    if (files.length === 1) {
-        const subPath = path.join(extPath, files[0])
-        const fileStat = fs.statSync(subPath)
-        if (fileStat.isDirectory()) {
-            fnlog(`${names.join(', ')} ultimately installed in single subdir ${subPath}`)
-            // Create environment variable <tool name>_ROOT with the installation path
-            for (const name of names) {
-                const env_var_name = `${name.toUpperCase()}_ROOT`
-                core.exportVariable(env_var_name, subPath)
-            }
-            // List all files in subpath
-            const subFiles = fs.readdirSync(subPath)
-            fnlog(`Files in ${subPath}: [${subFiles.join(', ')}]`)
-            extPath = subPath
-        }
+    // Strip single directory from the path if that's the case
+    fnlog(`Stripping single directory from ${extPath}`)
+    const stripped = await stripSingleDirectoryFromPath(extPath)
+    if (stripped) {
+        fnlog(`Stripped single directory from ${extPath}`)
+    } else {
+        fnlog(`No single directory to strip from ${extPath}`)
+    }
+
+    // Create environment variable <tool name>_ROOT with the installation path
+    for (const name of names) {
+        const env_var_name = `${name.toUpperCase()}_ROOT`
+        core.exportVariable(env_var_name, extPath)
     }
 
     // Install to prefix or to cache directory
@@ -11148,6 +11219,7 @@ async function install_program_from_url(names, version, check_latest, url_templa
     }
 
     // Recursively iterate subdirectories of extPath looking for ${name} executable
+    fnlog(`Looking for ${names.join(', ')} binary in ${extPath} subdirectories`)
     const installPrefixSubdirectories = [install_prefix, path.join(install_prefix, 'bin')].concat(getAllSubdirectories(install_prefix))
     fnlog(`Looking for ${names.join(', ')} binary in installed ${install_prefix} subdirectories`)
     const __ret2 = await find_program_in_paths(installPrefixSubdirectories, names, '*', check_latest, true)
@@ -11300,7 +11372,9 @@ module.exports = {
     moveWithPermissions,
     getCurrentUbuntuName,
     ensureSudoIsAvailable,
-    ensureAddAptRepositoryIsAvailable
+    ensureAddAptRepositoryIsAvailable,
+    downloadAndExtract,
+    cloneGitRepo
 }
 
 

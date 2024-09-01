@@ -2,6 +2,7 @@ const core = require('@actions/core')
 const actions_artifact = require('@actions/artifact')
 const fs = require('fs')
 const setup_cmake = require('setup-cmake')
+const setup_program = require('setup-program')
 const path = require('path')
 const exec = require('@actions/exec')
 const io = require('@actions/io')
@@ -841,10 +842,87 @@ async function resolveInputParameters(inputs, setupCMakeOutputs) {
     }
 }
 
+async function downloadUrlSourceCode(inputs) {
+    if (inputs.source_dir) {
+        const res = await setup_program.downloadAndExtract(inputs.url, inputs.source_dir)
+        if (res === undefined) {
+            throw new Error(`❌ Failed to download source code from ${inputs.url}`)
+        }
+    } else {
+        const res = await setup_program.downloadAndExtract(inputs.url)
+        if (res === undefined) {
+            throw new Error(`❌ Failed to download source code from ${inputs.url}`)
+        }
+        inputs.source_dir = res
+    }
+}
+
+async function cloneGitRepository(inputs) {
+    if (!inputs.source_dir) {
+        inputs.source_dir = await fs.mkdtemp(path.join(os.tmpdir(), 'source-'))
+    }
+    if (inputs.git_tag) {
+        await setup_program.cloneGitRepo(inputs.git_repository, inputs.source_dir, inputs.git_tag, {shallow: true})
+    } else {
+        await setup_program.cloneGitRepo(inputs.git_repository, inputs.source_dir, undefined, {shallow: true})
+    }
+}
+
+async function downloadSourceCode(inputs) {
+    if (inputs.url) {
+        await downloadUrlSourceCode(inputs)
+    } else {
+        await cloneGitRepository(inputs)
+    }
+}
+
+async function applyPatches(inputs) {
+    function fnlog(msg) {
+        log('applyPatches: ' + msg)
+    }
+
+    if (!inputs.patches) {
+        return
+    }
+    for (const patch of inputs.patches) {
+        const patchPath = path.resolve(patch)
+        if (!fs.existsSync(patchPath)) {
+            fnlog(`Patch file not found: ${patchPath}`)
+            continue
+        }
+        const isDir = fs.statSync(patchPath).isDirectory()
+        if (isDir) {
+            // Copy all files from the directory to the source directory
+            const files = fs.readdirSync(patchPath)
+            for (const file of files) {
+                const filePath = path.resolve(patchPath, file)
+                const destPath = path.resolve(inputs.source_dir, file)
+                await io.cp(filePath, destPath, {recursive: true})
+            }
+        } else {
+            const filePath = path.resolve(patch)
+            const destPath = path.resolve(inputs.source_dir, path.basename(patch))
+            await io.cp(filePath, destPath)
+        }
+    }
+}
+
 async function main(inputs) {
     function fnlog(msg) {
         log('cmake-workflow: ' + msg)
     }
+
+    // ----------------------------------------------
+    // Download the source code
+    // ----------------------------------------------
+    if (inputs.url || inputs.git_repository) {
+        await downloadSourceCode(inputs)
+    }
+
+    // ----------------------------------------------
+    // Apply patches
+    // ----------------------------------------------
+    await applyPatches(inputs)
 
     // ----------------------------------------------
     // Look for CMake versions
@@ -1234,7 +1312,7 @@ async function main(inputs) {
             // get each generator from the following lines until a blank line.
             // The output of each of these lines is something like:
             //   7Z                           = 7-Zip file format
-            const { stdout} = await exec.getExecOutput(`"${cpack_path}"`, ['--help'], {
+            const {stdout} = await exec.getExecOutput(`"${cpack_path}"`, ['--help'], {
                 silent: true,
                 ignoreReturnCode: true
             })
@@ -1706,8 +1784,13 @@ async function run() {
             // CMake
             cmake_path: core.getInput('cmake-path') || '',
             cmake_version: core.getInput('cmake-version') || '*',
-            // Configure options
+            // Source project
             source_dir: normalizePath(core.getInput('source-dir')),
+            url: core.getInput('url') || '',
+            git_repository: core.getInput('git-repository') || '',
+            git_tag: core.getInput('git-tag') || '',
+            patches: core.getMultilineInput('patches') || [],
+            // Configure options
             build_dir: normalizePath(core.getInput('build-dir')),
             preset: core.getInput('preset') || '',
             cc: normalizePath(core.getInput('cc') || process.env['CC'] || ''),

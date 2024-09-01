@@ -61,7 +61,7 @@ inputs:
 
   check-latest:
     description: "Set this option if you want the action to check for the latest available version that satisfies the version spec."
-    default: false
+    default: 'false'
 
   url:
     description: |
@@ -100,7 +100,7 @@ inputs:
 
   update-environment:
     description: "Set this option if you want the action to update environment variables."
-    default: true
+    default: 'true'
 
   trace-commands:
     description: 'Trace commands executed by the workflow.'

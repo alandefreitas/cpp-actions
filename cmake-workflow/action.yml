@@ -84,6 +84,56 @@ inputs:
     description: 'Directory for the source files.'
     required: false
     default: '.'
+
+  url:
+    description: |
+      URL to the source code.
+      
+      If this input is defined, the action will download the source code from the URL and use it as the
+      source directory.
+
+    required: false
+    default: ''
+
+  git-repository:
+    description: |
+      Git repository to clone.
+      
+      If this input is defined, the action will shallow clone the repository and use it as the source directory.
+
+    required: false
+    default: ''
+
+  git-tag:
+    description: |
+      Git branch name, tag or commit hash to checkout from the git repository.
+      
+      If this input is defined, the action will checkout this tag from the repository.
+
+    required: false
+    default: ''
+
+  patches:
+    description: |
+      List of patch files or directories to be copied to the source directory.
+      
+      The action will copy the files to the source directory before running the configure step.
+      
+      This is often useful when the source directory comes from a URL or git repository 
+      to patch the source files with CMake presets or include build scripts that are not part of the
+      repository.
+      
+      The files will be copied in the order they are defined in the input.
+      
+      If a file is specified, the action will copy the file to the source directory with the 
+      same filename.
+      
+      If a directory is specified, the action will copy all files in the directory to the 
+      source directory.
+
+    required: false
+    default: ''
+
   build-dir:
     description: |
       Directory for the binaries relative to the source directory.
