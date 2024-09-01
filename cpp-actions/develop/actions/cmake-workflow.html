@@ -532,6 +532,39 @@ the min CMake version that satisfies it.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>url</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">URL to the source code.</p>
+<p class="tableblock">If this input is defined, the action will download the source code from the URL and use it as the
+source directory.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>git-repository</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Git repository to clone.</p>
+<p class="tableblock">If this input is defined, the action will shallow clone the repository and use it as the source directory.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>git-tag</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Git branch name, tag or commit hash to checkout from the git repository.</p>
+<p class="tableblock">If this input is defined, the action will checkout this tag from the repository.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>patches</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">List of patch files or directories to be copied to the source directory.</p>
+<p class="tableblock">The action will copy the files to the source directory before running the configure step.</p>
+<p class="tableblock">This is often useful when the source directory comes from a URL or git repository
+to patch the source files with CMake presets or include build scripts that are not part of the
+repository.</p>
+<p class="tableblock">The files will be copied in the order they are defined in the input.</p>
+<p class="tableblock">If a file is specified, the action will copy the file to the source directory with the
+same filename.</p>
+<p class="tableblock">If a directory is specified, the action will copy all files in the directory to the
+source directory.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-dir</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Directory for the binaries relative to the source directory.</p>
 <p class="tableblock">The build directory might come from a preset file or be defined by the user.</p>
