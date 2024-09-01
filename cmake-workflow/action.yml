@@ -34,6 +34,18 @@ description: |
   The action also creates GitHub annotations when warnings or errors are emitted at any of these steps. This includes
   annotations for CMake errors at the configure step and build errors emitted from the compiler at the build step.
   
+  == Presets
+  
+  The action supports CMake presets. If a preset is defined, the action will use the values defined in the preset file
+  for the configure step. The other options will be used to override the values defined in the preset.
+  
+  If the CMake version does not support presets, the action will attempt to parse the preset file and use the values
+  defined in it for inputs that are not defined.
+  
+  The action also supports preset macros in the input values. For instance, if the `build-dir` is defined as
+  `${sourceDir}/build/${hostSystemName}`, the action will replace this value with the actual values of the variables
+  defined in the input options.
+  
   == Next steps
   
   After running the a complete CMake workflow for your project, the next step in your workflow should usually be
@@ -73,9 +85,28 @@ inputs:
     required: false
     default: '.'
   build-dir:
-    description: 'Directory for the binaries relative to the source directory.'
+    description: |
+      Directory for the binaries relative to the source directory.
+      
+      The build directory might come from a preset file or be defined by the user.
+      
+      If no preset file is specified and the user does not define the build directory, 
+      the action will use the default `build` directory. 
+
     required: false
-    default: 'build'
+    default: ''
+  preset:
+    description: |
+      Name of the CMake preset to use.
+      
+      If a preset is defined, other options will be used by CMake to override
+      the values defined in the preset.
+      
+      If the CMake version doesn't support presets, the action will attempt
+      to parse the preset file and use the values defined in it.
+
+    required: false
+    default: ''
   cc:
     description: |
       Path to C compiler.
@@ -162,9 +193,23 @@ inputs:
     default: ''
   generator-toolset:
     description: |
-      Toolset specification for the generator, if supported. 
+      Toolset specification for the generator, if supported.
+      
+      The option will be applied in the command line as the `-T` option.
       
       If not specified, the action will use the toolset defined by the environment variable `CMAKE_GENERATOR_TOOLSET`.
+      
+      If the environment variable is not specified, the action will use the default toolset for the generator.
+
+    required: false
+    default: ''
+  generator-architecture:
+    description: |
+      Architecture specification for the generator, if supported. 
+      
+      The option will be applied in the command line as the `-A` option.
+      
+      If not specified, the action will use the architecture defined by the environment variable `CMAKE_GENERATOR_ARCHITECTURE`.
       
       If the environment variable is not specified, the action will use the default toolset for the generator.
 

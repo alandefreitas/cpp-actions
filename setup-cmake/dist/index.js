@@ -377,6 +377,14 @@ async function main(inputs, subgroups = true) {
         core.endGroup()
     }
 
+    const max_supported_presets_version =
+        semver.gte(versionSV, '3.25.3') ? 6 :
+            semver.gte(versionSV, '3.24.4') ? 5 :
+                semver.gte(versionSV, '3.23.5') ? 4 :
+                    semver.gte(versionSV, '3.21.7') ? 3 :
+                        semver.gte(versionSV, '3.20.6') ? 2 :
+                            semver.gte(versionSV, '3.19.8') ? 1 : 0
+
     // Create outputs
     return {
         path: inputPath,
@@ -390,7 +398,8 @@ async function main(inputs, subgroups = true) {
         supports_path_to_build: semver.gte(versionSV, '3.13.0'),
         supports_parallel_build: semver.gte(versionSV, '3.12.0'),
         supports_build_multiple_targets: semver.gte(versionSV, '3.15.0'),
-        supports_cmake_install: semver.gte(versionSV, '3.15.0')
+        supports_cmake_install: semver.gte(versionSV, '3.15.0'),
+        supported_presets_version: max_supported_presets_version
     }
 }
 
