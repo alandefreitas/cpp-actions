@@ -433,6 +433,24 @@ annotations for CMake errors at the configure step and build errors emitted from
 </div>
 </div>
 <div class="sect1">
+<h2 id="_presets"><a class="anchor" href="#_presets"></a>Presets</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The action supports CMake presets. If a preset is defined, the action will use the values defined in the preset file
+for the configure step. The other options will be used to override the values defined in the preset.</p>
+</div>
+<div class="paragraph">
+<p>If the CMake version does not support presets, the action will attempt to parse the preset file and use the values
+defined in it for inputs that are not defined.</p>
+</div>
+<div class="paragraph">
+<p>The action also supports preset macros in the input values. For instance, if the <code>build-dir</code> is defined as
+<code>${sourceDir}/build/${hostSystemName}</code>, the action will replace this value with the actual values of the variables
+defined in the input options.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next steps</h2>
 <div class="sectionbody">
 <div class="paragraph">
@@ -515,8 +533,20 @@ the min CMake version that satisfies it.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Directory for the binaries relative to the source directory.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Directory for the binaries relative to the source directory.</p>
+<p class="tableblock">The build directory might come from a preset file or be defined by the user.</p>
+<p class="tableblock">If no preset file is specified and the user does not define the build directory,
+the action will use the default <code>build</code> directory.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>preset</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Name of the CMake preset to use.</p>
+<p class="tableblock">If a preset is defined, other options will be used by CMake to override
+the values defined in the preset.</p>
+<p class="tableblock">If the CMake version doesn&#8217;t support presets, the action will attempt
+to parse the preset file and use the values defined in it.</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
@@ -580,7 +610,16 @@ standard number with the exception of the latest standard.</p></td>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>generator-toolset</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Toolset specification for the generator, if supported.</p>
+<p class="tableblock">The option will be applied in the command line as the <code>-T</code> option.</p>
 <p class="tableblock">If not specified, the action will use the toolset defined by the environment variable <code>CMAKE_GENERATOR_TOOLSET</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default toolset for the generator.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>generator-architecture</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Architecture specification for the generator, if supported.</p>
+<p class="tableblock">The option will be applied in the command line as the <code>-A</code> option.</p>
+<p class="tableblock">If not specified, the action will use the architecture defined by the environment variable <code>CMAKE_GENERATOR_ARCHITECTURE</code>.</p>
 <p class="tableblock">If the environment variable is not specified, the action will use the default toolset for the generator.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
