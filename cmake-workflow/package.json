@@ -1,6 +1,6 @@
 {
   "name": "cmake-workflow",
-  "version": "1.0.0",
+  "version": "1.8.6",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -15,7 +15,8 @@
     "@actions/artifact": "^1.1.2",
     "@actions/core": "^1.10.0",
     "@actions/exec": "^1.1.1",
-    "@actions/io": "^1.1.3"
+    "@actions/io": "^1.1.3",
+    "setup-cmake": "file:../setup-cmake"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.36.1",

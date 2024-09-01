@@ -32479,9 +32479,6 @@ const setup_program = __nccwpck_require__(56859)
 const setup_gcc = __nccwpck_require__(76702)
 const setup_clang = __nccwpck_require__(49436)
 const setup_msvc = __nccwpck_require__(95545)
-// const httpm = require('@actions/http-client')
-// const github = require('@actions/github')
-// const tc = require('@actions/tool-cache')
 
 setup_program.trace_commands = false
 setup_gcc.trace_commands = false
@@ -40163,8 +40160,6 @@ const exec = __nccwpck_require__(42196)
 const path = __nccwpck_require__(71017)
 const httpm = __nccwpck_require__(74719)
 const setup_program = __nccwpck_require__(56859)
-// const github = require('@actions/github')
-// const tc = require('@actions/tool-cache')
 
 setup_program.trace_commands = false
 let trace_commands = false

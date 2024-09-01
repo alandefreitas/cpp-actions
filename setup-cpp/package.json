@@ -1,6 +1,6 @@
 {
-  "name": "cpp-matrix",
-  "version": "1.0.0",
+  "name": "setup-cpp",
+  "version": "1.8.6",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -15,7 +15,10 @@
     "@actions/core": "^1.10.0",
     "@actions/exec": "^1.1.1",
     "@actions/io": "^1.1.3",
-    "semver": "^7.5.1"
+    "semver": "^7.5.1",
+    "setup-program": "file:../setup-program",
+    "setup-gcc": "file:../setup-gcc",
+    "setup-clang": "file:../setup-clang"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.36.1",

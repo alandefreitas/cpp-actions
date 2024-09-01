@@ -12,8 +12,6 @@ const exec = __nccwpck_require__(1514)
 const path = __nccwpck_require__(1017)
 const httpm = __nccwpck_require__(6255)
 const setup_program = __nccwpck_require__(6859)
-// const github = require('@actions/github')
-// const tc = require('@actions/tool-cache')
 
 setup_program.trace_commands = false
 let trace_commands = false

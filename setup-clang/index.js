@@ -6,7 +6,7 @@ const fs = require('fs')
 const exec = require('@actions/exec')
 const path = require('path')
 const httpm = require('@actions/http-client')
-const setup_program = require('./../setup-program/index')
+const setup_program = require('setup-program')
 // const github = require('@actions/github')
 
 setup_program.trace_commands = false

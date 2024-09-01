@@ -4,13 +4,10 @@ const semver = require('semver')
 const fs = require('fs')
 const exec = require('@actions/exec')
 const path = require('path')
-const setup_program = require('./../setup-program/index')
-const setup_gcc = require('./../setup-gcc/index')
-const setup_clang = require('./../setup-clang/index')
+const setup_program = require('setup-program')
+const setup_gcc = require('setup-gcc')
+const setup_clang = require('setup-clang')
 const setup_msvc = require('./msvc-dev-cmd')
-// const httpm = require('@actions/http-client')
-// const github = require('@actions/github')
-// const tc = require('@actions/tool-cache')
 
 setup_program.trace_commands = false
 setup_gcc.trace_commands = false

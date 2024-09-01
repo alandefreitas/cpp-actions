@@ -2,7 +2,7 @@ const core = require('@actions/core')
 const tc = require('@actions/tool-cache')
 const semver = require('semver')
 const fs = require('fs')
-const setup_program = require('./../setup-program/index')
+const setup_program = require('setup-program')
 const path = require('path')
 
 setup_program.trace_commands = false
