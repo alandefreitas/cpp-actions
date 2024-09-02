@@ -32763,6 +32763,7 @@ async function downloadAndExtract(url, destPath = undefined) {
             }
             // https://github.com/actions/toolkit/pull/180
             destPath = destPath.replace(/\\/g, '/')
+            toolPath = toolPath.replace(/\\/g, '/')
         }
         // Extract
         if (url.endsWith('.zip')) {
