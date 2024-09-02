@@ -925,7 +925,9 @@ async function main(inputs) {
     // Download the source code
     // ----------------------------------------------
     if (inputs.url || inputs.git_repository) {
+        core.startGroup(`📥 Download source code`)
         await downloadSourceCode(inputs)
+        core.endGroup()
     }
 
     // ----------------------------------------------
