@@ -31010,7 +31010,8 @@ module.exports = {
     ensureSudoIsAvailable,
     ensureAddAptRepositoryIsAvailable,
     downloadAndExtract,
-    cloneGitRepo
+    cloneGitRepo,
+    stripSingleDirectoryFromPath
 }
 
 

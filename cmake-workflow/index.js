@@ -855,6 +855,7 @@ async function downloadUrlSourceCode(inputs) {
         }
         inputs.download_dir = res
     }
+    await setup_program.stripSingleDirectoryFromPath(inputs.download_dir)
 }
 
 async function cloneGitRepository(inputs) {
@@ -1856,7 +1857,7 @@ async function run() {
         trace_commands = inputs.trace_commands
         set_trace_commands(trace_commands)
         setup_cmake.set_trace_commands(trace_commands)
-
+        setup_program.set_trace_commands(trace_commands)
 
         core.startGroup('📥 Workflow Inputs')
         fnlog(`🧩 cmake-workflow.trace_commands: ${trace_commands}`)
