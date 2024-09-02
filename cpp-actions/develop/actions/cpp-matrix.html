@@ -687,6 +687,9 @@ in the <code>/__e/node20</code> directory.</p>
       clang-cl *
 
       '
+    subrange-policy: 'msvc: one-per-minor
+
+      '
     latest-factors: 'msvc ASan
 
       gcc Coverage TSan UBSan Fetch-Content
@@ -744,6 +747,19 @@ For any other compilers, the version requirements will passthrough to the output
 <p class="tableblock"><code>apple-clang *</code></p>
 <p class="tableblock"><code>mingw *</code></p>
 <p class="tableblock"><code>clang-cl *</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>subrange-policy</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The policy to be used to break the compiler version requirements into sub-ranges of versions.</p>
+<p class="tableblock">For instance, if the compiler requirements are <code>gcc &gt;=4.8</code>, the action will typically generate
+entries that satisfy <code>gcc &gt;=4.8 &lt;5</code>, <code>gcc &gt;=5 &lt;6</code>, <code>gcc &gt;=6 &lt;7</code>, and so on, because the default policy
+is <code>one-per-major</code>.</p>
+<p class="tableblock">The policy can be <code>one-per-major</code> or <code>one-per-minor</code>.</p>
+<p class="tableblock">This input can be a single value for all compilers or a multi-line list of compiler-specific policies.</p>
+<p class="tableblock">Another policy is to break into major versions when the range contains multiple major versions and
+into minor versions when the range contains multiple minor versions. The name of this policy
+is <code>one-per-major-minor</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>one-per-major</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>standards</code></p></td>
