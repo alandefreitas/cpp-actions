@@ -1896,13 +1896,13 @@ async function run() {
         }
     } catch (error) {
         fnlog(error.stack)
-        core.setFailed(error.message)
+        core.setFailed(`${error.message}\n${error.stack}`)
     }
 }
 
 if (require.main === require.cache[eval('__filename')]) {
     run().catch((error) => {
-        core.setFailed(error)
+        core.setFailed(`${error.message}\n${error.stack}`)
     })
 }
 
