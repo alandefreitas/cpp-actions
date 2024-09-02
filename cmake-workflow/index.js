@@ -928,7 +928,7 @@ async function main(inputs) {
     // ----------------------------------------------
     // Apply patches
     // ----------------------------------------------
-    if (inputs.patches) {
+    if (inputs.patches.length > 0) {
         core.startGroup(`🩹 Apply patches`)
         await applyPatches(inputs)
         core.endGroup()
