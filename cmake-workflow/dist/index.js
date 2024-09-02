@@ -1668,6 +1668,10 @@ function parseExtraArgs(extra_args) {
         log('parseExtraArgs: ' + msg)
     }
 
+    if (extra_args.length === 0) {
+        return []
+    }
+
     // Extra args is a multiline string. It can be parsed as either
     // a single line representing the arguments or as a map of arguments.
     // When a map is provided, the workflow will be run for each
