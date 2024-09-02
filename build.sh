@@ -16,16 +16,38 @@ for dir in */; do
     fi
 done
 
-echo "==== Composite actions ===="
-for project in "${projects_with_action[@]}"; do
-    echo "$project"
-done
+project_to_build=$1
 
-echo "Javascript projects:"
-for project in "${projects_with_package[@]}"; do
-    cd "$project" || exit
-    echo "==== Building $project ===="
-    npm install
-    npm run all
-    cd ..
-done
+if [ -n "$project_to_build" ]; then
+    echo "Building specified project: $project_to_build"
+    project_found=false
+    for project in "${projects_with_package[@]}"; do
+        if [[ $project == "$project_to_build/" ]]; then
+            project_found=true
+            cd "$project_to_build" || exit
+            echo "==== Building $project_to_build ===="
+            npm install
+            npm run all
+            cd ..
+            break
+        fi
+    done
+    if [ "$project_found" = false ]; then
+        echo "Project $project_to_build not found or does not have a package.json"
+        exit 1
+    fi
+else
+    echo "==== Composite actions ===="
+    for project in "${projects_with_action[@]}"; do
+        echo "$project"
+    done
+
+    echo "Javascript projects:"
+    for project in "${projects_with_package[@]}"; do
+        cd "$project" || exit
+        echo "==== Building $project ===="
+        npm install
+        npm run all
+        cd ..
+    done
+fi
