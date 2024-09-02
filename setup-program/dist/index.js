@@ -919,12 +919,18 @@ async function downloadAndExtract(url, destPath = undefined) {
         // Extract
         if (url.endsWith('.zip')) {
             extPath = await tc.extractZip(toolPath, destPath)
+        } else if (url.endsWith('.tar')) {
+            const flags = trace_commands ? '-vx' : '-x'
+            extPath = await tc.extractTar(toolPath, destPath, flags)
         } else if (url.endsWith('.tar.gz')) {
-            extPath = await tc.extractTar(toolPath, destPath)
+            const flags = trace_commands ? '-vxz' : '-xz'
+            extPath = await tc.extractTar(toolPath, destPath, flags)
         } else if (url.endsWith('.tar.xz')) {
-            extPath = await tc.extractTar(toolPath, destPath, 'xJ')
+            const flags = trace_commands ? '-vxJ' : '-xJ'
+            extPath = await tc.extractTar(toolPath, destPath, flags)
         } else if (url.endsWith('.tar.bz2')) {
-            extPath = await tc.extractTar(toolPath, destPath, 'xj')
+            const flags = trace_commands ? '-vxj' : '-xj'
+            extPath = await tc.extractTar(toolPath, destPath, flags)
         } else if (url.endsWith('.7z')) {
             extPath = await tc.extract7z(toolPath, destPath)
         } else if (process.platform === 'darwin' && url.endsWith('.pkg')) {
