@@ -10861,7 +10861,7 @@ async function cloneGitRepo(repo, destPath, ref = undefined, options = {shallow:
             throw new Error('Git not found')
         }
         // Clean the destPath
-        if (await fs.exists(destPath)) {
+        if (fs.existsSync(destPath)) {
             await io.rmRF(destPath)
         }
         // Clone the repository
