@@ -900,11 +900,13 @@ async function applyPatches(inputs) {
             for (const file of files) {
                 const filePath = path.resolve(patchPath, file)
                 const destPath = path.resolve(inputs.source_dir, file)
+                fnlog(`Copying ${filePath} to ${destPath}`)
                 await io.cp(filePath, destPath, {recursive: true})
             }
         } else {
             const filePath = path.resolve(patch)
             const destPath = path.resolve(inputs.source_dir, path.basename(patch))
+            fnlog(`Copying ${filePath} to ${destPath}`)
             await io.cp(filePath, destPath)
         }
     }
@@ -919,7 +921,7 @@ async function main(inputs) {
     // Download the source code
     // ----------------------------------------------
     if (inputs.url || inputs.git_repository) {
-        core.startGroup(`📥 Download source code`)
+        core.startGroup(`🌎 Download source code`)
         await downloadSourceCode(inputs)
         core.endGroup()
     }
@@ -927,7 +929,11 @@ async function main(inputs) {
     // ----------------------------------------------
     // Apply patches
     // ----------------------------------------------
-    await applyPatches(inputs)
+    if (inputs.patches) {
+        core.startGroup(`🩹 Apply patches`)
+        await applyPatches(inputs)
+        core.endGroup()
+    }
 
     // ----------------------------------------------
     // Look for CMake versions
