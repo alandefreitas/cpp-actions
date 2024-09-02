@@ -508,13 +508,26 @@ function splitRanges(range, versions, policy = SubrangePolicies.ONE_PER_MAJOR) {
 
 function compilerSupportsStd(compiler, version, cxxstd) {
     if (compiler === 'gcc') {
-        return (cxxstd <= 2020 && semver.satisfies(version, '>=11')) || (cxxstd <= 2017 && semver.satisfies(version, '>=7')) || (cxxstd <= 2014 && semver.satisfies(version, '>=6')) || (cxxstd <= 2011 && semver.satisfies(version, '>=4')) || cxxstd <= 2003
+        return (cxxstd <= 2020 && semver.satisfies(version, '>=11')) ||
+            (cxxstd <= 2017 && semver.satisfies(version, '>=7')) ||
+            (cxxstd <= 2014 && semver.satisfies(version, '>=6')) ||
+            (cxxstd <= 2011 && semver.satisfies(version, '>=4')) ||
+            cxxstd <= 2003
     }
     if (compiler === 'clang') {
-        return (cxxstd <= 2020 && semver.satisfies(version, '>=12')) || (cxxstd <= 2017 && semver.satisfies(version, '>=6')) || (cxxstd <= 2014 && semver.satisfies(version, '>=4')) || (cxxstd <= 2011 && semver.satisfies(version, '>=3')) || cxxstd <= 2003
+        return (cxxstd <= 2020 && semver.satisfies(version, '>=12')) ||
+            (cxxstd <= 2017 && semver.satisfies(version, '>=6')) ||
+            (cxxstd <= 2014 && semver.satisfies(version, '>=4')) ||
+            (cxxstd <= 2011 && semver.satisfies(version, '>=3')) ||
+            cxxstd <= 2003
     }
     if (compiler === 'msvc') {
-        return (cxxstd <= 2020 && semver.satisfies(version, '>=14.30')) || (cxxstd <= 2017 && semver.satisfies(version, '>=14.20')) || (cxxstd <= 2014 && semver.satisfies(version, '>=14.11')) || (cxxstd <= 2011 && semver.satisfies(version, '>=14')) || (cxxstd <= 2011 && semver.satisfies(version, '>=14.1')) || cxxstd <= 2003
+        return (cxxstd <= 2020 && semver.satisfies(version, '>=14.30')) ||
+            (cxxstd <= 2017 && semver.satisfies(version, '>=14.20')) ||
+            (cxxstd <= 2014 && semver.satisfies(version, '>=14.11')) ||
+            (cxxstd <= 2011 && semver.satisfies(version, '>=14')) ||
+            (cxxstd <= 2011 && semver.satisfies(version, '>=14.1')) ||
+            cxxstd <= 2003
     }
     return false
 }
@@ -1730,7 +1743,7 @@ function parseMap(lines) {
         if (key && value) {
             keyValues[key.trim()] = value.trim()
         } else if (key) {
-            keyValues[''] = value.trim()
+            keyValues[''] = key.trim()
         }
     }
     return keyValues

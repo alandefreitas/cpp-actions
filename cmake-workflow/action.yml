@@ -113,6 +113,15 @@ inputs:
     required: false
     default: ''
 
+  download-dir:
+    description: |
+      Directory where the source code will be downloaded.
+      
+      If the input is not specified, the action will download the source code to the source directory.
+
+    required: false
+    default: ''
+
   patches:
     description: |
       List of patch files or directories to be copied to the source directory.

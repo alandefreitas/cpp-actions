@@ -849,8 +849,8 @@ async function resolveInputParameters(inputs, setupCMakeOutputs) {
 }
 
 async function downloadUrlSourceCode(inputs) {
-    if (inputs.source_dir) {
-        const res = await setup_program.downloadAndExtract(inputs.url, inputs.source_dir)
+    if (inputs.download_dir) {
+        const res = await setup_program.downloadAndExtract(inputs.url, inputs.download_dir)
         if (res === undefined) {
             throw new Error(`❌ Failed to download source code from ${inputs.url}`)
         }
@@ -859,22 +859,25 @@ async function downloadUrlSourceCode(inputs) {
         if (res === undefined) {
             throw new Error(`❌ Failed to download source code from ${inputs.url}`)
         }
-        inputs.source_dir = res
+        inputs.download_dir = res
     }
 }
 
 async function cloneGitRepository(inputs) {
-    if (!inputs.source_dir) {
-        inputs.source_dir = await fs.mkdtemp(path.join(os.tmpdir(), 'source-'))
+    if (!inputs.download_dir) {
+        inputs.download_dir = await fs.mkdtemp(path.join(os.tmpdir(), 'source-'))
     }
     if (inputs.git_tag) {
-        await setup_program.cloneGitRepo(inputs.git_repository, inputs.source_dir, inputs.git_tag, {shallow: true})
+        await setup_program.cloneGitRepo(inputs.git_repository, inputs.download_dir, inputs.git_tag, {shallow: true})
     } else {
-        await setup_program.cloneGitRepo(inputs.git_repository, inputs.source_dir, undefined, {shallow: true})
+        await setup_program.cloneGitRepo(inputs.git_repository, inputs.download_dir, undefined, {shallow: true})
     }
 }
 
 async function downloadSourceCode(inputs) {
+    if (!inputs.download_dir) {
+        inputs.download_dir = inputs.source_dir
+    }
     if (inputs.url) {
         await downloadUrlSourceCode(inputs)
     } else {
@@ -1795,6 +1798,7 @@ async function run() {
             url: core.getInput('url') || '',
             git_repository: core.getInput('git-repository') || '',
             git_tag: core.getInput('git-tag') || '',
+            download_dir: normalizePath(core.getInput('download-dir')),
             patches: core.getMultilineInput('patches') || [],
             // Configure options
             build_dir: normalizePath(core.getInput('build-dir')),
