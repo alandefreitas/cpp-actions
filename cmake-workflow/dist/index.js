@@ -832,13 +832,11 @@ async function resolveInputParameters(inputs, setupCMakeOutputs) {
     // ----------------------------------------------
     // Print the adjusted parameters
     // ----------------------------------------------
-    core.startGroup('📥 Resolved Workflow Inputs')
     fnlog(`🧩 cmake-workflow.trace_commands: ${trace_commands}`)
     fnlog(`🧩 setup-cmake.trace_commands: ${setup_cmake.trace_commands}`)
     for (const [name, value] of Object.entries(inputs)) {
         core.info(`🧩 ${name.replaceAll('_', '-')}: ${JSON.stringify(value)}`)
     }
-    core.endGroup()
 
     return {
         main_cxxstd,
@@ -907,13 +905,13 @@ async function applyPatches(inputs) {
             for (const file of files) {
                 const filePath = path.resolve(patchPath, file)
                 const destPath = path.resolve(inputs.source_dir, file)
-                fnlog(`Copying ${filePath} to ${destPath}`)
+                core.info(`Copying ${filePath} to ${destPath}`)
                 await io.cp(filePath, destPath, {recursive: true})
             }
         } else {
             const filePath = path.resolve(patch)
             const destPath = path.resolve(inputs.source_dir, path.basename(patch))
-            fnlog(`Copying ${filePath} to ${destPath}`)
+            core.info(`Copying ${filePath} to ${destPath}`)
             await io.cp(filePath, destPath)
         }
     }
