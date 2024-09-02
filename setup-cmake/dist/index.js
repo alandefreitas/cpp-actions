@@ -11112,10 +11112,20 @@ async function downloadAndExtract(url, destPath = undefined) {
     try {
         const toolPath = await tc.downloadTool(url)
         fnlog(`Downloaded ${url} to ${toolPath}`)
-        // Create destination directory
-        if (!fs.existsSync(destPath)) {
-            fnlog(`Creating directory ${destPath}`)
-            await io.mkdirP(destPath)
+        const urlFilename = path.basename(url)
+        const urlBasename = path.basename(url, path.extname(url))
+        // Resolve the destination path if not undefined
+        if (destPath !== undefined) {
+            // Resolve the destination path if relative
+            if (!path.isAbsolute(destPath)) {
+                destPath = path.resolve(destPath)
+                fnlog(`Destination path is relative. Resolved to ${destPath}`)
+            }
+            // Create destination directory
+            if (!fs.existsSync(destPath)) {
+                fnlog(`Creating directory ${destPath}`)
+                await io.mkdirP(destPath)
+            }
         }
         // Extract
         if (url.endsWith('.zip')) {
