@@ -1091,6 +1091,7 @@ async function run() {
     }
 
     try {
+        core.startGroup('📥 Action Inputs')
         // Get trace_commands input first
         trace_commands = core.getBooleanInput('trace-commands')
         if (process.env['ACTIONS_STEP_DEBUG'] === 'true') {
@@ -1120,6 +1121,7 @@ async function run() {
         fnlog(`install_prefix: ${install_prefix}`)
         const fail_on_error = core.getBooleanInput('fail-on-error')
         fnlog(`fail_on_error: ${fail_on_error}`)
+        core.endGroup()
 
         if (process.platform === 'darwin') {
             process.env['AGENT_TOOLSDIRECTORY'] = '/Users/runner/hostedtoolcache'
@@ -1135,26 +1137,32 @@ async function run() {
 
         // Setup path program
         if (paths) {
+            core.startGroup('🔍 Searching in user provided paths')
             core.info(`Searching for ${name} ${version} in paths [${paths.join(',')}]`)
             const __ret = await find_program_in_path(paths, version, check_latest)
             output_version = __ret.output_version
             output_path = __ret.output_path
+            core.endGroup()
         }
 
         // Setup system program
         if (output_path === null) {
+            core.startGroup('🔍 Searching in system paths')
             core.info(`Searching for ${name} ${version} in PATH`)
             const __ret = await find_program_in_system_paths(paths, name, version, check_latest)
             output_version = __ret.output_version
             output_path = __ret.output_path
+            core.endGroup()
         }
 
         // Setup APT program
         if (output_version === null && process.platform === 'linux') {
+            core.startGroup('📦 Searching with APT')
             core.info(`Searching for ${name} ${version} with APT`)
             const __ret = await find_program_with_apt(name, version, check_latest)
             output_version = __ret.output_version
             output_path = __ret.output_path
+            core.endGroup()
         } else {
             if (output_version !== null) {
                 fnlog(`Skipping APT step because ${name} ${output_version} was already found in ${output_path}`)
@@ -1165,10 +1173,12 @@ async function run() {
 
         // Install program
         if (output_version === null && url !== null) {
+            core.startGroup('🚚 Downloading and Installing')
             core.info(`Fetching ${name} ${version} from URL`)
             const __ret = await install_program_from_url(name, version, check_latest, url, update_environment, install_prefix)
             output_version = __ret.output_version
             output_path = __ret.output_path
+            core.endGroup()
         } else {
             if (output_version !== null) {
                 fnlog(`Skipping download step because ${name} ${output_version} was already found in ${output_path}`)
@@ -1178,6 +1188,7 @@ async function run() {
         }
 
         // Parse Final program / Setup version / Outputs
+        core.startGroup('📤 Return outputs')
         if (output_path) {
             core.setOutput('path', output_path)
             fnlog(`Setting output path to ${output_path}`)
@@ -1203,6 +1214,7 @@ async function run() {
                 core.info('Cannot find program')
             }
         }
+        core.endGroup()
     } catch (error) {
         core.setFailed(error.message)
     }
