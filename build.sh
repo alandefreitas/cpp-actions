@@ -44,10 +44,14 @@ else
 
     echo "Javascript projects:"
     for project in "${projects_with_package[@]}"; do
-        cd "$project" || exit
-        echo "==== Building $project ===="
-        npm install
-        npm run all
-        cd ..
+        (
+          cd "$project" || exit
+          echo "==== Building $project ===="
+          npm install
+          npm run all
+          cd ..
+        ) &
     done
+
+    wait
 fi
