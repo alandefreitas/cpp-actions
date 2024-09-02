@@ -860,6 +860,7 @@ async function cloneGitRepository(inputs) {
     if (!inputs.download_dir) {
         inputs.download_dir = await fs.mkdtemp(path.join(os.tmpdir(), 'source-'))
     }
+    inputs.download_dir = path.resolve(inputs.download_dir)
     if (inputs.git_tag) {
         await setup_program.cloneGitRepo(inputs.git_repository, inputs.download_dir, inputs.git_tag, {shallow: true})
     } else {

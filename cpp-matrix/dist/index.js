@@ -37744,6 +37744,7 @@ const semver = __nccwpck_require__(3184)
 const fs = __nccwpck_require__(7147)
 const exec = __nccwpck_require__(9850)
 const path = __nccwpck_require__(1017)
+const os = __nccwpck_require__(2037)
 
 let trace_commands = false
 
@@ -38401,20 +38402,41 @@ async function cloneGitRepo(repo, destPath, ref = undefined, options = {shallow:
         if (fs.existsSync(destPath)) {
             await io.rmRF(destPath)
         }
-        // Clone the repository
-        let args = []
-        args.push('clone')
-        args.push(repo)
-        args.push(destPath)
-        if (options.shallow) {
-            args.push('--depth')
-            args.push('1')
-        }
-        if (ref) {
-            args.push('--branch')
+
+        const refIsHash = ref ? /^[0-9a-f]{40}$/.test(ref) : false
+        if (!refIsHash) {
+            // Clone the repository with the specified reference
+            let args = []
+            args.push('clone')
+            args.push(repo)
+            args.push(destPath)
+            if (options.shallow) {
+                args.push('--depth')
+                args.push('1')
+            }
+            if (ref) {
+                args.push('--branch')
+                args.push(ref)
+            }
+            await exec.exec(`"${git_path}"`, args)
+        } else {
+            // Reference is a commit hash: init and checkout
+            await io.rmRF(destPath)
+            await io.mkdirP(destPath)
+            await exec.exec(`"${git_path}"`, ['config', '--global', 'init.defaultBranch', 'master'], {cwd: destPath})
+            await exec.exec(`"${git_path}"`, ['config', '--global', 'advice.detachedHead', 'false'], {cwd: destPath})
+            await exec.exec(`"${git_path}"`, ['init'], {cwd: destPath})
+            await exec.exec(`"${git_path}"`, ['remote', 'add', 'origin', repo], {cwd: destPath})
+            let args = ['fetch']
+            if (options.shallow) {
+                args.push('--depth')
+                args.push('1')
+            }
+            args.push('origin')
             args.push(ref)
+            await exec.exec(`"${git_path}"`, args, {cwd: destPath})
+            await exec.exec(`"${git_path}"`, ['checkout', 'FETCH_HEAD'], {cwd: destPath})
         }
-        await exec.exec(`"${git_path}"`, args)
     } catch (error) {
         throw new Error('Error cloning Git repository: ' + error.message)
     }
@@ -38640,6 +38662,118 @@ async function moveWithSudo(source, destination, copyInstead = false, level) {
     return true
 }
 
+async function extractTar(tarPath, destPath, flags = undefined) {
+    function fnlog(msg) {
+        log('extractTar: ' + msg)
+    }
+
+    const IS_WINDOWS = process.platform === 'win32'
+    if (!IS_WINDOWS) {
+        return await tc.extractTar(tarPath, destPath, flags)
+    } else {
+        // Define the destPath
+        flags = flags || ''
+        const tarFilename = path.basename(tarPath)
+        const tarBasename = path.basename(tarFilename, path.extname(tarFilename))
+        if (destPath === undefined) {
+            destPath = path.join(os.tmpdir(), tarBasename)
+            await io.mkdirP(destPath)
+        }
+        // Define the intermediary paths
+        const isTwoStep = !tarPath.endsWith('.tar')
+        const firstDestPath = path.join(os.tmpdir(), tarBasename + '_1st')
+        await io.mkdirP(firstDestPath)
+        const secondDestPath = path.join(os.tmpdir(), tarBasename + '_2nd')
+        if (isTwoStep) {
+            await io.mkdirP(secondDestPath)
+        }
+        const finalDestPath = destPath
+        await io.mkdirP(finalDestPath)
+
+        fnlog(`First destination path: ${firstDestPath}`)
+        fnlog(`Second destination path: ${secondDestPath}`)
+        fnlog(`Final destination path: ${finalDestPath}`)
+
+        // First step
+        const path7z = await io.which('7z', true)
+        const args = ['x', tarPath, `-o${firstDestPath}`].concat(flags.includes('v') ? ['-bb1'] : [])
+        const {exitCode, stdout, stderr} = await exec.getExecOutput(path7z, args)
+        if (exitCode !== 0) {
+            throw new Error(`Failed to extract ${tarPath} to ${firstDestPath} with 7z: ${stderr}`)
+        }
+        if (!isTwoStep) {
+            fnlog(`Moving ${firstDestPath} to ${finalDestPath}`)
+            const files = fs.readdirSync(firstDestPath)
+            for (const file of files) {
+                const sourcePath = path.join(firstDestPath, file)
+                const destPath = path.join(finalDestPath, file)
+                await io.cp(sourcePath, destPath, {recursive: true})
+            }
+            await io.rmRF(firstDestPath)
+            return finalDestPath
+        }
+
+        // Find tar file for the second step
+        // The tar archive is compressed so 7z produces a .tar file and leaves
+        // it in the destination directory. So now we extract the tar
+        // file with 7z.
+        const files = fs.readdirSync(firstDestPath)
+        if (files.length > 1) {
+            // It extracted more than one file, so we assume it's the deflated
+            // tar file
+            fnlog(`Moving ${firstDestPath} to ${finalDestPath}`)
+            const files = fs.readdirSync(firstDestPath)
+            for (const file of files) {
+                const sourcePath = path.join(firstDestPath, file)
+                const destPath = path.join(finalDestPath, file)
+                await io.cp(sourcePath, destPath, {recursive: true})
+            }
+            await io.rmRF(firstDestPath)
+            return finalDestPath
+        }
+        const tarFiles = files.filter(file => file.endsWith('.tar'))
+        if (tarFiles.length === 0) {
+            // No tar file, so we assume it's the deflated tar file
+            fnlog(`Moving ${firstDestPath} to ${finalDestPath}`)
+            const files = fs.readdirSync(firstDestPath)
+            for (const file of files) {
+                const sourcePath = path.join(firstDestPath, file)
+                const destPath = path.join(finalDestPath, file)
+                await io.cp(sourcePath, destPath, {recursive: true})
+            }
+            await io.rmRF(firstDestPath)
+            return finalDestPath
+        }
+
+        // Second step
+        const tarFile = path.join(firstDestPath, tarFiles[0])
+        fnlog(`Extracting ${tarFile} to ${secondDestPath} with 7z`)
+        const args2 = ['x', tarFile, `-o${secondDestPath}`].concat(flags.includes('v') ? ['-bb1'] : [])
+        const {exitCode: exitCode2, stdout: stdout2, stderr: stderr2} = await exec.getExecOutput(path7z, args2)
+        if (exitCode2 !== 0) {
+            throw new Error(`Failed to extract ${tarFile} to ${secondDestPath} with 7z: ${stderr2}`)
+        }
+        if (secondDestPath !== finalDestPath) {
+            fnlog(`Moving ${secondDestPath} to ${finalDestPath}`)
+            const files = fs.readdirSync(secondDestPath)
+            for (const file of files) {
+                const sourcePath = path.join(secondDestPath, file)
+                const destPath = path.join(finalDestPath, file)
+                fnlog(`Copying ${sourcePath} to ${destPath}`)
+                await io.cp(sourcePath, destPath, {recursive: true})
+            }
+            fnlog(`Removing ${secondDestPath}`)
+            await io.rmRF(secondDestPath)
+        }
+        if (firstDestPath !== finalDestPath) {
+            fnlog(`Removing ${firstDestPath}`)
+            await io.rmRF(firstDestPath)
+        }
+        return finalDestPath
+    }
+}
+
+
 async function downloadAndExtract(url, destPath = undefined) {
     function fnlog(msg) {
         log('downloadAndExtract: ' + msg)
@@ -38675,11 +38809,7 @@ async function downloadAndExtract(url, destPath = undefined) {
             toolPath = newToolPath
         }
         // Patches for Windows
-        if (process.platform === 'win32') {
-            if (destPath === undefined) {
-                // https://github.com/actions/toolkit/pull/165
-                destPath = '.'
-            }
+        if (process.platform === 'win32' && destPath !== undefined) {
             // https://github.com/actions/toolkit/pull/180
             destPath = destPath.replace(/\\/g, '/')
             toolPath = toolPath.replace(/\\/g, '/')
@@ -38689,16 +38819,16 @@ async function downloadAndExtract(url, destPath = undefined) {
             extPath = await tc.extractZip(toolPath, destPath)
         } else if (url.endsWith('.tar')) {
             const flags = trace_commands ? '-vx' : '-x'
-            extPath = await tc.extractTar(toolPath, destPath, flags)
+            extPath = await extractTar(toolPath, destPath, flags)
         } else if (url.endsWith('.tar.gz')) {
             const flags = trace_commands ? '-vxz' : '-xz'
-            extPath = await tc.extractTar(toolPath, destPath, flags)
+            extPath = await extractTar(toolPath, destPath, flags)
         } else if (url.endsWith('.tar.xz')) {
             const flags = trace_commands ? '-vxJ' : '-xJ'
-            extPath = await tc.extractTar(toolPath, destPath, flags)
+            extPath = await extractTar(toolPath, destPath, flags)
         } else if (url.endsWith('.tar.bz2')) {
             const flags = trace_commands ? '-vxj' : '-xj'
-            extPath = await tc.extractTar(toolPath, destPath, flags)
+            extPath = await extractTar(toolPath, destPath, flags)
         } else if (url.endsWith('.7z')) {
             extPath = await tc.extract7z(toolPath, destPath)
         } else if (process.platform === 'darwin' && url.endsWith('.pkg')) {
@@ -38723,13 +38853,13 @@ async function stripSingleDirectoryFromPath(dirPath) {
     fnlog(`Checking if ${dirPath} contains a single directory`)
     const files = fs.readdirSync(dirPath)
     if (files.length === 1) {
-        fnlog(`Single file found in ${dirPath}`)
         const subPath = path.join(dirPath, files[0])
+        fnlog(`Single file found in ${dirPath}: ${subPath}`)
         const fileStat = fs.statSync(subPath)
         if (fileStat.isDirectory()) {
             // List all files in subpath
             const subFiles = fs.readdirSync(subPath)
-            fnlog(`Files in ${subPath}: [${subFiles.join(', ')}]`)
+            fnlog(`Strip files from ${subPath}: [${subFiles.join(', ')}]`)
 
             // Move everything to the parent directory
             for (const file of subFiles) {
@@ -38738,6 +38868,8 @@ async function stripSingleDirectoryFromPath(dirPath) {
                 await io.mv(sourcePath, destPath)
             }
             return true
+        } else {
+            fnlog(`Single file is not a directory: ${subPath}`)
         }
     }
     return false
