@@ -33072,33 +33072,57 @@ async function findGit() {
     return git_path
 }
 
-async function fetchGitTags(repo) {
+async function sleep(ms) {
+    const start = new Date().getTime()
+    while (new Date().getTime() < start + ms) {
+    }
+}
+
+
+async function fetchGitTags(repo, options = {}) {
     try {
         // Find git in PATH
         const git_path = await findGit()
         if (!git_path) {
             throw new Error('Git not found')
         }
-        const {
-            exitCode, stdout
-        } = await exec.getExecOutput(`"${git_path}" ls-remote --tags ` + repo, [], {silent: true})
-        if (exitCode !== 0) {
-            throw new Error('Git exited with non-zero exit code: ' + exitCode)
-        }
-        const stdoutTrimmed = stdout.trim()
-        const tags = stdoutTrimmed.split('\n').filter(tag => tag.trim() !== '')
-        let gitTags = []
-        for (const tag of tags) {
-            const parts = tag.split('\t')
-            if (parts.length > 1) {
-                let ref = parts[1]
-                if (!ref.endsWith('^{}')) {
-                    gitTags.push(ref)
+        const maxRetries = options.maxRetries || 10
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const args = ['ls-remote', '--tags', repo]
+                const {
+                    exitCode, stdout
+                } = await exec.getExecOutput(`"${git_path}"`, args, {silent: true})
+                if (exitCode !== 0) {
+                    throw new Error('Git exited with non-zero exit code: ' + exitCode)
+                }
+                const stdoutTrimmed = stdout.trim()
+                const tags = stdoutTrimmed.split('\n').filter(tag => tag.trim() !== '')
+                let gitTags = []
+                for (const tag of tags) {
+                    const parts = tag.split('\t')
+                    if (parts.length > 1) {
+                        let ref = parts[1]
+                        if (!ref.endsWith('^{}')) {
+                            gitTags.push(ref)
+                        }
+                    }
+                }
+                log('Git tags: ' + gitTags)
+                return gitTags
+            } catch (error) {
+                if (attempt < maxRetries) {
+                    log('Error fetching Git tags: ' + error.message)
+                    log(`Attempt ${attempt} of ${maxRetries}`)
+                    // Exponential backoff
+                    const delay = Math.pow(2, attempt - 1) * 1000
+                    log(`Retrying in ${delay} milliseconds...`)
+                    await sleep(delay)
+                } else {
+                    throw new Error('Max retries reached. Error fetching Git tags: ' + error.message)
                 }
             }
         }
-        log('Git tags: ' + gitTags)
-        return gitTags
     } catch (error) {
         throw new Error('Error fetching Git tags: ' + error.message)
     }

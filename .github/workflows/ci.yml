@@ -42,6 +42,8 @@ jobs:
             apple-clang *
             mingw *
             clang-cl *
+          subrange-policy: |
+            msvc: one-per-minor
           latest-factors: |
             msvc ASan
             gcc Coverage TSan UBSan Fetch-Content

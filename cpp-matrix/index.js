@@ -16,8 +16,10 @@ function log(...args) {
 }
 
 function isTruthy(s) {
-    s = s.trim()
-    return s !== '' && s.toLowerCase() !== 'false'
+    if (typeof s === 'string') {
+        return s !== '' && s.trim().toLowerCase() !== 'false'
+    }
+    return !!s
 }
 
 function parseCompilerRequirements(inputString) {
@@ -170,116 +172,43 @@ function normalizeCompilerName(name) {
     return name
 }
 
-const fetchGitTags = (repo) => {
-    const maxRetries = 10
-    let currentAttempt = 1
-    while (currentAttempt <= maxRetries) {
-        try {
-            const stdout = execSync('git ls-remote --tags ' + repo).toString()
-            const tags = stdout.split('\n').filter(tag => tag.trim() !== '')
-            let gitTags = []
-            for (const tag of tags) {
-                const parts = tag.split('\t')
-                if (parts.length > 1) {
-                    let ref = parts[1]
-                    if (!ref.endsWith('^{}')) {
-                        gitTags.push(ref)
-                    }
-                }
-            }
-            return gitTags
-        } catch (error) {
-            log(`Error fetching Git tags (attempt ${currentAttempt}): ${error.message}`)
-            if (currentAttempt < maxRetries) {
-                const delay = Math.pow(2, currentAttempt - 1) * 1000 // Exponential backoff
-                log(`Retrying in ${delay} milliseconds...`)
-                sleep(delay)
-            } else {
-                throw new Error('Max retries reached. Error fetching Git tags: ' + error.message)
-            }
-            currentAttempt++
+async function findVersionsFromTags(name, repo, file, regex) {
+    const versionsFromFile = setup_program.readVersionsFromFile(file)
+    if (versionsFromFile !== null) {
+        log(`${name} versions (from file): ` + versionsFromFile)
+        return versionsFromFile
+    }
+    const tags = await setup_program.fetchGitTags(repo, {
+        maxRetries: 10
+    })
+    let versions = []
+    for (const tag of tags) {
+        if (tag.match(regex)) {
+            const version = tag.match(regex)[1]
+            versions.push(version)
         }
     }
+    versions = versions.sort(semver.compare)
+    log(`${name} versions: ` + versions)
+    setup_program.saveVersionsToFile(versions, file)
+    return versions
 }
 
-const sleep = (ms) => {
-    const start = new Date().getTime()
-    while (new Date().getTime() < start + ms) {
-    }
+async function findGCCVersions() {
+    return await findVersionsFromTags(
+        'GCC',
+        'git://gcc.gnu.org/git/gcc.git',
+        'gcc-versions.txt',
+        /^refs\/tags\/releases\/gcc-(\d+\.\d+\.\d+)$/)
 }
 
-
-function findGCCVersionsImpl() {
-    let cachedVersions = null // Cache variable to store the versions
-
-    return function() {
-        if (cachedVersions !== null) {
-            // Return the cached versions if available
-            return cachedVersions
-        }
-
-        // Check if the versions can be read from a file
-        const versionsFromFile = setup_program.readVersionsFromFile('gcc-versions.txt')
-        if (versionsFromFile !== null) {
-            cachedVersions = versionsFromFile
-            log('GCC versions (from file): ' + versionsFromFile)
-            return versionsFromFile
-        }
-
-        const regex = /^refs\/tags\/releases\/gcc-(\d+\.\d+\.\d+)$/
-        let versions = []
-        const gitTags = fetchGitTags('git://gcc.gnu.org/git/gcc.git')
-        for (const tag of gitTags) {
-            if (tag.match(regex)) {
-                const version = tag.match(regex)[1]
-                versions.push(version)
-            }
-        }
-        versions = versions.sort(semver.compare)
-        cachedVersions = versions
-        log('GCC versions: ' + versions)
-        setup_program.saveVersionsToFile(versions, 'gcc-versions.txt')
-        return versions
-    }
+async function findClangVersions() {
+    return await findVersionsFromTags(
+        'Clang',
+        'https://github.com/llvm/llvm-project',
+        'clang-versions.txt',
+        /^refs\/tags\/llvmorg-(\d+\.\d+\.\d+)$/)
 }
-
-const findGCCVersions = findGCCVersionsImpl()
-
-function findClangVersionsImpl() {
-    let cachedVersions = null // Cache variable to store the versions
-
-    return function() {
-        if (cachedVersions !== null) {
-            // Return the cached versions if available
-            return cachedVersions
-        }
-
-        const versionsFromFile = setup_program.readVersionsFromFile('clang-versions.txt')
-        if (versionsFromFile !== null) {
-            cachedVersions = versionsFromFile
-            log('Clang versions (from file): ' + versionsFromFile)
-            return versionsFromFile
-        }
-
-        const regex = /^refs\/tags\/llvmorg-(\d+\.\d+\.\d+)$/
-        let versions = []
-        const gitTags = fetchGitTags('https://github.com/llvm/llvm-project')
-        for (const tag of gitTags) {
-            if (tag.match(regex)) {
-                const version = tag.match(regex)[1]
-                versions.push(version)
-            }
-        }
-        versions = versions.sort(semver.compare)
-        log('Clang versions: ' + versions)
-        cachedVersions = versions
-        setup_program.saveVersionsToFile(versions, 'clang-versions.txt')
-        return versions
-    }
-}
-
-// Usage:
-const findClangVersions = findClangVersionsImpl()
 
 function findMSVCVersions() {
     // MSVC is not open source, so we assume the versions available from github runner images are available
@@ -293,11 +222,11 @@ function findMSVCVersions() {
     return ['10.0.40219', '12.0.40660', '14.29.30139', '14.40.33810']
 }
 
-function findCompilerVersions(compiler) {
+async function findCompilerVersions(compiler) {
     if (compiler === 'gcc') {
-        return findGCCVersions()
+        return await findGCCVersions()
     } else if (compiler === 'clang') {
-        return findClangVersions()
+        return await findClangVersions()
     } else if (compiler === 'msvc') {
         return findMSVCVersions()
     }
@@ -362,14 +291,43 @@ function arraysHaveSameElements(arr1, arr2) {
 
 
 const SubrangePolicies = {
-    ONE_PER_MAJOR: 0, ONE_PER_MINOR: 1, DEFAULT: 2
+    ONE_PER_MAJOR: 0, ONE_PER_MINOR: 1, ONE_PER_MAJOR_OR_MINOR: 2
 }
 
-function splitRanges(range, versions, policy = SubrangePolicies.DEFAULT) {
+function getSubrangePolicy(policyStr) {
+    if (policyStr === 'one-per-major') {
+        return SubrangePolicies.ONE_PER_MAJOR
+    } else if (policyStr === 'one-per-minor') {
+        return SubrangePolicies.ONE_PER_MINOR
+    } else if (policyStr === 'one-per-major-or-minor') {
+        return SubrangePolicies.ONE_PER_MAJOR_OR_MINOR
+    }
+    return SubrangePolicies.ONE_PER_MAJOR
+}
+
+function getSubrangePolicyStr(policy) {
+    if (policy === SubrangePolicies.ONE_PER_MAJOR) {
+        return 'one-per-major'
+    } else if (policy === SubrangePolicies.ONE_PER_MINOR) {
+        return 'one-per-minor'
+    } else if (policy === SubrangePolicies.ONE_PER_MAJOR_OR_MINOR) {
+        return 'one-per-major-or-minor'
+    }
+    return 'one-per-major'
+}
+
+function splitRanges(range, versions, policy = SubrangePolicies.ONE_PER_MAJOR) {
+    function fnlog(msg) {
+        log('splitRanges: ' + msg)
+    }
+
     if (versions.length === 0) {
         // We know nothing about the available versions for that compiler, so we just return "*"
         return ['*']
     }
+    fnlog(`range: ${range}`)
+    fnlog(`versions: ${versions}`)
+    fnlog(`policy: ${getSubrangePolicyStr(policy)}`)
 
     versions = versions.map(s => semver.parse(s, {}))
     const minVersion = semver.minSatisfying(versions, range)
@@ -377,11 +335,18 @@ function splitRanges(range, versions, policy = SubrangePolicies.DEFAULT) {
     if (minVersion === null || maxVersion === null) {
         return ['*']
     }
-    const default_policy = minVersion.major === maxVersion.major ? SubrangePolicies.ONE_PER_MINOR : SubrangePolicies.ONE_PER_MAJOR
-    const effective_policy = policy === SubrangePolicies.DEFAULT ? default_policy : policy
+    fnlog(`minVersion: ${minVersion}`)
+    fnlog(`maxVersion: ${maxVersion}`)
+
+    const major_or_minor_policy = minVersion.major === maxVersion.major ? SubrangePolicies.ONE_PER_MINOR : SubrangePolicies.ONE_PER_MAJOR
+    const effective_major_or_minor_policy = policy === SubrangePolicies.ONE_PER_MAJOR_OR_MINOR ? major_or_minor_policy : policy
+    const effective_policy = policy === SubrangePolicies.ONE_PER_MAJOR_OR_MINOR ? major_or_minor_policy : policy
     const range_versions = versions.filter(v => semver.satisfies(v, range))
+
     let subranges = []
     if (effective_policy === SubrangePolicies.ONE_PER_MAJOR) {
+        fnlog('Effective policy: ONE_PER_MAJOR')
+
         // Add each major range (1, 2, 3, ...) from the main range for which there is a valid version
         for (let i = minVersion.major; i <= maxVersion.major; i++) {
             // Create an initial requirement with just the major version (eg: "9")
@@ -466,6 +431,8 @@ function splitRanges(range, versions, policy = SubrangePolicies.DEFAULT) {
     }
 
     if (effective_policy === SubrangePolicies.ONE_PER_MINOR) {
+        fnlog('Effective policy: ONE_PER_MINOR')
+
         // Add each major range (1, 2, 3, ...) from the main range for which there is a valid version
         for (let i = minVersion.major; i <= maxVersion.major; i++) {
             const unique_minors = versions
@@ -999,7 +966,7 @@ function applyCombinatorialFactors(matrix, inputs, latestIdx, earliestIdx, compi
     }
 }
 
-function setRecommendedFlags(entry, inputs) {
+async function setRecommendedFlags(entry, inputs) {
     entry['build-type'] = 'Release'
     entry['cxxflags'] = ''
     entry['ccflags'] = ''
@@ -1068,7 +1035,7 @@ function setRecommendedFlags(entry, inputs) {
     // Flags for time-trace
     if ('time-trace' in entry && entry['time-trace'] === true) {
         if (entry['compiler'] === 'clang') {
-            const v = semver.minSatisfying(findClangVersions(), entry['version'])
+            const v = semver.minSatisfying(await findClangVersions(), entry['version'])
             if (semver.satisfies(v, '>=9')) {
                 entry['cxxflags'] += ' -ftime-trace'
                 entry['ccflags'] += ' -ftime-trace'
@@ -1327,9 +1294,12 @@ async function generateMatrix(inputs) {
         fnlog(`Generating entries for ${compilerName0} version ${range}`)
         const earliestIdx = matrix.length
         const compilerName = normalizeCompilerName(compilerName0)
-        const allCompilerVersions = findCompilerVersions(compilerName)
-        const subranges = splitRanges(range, allCompilerVersions, SubrangePolicies.DEFAULT)
-        fnlog(`${compilerName} subranges: ${JSON.stringify(subranges)}`)
+        fnlog(`Find versions for ${compilerName}`)
+        const allCompilerVersions = await findCompilerVersions(compilerName)
+        const subrangePolicyStr = inputs.subrange_policy[compilerName] || inputs.subrange_policy[''] || 'one-per-major'
+        fnlog(`Subrange policy for ${compilerName}: ${subrangePolicyStr}`)
+        const subranges = splitRanges(range, allCompilerVersions, getSubrangePolicy(subrangePolicyStr))
+        fnlog(`${compilerName} sub-ranges: ${JSON.stringify(subranges)}`)
 
         // Iterate over subranges and generate an entry for each
         for (let i = 0; i < subranges.length; i++) {
@@ -1392,7 +1362,7 @@ async function generateMatrix(inputs) {
     core.startGroup('⚙️ Set recommended flags')
     // Patch each entry with recommended flags for special factors
     for (let entry of matrix) {
-        setRecommendedFlags(entry, inputs)
+        await setRecommendedFlags(entry, inputs)
     }
     printMatrix()
     core.endGroup()
@@ -1743,9 +1713,24 @@ function normalizeCompilerNameSuggestions(suggestionMap) {
 function parseKeyValues(lines) {
     const keyValues = []
     for (const line of lines) {
-        const [key, value] = line.split(':').map(part => part.trim())
+        const [key, value] = line.split(':')
         if (key && value) {
-            keyValues.push({key, value: value.trim()})
+            keyValues.push({key: key.trim(), value: value.trim()})
+        } else if (key) {
+            keyValues.push({key: '', value: key.trim()})
+        }
+    }
+    return keyValues
+}
+
+function parseMap(lines) {
+    const keyValues = {}
+    for (const line of lines) {
+        const [key, value] = line.split(':')
+        if (key && value) {
+            keyValues[key.trim()] = value.trim()
+        } else if (key) {
+            keyValues[''] = value.trim()
         }
     }
     return keyValues
@@ -1765,6 +1750,7 @@ async function run() {
         let inputs = {
             // Compilers
             compiler_versions: compilerVersions,
+            subrange_policy: parseMap(core.getMultilineInput('subrange-policy')),
             standards: normalizeCppVersionRequirement(core.getInput('standards')),
             max_standards: parseInt(core.getInput('max-standards').trim()),
 
@@ -1802,14 +1788,11 @@ async function run() {
             trace_commands: core.getBooleanInput('trace-commands')
         }
 
-        trace_commands = isTruthy(core.getInput('trace-commands'))
-        if (process.env['ACTIONS_STEP_DEBUG'] === 'true') {
-            // Force trace-commands
-            trace_commands = true
-        }
+        trace_commands = isTruthy(inputs.trace_commands) || process.env['ACTIONS_STEP_DEBUG'] === 'true'
 
         // Normalize compiler names in the keys of compiler_versions,
         // latest_factors, factors, combinatorial_factors
+        normalizeCompilerNameKeys(inputs.subrange_policy)
         normalizeCompilerNameKeys(inputs.compiler_versions)
         normalizeCompilerNameKeys(inputs.latest_factors)
         normalizeCompilerNameKeys(inputs.factors)
@@ -1839,16 +1822,16 @@ async function run() {
             core.setOutput('matrix', matrix)
 
         } catch (error) {
-            core.setFailed(error)
+            core.setFailed(`${error.message}\n${error.stack}`)
         }
     } catch (error) {
-        core.setFailed(error.message)
+        core.setFailed(`${error.message}\n${error.stack}`)
     }
 }
 
 if (require.main === module) {
     run().catch((error) => {
-        core.setFailed(error)
+        core.setFailed(`${error.message}\n${error.stack}`)
     })
 }
 

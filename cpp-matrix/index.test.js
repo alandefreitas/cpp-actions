@@ -4,7 +4,16 @@ Object.assign(global, main)
 const process = require('process')
 const cp = require('child_process')
 const path = require('path')
-const {parseCompilerRequirements, parseCompilerSuggestions} = require('./index')
+const {
+    generateMatrix,
+    generateTable,
+    parseCompilerRequirements,
+    parseCompilerSuggestions,
+    findGCCVersions,
+    findMSVCVersions,
+    findClangVersions,
+    isTruthy
+} = require('./index')
 const core = require('@actions/core')
 
 test('isTruthy', async () => {
@@ -88,49 +97,57 @@ describe('normalizeCompilerName', () => {
 })
 
 describe('findGCCVersions', () => {
-    expect(findGCCVersions()).toContain('4.8.0')
-    expect(findGCCVersions()).toContain('13.1.0')
+    test('contains valid versions', async () => {
+        expect(await findGCCVersions()).toContain('4.8.0')
+        expect(await findGCCVersions()).toContain('13.1.0')
+    })
 })
 
 describe('findClangVersions', () => {
-    expect(findClangVersions()).toContain('2.6.0')
-    expect(findClangVersions()).toContain('16.0.0')
+    test('Contains valid versions', async () => {
+        expect(await findClangVersions()).toContain('2.6.0')
+        expect(await findClangVersions()).toContain('16.0.0')
+    })
 })
 
 describe('splitRanges', () => {
-    expect(splitRanges('9.2 - 11', findGCCVersions())).toStrictEqual(['^9.2', '10', '11'])
-    expect(splitRanges('9.2 - 9.4 || 11', findGCCVersions())).toStrictEqual(['9.2 - 9.4', '11'])
-    expect(splitRanges('>=8 <9.100', findGCCVersions())).toStrictEqual(['8', '9'])
-    expect(splitRanges('>=14 <14.50', findMSVCVersions())).toStrictEqual(['14.29', '14.40'])
-    expect(splitRanges('<=9.2', ['9.1.0', '9.2.0', '9.3.0', '9.4.0', '9.5.0'], SubrangePolicies.ONE_PER_MAJOR)).toStrictEqual(['9 - 9.2'])
-    expect(splitRanges('>14.29.4 <14.40', ['14.29.30139', '14.29.30140'])).toStrictEqual(['14.29'])
-    expect(splitRanges('>14.29.30140 <14.40', ['14.29.30139', '14.29.30150'])).toStrictEqual(['~14.29.30150'])
-    expect(splitRanges('>14.0.0 <14.29.30140', ['14.29.30139', '14.29.30150'])).toStrictEqual(['14.29 - 14.29.30150'])
+    test('should split ranges correctly', async () => {
+        expect(splitRanges('9.2 - 11', await findGCCVersions())).toStrictEqual(['^9.2', '10', '11'])
+        expect(splitRanges('9.2 - 9.4 || 11', await findGCCVersions())).toStrictEqual(['9.2 - 9.4', '11'])
+        expect(splitRanges('>=8 <9.100', await findGCCVersions())).toStrictEqual(['8', '9'])
+        expect(splitRanges('>=14 <14.50', findMSVCVersions())).toStrictEqual(['14'])
+        expect(splitRanges('<=9.2', ['9.1.0', '9.2.0', '9.3.0', '9.4.0', '9.5.0'], SubrangePolicies.ONE_PER_MAJOR)).toStrictEqual(['9 - 9.2'])
+        expect(splitRanges('>14.29.4 <14.40', ['14.29.30139', '14.29.30140'])).toStrictEqual(['14'])
+        expect(splitRanges('>14.29.30140 <14.40', ['14.29.30139', '14.29.30150'])).toStrictEqual(['^14.29.30150'])
+        expect(splitRanges('>14.0.0 <14.29.30140', ['14.29.30139', '14.29.30150'])).toStrictEqual(['14 - 14.29.30139'])
+    })
 })
 
 describe('generateMatrix', () => {
-    const compilerVersions = {
-        gcc: '>=4.8.0',
-        clang: '>=3.8.0',
-        msvc: '>=14.2.0',
-        'apple-clang': '*'
-    }
-    const standards = normalizeCppVersionRequirement('>=11')
-    const max_standards = 2
-    const latest_factors = {gcc: ['Coverage', 'TSan', 'UBSan']}
-    const factors = {gcc: ['Asan', 'Shared'], msvc: ['Shared', 'x86']}
-    const inputs = {
-        compiler_versions: compilerVersions,
-        standards: standards,
-        max_standards: max_standards,
-        latest_factors: latest_factors,
-        factors: factors,
-        combinatorial_factors: {},
-        cxxflags: parseCompilerSuggestions(['gcc >=10 <12: -static'], Object.keys(compilerVersions))
-    }
-    generateMatrix(inputs).then((matrix) => {
+    test('should generate matrix correctly', async () => {
+        const compilerVersions = {
+            gcc: '>=4.8.0',
+            clang: '>=3.8.0',
+            msvc: '>=14.2.0',
+            'apple-clang': '*'
+        }
+        const standards = normalizeCppVersionRequirement('>=11')
+        const max_standards = 2
+        const latest_factors = {gcc: ['Coverage', 'TSan', 'UBSan']}
+        const factors = {gcc: ['Asan', 'Shared'], msvc: ['Shared', 'x86']}
+        const inputs = {
+            compiler_versions: compilerVersions,
+            standards: standards,
+            subrange_policy: {'': 'one-per-major'},
+            max_standards: max_standards,
+            latest_factors: latest_factors,
+            factors: factors,
+            combinatorial_factors: {},
+            cxxflags: parseCompilerSuggestions(['gcc >=10 <12: -static'], Object.keys(compilerVersions))
+        }
+        const matrix = await generateMatrix(inputs)
         expect(matrix.length === 0).toBe(false)
-        const table = generateTable(matrix, inputs)
+        const table = await generateTable(matrix, inputs)
         expect(table.length === 0).toBe(false)
     })
 })
