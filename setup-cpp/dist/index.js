@@ -70892,6 +70892,15 @@ async function downloadAndExtract(url, destPath = undefined) {
             fnlog(`Renamed ${toolPath} to ${newToolPath}`)
             toolPath = newToolPath
         }
+        // Patches for Windows
+        if (process.platform === 'win32') {
+            if (destPath === undefined) {
+                // https://github.com/actions/toolkit/pull/165
+                destPath = '.'
+            }
+            // https://github.com/actions/toolkit/pull/180
+            destPath = destPath.replace(/\\/g, '/')
+        }
         // Extract
         if (url.endsWith('.zip')) {
             extPath = await tc.extractZip(toolPath, destPath)
