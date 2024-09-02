@@ -17076,10 +17076,8 @@ async function downloadAndExtract(url, destPath = undefined) {
 
     let extPath = undefined
     try {
-        const toolPath = await tc.downloadTool(url)
+        let toolPath = await tc.downloadTool(url)
         fnlog(`Downloaded ${url} to ${toolPath}`)
-        const urlFilename = path.basename(url)
-        const urlBasename = path.basename(url, path.extname(url))
         // Resolve the destination path if not undefined
         if (destPath !== undefined) {
             // Resolve the destination path if relative
@@ -17092,6 +17090,18 @@ async function downloadAndExtract(url, destPath = undefined) {
                 fnlog(`Creating directory ${destPath}`)
                 await io.mkdirP(destPath)
             }
+        }
+        // Rename the toolPath filename to match the URL filename
+        const urlFilename = path.basename(url)
+        const isValidFilenameChars = /^[a-z0-9._-]+$/i.test(urlFilename)
+        if (isValidFilenameChars) {
+            // Rename only if the filename is valid
+            // Renaming makes the archive file name consistent with the URL
+            // and easier for tools to recognize the archive type
+            const newToolPath = path.join(path.dirname(toolPath), urlFilename)
+            await io.mv(toolPath, newToolPath)
+            fnlog(`Renamed ${toolPath} to ${newToolPath}`)
+            toolPath = newToolPath
         }
         // Extract
         if (url.endsWith('.zip')) {
