@@ -6,21 +6,7 @@ const fs = require('fs')
 const exec = require('@actions/exec')
 const path = require('path')
 const os = require('os')
-
-let trace_commands = false
-
-function log(...args) {
-    if (trace_commands) {
-        core.info(...args)
-    } else {
-        core.debug(...args)
-    }
-}
-
-function set_trace_commands(trace) {
-    trace_commands = trace
-}
-
+const trace_commands = require('trace-commands')
 
 function isExecutable(path) {
     if (!fs.existsSync(path) || fs.lstatSync(path).isDirectory()) {
@@ -65,7 +51,7 @@ function isExecutable(path) {
 /// @return: True if path program version satisfies the requirements
 async function program_satisfies(exec_path, semver_requirements) {
     function fnlog(msg) {
-        log('program_satisfies: ' + msg)
+        trace_commands.log('program_satisfies: ' + msg)
     }
 
     // Try to run the program and get the version string
@@ -115,7 +101,7 @@ async function program_satisfies(exec_path, semver_requirements) {
 
 async function find_program_in_path(paths, version, check_latest) {
     function fnlog(msg) {
-        log('find_program_in_path: ' + msg)
+        trace_commands.log('find_program_in_path: ' + msg)
     }
 
     let output_version = null
@@ -180,7 +166,7 @@ async function find_program_in_path(paths, version, check_latest) {
 
 async function find_program_in_paths(paths, names, version, check_latest, stop_at_first) {
     function fnlog(msg) {
-        log('find_program_in_paths: ' + msg)
+        trace_commands.log('find_program_in_paths: ' + msg)
     }
 
     let output_version = null
@@ -267,7 +253,7 @@ async function find_program_in_paths(paths, names, version, check_latest, stop_a
 
 async function find_program_in_system_paths(extra_paths, names, version, check_latest) {
     function fnlog(msg) {
-        log('find_program_in_system_paths: ' + msg)
+        trace_commands.log('find_program_in_system_paths: ' + msg)
     }
 
     // Append directories from PATH environment variable to paths
@@ -336,7 +322,7 @@ function escapeRegExp(string) {
 
 async function find_program_with_apt(names, version, check_latest) {
     function fnlog(msg) {
-        log('find_program_with_apt: ' + msg)
+        trace_commands.log('find_program_with_apt: ' + msg)
     }
 
     let output_version = null
@@ -564,7 +550,7 @@ function isSymlink(path) {
         const stats = fs.lstatSync(path)
         return stats.isSymbolicLink()
     } catch (error) {
-        log('An error occurred while checking if the path is a symlink:', error)
+        trace_commands.log('An error occurred while checking if the path is a symlink:', error)
         return false
     }
 }
@@ -572,9 +558,9 @@ function isSymlink(path) {
 function copySymlink(sourcePath, destinationPath, level = 0) {
     const targetPath = fs.readlinkSync(sourcePath)
     const levelPrefix = ' '.repeat(level * 2)
-    log(`${levelPrefix}Symlink found from ${sourcePath} to ${targetPath}`)
+    trace_commands.log(`${levelPrefix}Symlink found from ${sourcePath} to ${targetPath}`)
     fs.symlinkSync(targetPath, destinationPath)
-    log(`${levelPrefix}Symlink recreated from ${sourcePath} to ${destinationPath} with target ${targetPath}`)
+    trace_commands.log(`${levelPrefix}Symlink recreated from ${sourcePath} to ${destinationPath} with target ${targetPath}`)
 }
 
 async function findGit() {
@@ -633,15 +619,15 @@ async function fetchGitTags(repo, options = {}) {
                         }
                     }
                 }
-                log('Git tags: ' + gitTags)
+                trace_commands.log('Git tags: ' + gitTags)
                 return gitTags
             } catch (error) {
                 if (attempt < maxRetries) {
-                    log('Error fetching Git tags: ' + error.message)
-                    log(`Attempt ${attempt} of ${maxRetries}`)
+                    trace_commands.log('Error fetching Git tags: ' + error.message)
+                    trace_commands.log(`Attempt ${attempt} of ${maxRetries}`)
                     // Exponential backoff
                     const delay = Math.pow(2, attempt - 1) * 1000
-                    log(`Retrying in ${delay} milliseconds...`)
+                    trace_commands.log(`Retrying in ${delay} milliseconds...`)
                     await sleep(delay)
                 } else {
                     throw new Error('Max retries reached. Error fetching Git tags: ' + error.message)
@@ -720,9 +706,9 @@ function saveVersionsToFile(versions, filename) {
     try {
         const fileContents = JSON.stringify(versions)
         fs.writeFileSync(filename, fileContents, 'utf8')
-        log('Versions saved to file.')
+        trace_commands.log('Versions saved to file.')
     } catch (error) {
-        log('Error saving versions to file: ' + error)
+        trace_commands.log('Error saving versions to file: ' + error)
     }
 }
 
@@ -767,7 +753,7 @@ function getCurrentUbuntuName() {
             return 'noble'
         }
     }
-    log(`setup-program::getCurrentUbuntuName: Ubuntu name for version ${version} not supported`)
+    trace_commands.log(`setup-program::getCurrentUbuntuName: Ubuntu name for version ${version} not supported`)
     return null
 }
 
@@ -783,7 +769,7 @@ function getCurrentUbuntuName() {
 /// - If permissions are required, they will be moved or copied with sudo
 async function moveWithPermissions(source, destination, copyInstead = false, level = 0) {
     function fnlog(msg) {
-        log('moveWithPermissions: ' + msg)
+        trace_commands.log('moveWithPermissions: ' + msg)
     }
 
     const levelPrefix = '  '.repeat(level)
@@ -834,7 +820,7 @@ async function moveWithPermissions(source, destination, copyInstead = false, lev
 
 async function ensureSudoIsAvailable() {
     function fnlog(msg) {
-        log('ensureSudoIsAvailable: ' + msg)
+        trace_commands.log('ensureSudoIsAvailable: ' + msg)
     }
 
     let sudo_path = null
@@ -853,7 +839,7 @@ async function ensureSudoIsAvailable() {
 
 async function ensureAddAptRepositoryIsAvailable() {
     function fnlog(msg) {
-        log('ensureAddAptRepositoryIsAvailable: ' + msg)
+        trace_commands.log('ensureAddAptRepositoryIsAvailable: ' + msg)
     }
 
     let add_apt_repository_path = null
@@ -878,7 +864,7 @@ async function ensureAddAptRepositoryIsAvailable() {
 
 async function moveWithSudo(source, destination, copyInstead = false, level) {
     function fnlog(msg) {
-        log('moveWithSudo: ' + msg)
+        trace_commands.log('moveWithSudo: ' + msg)
     }
 
     await ensureSudoIsAvailable()
@@ -925,7 +911,7 @@ async function moveWithSudo(source, destination, copyInstead = false, level) {
 
 async function extractTar(tarPath, destPath, flags = undefined) {
     function fnlog(msg) {
-        log('extractTar: ' + msg)
+        trace_commands.log('extractTar: ' + msg)
     }
 
     const IS_WINDOWS = process.platform === 'win32'
@@ -962,16 +948,23 @@ async function extractTar(tarPath, destPath, flags = undefined) {
         if (exitCode !== 0) {
             throw new Error(`Failed to extract ${tarPath} to ${firstDestPath} with 7z: ${stderr}`)
         }
-        if (!isTwoStep) {
-            fnlog(`Moving ${firstDestPath} to ${finalDestPath}`)
-            const files = fs.readdirSync(firstDestPath)
+
+        async function copyFilesAndRemoveDir(sourcePath, destPath) {
+            fnlog(`Moving ${sourcePath} to ${destPath}`)
+            const files = fs.readdirSync(sourcePath)
             for (const file of files) {
-                const sourcePath = path.join(firstDestPath, file)
-                const destPath = path.join(finalDestPath, file)
-                await io.cp(sourcePath, destPath, {recursive: true})
+                const sourceFilePath = path.join(sourcePath, file)
+                const destFilePath = path.join(destPath, file)
+                fnlog(`Copying ${sourceFilePath} to ${destFilePath}`)
+                await io.cp(sourceFilePath, destFilePath, {recursive: true})
             }
-            await io.rmRF(firstDestPath)
-            return finalDestPath
+            fnlog(`Removing ${sourcePath}`)
+            await io.rmRF(sourcePath)
+            return destPath
+        }
+
+        if (!isTwoStep) {
+            return await copyFilesAndRemoveDir(firstDestPath, finalDestPath)
         }
 
         // Find tar file for the second step
@@ -982,28 +975,12 @@ async function extractTar(tarPath, destPath, flags = undefined) {
         if (files.length > 1) {
             // It extracted more than one file, so we assume it's the deflated
             // tar file
-            fnlog(`Moving ${firstDestPath} to ${finalDestPath}`)
-            const files = fs.readdirSync(firstDestPath)
-            for (const file of files) {
-                const sourcePath = path.join(firstDestPath, file)
-                const destPath = path.join(finalDestPath, file)
-                await io.cp(sourcePath, destPath, {recursive: true})
-            }
-            await io.rmRF(firstDestPath)
-            return finalDestPath
+            return await copyFilesAndRemoveDir(firstDestPath, finalDestPath)
         }
         const tarFiles = files.filter(file => file.endsWith('.tar'))
         if (tarFiles.length === 0) {
             // No tar file, so we assume it's the deflated tar file
-            fnlog(`Moving ${firstDestPath} to ${finalDestPath}`)
-            const files = fs.readdirSync(firstDestPath)
-            for (const file of files) {
-                const sourcePath = path.join(firstDestPath, file)
-                const destPath = path.join(finalDestPath, file)
-                await io.cp(sourcePath, destPath, {recursive: true})
-            }
-            await io.rmRF(firstDestPath)
-            return finalDestPath
+            return await copyFilesAndRemoveDir(firstDestPath, finalDestPath)
         }
 
         // Second step
@@ -1015,16 +992,7 @@ async function extractTar(tarPath, destPath, flags = undefined) {
             throw new Error(`Failed to extract ${tarFile} to ${secondDestPath} with 7z: ${stderr2}`)
         }
         if (secondDestPath !== finalDestPath) {
-            fnlog(`Moving ${secondDestPath} to ${finalDestPath}`)
-            const files = fs.readdirSync(secondDestPath)
-            for (const file of files) {
-                const sourcePath = path.join(secondDestPath, file)
-                const destPath = path.join(finalDestPath, file)
-                fnlog(`Copying ${sourcePath} to ${destPath}`)
-                await io.cp(sourcePath, destPath, {recursive: true})
-            }
-            fnlog(`Removing ${secondDestPath}`)
-            await io.rmRF(secondDestPath)
+            await copyFilesAndRemoveDir(secondDestPath, finalDestPath)
         }
         if (firstDestPath !== finalDestPath) {
             fnlog(`Removing ${firstDestPath}`)
@@ -1037,7 +1005,7 @@ async function extractTar(tarPath, destPath, flags = undefined) {
 
 async function downloadAndExtract(url, destPath = undefined) {
     function fnlog(msg) {
-        log('downloadAndExtract: ' + msg)
+        trace_commands.log('downloadAndExtract: ' + msg)
     }
 
     let extPath = undefined
@@ -1079,16 +1047,16 @@ async function downloadAndExtract(url, destPath = undefined) {
         if (url.endsWith('.zip')) {
             extPath = await tc.extractZip(toolPath, destPath)
         } else if (url.endsWith('.tar')) {
-            const flags = trace_commands ? '-vx' : '-x'
+            const flags = trace_commands.enabled() ? '-vx' : '-x'
             extPath = await extractTar(toolPath, destPath, flags)
         } else if (url.endsWith('.tar.gz')) {
-            const flags = trace_commands ? '-vxz' : '-xz'
+            const flags = trace_commands.enabled() ? '-vxz' : '-xz'
             extPath = await extractTar(toolPath, destPath, flags)
         } else if (url.endsWith('.tar.xz')) {
-            const flags = trace_commands ? '-vxJ' : '-xJ'
+            const flags = trace_commands.enabled() ? '-vxJ' : '-xJ'
             extPath = await extractTar(toolPath, destPath, flags)
         } else if (url.endsWith('.tar.bz2')) {
-            const flags = trace_commands ? '-vxj' : '-xj'
+            const flags = trace_commands.enabled() ? '-vxj' : '-xj'
             extPath = await extractTar(toolPath, destPath, flags)
         } else if (url.endsWith('.7z')) {
             extPath = await tc.extract7z(toolPath, destPath)
@@ -1108,7 +1076,7 @@ async function downloadAndExtract(url, destPath = undefined) {
 
 async function stripSingleDirectoryFromPath(dirPath) {
     function fnlog(msg) {
-        log('stripSingleDirectoryFromPath: ' + msg)
+        trace_commands.log('stripSingleDirectoryFromPath: ' + msg)
     }
 
     fnlog(`Checking if ${dirPath} contains a single directory`)
@@ -1138,7 +1106,7 @@ async function stripSingleDirectoryFromPath(dirPath) {
 
 async function install_program_from_url(names, version, check_latest, url_template, update_environment, install_prefix = null) {
     function fnlog(msg) {
-        log('install_program_from_url: ' + msg)
+        trace_commands.log('install_program_from_url: ' + msg)
     }
 
     let output_version = null
@@ -1229,18 +1197,16 @@ async function install_program_from_url(names, version, check_latest, url_templa
 
 async function run() {
     function fnlog(msg) {
-        log('setup-program: ' + msg)
+        trace_commands.log('setup-program: ' + msg)
     }
 
     try {
         core.startGroup('📥 Action Inputs')
         // Get trace_commands input first
-        trace_commands = core.getBooleanInput('trace-commands')
-        if (process.env['ACTIONS_STEP_DEBUG'] === 'true') {
+        if (core.getBooleanInput('trace-commands')) {
             // Force trace-commands
-            trace_commands = true
+            trace_commands.set_trace_commands(true)
         }
-        fnlog(`trace_commands: ${trace_commands}`)
 
         // Get inputs
         const name = core.getInput('name').split(' ').filter((name) => name !== '')
@@ -1373,8 +1339,6 @@ module.exports = {
     find_program_in_system_paths,
     find_program_with_apt,
     install_program_from_url,
-    trace_commands,
-    set_trace_commands,
     isSudoRequired,
     fetchGitTags,
     readVersionsFromFile,

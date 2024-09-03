@@ -8,19 +8,7 @@ const setup_program = require('setup-program')
 const setup_gcc = require('setup-gcc')
 const setup_clang = require('setup-clang')
 const setup_msvc = require('./msvc-dev-cmd')
-
-setup_program.trace_commands = false
-setup_gcc.trace_commands = false
-setup_clang.trace_commands = false
-let trace_commands = false
-
-function log(...args) {
-    if (trace_commands) {
-        core.info(...args)
-    } else {
-        core.debug(...args)
-    }
-}
+const trace_commands = require('trace-commands')
 
 function normalizeCompiler(compiler, version) {
     let parts = compiler.split(/-|\s/)
@@ -73,31 +61,22 @@ async function run() {
             return inputs.find(([name]) => name === key)[1]
         }
 
+        if (getInput(inputs, 'trace_commands')) {
+            trace_commands.set_trace_commands(true)
+        }
+
         function setInput(inputs, key, value) {
             const input = inputs.find(([name]) => name === key)
             if (input) {
                 input[1] = value
             } else {
-                log(`Input ${key} not found`)
+                trace_commands.log(`Input ${key} not found`)
                 inputs.push([key, value])
             }
         }
 
         for (const [name, value] of inputs) {
-            if (name === 'trace_commands') {
-                trace_commands = value
-                if (process.env['ACTIONS_STEP_DEBUG'] === 'true') {
-                    // Force trace-commands
-                    trace_commands = true
-                }
-                setup_program.set_trace_commands(trace_commands)
-                setup_gcc.set_trace_commands(trace_commands)
-                setup_clang.set_trace_commands(trace_commands)
-                log(`setup_program.trace_commands: ${setup_program.trace_commands}`)
-                log(`setup_gcc.trace_commands: ${setup_gcc.trace_commands}`)
-                log(`setup_clang.trace_commands: ${setup_clang.trace_commands}`)
-            }
-            log(`${name}: ${value}`)
+            trace_commands.log(`${name}: ${value}`)
         }
 
         const {compiler, version} = normalizeCompiler(getInput(inputs, 'compiler'), getInput(inputs, 'version'))
@@ -116,7 +95,7 @@ async function run() {
         let version_patch = null
 
         if (['clang', 'gcc'].includes(compiler) && process.platform === 'linux') {
-            log(`compiler: ${compiler}... forwarding to setup ${compiler} action.`)
+            trace_commands.log(`compiler: ${compiler}... forwarding to setup ${compiler} action.`)
             let SetupResult = null
             if (compiler === 'clang') {
                 SetupResult = await setup_clang.main(
@@ -143,12 +122,12 @@ async function run() {
                 version_patch = SetupResult.version_patch
             }
         } else if (compiler === 'msvc') {
-            log(`compiler: ${compiler}... forwarding to setupMSVCDevCmd.`)
+            trace_commands.log(`compiler: ${compiler}... forwarding to setupMSVCDevCmd.`)
             const arch = process.env['PROCESSOR_ARCHITECTURE'] || 'x64'
             setup_msvc.setupMSVCDevCmd(arch, '', '', '', '', '')
             output_path = process.env['Path']
             for (const [key, value] of Object.entries(process.env)) {
-                log(`${key}: ${value}`)
+                trace_commands.log(`${key}: ${value}`)
             }
             cc = ''
             cxx = ''
@@ -161,7 +140,7 @@ async function run() {
             version_patch = semverRelease ? semverRelease.patch : 0
         } else if (['mingw', 'mingw32', 'mingw64', 'gcc', 'clang', 'clang-cl'].includes(compiler)) {
             core.startGroup(`🔍 Searching for ${compiler}`)
-            log(`compiler: ${compiler}... looking for compiler in PATH.`)
+            trace_commands.log(`compiler: ${compiler}... looking for compiler in PATH.`)
             let which_arg
             if (['mingw', 'mingw32', 'mingw64', 'gcc'].includes(compiler)) {
                 which_arg = 'gcc'
@@ -195,7 +174,7 @@ async function run() {
                 const {exitCode: exitCode, stdout} = await exec.getExecOutput(`"${output_path}"`, ['--version'])
                 const version_output = stdout.trim()
                 if (exitCode !== 0) {
-                    log(`Path program ${path} --version exited with code ${exitCode}`)
+                    trace_commands.log(`Path program ${path} --version exited with code ${exitCode}`)
                     release = '0.0.0'
                     version_major = '0'
                     version_minor = '0'
@@ -238,7 +217,7 @@ async function run() {
             ]
             for (const [name, value] of outputs) {
                 core.setOutput(name, value)
-                log(`Setting output ${name} to ${value}`)
+                trace_commands.log(`Setting output ${name} to ${value}`)
             }
             core.endGroup()
         } else {
@@ -257,6 +236,5 @@ if (require.main === module) {
 }
 
 module.exports = {
-    trace_commands,
     normalizeCompiler
 }

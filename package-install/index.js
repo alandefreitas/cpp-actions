@@ -9,20 +9,7 @@ const os = require('os')
 const semver = require('semver')
 const crypto = require('crypto')
 const uuidV4 = require('uuid').v4
-
-let trace_commands = false
-
-function log(...args) {
-    if (trace_commands) {
-        core.info(...args)
-    } else {
-        core.debug(...args)
-    }
-}
-
-function set_trace_commands(trace) {
-    trace_commands = trace
-}
+const trace_commands = require('trace-commands')
 
 function formatTime(ms) {
     if (ms < 1000) {
@@ -43,7 +30,7 @@ function isSudoRequired() {
 
 async function apt_get_main(inputs) {
     function fnlog(msg) {
-        log('apt_get_main: ' + msg)
+        trace_commands.log('apt_get_main: ' + msg)
     }
 
     core.startGroup('🔍 Find apt-get')
@@ -471,7 +458,7 @@ function normalizePath(path) {
 
 async function run() {
     function fnlog(msg) {
-        log('package-install: ' + msg)
+        trace_commands.log('package-install: ' + msg)
     }
 
     try {
@@ -501,11 +488,9 @@ async function run() {
         }
 
         // Resolve paths
-        if (process.env['ACTIONS_STEP_DEBUG'] === 'true') {
-            // Force trace-commands
-            inputs.trace_commands = true
+        if (inputs.trace_commands) {
+            trace_commands.set_trace_commands(true)
         }
-        set_trace_commands(inputs.trace_commands)
 
         // ----------------------------------------------
         // patch apt-get packages for vcpkg
@@ -561,7 +546,5 @@ if (require.main === module) {
 }
 
 module.exports = {
-    trace_commands,
-    set_trace_commands,
     main
 }

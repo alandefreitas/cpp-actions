@@ -4,29 +4,14 @@ const semver = require('semver')
 const fs = require('fs')
 const setup_program = require('setup-program')
 const path = require('path')
-
-setup_program.trace_commands = false
-let trace_commands = false
-
-function log(...args) {
-    if (trace_commands) {
-        core.info(...args)
-    } else {
-        core.debug(...args)
-    }
-}
-
-function set_trace_commands(trace) {
-    trace_commands = trace
-    setup_program.set_trace_commands(trace)
-}
+const trace_commands = require("trace-commands")
 
 function findCMakeVersionsImpl() {
     let cachedVersions = null // Cache variable to store the versions
 
     return async function() {
         function fnlog(msg) {
-            log('findCMakeVersions: ' + msg)
+            trace_commands.log('findCMakeVersions: ' + msg)
         }
 
         if (cachedVersions !== null) {
@@ -68,7 +53,7 @@ const findCMakeVersions = findCMakeVersionsImpl()
 
 function updateCMakeVersionFromFile(cmake_file, version, allVersions) {
     function fnlog(msg) {
-        log('updateCMakeVersionFromFile: ' + msg)
+        trace_commands.log('updateCMakeVersionFromFile: ' + msg)
     }
 
     if (!cmake_file) {
@@ -210,7 +195,7 @@ function generateCMakeURL(version, architecture, fnlog) {
 
 async function main(inputs, subgroups = true) {
     function fnlog(msg) {
-        log('setup-cmake: ' + msg)
+        trace_commands.log('setup-cmake: ' + msg)
     }
 
     let {
@@ -399,7 +384,7 @@ async function main(inputs, subgroups = true) {
 
 async function run() {
     function fnlog(msg) {
-        log('setup-cmake: ' + msg)
+        trace_commands.log('setup-cmake: ' + msg)
     }
 
     try {
@@ -414,14 +399,10 @@ async function run() {
             check_latest: core.getBooleanInput('check-latest'),
             update_environment: core.getBooleanInput('update-environment')
         }
-        if (process.env['ACTIONS_STEP_DEBUG'] === 'true') {
-            // Force trace-commands
-            inputs.trace_commands = true
+
+        if (inputs.trace_commands) {
+            trace_commands.set_trace_commands(true)
         }
-        trace_commands = inputs['trace_commands']
-        set_trace_commands(trace_commands)
-        fnlog(`setup-cmake.trace_commands: ${trace_commands}`)
-        fnlog(`setup-program.trace_commands: ${setup_program.trace_commands}`)
 
         for (const [name, value] of Object.entries(inputs)) {
             fnlog(`${name}: ${value}`)
@@ -463,7 +444,5 @@ if (require.main === module) {
 }
 
 module.exports = {
-    trace_commands,
-    set_trace_commands,
     main
 }

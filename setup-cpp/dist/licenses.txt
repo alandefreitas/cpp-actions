@@ -121,6 +121,9 @@ Boost Software License 1.0
 setup-program
 Boost Software License 1.0
 
+trace-commands
+Boost Software License 1.0
+
 tunnel
 MIT
 The MIT License (MIT)

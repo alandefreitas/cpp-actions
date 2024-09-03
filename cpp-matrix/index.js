@@ -6,14 +6,7 @@ const setup_program = require('setup-program')
 const Handlebars = require('handlebars')
 const fs = require('fs')
 const path = require('path')
-
-let trace_commands = false
-
-function log(...args) {
-    if (trace_commands) {
-        console.log(...args)
-    }
-}
+const trace_commands = require('trace-commands')
 
 function isTruthy(s) {
     if (typeof s === 'string') {
@@ -175,7 +168,7 @@ function normalizeCompilerName(name) {
 async function findVersionsFromTags(name, repo, file, regex) {
     const versionsFromFile = setup_program.readVersionsFromFile(file)
     if (versionsFromFile !== null) {
-        log(`${name} versions (from file): ` + versionsFromFile)
+        trace_commands.log(`${name} versions (from file): ` + versionsFromFile)
         return versionsFromFile
     }
     const tags = await setup_program.fetchGitTags(repo, {
@@ -189,7 +182,7 @@ async function findVersionsFromTags(name, repo, file, regex) {
         }
     }
     versions = versions.sort(semver.compare)
-    log(`${name} versions: ` + versions)
+    trace_commands.log(`${name} versions: ` + versions)
     setup_program.saveVersionsToFile(versions, file)
     return versions
 }
@@ -318,7 +311,7 @@ function getSubrangePolicyStr(policy) {
 
 function splitRanges(range, versions, policy = SubrangePolicies.ONE_PER_MAJOR) {
     function fnlog(msg) {
-        log('splitRanges: ' + msg)
+        trace_commands.log('splitRanges: ' + msg)
     }
 
     if (versions.length === 0) {
@@ -1293,7 +1286,7 @@ function setOS(matrix) {
 
 async function generateMatrix(inputs) {
     function fnlog(msg) {
-        log('generateMatrix: ' + msg)
+        trace_commands.log('generateMatrix: ' + msg)
     }
 
     let matrix = []
@@ -1363,9 +1356,9 @@ async function generateMatrix(inputs) {
     }
 
     function printMatrix() {
-        log(`Matrix (${matrix.length} entries):`)
+        trace_commands.log(`Matrix (${matrix.length} entries):`)
         matrix.forEach(obj => {
-            log(`- ${JSON.stringify(obj)}`)
+            trace_commands.log(`- ${JSON.stringify(obj)}`)
         })
     }
 
@@ -1430,9 +1423,9 @@ async function generateMatrix(inputs) {
         core.startGroup('📋 C++ Matrix Summary')
         const table = generateTable(matrix, inputs)
         core.summary.addHeading('C++ Test Matrix').addTable(table).write().then(result => {
-            log('Table generated', result)
+            trace_commands.log('Table generated', result)
         }).catch(error => {
-            log('An error occurred generating the table:', error)
+            trace_commands.log('An error occurred generating the table:', error)
         })
         core.info('Summary table generated')
         core.endGroup()
@@ -1529,7 +1522,7 @@ function getAllFactors(latest_factors, factors) {
 
 function generateTable(matrix, inputs) {
     function fnlog(msg) {
-        log('generateTable: ' + msg)
+        trace_commands.log('generateTable: ' + msg)
     }
 
     const {latest_factors, factors} = inputs
@@ -1801,7 +1794,9 @@ async function run() {
             trace_commands: core.getBooleanInput('trace-commands')
         }
 
-        trace_commands = isTruthy(inputs.trace_commands) || process.env['ACTIONS_STEP_DEBUG'] === 'true'
+        if (inputs.trace_commands) {
+            trace_commands.set_trace_commands(true)
+        }
 
         // Normalize compiler names in the keys of compiler_versions,
         // latest_factors, factors, combinatorial_factors

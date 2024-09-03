@@ -3232,6 +3232,9 @@ Apache-2.0
 tr46
 MIT
 
+trace-commands
+Boost Software License 1.0
+
 traverse
 MIT/X11
 Copyright 2010 James Halliday (mail@substack.net)

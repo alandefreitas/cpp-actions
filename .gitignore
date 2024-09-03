@@ -76,3 +76,8 @@ gh-md-toc
 *.exe
 *.out
 *.app
+
+# Common packages
+common/*/dist
+common/trace-commands/dist
+

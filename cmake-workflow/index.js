@@ -7,26 +7,11 @@ const path = require('path')
 const exec = require('@actions/exec')
 const io = require('@actions/io')
 const os = require('os')
-
-setup_cmake.trace_commands = false
-let trace_commands = false
-
-function log(...args) {
-    if (trace_commands) {
-        core.info(...args)
-    } else {
-        core.debug(...args)
-    }
-}
-
-function set_trace_commands(trace) {
-    trace_commands = trace
-    setup_cmake.set_trace_commands(trace)
-}
+const trace_commands = require('trace-commands')
 
 function createCMakeConfigureAnnotations(output, inputs) {
     function fnlog(msg) {
-        log('createCMakeConfigureAnnotations: ' + msg)
+        trace_commands.log('createCMakeConfigureAnnotations: ' + msg)
     }
 
     // A CMake configure warning/error message looks like this regex followed
@@ -92,7 +77,7 @@ function createCMakeConfigureAnnotations(output, inputs) {
 
 function createCMakeBuildAnnotations(output, inputs) {
     function fnlog(msg) {
-        log('createCMakeBuildAnnotations: ' + msg)
+        trace_commands.log('createCMakeBuildAnnotations: ' + msg)
     }
 
     // A CMake build warning/error message is actually a warning/error
@@ -225,7 +210,7 @@ function createCMakeBuildAnnotations(output, inputs) {
 
 function createAnnotationsFromMessage(messages) {
     function fnlog(msg) {
-        log('createAnnotationsFromMessage: ' + msg)
+        trace_commands.log('createAnnotationsFromMessage: ' + msg)
     }
 
     for (const message of messages) {
@@ -249,7 +234,7 @@ function createAnnotationsFromMessage(messages) {
 
 function createCMakeTestAnnotations(output, inputs) {
     function fnlog(msg) {
-        log('createCMakeTestAnnotations: ' + msg)
+        trace_commands.log('createCMakeTestAnnotations: ' + msg)
     }
 
     // A CMake test warning/error message is actually an error message
@@ -339,24 +324,24 @@ function readAndValidatePresetFile(presetPath, supportedPresetsVersion) {
     try {
         presetJson = JSON.parse(presetFileContents)
     } catch (error) {
-        log(`Failed to parse preset file: ${error}`)
+        trace_commands.log(`Failed to parse preset file: ${error}`)
         return {exists, supported, presetJson}
     }
     if (typeof presetJson !== 'object') {
-        log(`Preset file is not an object`)
+        trace_commands.log(`Preset file is not an object`)
         return {exists, supported, presetJson}
     }
     if (!('version' in presetJson)) {
-        log(`Preset file does not have a 'version' field`)
+        trace_commands.log(`Preset file does not have a 'version' field`)
         return {exists, supported, presetJson}
     }
     if (typeof presetJson['version'] !== 'number') {
-        log(`Preset file 'version' field is not a number`)
+        trace_commands.log(`Preset file 'version' field is not a number`)
         return {exists, supported, presetJson}
     }
     const presetVersion = presetJson['version']
     if (presetVersion > supportedPresetsVersion) {
-        log(`Preset file version ${presetVersion} is greater than the maximum supported version ${supportedPresetsVersion}`)
+        trace_commands.log(`Preset file version ${presetVersion} is greater than the maximum supported version ${supportedPresetsVersion}`)
         return {exists, supported, presetJson}
     }
     // The preset file is supported
@@ -492,7 +477,7 @@ function resolvePreset(inputs, setupCMakeOutputs) {
     // Apply preset manually:
     // Check if at least the main preset file exists
     if (!exists) {
-        log(`Preset file not found: ${presetPath}`)
+        trace_commands.log(`Preset file not found: ${presetPath}`)
         return
     }
 
@@ -516,11 +501,11 @@ function resolvePreset(inputs, setupCMakeOutputs) {
     // Find the main preset
     let mainPreset = getPreset(inputs.preset, mergedPresetJson)
     if (!mainPreset) {
-        log(`Preset ${inputs.preset} not found`)
+        trace_commands.log(`Preset ${inputs.preset} not found`)
         return
     }
     if (mainPreset['inherits'] && !Array.isArray(mainPreset['inherits']) && typeof mainPreset['inherits'] !== 'string') {
-        log(`Preset ${inputs.preset} has an invalid inherits field`)
+        trace_commands.log(`Preset ${inputs.preset} has an invalid inherits field`)
         return
     }
     if (mainPreset['inherits'] && typeof mainPreset['inherits'] === 'string') {
@@ -540,12 +525,12 @@ function resolvePreset(inputs, setupCMakeOutputs) {
         const inherits = [...mainPreset['inherits']]
         for (const inherit of inherits) {
             if (inheritedPresetNames.includes(inherit)) {
-                log(`Inherited preset ${inherit} already inherited`)
+                trace_commands.log(`Inherited preset ${inherit} already inherited`)
                 continue
             }
             const inheritedPreset = getPreset(inherit, mergedPresetJson)
             if (!inheritedPreset) {
-                log(`Inherited preset ${inherit} not found`)
+                trace_commands.log(`Inherited preset ${inherit} not found`)
                 continue
             }
             mainPreset = mergeCMakeConfigurePresetObject(mainPreset, inheritedPreset)
@@ -699,7 +684,7 @@ function resolvePreset(inputs, setupCMakeOutputs) {
 
 async function setupDefaultGenerator(inputs) {
     function fnlog(msg) {
-        log('setupDefaultGenerator: ' + msg)
+        trace_commands.log('setupDefaultGenerator: ' + msg)
     }
 
     // Execute and get the output of:
@@ -740,7 +725,7 @@ async function setupDefaultGenerator(inputs) {
 
 async function resolveInputParameters(inputs, setupCMakeOutputs) {
     function fnlog(msg) {
-        log('resolveInputParameters: ' + msg)
+        trace_commands.log('resolveInputParameters: ' + msg)
     }
 
     // ----------------------------------------------
@@ -812,6 +797,7 @@ async function resolveInputParameters(inputs, setupCMakeOutputs) {
         }
         return compiler
     }
+
     inputs.cc = resolveCompilerPath(inputs.cc)
     core.info(`🧩 cc: ${inputs.cc}`)
     inputs.cxx = resolveCompilerPath(inputs.cxx)
@@ -848,8 +834,6 @@ async function resolveInputParameters(inputs, setupCMakeOutputs) {
     // ----------------------------------------------
     // Print the adjusted parameters
     // ----------------------------------------------
-    fnlog(`🧩 cmake-workflow.trace_commands: ${trace_commands}`)
-    fnlog(`🧩 setup-cmake.trace_commands: ${setup_cmake.trace_commands}`)
     for (const [name, value] of Object.entries(inputs)) {
         core.info(`🧩 ${name.replaceAll('_', '-')}: ${JSON.stringify(value)}`)
     }
@@ -903,7 +887,7 @@ async function downloadSourceCode(inputs) {
 
 async function applyPatches(inputs) {
     function fnlog(msg) {
-        log('applyPatches: ' + msg)
+        trace_commands.log('applyPatches: ' + msg)
     }
 
     if (!inputs.patches) {
@@ -936,7 +920,7 @@ async function applyPatches(inputs) {
 
 async function main(inputs) {
     function fnlog(msg) {
-        log('cmake-workflow: ' + msg)
+        trace_commands.log('cmake-workflow: ' + msg)
     }
 
     // ----------------------------------------------
@@ -1386,7 +1370,7 @@ async function main(inputs) {
                     cpack_args.push('-C')
                     cpack_args.push(inputs.build_type || 'Release')
                 }
-                if (trace_commands) {
+                if (trace_commands.enabled()) {
                     cpack_args.push('--verbose')
                 }
                 if (inputs.package_name) {
@@ -1551,7 +1535,7 @@ async function main(inputs) {
                 packages_dir,
                 {retentionDays: inputs.package_retention_days}
             )
-            log(`Created artifact with id: ${id} (bytes: ${size}`)
+            trace_commands.log(`Created artifact with id: ${id} (bytes: ${size}`)
             core.endGroup()
         }
     }
@@ -1690,7 +1674,7 @@ function parseExtraArgsEntry(extra_args) {
 
 function parseExtraArgs(extra_args) {
     function fnlog(msg) {
-        log('parseExtraArgs: ' + msg)
+        trace_commands.log('parseExtraArgs: ' + msg)
     }
 
     if (extra_args.length === 0) {
@@ -1814,7 +1798,7 @@ function applyPresetMacros(value, allInputs) {
 
 async function run() {
     function fnlog(msg) {
-        log('cmake-workflow: ' + msg)
+        trace_commands.log('cmake-workflow: ' + msg)
     }
 
     try {
@@ -1871,19 +1855,11 @@ async function run() {
             trace_commands: core.getBooleanInput('trace-commands')
         }
 
-        if (process.env['ACTIONS_STEP_DEBUG'] === 'true') {
-            // Force trace-commands
-            inputs.trace_commands = true
-            trace_commands = true
+        if (inputs.trace_commands) {
+            trace_commands.set_trace_commands(true)
         }
-        trace_commands = inputs.trace_commands
-        set_trace_commands(trace_commands)
-        setup_cmake.set_trace_commands(trace_commands)
-        setup_program.set_trace_commands(trace_commands)
 
         core.startGroup('📥 Workflow Inputs')
-        fnlog(`🧩 cmake-workflow.trace_commands: ${trace_commands}`)
-        fnlog(`🧩 setup-cmake.trace_commands: ${setup_cmake.trace_commands}`)
         for (const [name, value] of Object.entries(inputs)) {
             core.info(`🧩 ${name.replaceAll('_', '-')}: ${JSON.stringify(value)}`)
         }
@@ -1936,8 +1912,6 @@ if (require.main === module) {
 }
 
 module.exports = {
-    trace_commands,
-    set_trace_commands,
     parseExtraArgsEntry,
     main
 }

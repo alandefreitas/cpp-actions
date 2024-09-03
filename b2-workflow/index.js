@@ -4,20 +4,7 @@ const path = require('path')
 const exec = require('@actions/exec')
 const io = require('@actions/io')
 const os = require('os')
-
-let trace_commands = false
-
-function log(...args) {
-    if (trace_commands) {
-        core.info(...args)
-    } else {
-        core.debug(...args)
-    }
-}
-
-function set_trace_commands(trace) {
-    trace_commands = trace
-}
+const trace_commands = require('trace-commands')
 
 function numberOfCpus() {
     const result = typeof os.availableParallelism === 'function'
@@ -31,7 +18,7 @@ function numberOfCpus() {
 
 async function main(inputs) {
     function fnlog(msg) {
-        log('b2-workflow: ' + msg)
+        trace_commands.log('b2-workflow: ' + msg)
     }
 
     // ----------------------------------------------
@@ -433,7 +420,7 @@ function parseExtraArgs(extra_args) {
 
 async function run() {
     function fnlog(msg) {
-        log('b2-workflow: ' + msg)
+        trace_commands.log('b2-workflow: ' + msg)
     }
 
     try {
@@ -486,13 +473,9 @@ async function run() {
 
         // Resolve paths
         inputs.source_dir = path.resolve(inputs.source_dir)
-        if (process.env['ACTIONS_STEP_DEBUG'] === 'true') {
-            // Force trace-commands
-            inputs.trace_commands = true
-            trace_commands = true
+        if (inputs.trace_commands) {
+            trace_commands.set_trace_commands(true)
         }
-        trace_commands = inputs.trace_commands
-        set_trace_commands(trace_commands)
 
         core.startGroup('📥 Workflow Inputs')
         fnlog(`🧩 b2-workflow.trace_commands: ${trace_commands}`)
@@ -522,7 +505,5 @@ if (require.main === module) {
 }
 
 module.exports = {
-    trace_commands,
-    set_trace_commands,
     main
 }

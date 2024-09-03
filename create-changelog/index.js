@@ -3,20 +3,7 @@ const fs = require('fs')
 const path = require('path')
 const exec = require('@actions/exec')
 const axios = require('axios')
-
-let trace_commands = false
-
-function log(...args) {
-    if (trace_commands) {
-        core.info(...args)
-    } else {
-        core.debug(...args)
-    }
-}
-
-function set_trace_commands(trace) {
-    trace_commands = trace
-}
+const trace_commands = require('trace-commands')
 
 class Commit {
     constructor() {
@@ -322,7 +309,7 @@ function removeTagDuplicates(tags, comparisonFields) {
 
 async function processTags(projectPath, tagPattern, repoUrl, accessToken) {
     function fnlog(msg) {
-        log('processTags: ' + msg)
+        trace_commands.log('processTags: ' + msg)
     }
 
     let tags = await getLocalTags(projectPath, tagPattern)
@@ -341,32 +328,32 @@ async function processTags(projectPath, tagPattern, repoUrl, accessToken) {
 
 async function getIssueAuthor(repoUrl, issueNumber, accessToken) {
     // Extract the owner and repository name from the URL
-    const urlParts = repoUrl.replace(/\/$/, '').split('/');
-    const owner = urlParts[urlParts.length - 2];
-    const repository = urlParts[urlParts.length - 1];
+    const urlParts = repoUrl.replace(/\/$/, '').split('/')
+    const owner = urlParts[urlParts.length - 2]
+    const repository = urlParts[urlParts.length - 1]
 
     // Construct the GitHub API URL for the issue
-    const url = `https://api.github.com/repos/${owner}/${repository}/issues/${issueNumber}`;
+    const url = `https://api.github.com/repos/${owner}/${repository}/issues/${issueNumber}`
     const headers = {
-        'Accept': 'application/vnd.github.v3+json',
-    };
+        'Accept': 'application/vnd.github.v3+json'
+    }
 
     if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
+        headers['Authorization'] = `Bearer ${accessToken}`
     }
 
     try {
-        const response = await axios.get(url, { headers });
+        const response = await axios.get(url, {headers})
         if (response.status === 200) {
-            const issueData = response.data;
-            const author = issueData.user.login;
-            return author;
+            const issueData = response.data
+            const author = issueData.user.login
+            return author
         }
     } catch (error) {
-        console.error(`Error fetching issue author: ${error.message}`);
+        console.error(`Error fetching issue author: ${error.message}`)
     }
 
-    return null;
+    return null
 }
 
 function normalizeType(s) {
@@ -389,9 +376,9 @@ function normalizeType(s) {
         'version': 'release',
         'integration': 'ci',
         'break': 'breaking',
-        'undo': 'revert',
-    };
-    return categoryMapping[s.toLowerCase()] || s;
+        'undo': 'revert'
+    }
+    return categoryMapping[s.toLowerCase()] || s
 }
 
 async function populateConventional(commit, repoUrl, versionPattern, tags) {
@@ -649,7 +636,7 @@ async function getGithubCommits(repoUrl, branch, versionPattern, tags, accessTok
 
 async function processCommits(projectPath, repoUrl, versionPattern, tags, repoBranch, accessToken, checkUnconventional) {
     function fnlog(msg) {
-        log('processCommits: ' + msg)
+        trace_commands.log('processCommits: ' + msg)
     }
 
     let commits = await getLocalCommits(projectPath, repoUrl, versionPattern, tags)
@@ -1001,7 +988,7 @@ function capitalizeSentences(text) {
 
 function categorizeCommits(commits) {
     function fnlog(msg) {
-        log('categorizeCommits: ' + msg)
+        trace_commands.log('categorizeCommits: ' + msg)
     }
 
     let parentRelease = null
@@ -1052,8 +1039,8 @@ function humanize(s) {
         'breaking': 'Breaking',
         'revert': 'Revert',
         'other': 'Other'
-    };
-    return mapping[s] || s;
+    }
+    return mapping[s] || s
 }
 
 function commitTypeDescription(s) {
@@ -1073,13 +1060,13 @@ function commitTypeDescription(s) {
         'breaking': 'Breaking changes and compatibility modifications',
         'revert': 'Reverted changes to previous versions',
         'other': 'Other changes not covered by specific categories'
-    };
-    return mapping[s] || '';
+    }
+    return mapping[s] || ''
 }
 
 function generateOutput(changes, changeTypePriority, args, repoUrl, authors, parentRelease) {
     function fnlog(msg) {
-        log('generateOutput: ' + msg)
+        trace_commands.log('generateOutput: ' + msg)
     }
 
     let output = ''
@@ -1220,7 +1207,7 @@ function writeChangelog(outputPath, output) {
 
 async function main(inputs) {
     function fnlog(msg) {
-        log('create-changelog: ' + msg)
+        trace_commands.log('create-changelog: ' + msg)
     }
 
     core.startGroup('🧩 Adjusting parameters')
@@ -1317,7 +1304,7 @@ function normalizePath(path) {
 
 async function run() {
     function fnlog(msg) {
-        log('create-changelog: ' + msg)
+        trace_commands.log('create-changelog: ' + msg)
     }
 
     try {
@@ -1344,12 +1331,9 @@ async function run() {
         // Set trace_commands when in debug mode or when
         // the user explicitly sets it to true.
         // This enables the log() function to print to the console.
-        if (process.env['ACTIONS_STEP_DEBUG'] === 'true') {
-            // Force trace-commands
-            inputs.trace_commands = true
+        if (inputs.trace_commands) {
+            trace_commands.set_trace_commands(true)
         }
-        trace_commands = inputs.trace_commands
-        set_trace_commands(trace_commands)
 
         // Print a summary of the inputs
         core.startGroup('📥 Workflow Inputs')
@@ -1380,8 +1364,6 @@ if (require.main === module) {
 }
 
 module.exports = {
-    trace_commands,
-    set_trace_commands,
     Commit,
     GitHubUser,
     getCurrentBranch,

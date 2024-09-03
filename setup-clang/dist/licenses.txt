@@ -115,6 +115,9 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 setup-program
 Boost Software License 1.0
 
+trace-commands
+Boost Software License 1.0
+
 tunnel
 MIT
 The MIT License (MIT)

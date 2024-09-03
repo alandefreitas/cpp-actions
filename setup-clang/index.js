@@ -7,23 +7,7 @@ const exec = require('@actions/exec')
 const path = require('path')
 const httpm = require('@actions/http-client')
 const setup_program = require('setup-program')
-// const github = require('@actions/github')
-
-setup_program.trace_commands = false
-let trace_commands = false
-
-function log(...args) {
-    if (trace_commands) {
-        core.info(...args)
-    } else {
-        core.debug(...args)
-    }
-}
-
-function set_trace_commands(trace) {
-    trace_commands = trace
-    setup_program.set_trace_commands(trace)
-}
+const trace_commands = require('trace-commands')
 
 function findClangVersionsImpl() {
     let cachedVersions = null // Cache variable to store the versions
@@ -38,7 +22,7 @@ function findClangVersionsImpl() {
         const versionsFromFile = setup_program.readVersionsFromFile('clang-versions.txt')
         if (versionsFromFile !== null) {
             cachedVersions = versionsFromFile
-            log('Clang versions (from file): ' + versionsFromFile)
+            trace_commands.log('Clang versions (from file): ' + versionsFromFile)
             return versionsFromFile
         }
 
@@ -53,12 +37,12 @@ function findClangVersionsImpl() {
                 }
             }
             versions = versions.sort(semver.compare)
-            log('Clang versions: ' + versions)
+            trace_commands.log('Clang versions: ' + versions)
             cachedVersions = versions
             setup_program.saveVersionsToFile(versions, 'clang-versions.txt')
             return versions
         } catch (error) {
-            log('Error fetching Clang versions: ' + error)
+            trace_commands.log('Error fetching Clang versions: ' + error)
             return []
         }
     }
@@ -83,15 +67,15 @@ function removeClangPrefix(version) {
 function clangDownloadCandidates(version, allVersions, check_latest) {
     core.info(`Fetching Clang ${version} from release binaries`)
     // Determine the release to install and version candidates to fall back to
-    log('All Clang versions: ' + allVersions)
+    trace_commands.log('All Clang versions: ' + allVersions)
     const maxV = semver.maxSatisfying(allVersions, version)
-    log(`Max version in requirement "${version}": ` + maxV)
+    trace_commands.log(`Max version in requirement "${version}": ` + maxV)
     const minV = semver.minSatisfying(allVersions, version)
-    log(`Min version in requirement "${version}": ` + minV)
+    trace_commands.log(`Min version in requirement "${version}": ` + minV)
     const release = check_latest ? maxV : minV
-    log(`Target release ${release} (check latest: ${check_latest})`)
+    trace_commands.log(`Target release ${release} (check latest: ${check_latest})`)
     const srelease = semver.parse(release)
-    log(`Parsed release "${release}" is "${srelease.toString()}"`)
+    trace_commands.log(`Parsed release "${release}" is "${srelease.toString()}"`)
 
     // Determine version candidates we can fall back to by order of preference
     const major = srelease.major
@@ -117,12 +101,12 @@ function clangDownloadCandidates(version, allVersions, check_latest) {
             version_candidates.push(v)
         }
     }
-    log(`Version candidates: [${version_candidates.join(', ')}]`)
+    trace_commands.log(`Version candidates: [${version_candidates.join(', ')}]`)
 
     // Determine alternative ubuntu versions to try if the current one fails
     // to have a valid URL
     const cur_ubuntu_version = setup_program.getCurrentUbuntuVersion()
-    log(`Ubuntu version: ${cur_ubuntu_version}`)
+    trace_commands.log(`Ubuntu version: ${cur_ubuntu_version}`)
 
     // Get list of all ubuntu version candidates in order of preference
     // based on distance from the current ubuntu version
@@ -146,18 +130,18 @@ function clangDownloadCandidates(version, allVersions, check_latest) {
         const distB = Math.abs(bMajor - curMajor) * 100 + Math.abs(bMinor - curMinor)
         return distA - distB
     })
-    log(`Ubuntu version binaries: [${ubuntu_versions.join(', ')}]`)
+    trace_commands.log(`Ubuntu version binaries: [${ubuntu_versions.join(', ')}]`)
     return {version_candidates, ubuntu_versions}
 }
 
 function generateClangUrlsFor(version_candidate, ubuntu_version) {
-    log(`Trying to fetch Clang ${version_candidate} for Ubuntu ${ubuntu_version}`)
+    trace_commands.log(`Trying to fetch Clang ${version_candidate} for Ubuntu ${ubuntu_version}`)
     const ubuntu_image = `ubuntu-${ubuntu_version}`
-    log(`Ubuntu image: ${ubuntu_image}`)
+    trace_commands.log(`Ubuntu image: ${ubuntu_image}`)
     const clang_basename = `clang+llvm-${version_candidate}-x86_64-linux-gnu-${ubuntu_image}`
-    log(`Clang basename: ${clang_basename}`)
+    trace_commands.log(`Clang basename: ${clang_basename}`)
     const clang_filename = `${clang_basename}.tar.xz`
-    log(`Clang filename: ${clang_filename}`)
+    trace_commands.log(`Clang filename: ${clang_filename}`)
 
     const llvm_project_url = `https://github.com/llvm/llvm-project/releases/download/llvmorg-${version_candidate}/${clang_filename}`
 
@@ -198,7 +182,7 @@ async function install_program_from_clang_urls(ubuntu_versions, version_candidat
             } = generateClangUrlsFor(version_candidate, ubuntu_version)
             for (const clang_url of [llvm_project_url, llvm_releases_url, old_llvm_releases_url]) {
                 if (!await urlExists(clang_url)) {
-                    log(`Skipping ${clang_url} because it does not exist`)
+                    trace_commands.log(`Skipping ${clang_url} because it does not exist`)
                 } else {
                     const __ret = await setup_program.install_program_from_url(['clang'], version_candidate, check_latest, clang_url, update_environment, '/usr/local')
                     output_version = __ret.output_version
@@ -248,7 +232,7 @@ async function main(version, paths, check_latest, update_environment) {
     if (!output_path) {
         core.startGroup('Find clang in system paths')
         core.info(`Searching for Clang ${version} in PATH`)
-        log(`Arguments: ${paths}, ['clang++'], ${version}, ${check_latest}`)
+        trace_commands.log(`Arguments: ${paths}, ['clang++'], ${version}, ${check_latest}`)
         const __ret = await setup_program.find_program_in_system_paths(paths, ['clang++'], version, check_latest)
         output_version = __ret.output_version
         output_path = __ret.output_path
@@ -267,10 +251,10 @@ async function main(version, paths, check_latest, update_environment) {
             .filter((value) => value >= 10) // only major > 10
             .filter((value, index, self) => self.indexOf(value) === index) // no replicates
             .sort((a, b) => b - a) // descending order
-        log(`All version major candidates: [${allVersionMajors.join(', ')}]`)
+        trace_commands.log(`All version major candidates: [${allVersionMajors.join(', ')}]`)
 
         const ubuntuName = setup_program.getCurrentUbuntuName()
-        log(`Ubuntu version name: ${ubuntuName}`)
+        trace_commands.log(`Ubuntu version name: ${ubuntuName}`)
         if (ubuntuName !== null && allVersionMajors.length !== 0 && ['bionic', 'focal', 'jammy', 'kinetic', 'lunar', 'mantic'].includes(ubuntuName)) {
             // Adding a key requires gnupg
             await setup_program.find_program_with_apt(['gnupg'], '*', true)
@@ -290,7 +274,7 @@ async function main(version, paths, check_latest, update_environment) {
             let add_apt_repository_path = null
             try {
                 add_apt_repository_path = await io.which('add-apt-repository')
-                log(`add-apt-repository found at ${add_apt_repository_path}`)
+                trace_commands.log(`add-apt-repository found at ${add_apt_repository_path}`)
             } catch (error) {
                 add_apt_repository_path = null
             }
@@ -299,14 +283,14 @@ async function main(version, paths, check_latest, update_environment) {
             if (add_apt_repository_path !== null && add_apt_repository_path !== '') {
                 for (const major of allVersionMajors) {
                     const ReleaseFileURL = `https://apt.llvm.org/${ubuntuName}/dists/llvm-toolchain-${ubuntuName}-${major}/Release`
-                    log(`Checking if ${ReleaseFileURL} exists`)
+                    trace_commands.log(`Checking if ${ReleaseFileURL} exists`)
                     if (!await urlExists(ReleaseFileURL)) {
-                        log(`Skipping repository for major version ${major} because ${ReleaseFileURL} does not exist`)
+                        trace_commands.log(`Skipping repository for major version ${major} because ${ReleaseFileURL} does not exist`)
                         continue
                     }
                     await setup_program.ensureAddAptRepositoryIsAvailable()
                     const repo = `deb https://apt.llvm.org/${ubuntuName}/ llvm-toolchain-${ubuntuName}-${major} main`
-                    log(`Adding repository "${repo}"`)
+                    trace_commands.log(`Adding repository "${repo}"`)
                     if (setup_program.isSudoRequired()) {
                         await exec.exec(`sudo -n add-apt-repository -y "${repo}"`, [], {ignoreReturnCode: true})
                     } else {
@@ -322,9 +306,9 @@ async function main(version, paths, check_latest, update_environment) {
         core.endGroup()
     } else {
         if (output_version !== null) {
-            log(`Skipping APT step because Clang ${output_version} was already found in ${output_path}`)
+            trace_commands.log(`Skipping APT step because Clang ${output_version} was already found in ${output_path}`)
         } else if (process.platform !== 'linux') {
-            log(`Skipping APT step because platform is ${process.platform}`)
+            trace_commands.log(`Skipping APT step because platform is ${process.platform}`)
         }
     }
 
@@ -338,7 +322,7 @@ async function main(version, paths, check_latest, update_environment) {
         output_path = __ret.output_path
         core.endGroup()
     } else /* output_version !== null */ {
-        log(`Skipping download step because Clang ${output_version} was already found in ${output_path}`)
+        trace_commands.log(`Skipping download step because Clang ${output_version} was already found in ${output_path}`)
     }
 
     // Create outputs
@@ -360,12 +344,12 @@ async function main(version, paths, check_latest, update_environment) {
         }
 
         if (!fs.existsSync(cc)) {
-            log(`Could not find ${cc}, using ${output_path} as cc instead`)
+            trace_commands.log(`Could not find ${cc}, using ${output_path} as cc instead`)
             cc = output_path
         }
 
         if (!fs.existsSync(cxx)) {
-            log(`Could not find ${cxx}, using ${output_path} as cxx instead`)
+            trace_commands.log(`Could not find ${cxx}, using ${output_path} as cxx instead`)
             cxx = output_path
         }
 
@@ -392,13 +376,13 @@ async function main(version, paths, check_latest, update_environment) {
             // if (setup_program.getCurrentUbuntuVersion() != '16.04') {
             //   const libstdcpp_path = path.join(dir, 'lib', 'libstdc++.so.6')
             //   if (fs.existsSync(libstdcpp_path)) {
-            //     log(`Removing ${libstdcpp_path} because it's not needed on Ubuntu 16.04`)
+            //     trace_commands.log(`Removing ${libstdcpp_path} because it's not needed on Ubuntu 16.04`)
             //     fs.unlinkSync(libstdcpp_path)
             //   } else {
-            //     log(`Skipping libstdc++ removal because ${libstdcpp_path} does not exist`)
+            //     trace_commands.log(`Skipping libstdc++ removal because ${libstdcpp_path} does not exist`)
             //   }
             // } else {
-            //   log(`Skipping libstdc++ removal because Ubuntu version is 16.04`)
+            //   trace_commands.log(`Skipping libstdc++ removal because Ubuntu version is 16.04`)
             // }
 
             // If it's installed from the url, we need to add the lib dirs to LD_LIBRARY_PATH,
@@ -416,18 +400,18 @@ async function main(version, paths, check_latest, update_environment) {
             for (const lib_dir of lib_dirs) {
                 if (fs.existsSync(lib_dir)) {
                     if (!LD_LIBRARY_PATHS.includes(lib_dir)) {
-                        log(`Adding ${lib_dir} to LD_LIBRARY_PATH`)
+                        trace_commands.log(`Adding ${lib_dir} to LD_LIBRARY_PATH`)
                         LD_LIBRARY_PATHS.push(lib_dir)
                     } else {
-                        log(`Skipping ${lib_dir} because it is already in LD_LIBRARY_PATH`)
+                        trace_commands.log(`Skipping ${lib_dir} because it is already in LD_LIBRARY_PATH`)
                     }
                 } else {
-                    log(`Skipping ${lib_dir} because it does not exist`)
+                    trace_commands.log(`Skipping ${lib_dir} because it does not exist`)
                 }
             }
             LD_LIBRARY_PATH = LD_LIBRARY_PATHS.join(':')
             if (LD_LIBRARY_PATH !== process.env.LD_LIBRARY_PATH) {
-                log(`Setting LD_LIBRARY_PATH to ${LD_LIBRARY_PATH}`)
+                trace_commands.log(`Setting LD_LIBRARY_PATH to ${LD_LIBRARY_PATH}`)
                 core.exportVariable('LD_LIBRARY_PATH', LD_LIBRARY_PATH)
             }
         }
@@ -447,20 +431,15 @@ async function run() {
         ]
 
         for (const [name, value] of inputs) {
-            if (name === 'trace_commands') {
-                trace_commands = value
-                if (process.env['ACTIONS_STEP_DEBUG'] === 'true') {
-                    // Force trace-commands
-                    trace_commands = true
-                }
-                setup_program.set_trace_commands(trace_commands)
-                log(`setup_program.trace_commands: ${setup_program.trace_commands}`)
-            }
-            log(`${name}: ${value}`)
+            trace_commands.log(`${name}: ${value}`)
         }
 
         function getInput(inputs, key) {
             return inputs.find(([name]) => name === key)[1]
+        }
+
+        if (getInput(inputs, 'trace_commands')) {
+            trace_commands.set_trace_commands(true)
         }
 
         let {
@@ -493,7 +472,7 @@ async function run() {
             ]
             for (const [name, value] of outputs) {
                 core.setOutput(name, value)
-                log(`Setting output ${name} to ${value}`)
+                trace_commands.log(`Setting output ${name} to ${value}`)
             }
         } else {
             core.setFailed('Cannot setup Clang')
@@ -511,7 +490,5 @@ if (require.main === module) {
 }
 
 module.exports = {
-    trace_commands,
-    set_trace_commands,
     main
 }
