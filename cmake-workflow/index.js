@@ -772,27 +772,49 @@ async function resolveInputParameters(inputs, setupCMakeOutputs) {
     }
 
     // ----------------------------------------------
-    // Identify complete compiler paths
+    // Find other cmake tools
     // ----------------------------------------------
     const ctest_path = path.join(setupCMakeOutputs.dir, 'ctest')
     core.info(`🧩 ctest_path: ${ctest_path}`)
     const cpack_path = path.join(setupCMakeOutputs.dir, 'cpack')
     core.info(`🧩 cpack_path: ${cpack_path}`)
-    if (inputs.cc && path.basename(inputs.cc) === inputs.cc) {
-        try {
-            inputs.cc = await io.which(inputs.cc)
-        } catch (error) {
-            fnlog(`Could not find ${inputs.cc} in PATH`)
+
+    // ----------------------------------------------
+    // Identify complete compiler paths
+    // ----------------------------------------------
+    function resolveCompilerPath(compiler) {
+        // If it's empty, there's nothing to resolve.
+        if (!compiler) {
+            return compiler
         }
+        // If it's only an application name, try to find it in PATH
+        const isNameOnly = path.basename(compiler) === compiler
+        if (isNameOnly) {
+            try {
+                return io.which(compiler)
+            } catch (error) {
+                fnlog(`Could not find ${compiler} in PATH`)
+                return compiler
+            }
+        }
+        // If it's a relative path, resolve it
+        const isRelative = compiler.startsWith('.')
+        if (isRelative) {
+            compiler = path.resolve(compiler)
+        }
+        // Check if we need to add .exe to the compiler path on windows
+        if (process.platform === 'win32' && !compiler.endsWith('.exe')) {
+            // Does the file exist with .exe and not without it?
+            const compilerWithExe = compiler + '.exe'
+            if (fs.existsSync(compilerWithExe) && !fs.existsSync(compiler)) {
+                compiler = compilerWithExe
+            }
+        }
+        return compiler
     }
+    inputs.cc = resolveCompilerPath(inputs.cc)
     core.info(`🧩 cc: ${inputs.cc}`)
-    if (inputs.cxx && path.basename(inputs.cxx) === inputs.cxx) {
-        try {
-            inputs.cxx = await io.which(inputs.cxx)
-        } catch (error) {
-            fnlog(`Could not find ${inputs.cxx} in PATH`)
-        }
-    }
+    inputs.cxx = resolveCompilerPath(inputs.cxx)
     core.info(`🧩 cxx: ${inputs.cxx}`)
 
     // ----------------------------------------------
