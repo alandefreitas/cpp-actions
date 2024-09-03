@@ -249,6 +249,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.8.6/index.html">v1.8.6</a>
+        </li>
+        <li class="version">
           <a href="../v1.8.5/index.html">v1.8.5</a>
         </li>
         <li class="version">
@@ -325,6 +328,7 @@
   <div class="version-menu">
     <a class="version is-current" href="cmake-workflow.html">master</a>
     <a class="version" href="../develop/actions/cmake-workflow.html">develop</a>
+    <a class="version" href="../v1.8.6/actions/cmake-workflow.html">v1.8.6</a>
     <a class="version" href="../v1.8.5/actions/cmake-workflow.html">v1.8.5</a>
     <a class="version" href="../v1.8.4/actions/cmake-workflow.html">v1.8.4</a>
     <a class="version" href="../v1.8.3/actions/cmake-workflow.html">v1.8.3</a>
@@ -430,6 +434,24 @@ annotations for CMake errors at the configure step and build errors emitted from
 </div>
 </div>
 <div class="sect1">
+<h2 id="_presets"><a class="anchor" href="#_presets"></a>Presets</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The action supports CMake presets. If a preset is defined, the action will use the values defined in the preset file
+for the configure step. The other options will be used to override the values defined in the preset.</p>
+</div>
+<div class="paragraph">
+<p>If the CMake version does not support presets, the action will attempt to parse the preset file and use the values
+defined in it for inputs that are not defined.</p>
+</div>
+<div class="paragraph">
+<p>The action also supports preset macros in the input values. For instance, if the <code>build-dir</code> is defined as
+<code>${sourceDir}/build/${hostSystemName}</code>, the action will replace this value with the actual values of the variables
+defined in the input options.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next steps</h2>
 <div class="sectionbody">
 <div class="paragraph">
@@ -511,14 +533,68 @@ the min CMake version that satisfies it.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>url</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">URL to the source code.</p>
+<p class="tableblock">If this input is defined, the action will download the source code from the URL and use it as the
+source directory.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>git-repository</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Git repository to clone.</p>
+<p class="tableblock">If this input is defined, the action will shallow clone the repository and use it as the source directory.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>git-tag</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Git branch name, tag or commit hash to checkout from the git repository.</p>
+<p class="tableblock">If this input is defined, the action will checkout this tag from the repository.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>download-dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Directory where the source code will be downloaded.</p>
+<p class="tableblock">If the input is not specified, the action will download the source code to the source directory.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>patches</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">List of patch files or directories to be copied to the source directory.</p>
+<p class="tableblock">The action will copy the files to the source directory before running the configure step.</p>
+<p class="tableblock">This is often useful when the source directory comes from a URL or git repository
+to patch the source files with CMake presets or include build scripts that are not part of the
+repository.</p>
+<p class="tableblock">The files will be copied in the order they are defined in the input.</p>
+<p class="tableblock">If a file is specified, the action will copy the file to the source directory with the
+same filename.</p>
+<p class="tableblock">If a directory is specified, the action will copy all files in the directory to the
+source directory.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Directory for the binaries relative to the source directory.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Directory for the binaries relative to the source directory.</p>
+<p class="tableblock">The build directory might come from a preset file or be defined by the user.</p>
+<p class="tableblock">If no preset file is specified and the user does not define the build directory,
+the action will use the default <code>build</code> directory.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>preset</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Name of the CMake preset to use.</p>
+<p class="tableblock">If a preset is defined, other options will be used by CMake to override
+the values defined in the preset.</p>
+<p class="tableblock">If the CMake version doesn&#8217;t support presets, the action will attempt
+to parse the preset file and use the values defined in it.</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Path to C compiler.</p>
 <p class="tableblock">If the input is not specified, the action will use the compiler defined by the environment variable <code>CC</code>.</p>
+<p class="tableblock">The value can be an absolute path or the name of an application to be found it PATH.
+If the value is a relative path starting with '.', the path is resolved relative to
+the current working directory.</p>
 <p class="tableblock">If the environment variable is not specified, the action will use the default compiler as identified by CMake.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
@@ -533,6 +609,9 @@ the min CMake version that satisfies it.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Path to C++ compiler.</p>
 <p class="tableblock">If the input is not specified, the action will use the compiler defined by the environment variable <code>CXX</code>.</p>
+<p class="tableblock">The value can be an absolute path or the name of an application to be found it PATH.
+If the value is a relative path starting with '.', the path is resolved relative to
+the current working directory.</p>
 <p class="tableblock">If the environment variable is not specified, the action will use the default compiler as identified by CMake.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
@@ -577,7 +656,16 @@ standard number with the exception of the latest standard.</p></td>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>generator-toolset</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Toolset specification for the generator, if supported.</p>
+<p class="tableblock">The option will be applied in the command line as the <code>-T</code> option.</p>
 <p class="tableblock">If not specified, the action will use the toolset defined by the environment variable <code>CMAKE_GENERATOR_TOOLSET</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default toolset for the generator.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>generator-architecture</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Architecture specification for the generator, if supported.</p>
+<p class="tableblock">The option will be applied in the command line as the <code>-A</code> option.</p>
+<p class="tableblock">If not specified, the action will use the architecture defined by the environment variable <code>CMAKE_GENERATOR_ARCHITECTURE</code>.</p>
 <p class="tableblock">If the environment variable is not specified, the action will use the default toolset for the generator.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
@@ -593,7 +681,8 @@ instead of <code>CMAKE_BUILD_TYPE</code>.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-target</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Targets to build instead of the default target.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Targets to build instead of the default target.</p>
+<p class="tableblock">This can be a single target or a list of targets separated by a <code>,</code>, <code>;</code> or space.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
