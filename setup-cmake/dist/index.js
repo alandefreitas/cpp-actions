@@ -72,9 +72,9 @@ function findCMakeVersionsImpl() {
 
 const findCMakeVersions = findCMakeVersionsImpl()
 
-function update_version_from_file(cmake_file, version, allVersions) {
+function updateCMakeVersionFromFile(cmake_file, version, allVersions) {
     function fnlog(msg) {
-        log('update_version_from_file: ' + msg)
+        log('updateCMakeVersionFromFile: ' + msg)
     }
 
     if (!cmake_file) {
@@ -97,7 +97,7 @@ function update_version_from_file(cmake_file, version, allVersions) {
             fnlog(`CMake file ${cmake_file_path} also does not exist`)
             return version
         }
-        return update_version_from_file(cmake_file_path, version, allVersions)
+        return updateCMakeVersionFromFile(cmake_file_path, version, allVersions)
     }
 
     // Read cmake_file
@@ -251,7 +251,7 @@ async function main(inputs, subgroups = true) {
     if (!version) {
         version = '*'
     }
-    version = update_version_from_file(cmake_file, version, allVersions)
+    version = updateCMakeVersionFromFile(cmake_file, version, allVersions)
     if (subgroups) {
         core.endGroup()
     }

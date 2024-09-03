@@ -329,7 +329,7 @@ function readAndValidatePresetFile(presetPath, supportedPresetsVersion) {
     let presetJson = {}
 
     const presetPathExists = fs.existsSync(presetPath)
-    const presetPathIsFile = fs.statSync(presetPath).isFile()
+    const presetPathIsFile = presetPathExists ? fs.statSync(presetPath).isFile() : false
     if (!presetPathExists || !presetPathIsFile) {
         core.info(`Preset file not found: ${presetPath}`)
         return {exists, supported, presetJson}
