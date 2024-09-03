@@ -1,5 +1,5 @@
 const core = require('@actions/core')
-const actions_artifact = require('@actions/artifact')
+const {DefaultArtifactClient} = require('@actions/artifact')
 const fs = require('fs')
 const setup_cmake = require('setup-cmake')
 const setup_program = require('setup-program')
@@ -1522,7 +1522,8 @@ async function main(inputs) {
             fnlog(`Retention days: ${inputs.package_retention_days}`)
             const packages_dir = path.dirname(common_prefix)
             fnlog(`Packages directory: ${packages_dir}`)
-            const {id, size} = await actions_artifact.create().uploadArtifact(
+            const artifact = new DefaultArtifactClient()
+            const {id, size} = await artifact.uploadArtifact(
                 artifact_name,
                 package_files,
                 packages_dir,
