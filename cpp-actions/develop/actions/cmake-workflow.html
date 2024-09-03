@@ -591,6 +591,9 @@ to parse the preset file and use the values defined in it.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Path to C compiler.</p>
 <p class="tableblock">If the input is not specified, the action will use the compiler defined by the environment variable <code>CC</code>.</p>
+<p class="tableblock">The value can be an absolute path or the name of an application to be found it PATH.
+If the value is a relative path starting with '.', the path is resolved relative to
+the current working directory.</p>
 <p class="tableblock">If the environment variable is not specified, the action will use the default compiler as identified by CMake.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
@@ -605,6 +608,9 @@ to parse the preset file and use the values defined in it.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Path to C++ compiler.</p>
 <p class="tableblock">If the input is not specified, the action will use the compiler defined by the environment variable <code>CXX</code>.</p>
+<p class="tableblock">The value can be an absolute path or the name of an application to be found it PATH.
+If the value is a relative path starting with '.', the path is resolved relative to
+the current working directory.</p>
 <p class="tableblock">If the environment variable is not specified, the action will use the default compiler as identified by CMake.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
@@ -674,7 +680,8 @@ instead of <code>CMAKE_BUILD_TYPE</code>.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-target</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Targets to build instead of the default target.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Targets to build instead of the default target.</p>
+<p class="tableblock">This can be a single target or a list of targets separated by a <code>,</code>, <code>;</code> or space.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
