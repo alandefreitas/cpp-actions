@@ -1130,20 +1130,12 @@ function generateOutput(changes, changeTypePriority, args, repoUrl, authors, par
 
                     // Footer keys
                     if (commit.footers) {
-                        output += ' ('
-                        let first = true
-                        for (const [key, value] of commit.footers) {
-                            if (!first) {
-                                output += ', '
-                            }
-                            first = false
-                            if (value.startsWith('#')) {
-                                output += `${key} ${value}`
-                            } else {
-                                output += `${key}: ${value}`
-                            }
+                        const footerStrings = Object.entries(commit.footers).map(([key, value]) =>
+                            value.startsWith('#') ? `${key} ${value}` : `${key}: ${value}`
+                        )
+                        if (footerStrings.length > 0) {
+                            output += ` (${footerStrings.join(', ')})`
                         }
-                        output += ')'
                     }
 
                     // Commit ids
@@ -1197,7 +1189,7 @@ function generateOutput(changes, changeTypePriority, args, repoUrl, authors, par
 
     fnlog('CHANGELOG Contents:\n', output)
 
-    return {output, footnotesOutput}
+    return output
 }
 
 function writeChangelog(outputPath, output) {
@@ -1260,22 +1252,20 @@ async function main(inputs) {
 
     // Generate output
     core.startGroup('📄 Generating output')
-    const {
-        output,
-        footnotesOutput
-    } = generateOutput(changes, changeTypePriority, inputs, inputs.repoUrl, authors, parentRelease)
+    const outputContents = generateOutput(
+        changes, changeTypePriority, inputs, inputs.repoUrl, authors, parentRelease)
     core.endGroup()
 
     // Write file
     core.startGroup('📝 Writing changelog')
-    writeChangelog(inputs.output_path, output)
+    writeChangelog(inputs.output_path, outputContents)
     core.endGroup()
 
     if (inputs.update_summary) {
         core.startGroup('📝 Updating summary')
         try {
             await core.summary
-                .addRaw(`# Changelog\n\n${output}`)
+                .addRaw(`# Changelog\n\n${outputContents}`)
                 .write()
             fnlog('Summary written successfully.')
         } catch (error) {
