@@ -165,44 +165,6 @@ function normalizeCompilerName(name) {
     return name
 }
 
-async function findVersionsFromTags(name, repo, file, regex) {
-    const versionsFromFile = setup_program.readVersionsFromFile(file)
-    if (versionsFromFile !== null) {
-        trace_commands.log(`${name} versions (from file): ` + versionsFromFile)
-        return versionsFromFile
-    }
-    const tags = await setup_program.fetchGitTags(repo, {
-        maxRetries: 10
-    })
-    let versions = []
-    for (const tag of tags) {
-        if (tag.match(regex)) {
-            const version = tag.match(regex)[1]
-            versions.push(version)
-        }
-    }
-    versions = versions.sort(semver.compare)
-    trace_commands.log(`${name} versions: ` + versions)
-    setup_program.saveVersionsToFile(versions, file)
-    return versions
-}
-
-async function findGCCVersions() {
-    return await findVersionsFromTags(
-        'GCC',
-        'git://gcc.gnu.org/git/gcc.git',
-        'gcc-versions.txt',
-        /^refs\/tags\/releases\/gcc-(\d+\.\d+\.\d+)$/)
-}
-
-async function findClangVersions() {
-    return await findVersionsFromTags(
-        'Clang',
-        'https://github.com/llvm/llvm-project',
-        'clang-versions.txt',
-        /^refs\/tags\/llvmorg-(\d+\.\d+\.\d+)$/)
-}
-
 function findMSVCVersions() {
     // MSVC is not open source, so we assume the versions available from github runner images are available
     // See:
@@ -217,9 +179,9 @@ function findMSVCVersions() {
 
 async function findCompilerVersions(compiler) {
     if (compiler === 'gcc') {
-        return await findGCCVersions()
+        return await setup_program.findGCCVersions()
     } else if (compiler === 'clang') {
-        return await findClangVersions()
+        return await setup_program.findClangVersions()
     } else if (compiler === 'msvc') {
         return findMSVCVersions()
     }
@@ -1041,7 +1003,7 @@ async function setRecommendedFlags(entry, inputs) {
     // Flags for time-trace
     if ('time-trace' in entry && entry['time-trace'] === true) {
         if (entry['compiler'] === 'clang') {
-            const v = semver.minSatisfying(await findClangVersions(), entry['version'])
+            const v = semver.minSatisfying(await setup_program.findClangVersions(), entry['version'])
             if (semver.satisfies(v, '>=9')) {
                 entry['cxxflags'] += ' -ftime-trace'
                 entry['ccflags'] += ' -ftime-trace'
@@ -1850,8 +1812,6 @@ module.exports = {
     normalizeCppVersionRequirement,
     parseCompilerFactors,
     normalizeCompilerName,
-    findGCCVersions,
-    findClangVersions,
     findMSVCVersions,
     SubrangePolicies,
     splitRanges,

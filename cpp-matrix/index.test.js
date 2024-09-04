@@ -4,14 +4,15 @@ Object.assign(global, main)
 const process = require('process')
 const cp = require('child_process')
 const path = require('path')
+const setup_program = require('setup-program')
+
 const {
     generateMatrix,
     generateTable,
     parseCompilerRequirements,
     parseCompilerSuggestions,
-    findGCCVersions,
     findMSVCVersions,
-    findClangVersions,
+    splitRanges,
     isTruthy
 } = require('./index')
 const core = require('@actions/core')
@@ -96,25 +97,25 @@ describe('normalizeCompilerName', () => {
     })
 })
 
-describe('findGCCVersions', () => {
+describe('setup_program.findGCCVersions', () => {
     test('contains valid versions', async () => {
-        expect(await findGCCVersions()).toContain('4.8.0')
-        expect(await findGCCVersions()).toContain('13.1.0')
+        expect(await setup_program.findGCCVersions()).toContain('4.8.0')
+        expect(await setup_program.findGCCVersions()).toContain('13.1.0')
     })
 })
 
 describe('findClangVersions', () => {
     test('Contains valid versions', async () => {
-        expect(await findClangVersions()).toContain('2.6.0')
-        expect(await findClangVersions()).toContain('16.0.0')
+        expect(await setup_program.findClangVersions()).toContain('2.6.0')
+        expect(await setup_program.findClangVersions()).toContain('16.0.0')
     })
 })
 
 describe('splitRanges', () => {
     test('should split ranges correctly', async () => {
-        expect(splitRanges('9.2 - 11', await findGCCVersions())).toStrictEqual(['^9.2', '10', '11'])
-        expect(splitRanges('9.2 - 9.4 || 11', await findGCCVersions())).toStrictEqual(['9.2 - 9.4', '11'])
-        expect(splitRanges('>=8 <9.100', await findGCCVersions())).toStrictEqual(['8', '9'])
+        expect(splitRanges('9.2 - 11', await setup_program.findGCCVersions())).toStrictEqual(['^9.2', '10', '11'])
+        expect(splitRanges('9.2 - 9.4 || 11', await setup_program.findGCCVersions())).toStrictEqual(['9.2 - 9.4', '11'])
+        expect(splitRanges('>=8 <9.100', await setup_program.findGCCVersions())).toStrictEqual(['8', '9'])
         expect(splitRanges('>=14 <14.50', findMSVCVersions())).toStrictEqual(['14'])
         expect(splitRanges('<=9.2', ['9.1.0', '9.2.0', '9.3.0', '9.4.0', '9.5.0'], SubrangePolicies.ONE_PER_MAJOR)).toStrictEqual(['9 - 9.2'])
         expect(splitRanges('>14.29.4 <14.40', ['14.29.30139', '14.29.30140'])).toStrictEqual(['14'])

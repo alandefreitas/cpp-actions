@@ -24975,47 +24975,6 @@ const httpm = __nccwpck_require__(96255)
 const setup_program = __nccwpck_require__(56859)
 const trace_commands = __nccwpck_require__(80888)
 
-function findClangVersionsImpl() {
-    let cachedVersions = null // Cache variable to store the versions
-
-    return async function() {
-        if (cachedVersions !== null) {
-            // Return the cached versions if available
-            return cachedVersions
-        }
-
-        // Check if the versions can be read from a file
-        const versionsFromFile = setup_program.readVersionsFromFile('clang-versions.txt')
-        if (versionsFromFile !== null) {
-            cachedVersions = versionsFromFile
-            trace_commands.log('Clang versions (from file): ' + versionsFromFile)
-            return versionsFromFile
-        }
-
-        const regex = /^refs\/tags\/llvmorg-(\d+\.\d+\.\d+)$/
-        let versions = []
-        try {
-            const gitTags = await setup_program.fetchGitTags('https://github.com/llvm/llvm-project')
-            for (const tag of gitTags) {
-                if (tag.match(regex)) {
-                    const version = tag.match(regex)[1]
-                    versions.push(version)
-                }
-            }
-            versions = versions.sort(semver.compare)
-            trace_commands.log('Clang versions: ' + versions)
-            cachedVersions = versions
-            setup_program.saveVersionsToFile(versions, 'clang-versions.txt')
-            return versions
-        } catch (error) {
-            trace_commands.log('Error fetching Clang versions: ' + error)
-            return []
-        }
-    }
-}
-
-const findClangVersions = findClangVersionsImpl()
-
 function removeClangPrefix(version) {
     // Remove "clang-" or "clang++-" prefix
     if (version.startsWith('clang-') || version.startsWith('clang++-')) {
@@ -25177,7 +25136,7 @@ async function main(version, paths, check_latest, update_environment) {
         core.setFailed('This action is only supported on Linux')
     }
 
-    const allVersions = await findClangVersions()
+    const allVersions = await setup_program.findClangVersions()
     core.endGroup()
 
     // Path program version
@@ -57398,7 +57357,18 @@ async function sleep(ms) {
 async function fetchGitTags(repo, options = {}) {
     try {
         // Find git in PATH
-        const git_path = await findGit()
+        let git_path = null
+        try {
+            git_path = await findGit()
+        } catch (error) {
+            git_path = null
+        }
+        // Install git if we have to
+        if (!git_path) {
+            await find_program_with_apt(['git'], '*', false)
+            git_path = await findGit()
+        }
+        // Still no git? Fail
         if (!git_path) {
             throw new Error('Git not found')
         }
@@ -57443,6 +57413,45 @@ async function fetchGitTags(repo, options = {}) {
         throw new Error('Error fetching Git tags: ' + error.message)
     }
 }
+
+async function findVersionsFromTags(name, repo, file, regex) {
+    const versionsFromFile = readVersionsFromFile(file)
+    if (versionsFromFile !== null) {
+        trace_commands.log(`${name} versions (from file): ` + versionsFromFile)
+        return versionsFromFile
+    }
+    const tags = await fetchGitTags(repo, {
+        maxRetries: 10
+    })
+    let versions = []
+    for (const tag of tags) {
+        if (tag.match(regex)) {
+            const version = tag.match(regex)[1]
+            versions.push(version)
+        }
+    }
+    versions = versions.sort(semver.compare)
+    trace_commands.log(`${name} versions: ` + versions)
+    saveVersionsToFile(versions, file)
+    return versions
+}
+
+async function findGCCVersions() {
+    return await findVersionsFromTags(
+        'GCC',
+        'git://gcc.gnu.org/git/gcc.git',
+        'gcc-versions.txt',
+        /^refs\/tags\/releases\/gcc-(\d+\.\d+\.\d+)$/)
+}
+
+async function findClangVersions() {
+    return await findVersionsFromTags(
+        'Clang',
+        'https://github.com/llvm/llvm-project',
+        'clang-versions.txt',
+        /^refs\/tags\/llvmorg-(\d+\.\d+\.\d+)$/)
+}
+
 
 async function cloneGitRepo(repo, destPath, ref = undefined, options = {shallow: true}) {
     try {
@@ -58151,7 +58160,10 @@ module.exports = {
     ensureAddAptRepositoryIsAvailable,
     downloadAndExtract,
     cloneGitRepo,
-    stripSingleDirectoryFromPath
+    stripSingleDirectoryFromPath,
+    findVersionsFromTags,
+    findClangVersions,
+    findGCCVersions
 }
 
 

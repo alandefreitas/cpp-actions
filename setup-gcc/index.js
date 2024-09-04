@@ -8,92 +8,6 @@ const httpm = require('@actions/http-client')
 const setup_program = require('setup-program')
 const trace_commands = require('trace-commands')
 
-const fetchGitTags = async (repo) => {
-    try {
-        // Find git in path
-        let git_path
-        try {
-            git_path = await io.which('git')
-        } catch (error) {
-            git_path = null
-        }
-        if (git_path === null || git_path === '') {
-            if (setup_program.isSudoRequired()) {
-                await exec.exec(`sudo -n apt-get update`, [], {ignoreReturnCode: true})
-                await exec.exec(`sudo -n apt-get install -y git`, [], {ignoreReturnCode: true})
-            } else {
-                await exec.exec(`apt-get update`, [], {ignoreReturnCode: true})
-                await exec.exec(`apt-get install -y git`, [], {ignoreReturnCode: true})
-            }
-            git_path = await io.which('git')
-        }
-
-        const {
-            exitCode: exitCode, stdout: out
-        } = await exec.getExecOutput(`"${git_path}" ls-remote --tags ` + repo, [], {silent: true})
-        if (exitCode !== 0) {
-            throw new Error('Git exited with non-zero exit code: ' + exitCode)
-        }
-        const stdout = out.trim()
-        const tags = stdout.split('\n').filter(tag => tag.trim() !== '')
-        let gitTags = []
-        for (const tag of tags) {
-            const parts = tag.split('\t')
-            if (parts.length > 1) {
-                let ref = parts[1]
-                if (!ref.endsWith('^{}')) {
-                    gitTags.push(ref)
-                }
-            }
-        }
-        trace_commands.log('Git tags: ' + gitTags)
-        return gitTags
-    } catch (error) {
-        throw new Error('Error fetching Git tags: ' + error.message)
-    }
-}
-
-function findGCCVersionsImpl() {
-    let cachedVersions = null // Cache variable to store the versions
-
-    return async function() {
-        if (cachedVersions !== null) {
-            // Return the cached versions if available
-            return cachedVersions
-        }
-
-        // Check if the versions can be read from a file
-        const versionsFromFile = setup_program.readVersionsFromFile('gcc-versions.txt')
-        if (versionsFromFile !== null) {
-            cachedVersions = versionsFromFile
-            trace_commands.log('GCC versions (from file): ' + versionsFromFile)
-            return versionsFromFile
-        }
-
-        const regex = /^refs\/tags\/releases\/gcc-(\d+\.\d+\.\d+)$/
-        let versions = []
-        try {
-            const gitTags = await fetchGitTags('git://gcc.gnu.org/git/gcc.git')
-            for (const tag of gitTags) {
-                if (tag.match(regex)) {
-                    const version = tag.match(regex)[1]
-                    versions.push(version)
-                }
-            }
-            versions = versions.sort(semver.compare)
-            cachedVersions = versions
-            trace_commands.log('GCC versions: ' + versions)
-            setup_program.saveVersionsToFile(versions, 'gcc-versions.txt')
-            return versions
-        } catch (error) {
-            trace_commands.log('Error fetching GCC versions: ' + error)
-            return []
-        }
-    }
-}
-
-const findGCCVersions = findGCCVersionsImpl()
-
 function removeGCCPrefix(version) {
     // Remove "gcc-" or "g++-" prefix
     if (version.startsWith('gcc-') || version.startsWith('g++-')) {
@@ -107,7 +21,6 @@ function removeGCCPrefix(version) {
 
     return version
 }
-
 
 async function main(version, paths, check_latest, update_environment) {
     core.startGroup('Find GCC versions')
@@ -123,12 +36,12 @@ async function main(version, paths, check_latest, update_environment) {
         core.setFailed('This action is only supported on Linux')
     }
 
-    const allVersions = await findGCCVersions()
+    const allVersions = await setup_program.findGCCVersions()
     core.endGroup()
 
     // Path program version
-    let output_path = null
-    let output_version = null
+    let output_path
+    let output_version
 
     // Setup path program
     core.startGroup('Find GCC in specified paths')
@@ -197,11 +110,11 @@ async function main(version, paths, check_latest, update_environment) {
         trace_commands.log(`Min version in requirement "${version}": ` + minV)
         const release = check_latest ? maxV : minV
         trace_commands.log(`Target release ${release} (check latest: ${check_latest})`)
-        const srelease = semver.parse(release)
-        trace_commands.log(`Parsed release "${release}" is "${srelease.toString()}"`)
-        const major = srelease.major
-        const minor = srelease.minor
-        const patch = srelease.patch
+        const semverRelease = semver.parse(release)
+        trace_commands.log(`Parsed release "${release}" is "${semverRelease.toString()}"`)
+        const major = semverRelease.major
+        const minor = semverRelease.minor
+        const patch = semverRelease.patch
         let version_candidates = [release]
         for (const v of allVersions) {
             const sv = semver.parse(v)
@@ -220,7 +133,7 @@ async function main(version, paths, check_latest, update_environment) {
         // Determine ubuntu version
         const cur_ubuntu_version = setup_program.getCurrentUbuntuVersion()
         trace_commands.log(`Ubuntu version: ${cur_ubuntu_version}`)
-        let ubuntu_versions = []
+        let ubuntu_versions
         if (cur_ubuntu_version === '20.04') {
             ubuntu_versions = ['20.04', '22.04', '18.04', '16.04', '14.04', '12.04', '10.04']
         } else if (cur_ubuntu_version === '18.04') {

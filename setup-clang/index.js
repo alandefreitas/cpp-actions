@@ -9,47 +9,6 @@ const httpm = require('@actions/http-client')
 const setup_program = require('setup-program')
 const trace_commands = require('trace-commands')
 
-function findClangVersionsImpl() {
-    let cachedVersions = null // Cache variable to store the versions
-
-    return async function() {
-        if (cachedVersions !== null) {
-            // Return the cached versions if available
-            return cachedVersions
-        }
-
-        // Check if the versions can be read from a file
-        const versionsFromFile = setup_program.readVersionsFromFile('clang-versions.txt')
-        if (versionsFromFile !== null) {
-            cachedVersions = versionsFromFile
-            trace_commands.log('Clang versions (from file): ' + versionsFromFile)
-            return versionsFromFile
-        }
-
-        const regex = /^refs\/tags\/llvmorg-(\d+\.\d+\.\d+)$/
-        let versions = []
-        try {
-            const gitTags = await setup_program.fetchGitTags('https://github.com/llvm/llvm-project')
-            for (const tag of gitTags) {
-                if (tag.match(regex)) {
-                    const version = tag.match(regex)[1]
-                    versions.push(version)
-                }
-            }
-            versions = versions.sort(semver.compare)
-            trace_commands.log('Clang versions: ' + versions)
-            cachedVersions = versions
-            setup_program.saveVersionsToFile(versions, 'clang-versions.txt')
-            return versions
-        } catch (error) {
-            trace_commands.log('Error fetching Clang versions: ' + error)
-            return []
-        }
-    }
-}
-
-const findClangVersions = findClangVersionsImpl()
-
 function removeClangPrefix(version) {
     // Remove "clang-" or "clang++-" prefix
     if (version.startsWith('clang-') || version.startsWith('clang++-')) {
@@ -211,7 +170,7 @@ async function main(version, paths, check_latest, update_environment) {
         core.setFailed('This action is only supported on Linux')
     }
 
-    const allVersions = await findClangVersions()
+    const allVersions = await setup_program.findClangVersions()
     core.endGroup()
 
     // Path program version
