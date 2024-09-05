@@ -12,21 +12,9 @@ const {
     parseCompilerRequirements,
     parseCompilerSuggestions,
     findMSVCVersions,
-    splitRanges,
-    isTruthy
+    splitRanges
 } = require('./index')
 const core = require('@actions/core')
-
-test('isTruthy', async () => {
-    expect(isTruthy('true')).toBe(true)
-    expect(isTruthy('TRUE')).toBe(true)
-    expect(isTruthy('fds')).toBe(true)
-    expect(isTruthy('')).toBe(false)
-    expect(isTruthy('False')).toBe(false)
-    expect(isTruthy('false')).toBe(false)
-    expect(isTruthy('FALSE')).toBe(false)
-    expect(isTruthy(' FALSE ')).toBe(false)
-})
 
 test('parseCompilerRequirements', async () => {
     const input = `gcc >=4.8

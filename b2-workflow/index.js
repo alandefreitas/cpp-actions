@@ -5,6 +5,7 @@ const exec = require('@actions/exec')
 const io = require('@actions/io')
 const os = require('os')
 const trace_commands = require('trace-commands')
+const gh_inputs = require('gh-inputs')
 
 function numberOfCpus() {
     const result = typeof os.availableParallelism === 'function'
@@ -274,149 +275,6 @@ async function main(inputs) {
     core.endGroup()
 }
 
-function toTriboolInput(input) {
-    if (typeof input === 'boolean') {
-        return input
-    }
-    if (typeof input === 'number') {
-        return input !== 0
-    }
-    if (typeof input !== 'string') {
-        return undefined
-    }
-    if (['true', '1', 'on', 'yes', 'y'].includes(input.toLowerCase())) {
-        return true
-    } else if (['false', '0', 'off', 'no', 'n'].includes(input.toLowerCase())) {
-        return false
-    } else {
-        return undefined
-    }
-}
-
-function toTriboolOrStringInput(input) {
-    const asBool = toTriboolInput(input)
-    if (typeof asBool !== 'boolean') {
-        return input
-    }
-    return asBool
-}
-
-function toIntegerInput(input) {
-    const parsedInt = parseInt(input)
-    if (isNaN(parsedInt)) {
-        return undefined
-    } else {
-        return parsedInt
-    }
-}
-
-function normalizePath(path) {
-    const pathIsString = typeof path === 'string' || path instanceof String
-    if (pathIsString && process.platform === 'win32') {
-        return path.replace(/\\/g, '/')
-    }
-    return path
-}
-
-function parseExtraArgs(extra_args) {
-    // The extra_args input is a multiline string. Each element in the array
-    // is a line in the string. We need to split each line into arguments
-    // and then join them into a single array. It's not as simple as splitting
-    // on spaces because arguments can be quoted.
-
-    function extractIdentifier(i, line, char, curArg) {
-        const nextChar = i < line.length - 1 ? line[i + 1] : undefined
-        if (nextChar && nextChar.match(/^[a-zA-Z_]/)) {
-            let identifier = nextChar
-            let j = i + 2
-            for (; j < line.length; j++) {
-                const idChar = line[j]
-                // check if idChar is alphanum or underscore
-                if (idChar.match(/^[a-zA-Z0-9_]/)) {
-                    identifier += char
-                } else {
-                    break
-                }
-            }
-            // Replace $ with the value of the environment variable
-            // if it exists
-            const envValue = process.env[identifier]
-            if (envValue) {
-                curArg += envValue
-            }
-            // Advance i to the last character of the identifier
-            i = j - 1
-        } else {
-            // No valid identifier after $. Just output $.
-            curArg += char
-        }
-        return {i, curArg}
-    }
-
-    let args = []
-    for (const line of extra_args) {
-        let curQuote = undefined
-        let curArg = ''
-        for (let i = 0; i < line.length; i++) {
-            const char = line[i]
-            const inQuote = curQuote !== undefined
-            const curIsQuote = ['"', '\''].includes(char)
-            const curIsEscaped = i > 0 && line[i - 1] === '\\'
-            if (!inQuote) {
-                if (!curIsEscaped) {
-                    if (curIsQuote) {
-                        curQuote = char
-                    } else if (char === ' ') {
-                        if (curArg !== '') {
-                            args.push(curArg)
-                            curArg = ''
-                        }
-                    } else if (char === '$') {
-                        const __ret = extractIdentifier(i, line, char, curArg)
-                        i = __ret.i
-                        curArg = __ret.curArg
-                    } else if (char !== '\\') {
-                        curArg += char
-                    }
-                } else {
-                    curArg += char
-                }
-            } else if (curQuote === '"') {
-                // Preserve the literal value of all characters except for
-                // ($), (`), ("), (\), and the (!) character
-                if (!curIsEscaped) {
-                    if (char === curQuote) {
-                        curQuote = undefined
-                    } else if (char === '$') {
-                        const __ret = extractIdentifier(i, line, char, curArg)
-                        i = __ret.i
-                        curArg = __ret.curArg
-                    } else if (char !== '\\') {
-                        curArg += char
-                    }
-                } else {
-                    if (!['$', '`', '"', '\\'].includes(char)) {
-                        curArg += '\\'
-                    }
-                    curArg += char
-                }
-            } else if (curQuote === '\'') {
-                // Preserve the literal value of each character within the
-                // quotes
-                if (char !== curQuote) {
-                    curArg += char
-                } else {
-                    curQuote = undefined
-                }
-            }
-        }
-        if (curArg !== '') {
-            args.push(curArg)
-            curArg = ''
-        }
-    }
-    return args
-}
 
 async function run() {
     function fnlog(msg) {
@@ -426,81 +284,70 @@ async function run() {
     try {
         let inputs = {
             // Configure options
-            source_dir: normalizePath(core.getInput('source-dir')),
-            build_dir: normalizePath(core.getInput('build-dir')),
-            cxx: normalizePath(core.getInput('cxx') || process.env['CXX'] || ''),
-            ccflags: (core.getInput('ccflags') || process.env['CFLAGS'] || '').trim(),
-            cxxflags: (core.getInput('cxxflags') || process.env['CXXFLAGS'] || '').trim(),
-            cxxstd: (core.getInput('cxxstd') || process.env['CXXSTD'] || '').trim(),
-            shared: toTriboolInput(core.getInput('shared') || process.env['BUILD_SHARED_LIBS'] || ''),
-            toolset: core.getInput('toolset') || process.env['B2_TOOLSET'] || '',
-            build_type: (core.getInput('build-variant') || process.env['B2_BUILD_VARIANT'] || core.getInput('build-type') || process.env['B2_BUILD_TYPE'] || '').toLowerCase(),
-            modules: (core.getInput('modules') || '').split(/[,; ]/).filter((input) => input !== ''),
-            extra_args: parseExtraArgs(core.getMultilineInput('extra-args')),
+            source_dir: gh_inputs.getResolvedPath('source-dir'),
+            build_dir: gh_inputs.getNormalizedPath('build-dir'),
+            cxx: gh_inputs.getNormalizedPath('cxx', {fallbackEnv: 'CXX'}),
+            ccflags: gh_inputs.getInput('ccflags', {fallbackEnv: 'CFLAGS'}),
+            cxxflags: gh_inputs.getInput('cxxflags', {fallbackEnv: 'CXXFLAGS'}),
+            cxxstd: gh_inputs.getInput('cxxstd', {fallbackEnv: 'CXXSTD'}),
+            shared: gh_inputs.getTribool('shared', {fallbackEnv: 'BUILD_SHARED_LIBS'}),
+            toolset: gh_inputs.getInput('toolset', {fallbackEnv: 'B2_TOOLSET'}),
+            build_type: gh_inputs.getLowerCaseInput(['build-variant', 'build-type'], {fallbackEnv: ['B2_BUILD_VARIANT', 'B2_BUILD_TYPE']}),
+            modules: gh_inputs.getArray('modules', /[,; ]/),
+            extra_args: gh_inputs.getBashArguments('extra-args'),
             // B2-specific options
-            warnings_as_errors: toTriboolOrStringInput(core.getInput('warnings-as-errors')),
-            address_model: core.getInput('address-model') || undefined,
-            asan: toTriboolOrStringInput(core.getInput('asan')),
-            ubsan: toTriboolOrStringInput(core.getInput('ubsan')),
-            msan: toTriboolOrStringInput(core.getInput('msan')),
-            tsan: toTriboolOrStringInput(core.getInput('tsan')),
-            coverage: core.getInput('coverage') || undefined,
-            linkflags: core.getInput('linkflags') || undefined,
-            threading: core.getInput('threading') || undefined,
-            rtti: toTriboolOrStringInput(core.getInput('rtti')),
-            clean: toTriboolInput(core.getInput('clean')),
-            clean_all: toTriboolInput(core.getInput('clean-all')),
-            abbreviate_paths: toTriboolInput(core.getInput('abbreviate-paths')),
-            hash: toTriboolInput(core.getInput('hash')),
-            rebuild_all: toTriboolInput(core.getInput('rebuild-all')),
-            dry_run: toTriboolInput(core.getInput('dry-run')),
-            stop_on_error: toTriboolInput(core.getInput('stop-on-error')),
-            config: normalizePath(core.getInput('config')),
-            site_config: normalizePath(core.getInput('site-config')),
-            user_config: normalizePath(core.getInput('user-config')),
-            project_config: normalizePath(core.getInput('project-config')),
-            debug_configuration: toTriboolInput(core.getInput('debug-configuration')),
-            debug_building: toTriboolInput(core.getInput('debug-building')),
-            debug_generators: toTriboolInput(core.getInput('debug-generators')),
-            include: normalizePath(core.getInput('include')),
-            'define': core.getInput('define'),
-            runtime_link: toTriboolOrStringInput(core.getInput('runtime-link')),
+            warnings_as_errors: gh_inputs.getBoolOrString('warnings-as-errors'),
+            address_model: gh_inputs.getInput('address-model') || undefined,
+            asan: gh_inputs.getBoolOrString('asan'),
+            ubsan: gh_inputs.getBoolOrString('ubsan'),
+            msan: gh_inputs.getBoolOrString('msan'),
+            tsan: gh_inputs.getBoolOrString('tsan'),
+            coverage: gh_inputs.getInput('coverage') || undefined,
+            linkflags: gh_inputs.getInput('linkflags') || undefined,
+            threading: gh_inputs.getInput('threading') || undefined,
+            rtti: gh_inputs.getBoolOrString('rtti'),
+            clean: gh_inputs.getTribool('clean'),
+            clean_all: gh_inputs.getTribool('clean-all'),
+            abbreviate_paths: gh_inputs.getTribool('abbreviate-paths'),
+            hash: gh_inputs.getTribool('hash'),
+            rebuild_all: gh_inputs.getTribool('rebuild-all'),
+            dry_run: gh_inputs.getTribool('dry-run'),
+            stop_on_error: gh_inputs.getTribool('stop-on-error'),
+            config: gh_inputs.getNormalizedPath('config'),
+            site_config: gh_inputs.getNormalizedPath('site-config'),
+            user_config: gh_inputs.getNormalizedPath('user-config'),
+            project_config: gh_inputs.getNormalizedPath('project-config'),
+            debug_configuration: gh_inputs.getTribool('debug-configuration'),
+            debug_building: gh_inputs.getTribool('debug-building'),
+            debug_generators: gh_inputs.getTribool('debug-generators'),
+            include: gh_inputs.getNormalizedPath('include'),
+            define: gh_inputs.getInput('define'),
+            runtime_link: gh_inputs.getBoolOrString('runtime-link'),
             // Build options
-            jobs: toIntegerInput(core.getInput('jobs') || process.env['B2_JOBS']) || numberOfCpus(),
+            jobs: gh_inputs.getInt('jobs', {fallbackEnv: 'B2_JOBS'}) || numberOfCpus(),
             // Annotations and tracing
-            trace_commands: core.getBooleanInput('trace-commands')
+            trace_commands: gh_inputs.getBoolean('trace-commands')
         }
 
-        // Resolve paths
-        inputs.source_dir = path.resolve(inputs.source_dir)
+        // Apply trace commands
         if (inputs.trace_commands) {
             trace_commands.set_trace_commands(true)
         }
-
-        core.startGroup('📥 Workflow Inputs')
         fnlog(`🧩 b2-workflow.trace_commands: ${trace_commands}`)
-        for (const [name, value] of Object.entries(inputs)) {
-            core.info(`🧩 ${name.replaceAll('_', '-')}: ${JSON.stringify(value)}`)
-        }
+
+        core.startGroup('📥 Action Inputs')
+        gh_inputs.printInputObject(inputs)
         core.endGroup()
 
-        try {
-            await main(inputs)
-        } catch (error) {
-            // Print stack trace
-            fnlog(error.stack)
-            // Print error message
-            core.error(error)
-            core.setFailed(error.message)
-        }
+        await main(inputs)
     } catch (error) {
-        core.setFailed(error.message)
+        core.setFailed(`${error.message}\n${error.stack}`)
     }
 }
 
 if (require.main === module) {
     run().catch((error) => {
-        core.setFailed(error)
+        core.setFailed(`${error.message}\n${error.stack}`)
     })
 }
 

@@ -4,52 +4,8 @@ const semver = require('semver')
 const fs = require('fs')
 const setup_program = require('setup-program')
 const path = require('path')
-const trace_commands = require("trace-commands")
-
-function findCMakeVersionsImpl() {
-    let cachedVersions = null // Cache variable to store the versions
-
-    return async function() {
-        function fnlog(msg) {
-            trace_commands.log('findCMakeVersions: ' + msg)
-        }
-
-        if (cachedVersions !== null) {
-            // Return the cached versions if available
-            return cachedVersions
-        }
-
-        // Check if the versions can be read from a file
-        const versionsFromFile = setup_program.readVersionsFromFile('cmake-versions.txt')
-        if (versionsFromFile !== null) {
-            cachedVersions = versionsFromFile
-            fnlog('CMake versions (from file): ' + versionsFromFile)
-            return versionsFromFile
-        }
-
-        // regex='^v([0-9]+\.[0-9]+\.[0-9]+)$'
-        const regex = /^refs\/tags\/v(\d+\.\d+\.\d+)$/
-        let versions = []
-        try {
-            const gitTags = await setup_program.fetchGitTags('https://github.com/Kitware/CMake.git')
-            for (const tag of gitTags) {
-                if (tag.match(regex)) {
-                    const version = tag.match(regex)[1]
-                    versions.push(version)
-                }
-            }
-            versions = versions.sort(semver.compare)
-            cachedVersions = versions
-            setup_program.saveVersionsToFile(versions, 'cmake-versions.txt')
-            return versions
-        } catch (error) {
-            fnlog('Error fetching CMake versions: ' + error)
-            return []
-        }
-    }
-}
-
-const findCMakeVersions = findCMakeVersionsImpl()
+const trace_commands = require('trace-commands')
+const gh_inputs = require('gh-inputs')
 
 function updateCMakeVersionFromFile(cmake_file, version, allVersions) {
     function fnlog(msg) {
@@ -214,7 +170,7 @@ async function main(inputs, subgroups = true) {
     if (subgroups) {
         core.startGroup('🌐 Find CMake versions')
     }
-    const allVersions = await findCMakeVersions()
+    const allVersions = await setup_program.findCMakeVersions()
     fnlog('All CMake versions: ' + allVersions)
     if (subgroups) {
         core.endGroup()
@@ -389,57 +345,47 @@ async function run() {
 
     try {
         const inputs = {
-            trace_commands: core.getBooleanInput('trace-commands'),
-            version: core.getInput('version') || '*',
-            architecture: core.getInput('architecture'),
-            cmake_file: core.getInput('cmake-file'),
-            path: core.getInput('path'),
-            cmake_path: core.getInput('cmake-path'),
-            cache: core.getBooleanInput('cache'),
-            check_latest: core.getBooleanInput('check-latest'),
-            update_environment: core.getBooleanInput('update-environment')
-        }
-
-        if (inputs.trace_commands) {
-            trace_commands.set_trace_commands(true)
-        }
-
-        for (const [name, value] of Object.entries(inputs)) {
-            fnlog(`${name}: ${value}`)
+            version: gh_inputs.getInput('version', {defaultValue: '*'}),
+            architecture: gh_inputs.getInput('architecture'),
+            cmake_file: gh_inputs.getInput('cmake-file'),
+            path: gh_inputs.getInput('path'),
+            cmake_path: gh_inputs.getInput('cmake-path'),
+            cache: gh_inputs.getBool('cache'),
+            check_latest: gh_inputs.getBool('check-latest'),
+            update_environment: gh_inputs.getBool('update-environment'),
+            trace_commands: gh_inputs.getBool('trace-commands')
         }
 
         if (inputs.cmake_path) {
             inputs.path = inputs.cmake_path
         }
 
-        try {
-            const outputs = await main(inputs)
-            // Parse Final program / Setup version / Outputs
-            if (outputs['path']) {
-                core.startGroup('📥 Set outputs')
-                for (const [name, value] of Object.entries(outputs)) {
-                    const yaml_key = name.replaceAll('_', '-')
-                    core.setOutput(yaml_key, value)
-                    fnlog(`${yaml_key}: ${value}`)
-                }
-                core.endGroup()
-            } else {
-                core.setFailed('Cannot setup CMake')
-            }
-        } catch (error) {
-            // Print stack trace
-            fnlog(error.stack)
-            core.setFailed(error)
+        if (inputs.trace_commands) {
+            trace_commands.set_trace_commands(true)
+        }
+
+        core.startGroup('📥 Action Inputs')
+        gh_inputs.printInputObject(inputs)
+        core.endGroup()
+
+        const outputs = await main(inputs)
+        // Parse Final program / Setup version / Outputs
+        if (outputs['path']) {
+            core.startGroup('📤 Action Outputs')
+            gh_inputs.setOutputObject(outputs)
+            core.endGroup()
+        } else {
+            core.setFailed('Cannot setup CMake')
         }
     } catch (error) {
         fnlog(error.stack)
-        core.setFailed(error)
+        core.setFailed(`${error.message}\n${error.stack}`)
     }
 }
 
 if (require.main === module) {
     run().catch((error) => {
-        core.setFailed(error)
+        core.setFailed(`${error.message}\n${error.stack}`)
     })
 }
 

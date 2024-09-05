@@ -16,7 +16,8 @@
     "@actions/tool-cache": "^2.0.1",
     "semver": "^7.6.3",
     "setup-program": "file:../setup-program",
-    "trace-commands": "file:../common/trace-commands"
+    "trace-commands": "file:../common/trace-commands",
+    "gh-inputs": "file:../common/gh-inputs"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.38.1",

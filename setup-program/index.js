@@ -6,7 +6,9 @@ const fs = require('fs')
 const exec = require('@actions/exec')
 const path = require('path')
 const os = require('os')
+const httpm = require('@actions/http-client')
 const trace_commands = require('trace-commands')
+const gh_inputs = require('gh-inputs')
 
 function isExecutable(path) {
     if (!fs.existsSync(path) || fs.lstatSync(path).isDirectory()) {
@@ -315,6 +317,17 @@ function isSudoRequired() {
     return process.getuid() !== 0
 }
 
+async function urlExists(url) {
+    const http_client = new httpm.HttpClient('setup-clang', [], {
+        allowRetries: true, maxRetries: 3
+    })
+    try {
+        const res = await http_client.head(url)
+        return res.message.statusCode === 200
+    } catch (error) {
+        return false
+    }
+}
 
 function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -686,6 +699,14 @@ async function findClangVersions() {
         'https://github.com/llvm/llvm-project',
         'clang-versions.txt',
         /^refs\/tags\/llvmorg-(\d+\.\d+\.\d+)$/)
+}
+
+async function findCMakeVersions() {
+    return await findVersionsFromTags(
+        'CMake',
+        'https://github.com/Kitware/CMake.git',
+        'cmake-versions.txt',
+        /^refs\/tags\/v(\d+\.\d+\.\d+)$/)
 }
 
 
@@ -1154,7 +1175,13 @@ async function stripSingleDirectoryFromPath(dirPath) {
     return false
 }
 
-async function install_program_from_url(names, version, check_latest, url_template, update_environment, install_prefix = null) {
+async function install_program_from_url(
+    names,
+    version,
+    check_latest,
+    url_template,
+    update_environment,
+    install_prefix) {
     function fnlog(msg) {
         trace_commands.log('install_program_from_url: ' + msg)
     }
@@ -1209,7 +1236,7 @@ async function install_program_from_url(names, version, check_latest, url_templa
     }
 
     // Install to prefix or to cache directory
-    if (install_prefix !== null) {
+    if (install_prefix) {
         fnlog(`Moving ${extPath} to ${install_prefix}`)
         const move_ok = await moveWithPermissions(extPath, install_prefix)
         if (!move_ok) {
@@ -1251,40 +1278,31 @@ async function run() {
     }
 
     try {
-        core.startGroup('📥 Action Inputs')
+        let inputs = {
+            name: gh_inputs.getArray('name', / /, undefined, {required: true}),
+            version: gh_inputs.getInput('version', {defaultValue: '*'}),
+            paths: gh_inputs.getArray('path', /[:;]/),
+            check_latest: gh_inputs.getBoolean('check-latest'),
+            update_environment: gh_inputs.getBoolean('update-environment'),
+            url: gh_inputs.getInput('url'),
+            install_prefix: gh_inputs.getInput('install-prefix'),
+            fail_on_error: gh_inputs.getBoolean('fail-on-error'),
+            trace_commands: gh_inputs.getBoolean('trace-commands')
+        }
+
         // Get trace_commands input first
-        if (core.getBooleanInput('trace-commands')) {
-            // Force trace-commands
+        if (inputs.trace_commands) {
             trace_commands.set_trace_commands(true)
         }
 
-        // Get inputs
-        const name = core.getInput('name').split(' ').filter((name) => name !== '')
-        if (name.length === 0) {
-            core.setFailed('name input is required')
-            return
-        }
-        fnlog(`name: [${name.join(', ')}]`)
-        const version = core.getInput('version') || '*'
-        fnlog(`version: ${version}`)
-        const paths = core.getInput('path').split(/[:;]/).filter((path) => path !== '')
-        fnlog(`paths: ${paths}`)
-        const check_latest = core.getBooleanInput('check-latest')
-        fnlog(`check_latest: ${check_latest}`)
-        const update_environment = core.getBooleanInput('update-environment')
-        fnlog(`update_environment: ${update_environment}`)
-        const url = core.getInput('url') || null
-        fnlog(`url: ${url}`)
-        const install_prefix = core.getInput('install-prefix') || null
-        fnlog(`install_prefix: ${install_prefix}`)
-        const fail_on_error = core.getBooleanInput('fail-on-error')
-        fnlog(`fail_on_error: ${fail_on_error}`)
+        core.startGroup('📥 Action Inputs')
+        gh_inputs.printInputObject(inputs)
         core.endGroup()
 
+        // Set cache directory
         if (process.platform === 'darwin') {
             process.env['AGENT_TOOLSDIRECTORY'] = '/Users/runner/hostedtoolcache'
         }
-
         if (process.env.AGENT_TOOLSDIRECTORY?.trim()) {
             process.env['RUNNER_TOOL_CACHE'] = process.env['AGENT_TOOLSDIRECTORY']
         }
@@ -1294,10 +1312,10 @@ async function run() {
         let output_version = null
 
         // Setup path program
-        if (paths) {
+        if (inputs.paths) {
             core.startGroup('🔍 Searching in user provided paths')
-            core.info(`Searching for ${name} ${version} in paths [${paths.join(',')}]`)
-            const __ret = await find_program_in_path(paths, version, check_latest)
+            core.info(`Searching for ${inputs.name} ${inputs.version} in paths [${inputs.paths.join(',')}]`)
+            const __ret = await find_program_in_path(inputs.paths, inputs.version, inputs.check_latest)
             output_version = __ret.output_version
             output_path = __ret.output_path
             core.endGroup()
@@ -1306,8 +1324,8 @@ async function run() {
         // Setup system program
         if (output_path === null) {
             core.startGroup('🔍 Searching in system paths')
-            core.info(`Searching for ${name} ${version} in PATH`)
-            const __ret = await find_program_in_system_paths(paths, name, version, check_latest)
+            core.info(`Searching for ${inputs.name} ${inputs.version} in PATH`)
+            const __ret = await find_program_in_system_paths(inputs.paths, inputs.name, inputs.version, inputs.check_latest)
             output_version = __ret.output_version
             output_path = __ret.output_path
             core.endGroup()
@@ -1316,31 +1334,37 @@ async function run() {
         // Setup APT program
         if (output_version === null && process.platform === 'linux') {
             core.startGroup('📦 Searching with APT')
-            core.info(`Searching for ${name} ${version} with APT`)
-            const __ret = await find_program_with_apt(name, version, check_latest)
+            core.info(`Searching for ${inputs.name} ${inputs.version} with APT`)
+            const __ret = await find_program_with_apt(inputs.name, inputs.version, inputs.check_latest)
             output_version = __ret.output_version
             output_path = __ret.output_path
             core.endGroup()
         } else {
             if (output_version !== null) {
-                fnlog(`Skipping APT step because ${name} ${output_version} was already found in ${output_path}`)
+                fnlog(`Skipping APT step because ${inputs.name} ${output_version} was already found in ${output_path}`)
             } else if (process.platform !== 'linux') {
                 fnlog(`Skipping APT step because platform is ${process.platform}`)
             }
         }
 
         // Install program
-        if (output_version === null && url !== null) {
+        if (output_version === null && inputs.url !== null) {
             core.startGroup('🚚 Downloading and Installing')
-            core.info(`Fetching ${name} ${version} from URL`)
-            const __ret = await install_program_from_url(name, version, check_latest, url, update_environment, install_prefix)
+            core.info(`Fetching ${inputs.name} ${inputs.version} from URL`)
+            const __ret = await install_program_from_url(
+                inputs.name,
+                inputs.version,
+                inputs.check_latest,
+                inputs.url,
+                inputs.update_environment,
+                inputs.install_prefix)
             output_version = __ret.output_version
             output_path = __ret.output_path
             core.endGroup()
         } else {
             if (output_version !== null) {
-                fnlog(`Skipping download step because ${name} ${output_version} was already found in ${output_path}`)
-            } else if (url === null) {
+                fnlog(`Skipping download step because ${inputs.name} ${output_version} was already found in ${output_path}`)
+            } else if (inputs.url === null) {
                 fnlog(`Skipping download step because no URL was provided. URL: ${url}`)
             }
         }
@@ -1348,25 +1372,24 @@ async function run() {
         // Parse Final program / Setup version / Outputs
         core.startGroup('📤 Return outputs')
         if (output_path) {
-            core.setOutput('path', output_path)
-            fnlog(`Setting output path to ${output_path}`)
-            core.setOutput('dir', path.dirname(output_path))
-            fnlog(`Setting output dir to ${path.dirname(output_path)}`)
-            const v = output_version !== null ? semver.parse(output_version, {
-                includePrerelease: false, loose: true
-            }) : semver.parse('0.0.0', {includePrerelease: false, loose: true})
-            core.setOutput('version', v.toString())
-            fnlog(`Setting output version to ${v.toString()}`)
-            core.setOutput('version-major', v.major)
-            fnlog(`Setting output version-major to ${v.major}`)
-            core.setOutput('version-minor', v.minor)
-            fnlog(`Setting output version-minor to ${v.minor}`)
-            core.setOutput('version-patch', v.patch)
-            fnlog(`Setting output version-patch to ${v.patch}`)
-            core.setOutput('found', true)
+            const semverVersion = output_version !== null ?
+                semver.parse(output_version, {includePrerelease: false, loose: true}) :
+                semver.parse('0.0.0', {includePrerelease: false, loose: true})
+            const outputs = {
+                path: output_path,
+                dir: path.dirname(output_path),
+                version: semverVersion.toString(),
+                version_major: semverVersion.major,
+                version_minor: semverVersion.minor,
+                version_patch: semverVersion.patch,
+                found: true
+            }
+            core.startGroup('📤 Action Outputs')
+            gh_inputs.setOutputObject(outputs)
+            core.endGroup()
         } else {
             core.setOutput('found', false)
-            if (fail_on_error) {
+            if (inputs.fail_on_error) {
                 core.setFailed('Cannot find program')
             } else {
                 core.info('Cannot find program')
@@ -1374,13 +1397,13 @@ async function run() {
         }
         core.endGroup()
     } catch (error) {
-        core.setFailed(error.message)
+        core.setFailed(`${error.message}\n${error.stack}`)
     }
 }
 
 if (require.main === module) {
     run().catch((error) => {
-        core.setFailed(error)
+        core.setFailed(`${error.message}\n${error.stack}`)
     })
 }
 
@@ -1403,5 +1426,7 @@ module.exports = {
     stripSingleDirectoryFromPath,
     findVersionsFromTags,
     findClangVersions,
-    findGCCVersions
+    findCMakeVersions,
+    findGCCVersions,
+    urlExists
 }

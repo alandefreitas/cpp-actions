@@ -1,5 +1,4 @@
 const core = require('@actions/core')
-// const github = require('@actions/github');
 const semver = require('semver')
 const {execSync} = require('child_process')
 const setup_program = require('setup-program')
@@ -7,13 +6,7 @@ const Handlebars = require('handlebars')
 const fs = require('fs')
 const path = require('path')
 const trace_commands = require('trace-commands')
-
-function isTruthy(s) {
-    if (typeof s === 'string') {
-        return s !== '' && s.trim().toLowerCase() !== 'false'
-    }
-    return !!s
-}
+const gh_inputs = require('gh-inputs')
 
 function parseCompilerRequirements(inputString) {
     const tokens = inputString.split(/[\n\s]+/)
@@ -1678,82 +1671,49 @@ function normalizeCompilerNameSuggestions(suggestionMap) {
     })
 }
 
-function parseKeyValues(lines) {
-    const keyValues = []
-    for (const line of lines) {
-        const [key, value] = line.split(':')
-        if (key && value) {
-            keyValues.push({key: key.trim(), value: value.trim()})
-        } else if (key) {
-            keyValues.push({key: '', value: key.trim()})
-        }
-    }
-    return keyValues
-}
-
-function parseMap(lines) {
-    const keyValues = {}
-    for (const line of lines) {
-        const [key, value] = line.split(':')
-        if (key && value) {
-            keyValues[key.trim()] = value.trim()
-        } else if (key) {
-            keyValues[''] = key.trim()
-        }
-    }
-    return keyValues
-}
-
-function normalizePath(path) {
-    const pathIsString = typeof path === 'string' || path instanceof String
-    if (pathIsString && process.platform === 'win32') {
-        return path.replace(/\\/g, '/')
-    }
-    return path
-}
-
 async function run() {
     try {
-        const compilerVersions = parseCompilerRequirements(core.getInput('compilers'))
+        const compilerVersions = parseCompilerRequirements(gh_inputs.getInput('compilers'))
+        const compilerKeys = Object.keys(compilerVersions)
         let inputs = {
             // Compilers
             compiler_versions: compilerVersions,
-            subrange_policy: parseMap(core.getMultilineInput('subrange-policy')),
-            standards: normalizeCppVersionRequirement(core.getInput('standards')),
-            max_standards: parseInt(core.getInput('max-standards').trim()),
+            subrange_policy: gh_inputs.getMap('subrange-policy'),
+            standards: normalizeCppVersionRequirement(gh_inputs.getInput('standards')),
+            max_standards: gh_inputs.getInt('max-standards'),
 
             // Factors
-            latest_factors: parseCompilerFactors(core.getInput('latest-factors'), Object.keys(compilerVersions)),
-            factors: parseCompilerFactors(core.getInput('factors'), Object.keys(compilerVersions)),
-            combinatorial_factors: parseCompilerFactors(core.getInput('combinatorial-factors'), Object.keys(compilerVersions)),
-            force_factors: parseCompilerSuggestions(core.getMultilineInput('force-factors'), Object.keys(compilerVersions)),
-            extra_values: parseKeyValues(core.getMultilineInput('extra-values')),
+            latest_factors: parseCompilerFactors(gh_inputs.getInput('latest-factors'), compilerKeys),
+            factors: parseCompilerFactors(gh_inputs.getInput('factors'), compilerKeys),
+            combinatorial_factors: parseCompilerFactors(gh_inputs.getInput('combinatorial-factors'), compilerKeys),
+            force_factors: parseCompilerSuggestions(gh_inputs.getMultilineInput('force-factors'), compilerKeys),
+            extra_values: gh_inputs.getKeyValues('extra-values'),
 
             // Customize suggestions
-            runs_on: parseCompilerSuggestions(core.getMultilineInput('runs-on'), Object.keys(compilerVersions)),
-            containers: parseCompilerSuggestions(core.getMultilineInput('containers'), Object.keys(compilerVersions)),
-            generators: parseCompilerSuggestions(core.getMultilineInput('generators'), Object.keys(compilerVersions)),
-            generator_toolsets: parseCompilerSuggestions(core.getMultilineInput('generator-toolsets'), Object.keys(compilerVersions)),
-            b2_toolsets: parseCompilerSuggestions(core.getMultilineInput('b2-toolsets'), Object.keys(compilerVersions)),
-            ccflags: parseCompilerSuggestions(core.getMultilineInput('ccflags'), Object.keys(compilerVersions)),
-            cxxflags: parseCompilerSuggestions(core.getMultilineInput('cxxflags'), Object.keys(compilerVersions)),
-            install: parseCompilerSuggestions(core.getMultilineInput('install'), Object.keys(compilerVersions)),
-            triplets: parseCompilerSuggestions(core.getMultilineInput('triplets'), Object.keys(compilerVersions)),
-            build_types: parseCompilerSuggestions(core.getMultilineInput('build-types'), Object.keys(compilerVersions)),
+            runs_on: parseCompilerSuggestions(gh_inputs.getMultilineInput('runs-on'), compilerKeys),
+            containers: parseCompilerSuggestions(gh_inputs.getMultilineInput('containers'), compilerKeys),
+            generators: parseCompilerSuggestions(gh_inputs.getMultilineInput('generators'), compilerKeys),
+            generator_toolsets: parseCompilerSuggestions(gh_inputs.getMultilineInput('generator-toolsets'), compilerKeys),
+            b2_toolsets: parseCompilerSuggestions(gh_inputs.getMultilineInput('b2-toolsets'), compilerKeys),
+            ccflags: parseCompilerSuggestions(gh_inputs.getMultilineInput('ccflags'), compilerKeys),
+            cxxflags: parseCompilerSuggestions(gh_inputs.getMultilineInput('cxxflags'), compilerKeys),
+            install: parseCompilerSuggestions(gh_inputs.getMultilineInput('install'), compilerKeys),
+            triplets: parseCompilerSuggestions(gh_inputs.getMultilineInput('triplets'), compilerKeys),
+            build_types: parseCompilerSuggestions(gh_inputs.getMultilineInput('build-types'), compilerKeys),
 
             // Customization flags
-            default_build_type: core.getInput('default-build-type').trim() || 'Release',
-            sanitizer_build_type: core.getInput('sanitizer-build-type').trim() || 'Release',
-            x86_build_type: core.getInput('x86-build-type').trim() || 'Release',
-            use_containers: core.getBooleanInput('use-containers'),
+            default_build_type: gh_inputs.getInput('default-build-type').trim() || 'Release',
+            sanitizer_build_type: gh_inputs.getInput('sanitizer-build-type').trim() || 'Release',
+            x86_build_type: gh_inputs.getInput('x86-build-type').trim() || 'Release',
+            use_containers: gh_inputs.getBoolean('use-containers'),
 
             // Output file
-            output_file: normalizePath(core.getInput('output-file')),
+            output_file: gh_inputs.getNormalizedPath('output-file'),
 
             // Annotations and tracing
-            log_matrix: core.getBooleanInput('log-matrix'),
-            generate_summary: core.getBooleanInput('generate-summary'),
-            trace_commands: core.getBooleanInput('trace-commands')
+            log_matrix: gh_inputs.getBoolean('log-matrix'),
+            generate_summary: gh_inputs.getBoolean('generate-summary'),
+            trace_commands: gh_inputs.getBoolean('trace-commands')
         }
 
         if (inputs.trace_commands) {
@@ -1782,15 +1742,12 @@ async function run() {
         normalizeCompilerNameSuggestions(inputs.build_types)
 
         core.startGroup('📥 C++ Matrix Requirements')
-        for (const [name, value] of Object.entries(inputs)) {
-            core.info(`🧩 ${name.replaceAll('_', '-')}: ${JSON.stringify(value)}`)
-        }
+        gh_inputs.printInputObject(inputs)
         core.endGroup()
 
         try {
             const matrix = await generateMatrix(inputs)
             core.setOutput('matrix', matrix)
-
         } catch (error) {
             core.setFailed(`${error.message}\n${error.stack}`)
         }
@@ -1806,7 +1763,6 @@ if (require.main === module) {
 }
 
 module.exports = {
-    isTruthy,
     parseCompilerRequirements,
     parseCompilerSuggestions,
     normalizeCppVersionRequirement,

@@ -19,7 +19,8 @@
     "setup-program": "file:../setup-program",
     "setup-gcc": "file:../setup-gcc",
     "setup-clang": "file:../setup-clang",
-    "trace-commands": "file:../common/trace-commands"
+    "trace-commands": "file:../common/trace-commands",
+    "gh-inputs": "file:../common/gh-inputs"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.38.1",

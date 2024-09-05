@@ -10,6 +10,8 @@ const semver = require('semver')
 const crypto = require('crypto')
 const uuidV4 = require('uuid').v4
 const trace_commands = require('trace-commands')
+const gh_inputs = require('gh-inputs')
+const setup_program = require('setup-program')
 
 function formatTime(ms) {
     if (ms < 1000) {
@@ -21,13 +23,6 @@ function formatTime(ms) {
     return `${(ms / 1000 / 60).toFixed(1)}m`
 }
 
-function isSudoRequired() {
-    if (process.platform !== 'linux') {
-        return false
-    }
-    return process.getuid() !== 0
-}
-
 async function apt_get_main(inputs) {
     function fnlog(msg) {
         trace_commands.log('apt_get_main: ' + msg)
@@ -36,7 +31,7 @@ async function apt_get_main(inputs) {
     core.startGroup('🔍 Find apt-get')
     fnlog(`Check if apt-get is installed`)
     const apt_get_path = await io.which('apt-get', true)
-    const sudo_required = isSudoRequired()
+    const sudo_required = setup_program.isSudoRequired()
     const sudoPrefix = sudo_required ? 'sudo ' : ''
     core.info(`🧩 apt-get-path: ${apt_get_path}`)
     core.info(`🧩 sudo-required: ${sudo_required}`)
@@ -412,50 +407,6 @@ async function main(inputs, force_install_vcpkg) {
     return {}
 }
 
-function toTriboolInput(input) {
-    if (typeof input === 'boolean') {
-        return input
-    }
-    if (typeof input === 'number') {
-        return input !== 0
-    }
-    if (typeof input !== 'string') {
-        return undefined
-    }
-    if (['true', '1', 'on', 'yes', 'y'].includes(input.toLowerCase())) {
-        return true
-    } else if (['false', '0', 'off', 'no', 'n'].includes(input.toLowerCase())) {
-        return false
-    } else {
-        return undefined
-    }
-}
-
-function toTriboolOrStringInput(input) {
-    const asBool = toTriboolInput(input)
-    if (typeof asBool !== 'boolean') {
-        return input
-    }
-    return asBool
-}
-
-function toIntegerInput(input) {
-    const parsedInt = parseInt(input)
-    if (isNaN(parsedInt)) {
-        return undefined
-    } else {
-        return parsedInt
-    }
-}
-
-function normalizePath(path) {
-    const pathIsString = typeof path === 'string' || path instanceof String
-    if (pathIsString && process.platform === 'win32') {
-        return path.replace(/\\/g, '/')
-    }
-    return path
-}
-
 async function run() {
     function fnlog(msg) {
         trace_commands.log('package-install: ' + msg)
@@ -464,27 +415,27 @@ async function run() {
     try {
         let inputs = {
             // packages
-            vcpkg: (core.getInput('vcpkg') || '').split(/[,; \n]/).filter((input) => input !== ''),
-            apt_get: (core.getInput('apt-get') || '').split(/[,; \n]/).filter((input) => input !== ''),
+            vcpkg: gh_inputs.getArray('vcpkg'),
+            apt_get: gh_inputs.getArray('apt-get'),
             // vcpkg options
-            cxx: normalizePath(core.getInput('cxx') || process.env['CXX'] || ''),
-            cxxflags: (core.getInput('cxxflags') || process.env['CXXFLAGS'] || '').trim(),
-            cc: normalizePath(core.getInput('cc') || process.env['CC'] || ''),
-            ccflags: (core.getInput('ccflags') || process.env['CFLAGS'] || '').trim(),
-            vcpkg_triplet: core.getInput('vcpkg-triplet') || '',
-            vcpkg_dir: normalizePath(core.getInput('vcpkg-dir') || ''),
-            vcpkg_branch: core.getInput('vcpkg-branch') || '',
-            vcpkg_cache: toTriboolInput(core.getInput('vcpkg-cache')) || true,
-            vcpkg_force_install: toTriboolInput(core.getInput('vcpkg-force-install')) || false,
+            cxx: gh_inputs.getNormalizedPath('cxx', {fallbackEnv: 'CXX'}),
+            cxxflags: gh_inputs.getInput('cxxflags', {fallbackEnv: 'CXXFLAGS'}),
+            cc: gh_inputs.getNormalizedPath('cc', {fallbackEnv: 'CC'}),
+            ccflags: gh_inputs.getInput('ccflags', {fallbackEnv: 'CFLAGS'}),
+            vcpkg_triplet: gh_inputs.getInput('vcpkg-triplet'),
+            vcpkg_dir: gh_inputs.getNormalizedPath('vcpkg-dir'),
+            vcpkg_branch: gh_inputs.getInput('vcpkg-branch'),
+            vcpkg_cache: gh_inputs.getBoolean('vcpkg-cache', {defaultValue: true}),
+            vcpkg_force_install: gh_inputs.getBoolean('vcpkg-force-install', {defaultValue: false}),
             // apt-get options
-            apt_get_retries: toIntegerInput(core.getInput('apt-get-retries') || process.env['APT_GET_RETRIES']) || 3,
-            apt_get_sources: (core.getInput('apt-get-sources') || '').split(/[,; ]/).filter((input) => input !== ''),
-            apt_get_source_keys: (core.getInput('apt-get-source-keys') || '').split(/[,; ]/).filter((input) => input !== ''),
-            apt_get_ignore_missing: toTriboolInput(core.getInput('apt-get-ignore-missing')) || false,
-            apt_get_add_architecture: (core.getInput('apt-get-add-architecture') || '').split(/[,; ]/).filter((input) => input !== ''),
-            apt_get_bulk_install: toTriboolInput(core.getInput('apt-get-bulk-install')) || false,
+            apt_get_retries: gh_inputs.getInt('apt-get-retries', {fallbackEnv: 'APT_GET_RETRIES', defaultValue: 3}),
+            apt_get_sources: gh_inputs.getArray('apt-get-sources'),
+            apt_get_source_keys: gh_inputs.getArray('apt-get-source-keys'),
+            apt_get_ignore_missing: gh_inputs.getBoolean('apt-get-ignore-missing', {defaultValue: false}),
+            apt_get_add_architecture: gh_inputs.getArray('apt-get-add-architecture'),
+            apt_get_bulk_install: gh_inputs.getBoolean('apt-get-bulk-install', {defaultValue: false}),
             // Annotations and tracing
-            trace_commands: core.getBooleanInput('trace-commands')
+            trace_commands: gh_inputs.getBoolean('trace-commands')
         }
 
         // Resolve paths
@@ -496,7 +447,8 @@ async function run() {
         // patch apt-get packages for vcpkg
         // ----------------------------------------------
         if (inputs.vcpkg.length > 0 && process.platform === 'linux') {
-            for (const pkg of ['git', 'curl', 'zip', 'unzip', 'tar']) {
+            let vcpkgDependencies = ['git', 'curl', 'zip', 'unzip', 'tar']
+            for (const pkg of vcpkgDependencies) {
                 if (!inputs.apt_get.includes(pkg)) {
                     inputs.apt_get.push(pkg)
                 }
@@ -514,34 +466,22 @@ async function run() {
             inputs.vcpkg = inputs.vcpkg.filter((item) => item !== 'true')
         }
 
-        core.startGroup('📥 Workflow Inputs')
-        fnlog(`🧩 package-install.trace_commands: ${trace_commands}`)
-        for (const [name, value] of Object.entries(inputs)) {
-            core.info(`🧩 ${name.replaceAll('_', '-')}: ${value ? (typeof value === 'string' ? `"${value}"` : value) : '<empty>'}`)
-        }
+        core.startGroup('📥 Action Inputs')
+        gh_inputs.printInputObject(inputs)
         core.endGroup()
 
-        try {
-            const outputs = await main(inputs)
-            core.startGroup('📤 Workflow Outputs')
-            for (const [name, value] of Object.entries(outputs)) {
-                const outputKey = name.replaceAll('_', '-')
-                core.info(`🧩 ${outputKey}: ${value ? (typeof value === 'string' ? `"${value}"` : value) : '<empty>'}`)
-                core.setOutput(outputKey, value)
-            }
-            core.endGroup()
-        } catch (error) {
-            fnlog(error.stack)
-            core.setFailed(error)
-        }
+        const outputs = await main(inputs)
+        core.startGroup('📤 Action Outputs')
+        gh_inputs.setOutputObject(outputs)
+        core.endGroup()
     } catch (error) {
-        core.setFailed(error)
+        core.setFailed(`${error.message}\n${error.stack}`)
     }
 }
 
 if (require.main === module) {
     run().catch((error) => {
-        core.setFailed(error)
+        core.setFailed(`${error.message}\n${error.stack}`)
     })
 }
 

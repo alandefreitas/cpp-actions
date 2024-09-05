@@ -8,6 +8,7 @@ const path = require('path')
 const httpm = require('@actions/http-client')
 const setup_program = require('setup-program')
 const trace_commands = require('trace-commands')
+const gh_inputs = require('gh-inputs')
 
 function removeClangPrefix(version) {
     // Remove "clang-" or "clang++-" prefix
@@ -113,17 +114,6 @@ function generateClangUrlsFor(version_candidate, ubuntu_version) {
     return {llvm_project_url, llvm_releases_url, old_llvm_releases_url}
 }
 
-async function urlExists(url) {
-    const http_client = new httpm.HttpClient('setup-clang', [], {
-        allowRetries: true, maxRetries: 3
-    })
-    try {
-        const res = await http_client.head(url)
-        return res.message.statusCode === 200
-    } catch (error) {
-        return false
-    }
-}
 
 async function install_program_from_clang_urls(ubuntu_versions, version_candidates, version, check_latest, update_environment, output_version, output_path) {
     // Try URLs considering ubuntu versions
@@ -140,7 +130,7 @@ async function install_program_from_clang_urls(ubuntu_versions, version_candidat
                 old_llvm_releases_url
             } = generateClangUrlsFor(version_candidate, ubuntu_version)
             for (const clang_url of [llvm_project_url, llvm_releases_url, old_llvm_releases_url]) {
-                if (!await urlExists(clang_url)) {
+                if (!await setup_program.urlExists(clang_url)) {
                     trace_commands.log(`Skipping ${clang_url} because it does not exist`)
                 } else {
                     const __ret = await setup_program.install_program_from_url(['clang'], version_candidate, check_latest, clang_url, update_environment, '/usr/local')
@@ -157,7 +147,7 @@ async function install_program_from_clang_urls(ubuntu_versions, version_candidat
 }
 
 async function main(version, paths, check_latest, update_environment) {
-    core.startGroup('Find clang versions')
+    core.startGroup('🌍 Find clang versions')
     if (process.platform === 'darwin') {
         process.env['AGENT_TOOLSDIRECTORY'] = '/Users/runner/hostedtoolcache'
     }
@@ -165,7 +155,6 @@ async function main(version, paths, check_latest, update_environment) {
     if (process.env.AGENT_TOOLSDIRECTORY?.trim()) {
         process.env['RUNNER_TOOL_CACHE'] = process.env['AGENT_TOOLSDIRECTORY']
     }
-
     if (process.platform !== 'linux') {
         core.setFailed('This action is only supported on Linux')
     }
@@ -179,7 +168,7 @@ async function main(version, paths, check_latest, update_environment) {
 
     // Setup path program
     if (paths.length > 0) {
-        core.startGroup('Find clang in specified paths')
+        core.startGroup('📂 Find clang in specified paths')
         core.info(`Searching for Clang ${version} in paths [${paths.join(',')}]`)
         const __ret = await setup_program.find_program_in_path(paths, version, check_latest)
         output_version = __ret.output_version
@@ -189,7 +178,7 @@ async function main(version, paths, check_latest, update_environment) {
 
     // Setup system program
     if (!output_path) {
-        core.startGroup('Find clang in system paths')
+        core.startGroup('💻 Find clang in system paths')
         core.info(`Searching for Clang ${version} in PATH`)
         trace_commands.log(`Arguments: ${paths}, ['clang++'], ${version}, ${check_latest}`)
         const __ret = await setup_program.find_program_in_system_paths(paths, ['clang++'], version, check_latest)
@@ -200,7 +189,7 @@ async function main(version, paths, check_latest, update_environment) {
 
     // Setup APT program
     if (!output_version && process.platform === 'linux') {
-        core.startGroup('Find clang with APT')
+        core.startGroup('📦 Find clang with APT')
         core.info(`Searching for Clang ${version} with APT`)
 
         // Add repositories for major clang versions
@@ -243,7 +232,7 @@ async function main(version, paths, check_latest, update_environment) {
                 for (const major of allVersionMajors) {
                     const ReleaseFileURL = `https://apt.llvm.org/${ubuntuName}/dists/llvm-toolchain-${ubuntuName}-${major}/Release`
                     trace_commands.log(`Checking if ${ReleaseFileURL} exists`)
-                    if (!await urlExists(ReleaseFileURL)) {
+                    if (!await setup_program.urlExists(ReleaseFileURL)) {
                         trace_commands.log(`Skipping repository for major version ${major} because ${ReleaseFileURL} does not exist`)
                         continue
                     }
@@ -274,7 +263,7 @@ async function main(version, paths, check_latest, update_environment) {
     // If output_version === null, and it gets installed at all, it will be installed from a URL
     const installed_from_url = output_version === null
     if (output_version === null) {
-        core.startGroup('Download clang')
+        core.startGroup('⬇️ Download clang')
         let {version_candidates, ubuntu_versions} = clangDownloadCandidates(version, allVersions, check_latest)
         const __ret = await install_program_from_clang_urls(ubuntu_versions, version_candidates, version, check_latest, update_environment, output_version, output_path)
         output_version = __ret.output_version
@@ -285,7 +274,7 @@ async function main(version, paths, check_latest, update_environment) {
     }
 
     // Create outputs
-    core.startGroup('Set outputs')
+    core.startGroup('📤 Set outputs')
     let cc = output_path
     let cxx = output_path
     let bindir = ''
@@ -376,63 +365,35 @@ async function main(version, paths, check_latest, update_environment) {
         }
     }
     core.endGroup()
-    return {output_path, cc, cxx, bindir, dir, release, version_major, version_minor, version_patch}
+    return {output_path, cc, cxx, bindir, dir, version: release, version_major, version_minor, version_patch}
 }
 
 async function run() {
     try {
-        const inputs = [
-            ['trace_commands', core.getBooleanInput('trace-commands')],
-            ['version', removeClangPrefix(core.getInput('version') || '*')],
-            ['path', core.getInput('path').split(/[:;]/).filter((path) => path !== '')],
-            ['check_latest', core.getBooleanInput('check-latest')],
-            ['update_environment', core.getBooleanInput('update-environment')]
-        ]
-
-        for (const [name, value] of inputs) {
-            trace_commands.log(`${name}: ${value}`)
+        const inputs = {
+            version: removeClangPrefix(gh_inputs.getInput('version', {defaultValue: '*'})),
+            path: gh_inputs.getArray('path', /[:;]/),
+            check_latest: gh_inputs.getBoolean('check-latest'),
+            update_environment: gh_inputs.getBoolean('update-environment'),
+            trace_commands: gh_inputs.getBoolean('trace-commands')
         }
 
-        function getInput(inputs, key) {
-            return inputs.find(([name]) => name === key)[1]
-        }
-
-        if (getInput(inputs, 'trace_commands')) {
+        if (inputs.trace_commands) {
             trace_commands.set_trace_commands(true)
         }
 
-        let {
-            output_path,
-            cc,
-            cxx,
-            bindir,
-            dir,
-            release,
-            version_major,
-            version_minor,
-            version_patch
-        } = await main(
-            getInput(inputs, 'version'),
-            getInput(inputs, 'path'),
-            getInput(inputs, 'check_latest'),
-            getInput(inputs, 'update_environment'))
+        core.startGroup('📥 Action Inputs')
+        gh_inputs.printInputObject(inputs)
+        core.endGroup()
+
+        const outputs = await main(
+            inputs.version, inputs.path, inputs.check_latest, inputs.update_environment)
 
         // Parse Final program / Setup version / Outputs
-        if (output_path !== null && output_path !== undefined) {
-            const outputs = [
-                ['cc', cc],
-                ['cxx', cxx],
-                ['bindir', bindir],
-                ['dir', dir],
-                ['version', release],
-                ['version-major', version_major],
-                ['version-minor', version_minor],
-                ['version-patch', version_patch]
-            ]
-            for (const [name, value] of outputs) {
-                core.setOutput(name, value)
-                trace_commands.log(`Setting output ${name} to ${value}`)
-            }
+        if (outputs.output_path) {
+            core.startGroup('📤 Action Outputs')
+            gh_inputs.setOutputObject(outputs)
+            core.endGroup()
         } else {
             core.setFailed('Cannot setup Clang')
         }

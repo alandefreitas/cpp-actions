@@ -18,7 +18,8 @@
     "@actions/io": "^1.1.3",
     "setup-cmake": "file:../setup-cmake",
     "setup-program": "file:../setup-program",
-    "trace-commands": "file:../common/trace-commands"
+    "trace-commands": "file:../common/trace-commands",
+    "gh-inputs": "file:../common/gh-inputs"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.38.1",

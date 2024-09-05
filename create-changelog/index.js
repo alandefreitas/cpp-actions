@@ -4,6 +4,7 @@ const path = require('path')
 const exec = require('@actions/exec')
 const axios = require('axios')
 const trace_commands = require('trace-commands')
+const gh_inputs = require('gh-inputs')
 
 class Commit {
     constructor() {
@@ -1275,23 +1276,6 @@ async function main(inputs) {
     }
 }
 
-function toIntegerInput(input) {
-    const parsedInt = parseInt(input)
-    if (isNaN(parsedInt)) {
-        return undefined
-    } else {
-        return parsedInt
-    }
-}
-
-function normalizePath(path) {
-    const pathIsString = typeof path === 'string' || path instanceof String
-    if (pathIsString && process.platform === 'win32') {
-        return path.replace(/\\/g, '/')
-    }
-    return path
-}
-
 async function run() {
     function fnlog(msg) {
         trace_commands.log('create-changelog: ' + msg)
@@ -1300,17 +1284,17 @@ async function run() {
     try {
         let inputs = {
             // Configure options
-            source_dir: normalizePath(core.getInput('source-dir')),
-            version_pattern: new RegExp(core.getInput('version-pattern')),
-            tag_pattern: new RegExp(core.getInput('tag-pattern')),
-            output_path: normalizePath(core.getInput('output-path')),
-            limit: toIntegerInput(core.getInput('limit')),
-            thank_non_regular: core.getBooleanInput('thank-non-regular'),
-            check_unconventional: core.getBooleanInput('check-unconventional'),
-            link_commits: core.getBooleanInput('link-commits'),
-            github_token: core.getInput('github-token'),
-            update_summary: core.getBooleanInput('update-summary'),
-            trace_commands: core.getBooleanInput('trace-commands')
+            source_dir: gh_inputs.getNormalizedPath('source-dir'),
+            version_pattern: gh_inputs.getRegex('version-pattern'),
+            tag_pattern: gh_inputs.getRegex('tag-pattern'),
+            output_path: gh_inputs.getNormalizedPath('output-path'),
+            limit: gh_inputs.getInt('limit'),
+            thank_non_regular: gh_inputs.getBoolean('thank-non-regular'),
+            check_unconventional: gh_inputs.getBoolean('check-unconventional'),
+            link_commits: gh_inputs.getBoolean('link-commits'),
+            github_token: gh_inputs.getInput('github-token'),
+            update_summary: gh_inputs.getBoolean('update-summary'),
+            trace_commands: gh_inputs.getBoolean('trace-commands')
         }
 
         // Resolve paths
@@ -1326,11 +1310,8 @@ async function run() {
         }
 
         // Print a summary of the inputs
-        core.startGroup('📥 Workflow Inputs')
-        fnlog(`🧩 create-changelog.trace_commands: ${trace_commands}`)
-        for (const [name, value] of Object.entries(inputs)) {
-            core.info(`🧩 ${name.replaceAll('_', '-')}: ${JSON.stringify(value)}`)
-        }
+        core.startGroup('📥 Action Inputs')
+        gh_inputs.printInputObject(inputs)
         core.endGroup()
 
         try {
@@ -1349,7 +1330,7 @@ async function run() {
 
 if (require.main === module) {
     run().catch((error) => {
-        core.setFailed(error)
+        core.setFailed(`${error.message}\n${error.stack}`)
     })
 }
 
@@ -1384,8 +1365,6 @@ module.exports = {
     categorizeCommits,
     generateOutput,
     writeChangelog,
-    toIntegerInput,
-    normalizePath,
     run,
     main
 }

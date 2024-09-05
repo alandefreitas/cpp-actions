@@ -4,11 +4,11 @@ const semver = require('semver')
 const fs = require('fs')
 const exec = require('@actions/exec')
 const path = require('path')
-const setup_program = require('setup-program')
 const setup_gcc = require('setup-gcc')
 const setup_clang = require('setup-clang')
 const setup_msvc = require('./msvc-dev-cmd')
 const trace_commands = require('trace-commands')
+const gh_inputs = require('gh-inputs')
 
 function normalizeCompiler(compiler, version) {
     let parts = compiler.split(/-|\s/)
@@ -46,43 +46,27 @@ function normalizeCompiler(compiler, version) {
 
 async function run() {
     try {
-        core.startGroup(`📥 Inputs`)
-
-        const inputs = [
-            ['trace_commands', core.getBooleanInput('trace-commands')],
-            ['compiler', core.getInput('compiler') || '*'],
-            ['version', core.getInput('version') || '*'],
-            ['path', core.getInput('path').split(/[:;]/).filter((path) => path !== '')],
-            ['check_latest', core.getBooleanInput('check-latest')],
-            ['update_environment', core.getBooleanInput('update-environment')]
-        ]
-
-        function getInput(inputs, key) {
-            return inputs.find(([name]) => name === key)[1]
+        const inputs = {
+            compiler: gh_inputs.getInput('compiler', {defaultValue: '*'}),
+            version: gh_inputs.getInput('version', {defaultValue: '*'}),
+            path: gh_inputs.getArray('path', /[:;]/),
+            check_latest: gh_inputs.getBoolean('check-latest'),
+            update_environment: gh_inputs.getBoolean('update-environment'),
+            trace_commands: gh_inputs.getBoolean('trace-commands')
         }
 
-        if (getInput(inputs, 'trace_commands')) {
+        if (inputs.trace_commands) {
             trace_commands.set_trace_commands(true)
         }
 
-        function setInput(inputs, key, value) {
-            const input = inputs.find(([name]) => name === key)
-            if (input) {
-                input[1] = value
-            } else {
-                trace_commands.log(`Input ${key} not found`)
-                inputs.push([key, value])
-            }
-        }
+        const {compiler, version} = normalizeCompiler(inputs.compiler, inputs.version)
+        inputs.compiler = compiler
+        inputs.version = version
 
-        for (const [name, value] of inputs) {
-            trace_commands.log(`${name}: ${value}`)
-        }
-
-        const {compiler, version} = normalizeCompiler(getInput(inputs, 'compiler'), getInput(inputs, 'version'))
-        setInput(inputs, 'compiler', compiler)
-        setInput(inputs, 'version', version)
+        core.startGroup('📥 Action Inputs')
+        gh_inputs.printInputObject(inputs)
         core.endGroup()
+
 
         let output_path = null
         let cc = null
@@ -93,22 +77,21 @@ async function run() {
         let version_major = null
         let version_minor = null
         let version_patch = null
-
         if (['clang', 'gcc'].includes(compiler) && process.platform === 'linux') {
             trace_commands.log(`compiler: ${compiler}... forwarding to setup ${compiler} action.`)
             let SetupResult = null
             if (compiler === 'clang') {
                 SetupResult = await setup_clang.main(
-                    getInput(inputs, 'version'),
-                    getInput(inputs, 'path'),
-                    getInput(inputs, 'check_latest'),
-                    getInput(inputs, 'update_environment'))
+                    inputs.version,
+                    inputs.path,
+                    inputs.check_latest,
+                    inputs.update_environment)
             } else if (compiler === 'gcc') {
                 SetupResult = await setup_gcc.main(
-                    getInput(inputs, 'version'),
-                    getInput(inputs, 'path'),
-                    getInput(inputs, 'check_latest'),
-                    getInput(inputs, 'update_environment'))
+                    inputs.version,
+                    inputs.path,
+                    inputs.check_latest,
+                    inputs.update_environment)
             }
             if (SetupResult !== null) {
                 output_path = SetupResult.output_path
@@ -204,21 +187,18 @@ async function run() {
 
         // Parse Final program / Setup version / Outputs
         if (output_path !== null && output_path !== undefined) {
-            core.startGroup(`📤 Outputs`)
-            const outputs = [
-                ['cc', cc],
-                ['cxx', cxx],
-                ['bindir', bindir],
-                ['dir', dir],
-                ['version', release],
-                ['version-major', version_major],
-                ['version-minor', version_minor],
-                ['version-patch', version_patch]
-            ]
-            for (const [name, value] of outputs) {
-                core.setOutput(name, value)
-                trace_commands.log(`Setting output ${name} to ${value}`)
+            const outputs = {
+                cc: cc,
+                cxx: cxx,
+                bindir: bindir,
+                dir: dir,
+                version: release,
+                version_major: version_major,
+                version_minor: version_minor,
+                version_patch: version_patch
             }
+            core.startGroup('📤 Action Outputs')
+            gh_inputs.setOutputObject(outputs)
             core.endGroup()
         } else {
             core.setFailed(`Cannot setup ${compiler}`)

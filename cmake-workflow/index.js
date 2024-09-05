@@ -1,13 +1,14 @@
 const core = require('@actions/core')
 const {DefaultArtifactClient} = require('@actions/artifact')
 const fs = require('fs')
-const setup_cmake = require('setup-cmake')
-const setup_program = require('setup-program')
 const path = require('path')
 const exec = require('@actions/exec')
 const io = require('@actions/io')
 const os = require('os')
 const trace_commands = require('trace-commands')
+const setup_cmake = require('setup-cmake')
+const setup_program = require('setup-program')
+const gh_inputs = require('gh-inputs')
 
 function createCMakeConfigureAnnotations(output, inputs) {
     function fnlog(msg) {
@@ -1572,106 +1573,6 @@ function toIntegerInput(input) {
     }
 }
 
-function parseExtraArgsEntry(extra_args) {
-    // The extra_args input is a multiline string. Each element in the array
-    // is a line in the string. We need to split each line into arguments
-    // and then join them into a single array. It's not as simple as splitting
-    // on spaces because arguments can be quoted.
-
-    function extractIdentifier(i, line, char, curArg) {
-        const nextChar = i < line.length - 1 ? line[i + 1] : undefined
-        if (nextChar && nextChar.match(/^[a-zA-Z_]/)) {
-            let identifier = nextChar
-            let j = i + 2
-            for (; j < line.length; j++) {
-                const idChar = line[j]
-                // check if idChar is alphanum or underscore
-                if (idChar.match(/^[a-zA-Z0-9_]/)) {
-                    identifier += char
-                } else {
-                    break
-                }
-            }
-            // Replace $ with the value of the environment variable
-            // if it exists
-            const envValue = process.env[identifier]
-            if (envValue) {
-                curArg += envValue
-            }
-            // Advance i to the last character of the identifier
-            i = j - 1
-        } else {
-            // No valid identifier after $. Just output $.
-            curArg += char
-        }
-        return {i, curArg}
-    }
-
-    let args = []
-    for (const line of extra_args) {
-        let curQuote = undefined
-        let curArg = ''
-        for (let i = 0; i < line.length; i++) {
-            const char = line[i]
-            const inQuote = curQuote !== undefined
-            const curIsQuote = ['"', '\''].includes(char)
-            const curIsEscaped = i > 0 && line[i - 1] === '\\'
-            if (!inQuote) {
-                if (!curIsEscaped) {
-                    if (curIsQuote) {
-                        curQuote = char
-                    } else if (char === ' ') {
-                        if (curArg !== '') {
-                            args.push(curArg)
-                            curArg = ''
-                        }
-                    } else if (char === '$') {
-                        const __ret = extractIdentifier(i, line, char, curArg)
-                        i = __ret.i
-                        curArg = __ret.curArg
-                    } else if (char !== '\\') {
-                        curArg += char
-                    }
-                } else {
-                    curArg += char
-                }
-            } else if (curQuote === '"') {
-                // Preserve the literal value of all characters except for
-                // ($), (`), ("), (\), and the (!) character
-                if (!curIsEscaped) {
-                    if (char === curQuote) {
-                        curQuote = undefined
-                    } else if (char === '$') {
-                        const __ret = extractIdentifier(i, line, char, curArg)
-                        i = __ret.i
-                        curArg = __ret.curArg
-                    } else if (char !== '\\') {
-                        curArg += char
-                    }
-                } else {
-                    if (!['$', '`', '"', '\\'].includes(char)) {
-                        curArg += '\\'
-                    }
-                    curArg += char
-                }
-            } else if (curQuote === '\'') {
-                // Preserve the literal value of each character within the
-                // quotes
-                if (char !== curQuote) {
-                    curArg += char
-                } else {
-                    curQuote = undefined
-                }
-            }
-        }
-        if (curArg !== '') {
-            args.push(curArg)
-            curArg = ''
-        }
-    }
-    return args
-}
-
 function parseExtraArgs(extra_args) {
     function fnlog(msg) {
         trace_commands.log('parseExtraArgs: ' + msg)
@@ -1713,7 +1614,7 @@ function parseExtraArgs(extra_args) {
     if (!res) {
         // Parse all lines as a single line of cmake args
         fnlog('Parsing all lines as a single line of cmake args')
-        return parseExtraArgsEntry(extra_args)
+        return gh_inputs.parseBashArguments(extra_args)
     } else {
         // Parse lines as a map of key-value pairs where each value
         // is one factor we have to test.
@@ -1733,7 +1634,7 @@ function parseExtraArgs(extra_args) {
         fnlog(`Parsed extra args map: ${JSON.stringify(extraArgsMap)}`)
         // Parse each value in the map as a single line of cmake args
         for (const key in extraArgsMap) {
-            extraArgsMap[key] = parseExtraArgsEntry(extraArgsMap[key])
+            extraArgsMap[key] = gh_inputs.parseBashArguments(extraArgsMap[key])
         }
         fnlog(`Parsed extra args map: ${JSON.stringify(extraArgsMap)}`)
         return extraArgsMap
@@ -1747,16 +1648,6 @@ function normalizePath(inputPath) {
     }
     return inputPath
 }
-
-// function ensureAbsolute(inputPath) {
-//     const pathIsString = typeof inputPath === 'string' || inputPath instanceof String
-//     if (pathIsString) {
-//         if (!path.isAbsolute(inputPath)) {
-//             inputPath = path.resolve(process.cwd(), inputPath)
-//         }
-//     }
-//     return inputPath
-// }
 
 function applyPresetMacros(value, allInputs) {
     // The action allows preset macros to be used in the input.
@@ -1804,65 +1695,69 @@ async function run() {
     try {
         let inputs = {
             // CMake
-            cmake_path: core.getInput('cmake-path') || '',
-            cmake_version: core.getInput('cmake-version') || '*',
+            cmake_path: gh_inputs.getInput('cmake-path'),
+            cmake_version: gh_inputs.getInput('cmake-version', {defaultValue: '*'}),
             // Source project
-            source_dir: normalizePath(core.getInput('source-dir')),
-            url: core.getInput('url') || '',
-            git_repository: core.getInput('git-repository') || '',
-            git_tag: core.getInput('git-tag') || '',
-            download_dir: normalizePath(core.getInput('download-dir')),
-            patches: core.getMultilineInput('patches') || [],
+            source_dir: gh_inputs.getResolvedPath('source-dir'),
+            url: gh_inputs.getInput('url'),
+            git_repository: gh_inputs.getInput('git-repository'),
+            git_tag: gh_inputs.getInput('git-tag'),
+            download_dir: gh_inputs.getNormalizedPath('download-dir'),
+            patches: gh_inputs.getMultilineInput('patches'),
             // Configure options
-            build_dir: normalizePath(core.getInput('build-dir')),
-            preset: core.getInput('preset') || '',
-            cc: normalizePath(core.getInput('cc') || process.env['CC'] || ''),
-            ccflags: core.getInput('ccflags') || process.env['CFLAGS'] || '',
-            cxx: normalizePath(core.getInput('cxx') || process.env['CXX'] || ''),
-            cxxflags: core.getInput('cxxflags') || process.env['CXXFLAGS'] || '',
-            cxxstd: (core.getInput('cxxstd') || process.env['CXXSTD'] || '').split(/[,; ]/).filter((input) => input !== ''),
-            shared: toBooleanInput(core.getInput('shared') || process.env['BUILD_SHARED_LIBS'] || ''),
-            toolchain: normalizePath(core.getInput('toolchain') || process.env['CMAKE_TOOLCHAIN_FILE'] || ''),
-            generator: core.getInput('generator') || process.env['CMAKE_GENERATOR'] || '',
-            generator_toolset: core.getInput('generator-toolset') || process.env['CMAKE_GENERATOR_TOOLSET'] || '',
-            generator_architecture: core.getInput('generator-architecture') || process.env['CMAKE_GENERATOR_ARCHITECTURE'] || '',
-            build_type: core.getInput('build-type') || process.env['CMAKE_BUILD_TYPE'] || '',
-            build_target: (core.getInput('build-target') || '').split(/[,; ]/).filter((input) => input !== ''),
-            extra_args: parseExtraArgs(core.getMultilineInput('extra-args')) || '',
-            export_compile_commands: toBooleanInput(core.getInput('export-compile-commands') || process.env['CMAKE_EXPORT_COMPILE_COMMANDS'] || ''),
+            build_dir: gh_inputs.getNormalizedPath('build-dir'),
+            preset: gh_inputs.getInput('preset') || '',
+            cc: gh_inputs.getNormalizedPath('cc', {fallbackEnv: 'CC'}),
+            ccflags: gh_inputs.getInput('ccflags', {fallbackEnv: 'CFLAGS'}),
+            cxx: gh_inputs.getNormalizedPath('cxx', {fallbackEnv: 'CXX'}),
+            cxxflags: gh_inputs.getInput('cxxflags', {fallbackEnv: 'CXXFLAGS'}),
+            cxxstd: gh_inputs.getArray('cxxstd', undefined, undefined, {fallbackEnv: 'CXXSTD'}),
+            shared: gh_inputs.getTribool('shared', {fallbackEnv: 'BUILD_SHARED_LIB'}),
+            toolchain: gh_inputs.getNormalizedPath('toolchain', {fallbackEnv: 'CMAKE_TOOLCHAIN_FILE'}),
+            generator: gh_inputs.getInput('generator', {fallbackEnv: 'CMAKE_GENERATOR'}),
+            generator_toolset: gh_inputs.getInput('generator-toolset', {fallbackEnv: 'CMAKE_GENERATOR_TOOLSET'}),
+            generator_architecture: gh_inputs.getInput('generator-architecture', {fallbackEnv: 'CMAKE_GENERATOR_ARCHITECTURE'}),
+            build_type: gh_inputs.getInput('build-type', {fallbackEnv: 'CMAKE_BUILD_TYPE'}),
+            build_target: gh_inputs.getArray('build-target'),
+            extra_args: parseExtraArgs(gh_inputs.getMultilineInput('extra-args')),
+            export_compile_commands: gh_inputs.getTribool('export-compile-commands', {fallbackEnv: 'CMAKE_EXPORT_COMPILE_COMMANDS'}),
             // Build options
-            jobs: toIntegerInput(core.getInput('jobs') || process.env['CMAKE_JOBS']) || numberOfCpus(),
+            jobs: gh_inputs.getInt('jobs', {fallbackEnv: 'CMAKE_JOBS', defaultValue: numberOfCpus()}),
             // Test options
-            run_tests: toBooleanInput(core.getInput('run-tests') || process.env['CMAKE_RUN_TESTS'] || ''),
-            configure_tests_flag: core.getInput('configure-tests-flag') || '',
-            test_all_cxxstd: core.getBooleanInput('test-all-cxxstd'),
+            run_tests: gh_inputs.getTribool('run-tests', {fallbackEnv: 'CMAKE_RUN_TESTS'}),
+            configure_tests_flag: gh_inputs.getInput('configure-tests-flag'),
+            test_all_cxxstd: gh_inputs.getBoolean('test-all-cxxstd'),
             // Install
-            install: toBooleanInput(core.getInput('install') || process.env['CMAKE_INSTALL'] || ''),
-            install_all_cxxstd: core.getBooleanInput('install-all-cxxstd'),
-            install_prefix: normalizePath(core.getInput('install-prefix') || process.env['CMAKE_INSTALL_PREFIX'] || ''),
+            install: gh_inputs.getTribool('install', {fallbackEnv: 'CMAKE_INSTALL'}),
+            install_all_cxxstd: gh_inputs.getTribool('install-all-cxxstd'),
+            install_prefix: gh_inputs.getNormalizedPath('install-prefix', {fallbackEnv: 'CMAKE_INSTALL_PREFIX'}),
             // Package
-            package: toBooleanInput(core.getInput('package') || process.env['CMAKE_PACKAGE'] || ''),
-            package_all_cxxstd: core.getBooleanInput('package-all-cxxstd'),
-            package_name: core.getInput('package-name') || '',
-            package_dir: normalizePath(core.getInput('package-dir')),
-            package_vendor: core.getInput('package-vendor') || '',
-            package_generators: (core.getInput('package-generators') || process.env['CPACK_GENERATOR'] || '').split(/[,; ]/).filter((input) => input !== ''),
-            package_artifact: toBooleanInput(core.getInput('package-artifact') || process.env['CMAKE_PACKAGE_ARTIFACT'] || 'true'),
-            package_retention_days: toIntegerInput(core.getInput('package-retention-days')) || 10,
+            package: gh_inputs.getTribool('package', {fallbackEnv: 'CMAKE_PACKAGE'}),
+            package_all_cxxstd: gh_inputs.getBoolean('package-all-cxxstd'),
+            package_name: gh_inputs.getInput('package-name'),
+            package_dir: gh_inputs.getNormalizedPath('package-dir'),
+            package_vendor: gh_inputs.getInput('package-vendor'),
+            package_generators: gh_inputs.getArray('package-generators', undefined, undefined, {fallbackEnv: 'CPACK_GENERATOR'}),
+            package_artifact: gh_inputs.getTribool('package-artifact', {
+                fallbackEnv: 'CMAKE_PACKAGE_ARTIFACT',
+                defaultValue: true
+            }),
+            package_retention_days: gh_inputs.getInt('package-retention-days', {defaultValue: 10}),
             // Annotations and tracing
-            create_annotations: toBooleanInput(core.getInput('create-annotations') || process.env['CMAKE_CREATE_ANNOTATIONS'] || 'true'),
-            ref_source_dir: normalizePath(path.resolve(core.getInput('ref-source-dir') || process.env['GITHUB_WORKSPACE'] || '')),
-            trace_commands: core.getBooleanInput('trace-commands')
+            create_annotations: gh_inputs.getTribool('create-annotations', {
+                fallbackEnv: 'CMAKE_CREATE_ANNOTATIONS',
+                defaultValue: true
+            }),
+            ref_source_dir: gh_inputs.getResolvedPath('ref-source-dir', {fallbackEnv: 'GITHUB_WORKSPACE'}),
+            trace_commands: gh_inputs.getBoolean('trace-commands')
         }
 
         if (inputs.trace_commands) {
             trace_commands.set_trace_commands(true)
         }
 
-        core.startGroup('📥 Workflow Inputs')
-        for (const [name, value] of Object.entries(inputs)) {
-            core.info(`🧩 ${name.replaceAll('_', '-')}: ${JSON.stringify(value)}`)
-        }
+        core.startGroup('📥 Action Inputs')
+        gh_inputs.printInputObject(inputs)
         core.endGroup()
 
         const singleExtraArgs = Array.isArray(inputs.extra_args)
@@ -1912,6 +1807,5 @@ if (require.main === module) {
 }
 
 module.exports = {
-    parseExtraArgsEntry,
     main
 }

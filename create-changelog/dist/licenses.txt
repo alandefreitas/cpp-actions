@@ -232,6 +232,9 @@ Copyright (c) 2012 Felix Geisendörfer (felix@debuggable.com) and contributors
  THE SOFTWARE.
 
 
+gh-inputs
+Boost Software License 1.0
+
 has-flag
 MIT
 MIT License

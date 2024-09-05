@@ -80,4 +80,5 @@ gh-md-toc
 # Common packages
 common/*/dist
 common/trace-commands/dist
+common/gh-inputs/dist
 

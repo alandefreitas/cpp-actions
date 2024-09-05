@@ -7,6 +7,7 @@ const path = require('path')
 const httpm = require('@actions/http-client')
 const setup_program = require('setup-program')
 const trace_commands = require('trace-commands')
+const gh_inputs = require('gh-inputs')
 
 function removeGCCPrefix(version) {
     // Remove "gcc-" or "g++-" prefix
@@ -253,69 +254,43 @@ async function main(version, paths, check_latest, update_environment) {
         version_patch = semverV.patch
     }
     core.endGroup()
-    return {output_path, cc, cxx, bindir, dir, release, version_major, version_minor, version_patch}
+    return {output_path, cc, cxx, bindir, dir, version: release, version_major, version_minor, version_patch}
 }
 
 async function run() {
     try {
-        const inputs = [
-            ['trace_commands', core.getBooleanInput('trace-commands')],
-            ['version', removeGCCPrefix(core.getInput('version') || '*')],
-            ['path', core.getInput('path').split(/[:;]/).filter((path) => path !== '')],
-            ['check_latest', core.getBooleanInput('check-latest')],
-            ['update_environment', core.getBooleanInput('update-environment')]
-        ]
+        const inputs = {
+            version: removeGCCPrefix(gh_inputs.getInput('version', {defaultValue: '*'})),
+            path: gh_inputs.getArray('path', /[:;]/),
+            check_latest: gh_inputs.getBoolean('check-latest'),
+            update_environment: gh_inputs.getBoolean('update-environment'),
+            trace_commands: gh_inputs.getBoolean('trace-commands')
+        }
 
         if (inputs.trace_commands) {
             trace_commands.set_trace_commands(true)
         }
 
-        for (const [name, value] of inputs) {
-            trace_commands.log(`${name}: ${value}`)
-        }
+        core.startGroup('📥 Action Inputs')
+        gh_inputs.printInputObject(inputs)
+        core.endGroup()
 
-
-        function getInput(inputs, key) {
-            return inputs.find(([name]) => name === key)[1]
-        }
-
-        let {
-            output_path,
-            cc,
-            cxx,
-            bindir,
-            dir,
-            release,
-            version_major,
-            version_minor,
-            version_patch
-        } = await main(
-            getInput(inputs, 'version'),
-            getInput(inputs, 'path'),
-            getInput(inputs, 'check_latest'),
-            getInput(inputs, 'update_environment'))
+        const outputs = await main(
+            inputs.version,
+            inputs.path,
+            inputs.check_latest,
+            inputs.update_environment)
 
         // Parse Final program / Setup version / Outputs
-        if (output_path !== null && output_path !== undefined) {
-            const outputs = [
-                ['cc', cc],
-                ['cxx', cxx],
-                ['bindir', bindir],
-                ['dir', dir],
-                ['version', release],
-                ['version-major', version_major],
-                ['version-minor', version_minor],
-                ['version-patch', version_patch]
-            ]
-            for (const [name, value] of outputs) {
-                core.setOutput(name, value)
-                trace_commands.log(`Setting output ${name} to ${value}`)
-            }
+        if (outputs.output_path) {
+            core.startGroup('📤 Action Outputs')
+            gh_inputs.setOutputObject(outputs)
+            core.endGroup()
         } else {
             core.setFailed('Cannot setup GCC')
         }
     } catch (error) {
-        core.setFailed(error.message)
+        core.setFailed(`${error.message}\n${error.stack}`)
     }
 }
 
