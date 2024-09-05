@@ -1413,6 +1413,7 @@ module.exports = {
     find_program_with_apt,
     install_program_from_url,
     isSudoRequired,
+    findGit,
     fetchGitTags,
     readVersionsFromFile,
     saveVersionsToFile,

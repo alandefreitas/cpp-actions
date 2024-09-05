@@ -35,64 +35,124 @@ description: |
 
 inputs:
   boost-dir:
-    description: 'The boost directory. The default value assumes boost is in-source.'
+    description: |
+      The directory where Boost should be cloned. 
+      
+      If no value is provided (default), the action will clone boost in a temporary 
+      directory.
+
     required: false
     default: ''
   branch:
-    description: 'Branch of the super-project'
+    description: |
+      Branch of the super-project.
+      
+      Boost projects should usually set this to `develop` or `master` according
+      to the project branch they are working on.
+
     required: false
     default: 'master'
   patches:
-    description: 'Libraries used to patch the boost installation'
+    description: |
+      A list of patches to apply to the boost super-project.
+      
+      A patch is a module intended as a Boost library that is not yet part of the super-project.
+      
+      Each path will be cloned in the `libs` directory of the super-project. 
+
     required: true
     default: ''
+
   modules:
-    description: 'The boost submodules we need to clone'
+    description: |
+      The boost submodules we need to clone.
+      
+      This field is optional. If not set, the action will scan the modules found in `scan-modules-dir`.
+
     required: false
     default: ''
-  modules-scan-paths:
-    description: 'Additional modules subdirectory to scan; can be repeated'
-    required: false
-    default: ''
-  modules-exclude-paths:
-    description: 'Additional modules subdirectory to scan; can be repeated'
-    required: false
-    default: 'test'
+
   scan-modules-dir:
-    description: 'An independent directory we should scan for boost dependencies to clone'
+    description: |
+      An independent directory we should scan for boost dependencies to clone.
+      This option also accepts a multi-line string with multiple directories.
+      
+      This is usually a directory in the current project that requires boost libraries.
+      The Boost modules required in files from this directory will be added to the `modules` list.
+      
+      Only the subdirectories of this directory specified by `modules-scan-paths` will be scanned.
+
+    required: false
+    default: '.'
+
+  modules-scan-paths:
+    description: |
+      Additional module subdirectory to scan.
+      
+      For instance, by setting it to `test` the action will scan the `test` directory for boost dependencies.
+      
+      By default, the action scans the ['include', 'src', 'source', 'test', 'tests', 'example', 'examples'] directories.
+
     required: false
     default: ''
+
+  modules-exclude-paths:
+    description: |
+      Module subdirectory to exclude from scanning.
+      
+      Directories that match any of the values in this list will be ignored.
+      
+      By default, the action excludes the ['test', 'tests'] directories.
+
+    required: false
+    default: 'test tests'
+
   scan-modules-ignore:
-    description: 'List of modules that should be ignored in scan-modules'
+    description: |
+      List of modules that should be ignored in scan-modules.
+      
+      This if often useful to exclude the current project's libraries from the scan.
+
     required: false
     default: ''
   cache:
     description: |
-      Cache boost source directory.
-      
+      Cache the boost source directory for future builds.
       The cache key will include the boost hash, the modules hash and the patch hashes.
-      When using the cache, the action will not scan for dependencies. This means that if a transitive
-      dependency is updated, the cache will not be invalidated.
       
-      Note that the cache only includes the source directory and will be reused by other environments.
-      This means binaries should not be included in the boost directory.
+      When using the cache, the action will not rescan dependencies. This means that if a transitive
+      dependency is updated and `optimistic-caching` is being used, the cache will not be invalidated. 
+      The previous version of the transitive dependency will be used until the cache expires.
       
-      When testing a boost library, this source directory should be moved to another location
-      before it's the tests are built. 
-
     required: false
     default: 'true'
 
   optimistic-caching:
     description: |
-      If this option is set to `true`, the cache key will not include the main boost super-project hash in the
-      cache key. The key will only include the hash of direct module dependencies and patches in the cache key.
+      If this option is `true`, the action will reuse the cache whenever direct dependencies haven't changed.
       
-      This means that if this option is `true` and transitive module dependencies are updated, the cache will not
-      be invalidated until transitive dependencies are updated or the current cache expires.
+      For instance, if your library depends on Boost.Url and Boost.Url depends on Boost.Optional, then
+      the cache will be reused for as long as Boost.Url hasn't changed, even if Boost.Optional has
+      changed. If you know about a change in a transitive dependency that affects your library, the
+      current cache should be invalidated for the changes to take effect.
       
-      On the other hand, if this option is set to `false`, the cache might be invalidated if unrelated modules
-      in the super-project are updated.
+      In the `develop` branch, this makes the cache much more useful, as the super-project hash changes
+      many times a day and the cache would be invalidated every time that happens. The downside is that
+      if a transitive dependency is updated, the cache will not be invalidated until the current cache expires.
+      However, this option assumes changes in transitive dependencies should not usually affect the library.
+      
+      If this option is set to `false`, the cache will be invalidated whenever the hash of the Boost super-project
+      repository changes, which implies it's also updated whenever a transitive dependency is updated. Note that
+      in this pessimistic case, the cache will be invalidated even if the change in the super-project is unrelated
+      to the library, even when considering transitive dependencies. This makes the pessimistic option more
+      pessimistic than it should be.
+      
+      The reason we have to use the main super-project hash in the cache key is that calculating a new
+      hash only for transitive dependencies would require us to clone these transitive dependencies, which
+      makes the cache useless.
+      
+      The default value is `false`, because we prioritize correctness over performance. However,
+      most users should consider the possibility of setting this option to `true`, considering their requirements.
 
     required: false
     default: 'false'
@@ -104,388 +164,13 @@ inputs:
 outputs:
   boost-dir:
     description: "The absolute path to the boost source files."
-    value: ${{ steps.ctx.outputs.boost_dir }}
 
 runs:
-  using: "composite"
-  steps:
-    - name: Ensure python is available for find-python action in containers
-      if: inputs.modules != '' || inputs.scan-modules-dir != ''
-      uses: alandefreitas/cpp-actions/package-install@v1.5.0
-      with:
-        apt-get: python3
+  using: 'node20'
+  main: 'dist/index.js'
+  post-if: success()
+branding:
+  icon: 'code'
+  color: 'yellow'
 
-    - name: Find python
-      if: inputs.modules != '' || inputs.scan-modules-dir != ''
-      id: find-python
-      shell: bash
-      run: |
-        # Find Python
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
-        executables=("python3" "python")
-        for executable in "${executables[@]}"; do        
-          if command -v "$executable" &> /dev/null; then
-            # Get git version
-            version_output=$("$executable" --version)
-            regex='([0-9]+)\.([0-9]+)\.([0-9]+)'
-            [[ "$version_output" =~ $regex ]] || true
-            version="${BASH_REMATCH[0]}"
-            major="${BASH_REMATCH[1]}"
-            minor="${BASH_REMATCH[2]}"
-            patch="${BASH_REMATCH[3]}"
-            if [ "$version" != "" ]; then
-              echo -E "path=$(which $executable)" >> $GITHUB_OUTPUT
-              echo "version=$version" >> $GITHUB_OUTPUT
-              echo "major=$major" >> $GITHUB_OUTPUT
-              echo "minor=$minor" >> $GITHUB_OUTPUT
-              echo "patch=$patch" >> $GITHUB_OUTPUT
-            fi
-        
-            # Check if git supports --jobs option # 2.27.0 is min version for --jobs
-            supports_scan_scripts="false"
-            if [[ "$major" -gt "3" ]]; then
-              supports_scan_scripts="true"
-            elif [[ "$major" -eq "3" ]] && [[ "$minor" -ge "5" ]]; then
-              supports_scan_scripts="true"
-            fi
-            echo "supports_scan_scripts=$supports_scan_scripts" >> $GITHUB_OUTPUT
-            break
-          fi        
-        done
 
-    - name: Ensure libssl is available for setup-python action
-      if: (inputs.modules != '' || inputs.scan-modules-dir != '') && steps.find-python.outputs.supports_scan_scripts != 'true'
-      uses: alandefreitas/cpp-actions/package-install@v1.5.0
-      with:
-        apt-get: libssl-dev
-
-    - uses: actions/setup-python@v5.0.0
-      if: (inputs.modules != '' || inputs.scan-modules-dir != '') && steps.find-python.outputs.supports_scan_scripts != 'true'
-      id: setup-python
-      with:
-        python-version: "3.11.7"
-
-    - name: Ensure curl is available for scan module step in containers
-      if: inputs.scan-modules-dir != ''
-      uses: alandefreitas/cpp-actions/package-install@v1.5.0
-      with:
-        apt-get: curl
-
-    - name: Scan Required Boost Modules
-      if: inputs.scan-modules-dir != ''
-      id: scan-modules
-      shell: bash
-      run: |
-        # Scan ${{ inputs.scan-modules-dir }}
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
-        source_dir="${{ inputs.scan-modules-dir }}"
-        if [[ $source_dir != /* ]]; then
-          source_dir="$(readlink -f "$source_dir" 2>/dev/null || realpath -e "$source_dir" 2>/dev/null || echo "$(pwd)/$source_dir")"
-        fi
-        
-        python_path="${{ steps.setup-python.outputs.python-path || steps.find-python.outputs.path }}"
-        
-        # Go to action path to find the script and aux files
-        # https://github.com/actions/runner/issues/716
-        cd "$GITHUB_ACTION_PATH"
-        
-        # Pre-cache the files scan_deps needs for scanning
-        if command -v curl &> /dev/null; then
-          curl -o "${{ inputs.branch }}.gitmodules" "https://raw.githubusercontent.com/boostorg/boost/${{ inputs.branch }}/.gitmodules"
-          curl -o "${{ inputs.branch }}.exceptions.txt" "https://raw.githubusercontent.com/boostorg/boostdep/${{ inputs.branch }}/depinst/exceptions.txt"
-        elif command -v wget &> /dev/null; then
-          wget -O "${{ inputs.branch }}.gitmodules" "https://raw.githubusercontent.com/boostorg/boost/${{ inputs.branch }}/.gitmodules"
-          wget -O "${{ inputs.branch }}.exceptions.txt" "https://raw.githubusercontent.com/boostorg/boostdep/${{ inputs.branch }}/depinst/exceptions.txt"
-        else
-          # Let scan_deps download the files
-          $python_path -m pip install requests
-        fi
-        ls
-        
-        # Run scan_deps on the reference directory
-        set -e
-        modules=$($python_path scan_deps.py --dir "$source_dir" --branch ${{ inputs.branch }} ${{ inputs.scan-modules-ignore && format('--ignore {0}', inputs.scan-modules-ignore) }})
-        python_exit_code=$?
-        set -e
-        if [ $python_exit_code -ne 0 ]; then
-            echo "Error: Scan deps failed with exit code $python_exit_code"
-            modules=""
-        fi
-        echo "modules=$modules" >> $GITHUB_OUTPUT
-
-    - name: Environment
-      id: ctx
-      shell: bash
-      run: |
-        # Determine cache key for boost
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
-        boost_hash=$(git ls-remote https://github.com/boostorg/boost.git ${{ inputs.branch }} | awk '{ print $1 }')
-        echo "boost_hash=$boost_hash" >> $GITHUB_OUTPUT
-        
-        # Merge input modules and scanned modules
-        all_modules=""
-        input_modules="${{ inputs.modules }}"
-        scanned_modules="${{ steps.scan-modules.outputs.modules }}"
-        for module in ${input_modules//,/ }
-        do
-            module_basename=${module##*/}
-            all_modules="$all_modules $module_basename"
-        done
-        for module in ${scanned_modules// / }
-        do
-            module_basename=${module##*/}
-            all_modules="$all_modules $module_basename"
-        done
-        echo "all_modules=$all_modules" >> $GITHUB_OUTPUT
-        
-        # Find wget or curl
-        if command -v curl &> /dev/null; then
-          curl_executable="curl"
-        fi
-        if command -v wget &> /dev/null; then
-          wget_executable="wget"
-        fi
-        
-        # Add modules hashes to boost cache key
-        modules_hash=""
-        if command -v sha1sum >/dev/null 2>&1; then
-          has_sha1sum=true
-        else
-          has_sha1sum=false
-        fi
-        for module in ${all_modules// / }
-        do
-            module_basename=${module##*/}
-        
-            # Ensure the module repo exists so git doesn't fail later on
-            module_repo_exists=false
-            if [ -n "$curl_executable" ]; then
-              module_repo_exists=$(curl --silent --fail --head https://github.com/boostorg/$module_basename >/dev/null && echo "true" || echo "false")
-            elif [ -n "$wget_executable" ]; then
-              module_repo_exists=$(wget --quiet --spider https://github.com/boostorg/$module_basename && echo "true" || echo "false")
-            fi
-        
-            # Get a hash for the module
-            if [ "$module_repo_exists" == "true" ]; then
-              module_hash=$(git ls-remote https://github.com/boostorg/$module_basename.git ${{ inputs.branch }} | awk '{ print $1 }')
-            else
-              module_hash=$boost_hash
-            fi
-        
-            # Update the cache key with a hash for the module only
-            # We only invalidate the cache if one of the modules has changed.
-            # Changing only the boost super-project won't invalidate the cache 
-            if [ "$modules_hash" == "" ]; then
-              modules_hash=$module_hash
-            else
-              concatenated_string="${modules_hash}${module_hash}"
-              if [ "$has_sha1sum" == "true" ]; then
-                modules_hash=$(echo -n "${concatenated_string}" | sha1sum | awk '{print $1}')
-              else
-                modules_hash=$(echo -n "${concatenated_string}" | shasum -a 1 | awk '{print $1}')
-              fi
-            fi
-        done
-        
-        # Add patch names and hashes to hash
-        patches=${{ inputs.patches }}
-        for patch in ${patches//,/ }
-        do
-            patch_hash=$(git ls-remote $patch ${{ inputs.branch }} | awk '{ print $1 }')
-            if [ "modules_hash" == "" ]; then
-              modules_hash=$patch_hash
-            else
-              concatenated_string="${modules_hash}${patch_hash}"
-              if [ "$has_sha1sum" == "true" ]; then
-                modules_hash=$(echo -n "${concatenated_string}" | sha1sum | awk '{print $1}')
-              else
-                modules_hash=$(echo -n "${concatenated_string}" | shasum -a 1 | awk '{print $1}')
-              fi
-            fi
-        done
-        
-        # If there are no modules, then we update the cache key with the boost-hash
-        # as we are about to clone all modules
-        cache_hash=""
-        if [ "modules_hash" == "" ]; then
-          cache_hash=boost-source-$boost_hash
-        elif [ "${{ inputs.optimistic-caching }}" == "true" ]; then
-          cache_hash=boost-source-$modules_hash
-        else
-          cache_hash=boost-source-$boost_hash-$modules_hash
-        fi
-        echo "cache_hash=$cache_hash" >> $GITHUB_OUTPUT
-        
-        # absolute cache directory
-        working_dir="$(pwd)"
-        boost_dir="${{ inputs.boost-dir }}"
-        if [ "$boost_dir" == "" ]; then
-          boost_dir="$RUNNER_TOOL_CACHE/boost/${{inputs.branch}}"
-        elif [[ $boost_dir != /* ]]; then
-          boost_dir="$(readlink -f "$boost_dir" 2>/dev/null || realpath -e "$boost_dir" 2>/dev/null || echo "$working_dir/$boost_dir")"
-        fi
-        mkdir -p "$boost_dir"
-        ls "$boost_dir"
-        echo -E "boost_dir=$boost_dir" >> $GITHUB_OUTPUT
-
-    # Attempt to get boost with the specified modules from the cache before cloning it
-    - name: boost cache
-      id: cache-boost
-      if: inputs.cache == 'true'
-      uses: actions/cache@v4
-      with:
-        path: ${{ steps.ctx.outputs.boost_dir }}
-        key: ${{ steps.ctx.outputs.cache_hash }}
-
-    # Clone boost if not found in cache
-    - name: boost clone
-      if: inputs.cache != 'true' || steps.cache-boost.outputs.cache-hit != 'true'
-      shell: bash
-      run: |
-        # Clone Boost Superproject 
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        git clone https://github.com/boostorg/boost.git -b ${{ inputs.branch }} "${{ steps.ctx.outputs.boost_dir }}"
-
-    # Apply patches if boost not found in cache
-    - name: boost patches
-      if: (inputs.cache != 'true' || steps.cache-boost.outputs.cache-hit != 'true') && inputs.patches != ''
-      shell: bash
-      working-directory: ${{ ( inputs.boost-dir != '' && inputs.boost-dir ) || steps.ctx.outputs.boost_dir }}/libs
-      run: |
-        # Apply boost patches ${{ inputs.patches }}
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
-        patches=${{ inputs.patches }}
-        for patch in ${patches//,/ }
-        do
-            git clone $patch -b ${{ inputs.branch }}
-        done
-
-    - name: Get CPU cores
-      uses: SimenB/github-actions-cpu-cores@v2.0.0
-      id: cpu-cores
-
-    - name: Git features
-      if: inputs.cache != 'true' || steps.cache-boost.outputs.cache-hit != 'true'
-      working-directory: ${{ ( inputs.boost-dir != '' && inputs.boost-dir ) || steps.ctx.outputs.boost_dir }}
-      shell: bash
-      id: features
-      run: |
-        # Identify git features
-        
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        GIT_EXECUTABLE="git"
-        if command -v "$GIT_EXECUTABLE" &> /dev/null; then
-          # Get git version
-          VERSION_OUTPUT=$("$GIT_EXECUTABLE" --version)
-          regex='([0-9]+)\.([0-9]+)\.([0-9]+)'
-          [[ $VERSION_OUTPUT =~ $regex ]]
-          GIT_VERSION="${BASH_REMATCH[0]}"
-          GIT_MAJOR="${BASH_REMATCH[1]}"
-          GIT_MINOR="${BASH_REMATCH[2]}"
-          GIT_PATCH="${BASH_REMATCH[3]}"
-          if [ "$GIT_VERSION" != "" ]; then
-            echo -E "executable=$(which $GIT_EXECUTABLE)"
-            echo "version=$GIT_VERSION" >> $GITHUB_OUTPUT
-            echo "major=$GIT_MAJOR" >> $GITHUB_OUTPUT
-            echo "minor=$GIT_MINOR" >> $GITHUB_OUTPUT
-            echo "patch=$GIT_PATCH" >> $GITHUB_OUTPUT
-          fi
-        
-          # Check if git supports --jobs option: 2.27.0 is min version for --jobs
-          supports_jobs="false"
-          if [ "$GIT_MAJOR" -gt "2" ]; then
-            supports_jobs="true"
-          elif [ "$GIT_MAJOR" -eq "2" ] && [ "$GIT_MINOR" -ge "27" ]; then
-            supports_jobs="true"
-          fi
-          echo "jobs=$supports_jobs" >> $GITHUB_OUTPUT
-
-          # Check if git supports --depth option properly: 2.17.0
-          supports_depth="false"
-          if [ "$GIT_MAJOR" -gt "2" ]; then
-            supports_depth="true"
-          elif [ "$GIT_MAJOR" -eq "2" ] && [ "$GIT_MINOR" -ge "17" ]; then
-            supports_depth="true"
-          fi
-          echo "depth=$supports_depth" >> $GITHUB_OUTPUT
-        else
-          echo "::error title:Git not found::boost-clone: cannot find git executable"
-          false
-        fi
-
-    # Initialize all submodules if boost not found in cache and no specific modules were specified
-    - name: Initialize all submodules
-      if: ((inputs.cache != 'true' || steps.cache-boost.outputs.cache-hit != 'true') && steps.ctx.outputs.all_modules == '')
-      working-directory: ${{ ( inputs.boost-dir != '' && inputs.boost-dir ) || steps.ctx.outputs.boost_dir }}
-      shell: bash
-      run: |
-        # Update all boost submodules
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
-        GIT_ARGS=(${{ (steps.features.outputs.jobs == 'true' && format('"--jobs" "{0}"', steps.cpu-cores.outputs.count)) || '' }})
-        GIT_ARGS+=(${{ (steps.features.outputs.depth == 'true' && '"--depth" "1"') || '' }})
-        git submodule update --depth 1 "${GIT_ARGS[@]}" --init --recursive
-
-    # Initialize specified submodules if boost not found in cache and submodules were specified
-    - name: Initialize specified submodules
-      if: ((inputs.cache != 'true' || steps.cache-boost.outputs.cache-hit != 'true') && steps.ctx.outputs.all_modules != '')
-      working-directory: ${{ ( inputs.boost-dir != '' && inputs.boost-dir ) || steps.ctx.outputs.boost_dir }}
-      shell: bash
-      run: |
-        # Scan transitive dependencies and update submodules
-        ${{ (inputs.trace-commands == 'true' && 'set -xe') || '' }}
-        
-        GIT_ARGS=(${{ (steps.features.outputs.jobs == 'true' && format('"--jobs" "{0}"', steps.cpu-cores.outputs.count)) || '' }})
-        GIT_ARGS+=(${{ (steps.features.outputs.depth == 'true' && '"--depth" "1"') || '' }})
-        GIT_ARGS+=("-q")
-        git submodule update "${GIT_ARGS[@]}" --init tools/boostdep    
-        
-        # Initialize each explicitly specified module
-        modules="${{ steps.ctx.outputs.all_modules }}"
-        for module in ${modules// / }
-        do
-            echo "Initialize submodule $module"
-            git submodule update "${GIT_ARGS[@]}" --init libs/$module || true
-        done
-        
-        git submodule update "${GIT_ARGS[@]}" --init tools/build || true
-        git submodule update "${GIT_ARGS[@]}" --init tools/cmake || true
-        
-        # Initialize dependencies of each explicitly specified module
-        python_path="${{ steps.setup-python.outputs.python-path || steps.find-python.outputs.path }}"
-        python_exit_code=0
-        for module in ${modules// / }
-        do
-            GIT_ARGS="${{ (steps.features.outputs.jobs == 'true' && format('--jobs {0} ', steps.cpu-cores.outputs.count)) || '' }}"
-            GIT_ARGS+="${{ (steps.features.outputs.depth == 'true' && '--depth 1') || '' }}"
-            DEPINST_ARGS=(${{ (inputs.trace-commands == 'true' && '"--verbose"') || '' }})
-            includes=${{ inputs.modules-scan-paths }}
-            for include in ${includes// / }; do
-              DEPINST_ARGS+=("--include" "$include")
-            done
-            excludes=${{ inputs.modules-exclude-paths }}
-            for exclude in ${excludes// / }; do
-              DEPINST_ARGS+=("--exclude" "$exclude")
-            done
-            echo "Run boostdep for required module $module"
-            set +e
-            "$python_path" tools/boostdep/depinst/depinst.py "${DEPINST_ARGS[@]}" --git_args "$GIT_ARGS" $module
-            python_exit_code=$?
-            set -e
-            if [ $python_exit_code -ne 0 ]; then
-                echo "Error: Boostdep ($module) failed with exit code $python_exit_code"
-                break
-            fi
-        done
-        
-        if [ $python_exit_code -ne 0 ]; then
-          echo "Boostdep failed. Initializing all modules..."
-          GIT_ARGS=(${{ (steps.features.outputs.jobs == 'true' && format('"--jobs" "{0}"', steps.cpu-cores.outputs.count)) || '' }})
-          GIT_ARGS+=(${{ (steps.features.outputs.depth == 'true' && '"--depth" "1"') || '' }})
-          GIT_ARGS+=("-q")
-          git submodule update "${GIT_ARGS[@]}" --init --recursive
-        fi

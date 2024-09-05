@@ -142,6 +142,10 @@ function getArray(name, splitter = defaultSplitRegex, filterFn = isNonEmptyStr, 
     return getInput(name, options).split(splitter).filter(filterFn)
 }
 
+function getSet(name, splitter = defaultSplitRegex, filterFn = isNonEmptyStr, options = defaultOptions) {
+    return new Set(getArray(name, splitter, filterFn, options))
+}
+
 function toIntegerInput(input) {
     const parsedInt = parseInt(input)
     if (isNaN(parsedInt)) {
@@ -302,20 +306,37 @@ function getMap(name, delimiter = ':', options = defaultOptions) {
     return parseMap(getMultilineInput(name, options), delimiter)
 }
 
+// Make a string representation of a value suitable for logging
+function makeValueString(value) {
+    if (value instanceof Set) {
+        return JSON.stringify(Array.from(value)).replace(/^\[/, '{').replace(/]$/, '}')
+    }
+    if (value instanceof Map) {
+        return JSON.stringify(Object.fromEntries(value))
+    }
+    if (typeof value === 'boolean') {
+        return value ? 'true' : 'false'
+    }
+    if (!value) {
+        return '<empty>'
+    }
+    return JSON.stringify(value)
+}
+
+function makeKebabName(name) {
+    return name.replaceAll('_', '-')
+}
+
 function printInputObject(inputObject) {
     for (const [name, value] of Object.entries(inputObject)) {
-        const kekabName = name.replaceAll('_', '-')
-        const valueStr = value ? JSON.stringify(value) : '<empty>'
-        core.info(`🧩 ${kekabName}: ${valueStr}`)
+        core.info(`🧩 ${makeKebabName(name)}: ${makeValueString(value)}`)
     }
 }
 
 function setOutputObject(outputObject) {
     for (const [name, value] of Object.entries(outputObject)) {
-        const kebabName = name.replaceAll('_', '-')
-        const valueStr = value ? JSON.stringify(value) : '<empty>'
-        core.info(`🧩 ${kebabName}: ${valueStr}`)
-        core.setOutput(kebabName, value)
+        core.info(`🧩 ${makeKebabName(name)}: ${makeValueString(value)}`)
+        core.setOutput(makeKebabName(name), value)
     }
 }
 
@@ -327,6 +348,7 @@ module.exports = {
     getResolvedPath,
     getTribool,
     getArray,
+    getSet,
     getBoolOrString,
     getInt,
     getBoolean: getBool,
@@ -336,7 +358,8 @@ module.exports = {
     parseBashArguments,
     printInputObject,
     setOutputObject,
-    getMultilineInput
+    getMultilineInput,
+    makeValueString
 }
 
 /***/ }),
@@ -80663,6 +80686,7 @@ module.exports = {
     find_program_with_apt,
     install_program_from_url,
     isSudoRequired,
+    findGit,
     fetchGitTags,
     readVersionsFromFile,
     saveVersionsToFile,
