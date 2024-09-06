@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "prepare": "ncc build index.js -o dist --source-map --license licenses.txt",
+    "prepare": "ncc build index.js -o dist --source-map --license licenses.txt --minify",
     "create-changelog": "node create-changelog.js",
     "test": "jest",
     "all": "npm run prepare && npm run test"
