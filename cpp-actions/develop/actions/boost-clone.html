@@ -430,64 +430,90 @@ step to be the <a href="b2-workflow.html" class="xref page">B2 Workflow</a>.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>boost-dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The boost directory. The default value assumes boost is in-source.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The directory where Boost should be cloned.</p>
+<p class="tableblock">If no value is provided (default), the action will clone boost in a temporary
+directory.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>branch</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Branch of the super-project.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Branch of the super-project.</p>
+<p class="tableblock">Boost projects should usually set this to <code>develop</code> or <code>master</code> according
+to the project branch they are working on.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>master</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>patches</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Libraries used to patch the boost installation. ⚠️ This parameter is required.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A list of patches to apply to the boost super-project.</p>
+<p class="tableblock">A patch is a module intended as a Boost library that is not yet part of the super-project.</p>
+<p class="tableblock">Each path will be cloned in the <code>libs</code> directory of the super-project. ⚠️ This parameter is required.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>modules</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The boost submodules we need to clone.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The boost submodules we need to clone.</p>
+<p class="tableblock">This field is optional. If not set, the action will scan the modules found in <code>scan-modules-dir</code>.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>scan-modules-dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">An independent directory we should scan for boost dependencies to clone.
+This option also accepts a multi-line string with multiple directories.</p>
+<p class="tableblock">This is usually a directory in the current project that requires boost libraries.
+The Boost modules required in files from this directory will be added to the <code>modules</code> list.</p>
+<p class="tableblock">Only the subdirectories of this directory specified by <code>modules-scan-paths</code> will be scanned.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>modules-scan-paths</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Additional modules subdirectory to scan; can be repeated.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Additional module subdirectory to scan.</p>
+<p class="tableblock">For instance, by setting it to <code>test</code> the action will scan the <code>test</code> directory for boost dependencies.</p>
+<p class="tableblock">By default, the action scans the ['include', 'src', 'source', 'test', 'tests', 'example', 'examples'] directories.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>modules-exclude-paths</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Additional modules subdirectory to scan; can be repeated.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>test</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>scan-modules-dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">An independent directory we should scan for boost dependencies to clone.</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Module subdirectory to exclude from scanning.</p>
+<p class="tableblock">Directories that match any of the values in this list will be ignored.</p>
+<p class="tableblock">By default, the action excludes the ['test', 'tests'] directories.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>test tests</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>scan-modules-ignore</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of modules that should be ignored in scan-modules.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">List of modules that should be ignored in scan-modules.</p>
+<p class="tableblock">This if often useful to exclude the current project&#8217;s libraries from the scan.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Cache boost source directory.</p>
-<p class="tableblock">The cache key will include the boost hash, the modules hash and the patch hashes.
-When using the cache, the action will not scan for dependencies. This means that if a transitive
-dependency is updated, the cache will not be invalidated.</p>
-<p class="tableblock">Note that the cache only includes the source directory and will be reused by other environments.
-This means binaries should not be included in the boost directory.</p>
-<p class="tableblock">When testing a boost library, this source directory should be moved to another location
-before it&#8217;s the tests are built.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Cache the boost source directory for future builds.
+The cache key will include the boost hash, the modules hash and the patch hashes.</p>
+<p class="tableblock">When using the cache, the action will not rescan dependencies. This means that if a transitive
+dependency is updated and <code>optimistic-caching</code> is being used, the cache will not be invalidated.
+The previous version of the transitive dependency will be used until the cache expires.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>optimistic-caching</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">If this option is set to <code>true</code>, the cache key will not include the main boost super-project hash in the
-cache key. The key will only include the hash of direct module dependencies and patches in the cache key.</p>
-<p class="tableblock">This means that if this option is <code>true</code> and transitive module dependencies are updated, the cache will not
-be invalidated until transitive dependencies are updated or the current cache expires.</p>
-<p class="tableblock">On the other hand, if this option is set to <code>false</code>, the cache might be invalidated if unrelated modules
-in the super-project are updated.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">If this option is <code>true</code>, the action will reuse the cache whenever direct dependencies haven&#8217;t changed.</p>
+<p class="tableblock">For instance, if your library depends on Boost.Url and Boost.Url depends on Boost.Optional, then
+the cache will be reused for as long as Boost.Url hasn&#8217;t changed, even if Boost.Optional has
+changed. If you know about a change in a transitive dependency that affects your library, the
+current cache should be invalidated for the changes to take effect.</p>
+<p class="tableblock">In the <code>develop</code> branch, this makes the cache much more useful, as the super-project hash changes
+many times a day and the cache would be invalidated every time that happens. The downside is that
+if a transitive dependency is updated, the cache will not be invalidated until the current cache expires.
+However, this option assumes changes in transitive dependencies should not usually affect the library.</p>
+<p class="tableblock">If this option is set to <code>false</code>, the cache will be invalidated whenever the hash of the Boost super-project
+repository changes, which implies it&#8217;s also updated whenever a transitive dependency is updated. Note that
+in this pessimistic case, the cache will be invalidated even if the change in the super-project is unrelated
+to the library, even when considering transitive dependencies. This makes the pessimistic option more
+pessimistic than it should be.</p>
+<p class="tableblock">The reason we have to use the main super-project hash in the cache key is that calculating a new
+hash only for transitive dependencies would require us to clone these transitive dependencies, which
+makes the cache useless.</p>
+<p class="tableblock">The default value is <code>false</code>, because we prioritize correctness over performance. However,
+most users should consider the possibility of setting this option to <code>true</code>, considering their requirements.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
