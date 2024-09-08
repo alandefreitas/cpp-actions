@@ -118,7 +118,7 @@ function getTribool(name, options = defaultOptions) {
 function getBoolOrString(input, options = defaultOptions) {
     const asBool = getTribool(input, options)
     if (typeof asBool !== 'boolean') {
-        return input
+        return getInput(input, options)
     }
     return asBool
 }

@@ -24,7 +24,7 @@ class Commit {
         this.scope = null
         this.description = null
         this.body = ''
-        this.footers = []
+        this.footers = {}
         this.breaking = false
 
         // whether the commit is conventional or not
@@ -358,6 +358,10 @@ async function getIssueAuthor(repoUrl, issueNumber, accessToken) {
 }
 
 function normalizeType(s) {
+    if (!s) {
+        return 'other'
+    }
+
     // The units of information that make up Conventional Commits MUST NOT be treated as case sensitive
     // by implementors, with the exception of BREAKING CHANGE which MUST be uppercase.
     // BREAKING-CHANGE MUST be synonymous with BREAKING CHANGE
@@ -408,15 +412,13 @@ async function populateConventional(commit, repoUrl, versionPattern, tags) {
             const m = line.match(/(([^ ]+): )|(([^ ]+) #)|((BREAKING CHANGE): )/)
             if (m) {
                 // is a footer
-                if (m[1]) {
-                    commit.footers.push([m[2], line.slice(m[2].length + 2).trim()])
-                } else if (m[3]) {
-                    commit.footers.push([m[4], line.slice(m[4].length + 1).trim()])
-                } else if (m[5]) {
-                    commit.footers.push([m[6], line.slice(m[6].length + 2).trim()])
-                }
-                if (commit.footers[commit.footers.length - 1][0].toLowerCase().startsWith('breaking')) {
-                    commit.breaking = true
+                const footerKey = m[1] ? m[2] : m[3] ? m[4] : m[5] ? m[6] : null
+                if (footerKey) {
+                    const offset = m[1] || m[5] ? 2 : 1
+                    commit.footers[footerKey] = line.slice(footerKey.length + offset).trim()
+                    if (footerKey.toLowerCase().startsWith('breaking')) {
+                        commit.breaking = true
+                    }
                 }
             } else if (['breaking', 'breaking-change', 'breaking change'].includes(line.toLowerCase())) {
                 // footer with no key and value
@@ -436,7 +438,7 @@ async function populateConventional(commit, repoUrl, versionPattern, tags) {
     const issueFooterKeys = ['Close', 'Closes', 'Closed', 'close', 'closes', 'closed',
         'Fix', 'Fixes', 'Fixed', 'fix', 'fixes', 'fixed',
         'Resolve', 'Resolves', 'Resolved', 'resolve', 'resolves', 'resolved']
-    for (const [key, value] of commit.footers) {
+    for (const [key, value] of Object.entries(commit.footers)) {
         if (issueFooterKeys.includes(key) && value.startsWith('#')) {
             commit.issue = value.slice(1)
             commit.gh_issue_username = await getIssueAuthor(repoUrl, commit.issue)
@@ -550,9 +552,9 @@ function removeCommitDuplicates(commits) {
                 if (uniqueCommits[idx].body !== commit.body) {
                     uniqueCommits[idx].body += commit.body
                 }
-                for (const footer of commit.footers) {
-                    if (!uniqueCommits[idx].footers.includes(footer)) {
-                        uniqueCommits[idx].footers.push(footer)
+                for (const [footerKey, footerValue] of Object.entries(commit.footers)) {
+                    if (!uniqueCommits[idx].footers.includes(footerKey)) {
+                        uniqueCommits[idx].footers.push(footerKey)
                     }
                 }
                 if (commit.breaking) {
@@ -1130,7 +1132,7 @@ function generateOutput(changes, changeTypePriority, args, repoUrl, authors, par
                     }
 
                     // Footer keys
-                    if (commit.footers) {
+                    if (Object.entries(commit.footers).length > 0) {
                         const footerStrings = Object.entries(commit.footers).map(([key, value]) =>
                             typeof value !== 'string' ?
                                 `${key}: ${gh_inputs.makeValueString(value)}` :
