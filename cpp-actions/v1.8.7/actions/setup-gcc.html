@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+        <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Setup GCC :: C++ Actions</title>
+    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/setup-gcc.html">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+    <link rel="stylesheet" href="../../../_/css/vendor/tabs.css">
+    <script>var uiRootPath = '../../../_'</script>
+<link rel="icon" href="../../../_/img/favicon.svg" type="image/svg">
+    <style>
+      .algolia-autocomplete .ds-dropdown-menu:before {
+          display: block;
+          position: absolute;
+          content: "";
+          width: 14px;
+          height: 14px;
+          background: #fff;
+          z-index: 2;
+          top: 9px;
+          left: -7px !important;
+          border-top: 1px solid #d9d9d9;
+          border-right: 1px solid #d9d9d9;
+          -webkit-transform: rotate(-136deg);
+          transform: rotate(-136deg);
+          border-radius: 2px;
+      }
+      .search-result-dropdown-menu:before {
+          display: block;
+          position: absolute;
+          content: "";
+          width: 14px;
+          height: 14px;
+          background: #fff !important;
+          z-index: 2;
+          top: 9px;
+          border-top: 1px solid #d9d9d9;
+          border-right: 1px solid #d9d9d9;
+          -webkit-transform: rotate(-136deg);
+          transform: rotate(-136deg);
+          border-radius: 2px;
+          left: -7px;
+      }
+      .nav-container .search-result-dropdown-menu {
+        position: fixed;
+        top: 65px;
+        left: 13.5rem;
+        width: 50%;
+        overflow: visible;
+        max-height: calc(100vh - 5.25rem);
+        line-height: 1.5;
+        z-index: 9999;
+      }
+      .nav-container .button {
+        padding: 0px 14px;
+        background-color: #FF9F00;
+        color: #fff;
+      }
+      .algolia-autocomplete.algolia-autocomplete-left .ds-dropdown-menu {
+          position: fixed !important;
+          top: 65px !important;
+          left: 13.5rem !important;
+          z-index: 99 !important;
+      }
+      .search-selector {
+        margin-right: 133px;
+        text-transform: none;
+      }
+      @media screen and (max-width: 1024px) {
+        .nav-container .search-result-dropdown-menu {
+          top: 103px;
+          left: 14.5rem;
+        }
+      }
+      @media screen and (max-width: 768px) {
+        .search-result-dropdown-menu:before {
+            top: -6px;
+            -webkit-transform: rotate(-45deg);
+            transform: rotate(-45deg);
+            left: 35px;
+        }
+        .nav-container .search-result-dropdown-menu {
+            top: 100%;
+            left: 0;
+            width: 90vw;
+            position: absolute !important;
+        }
+        .algolia-autocomplete.algolia-autocomplete-left .ds-dropdown-menu {
+          position: absolute !important;
+          top: 100% !important;
+          left: 0px !important;
+          z-index: 99 !important;
+        }
+        .algolia-autocomplete .ds-dropdown-menu:before{
+            top: -6px;
+            -webkit-transform: rotate(-45deg);
+            transform: rotate(-45deg);
+            left: 35px !important;
+        }
+      }
+    </style>
+  </head>
+  <body class="article">
+    <script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true});</script><header class="header">
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <a class="navbar-item" href="https://alandefreitas.github.io/cpp-actions/doc/cpp-actions/">
+                <img src="../../../_/img/banner.svg" alt="" width="130">
+                    <div class="navbar-item-nonProduction">
+                        <p>v1.8.7</p>
+                    </div>
+            </a>
+            <button class="navbar-burger" data-target="topbar-nav">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+
+
+        <div id="topbar-nav" class="navbar-menu">
+                <div class="navbar-item is-hoverable">
+                        <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions
+                            : Setup GCC</a>
+                </div>
+                    <div class="navbar-item is-hoverable">
+                        <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions" target="_blank">GitHub</a>
+                    </div>
+                    <div class="navbar-item is-hoverable">
+                        <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions/releases" target="_blank">Releases</a>
+                    </div>
+
+            <div class="navbar-end">
+                <div class="navbar-item">
+                      <span class="control">
+                        <a class="button is-primary" target="blank_"
+                           href="https://github.com/alandefreitas/cpp-actions/issues/new/choose">Report an Issue</a>
+                      </span>
+                </div>
+            </div>
+        </div>
+    </nav>
+</header>
+    <div class="body">
+<div class="nav-container" data-component="cpp-actions" data-version="v1.8.7">
+  <aside class="nav">
+    <div class="panels">
+    <div class="nav-panel-menu is-active" data-panel="menu">
+        <div class="navbar-item search hide-for-print">
+            <div id="search-field" class="field has-filter">
+                <div style="display: flex; flex-direction: column;">
+                    <div style="display: flex; margin-bottom: 10px; position: relative;">
+                        <input id="search-input" type="text" placeholder="Search the docs" style="flex: 1; padding: 0 0.25em" onkeyup="onSearch()">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <nav class="nav-menu">
+                <h3 class="title"><a href="../index.html">C++ Actions</a></h3>
+            <ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../design.html">Design Rationale</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Compilers</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-cpp.html">Setup C++ Action</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="setup-gcc.html">Setup GCC Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-clang.html">Setup Clang Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Tools</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="package-install.html">Install Packages Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-program.html">Setup Program Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Workflows</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="cmake-workflow.html">CMake Workflow Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="b2-workflow.html">B2 Workflow Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Reports</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="create-changelog.html">Create Changelog Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../contribute.html">Contribute</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../license.html">License</a>
+  </li>
+</ul>
+  </li>
+</ul>
+        </nav>
+    </div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">C++ Actions</span>
+    <span class="version">v1.8.7</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../../index.html">C++ Actions</a>
+      <ul class="versions">
+        <li class="version is-latest">
+          <a href="../../index.html">master</a>
+        </li>
+        <li class="version">
+          <a href="../../develop/index.html">develop</a>
+        </li>
+        <li class="version is-current">
+          <a href="../index.html">v1.8.7</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.8.6/index.html">v1.8.6</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.8.5/index.html">v1.8.5</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.8.4/index.html">v1.8.4</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.8.3/index.html">v1.8.3</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.8.2/index.html">v1.8.2</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.8.1/index.html">v1.8.1</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.8.0/index.html">v1.8.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.7.0/index.html">v1.7.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.6.2/index.html">v1.6.2</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.6.1/index.html">v1.6.1</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.6.0/index.html">v1.6.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.5.0/index.html">v1.5.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.4.1/index.html">v1.4.1</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.4.0/index.html">v1.4.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.3.0/index.html">v1.3.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.2.1/index.html">v1.2.1</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.2.0/index.html">v1.2.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.1.0/index.html">v1.1.0</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.0.0/index.html">v1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+    <button class="nav-toggle"></button>
+        <a href="../../index.html" class="home-link"></a>
+    <nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">C++ Actions</a></li>
+    <li>Compilers</li>
+    <li><a href="setup-gcc.html">Setup GCC Action</a></li>
+  </ul>
+</nav>
+    <div class="page-versions">
+  <button class="version-menu-toggle" title="Show other versions of page">v1.8.7</button>
+  <div class="version-menu">
+    <a class="version" href="../../actions/setup-gcc.html">master</a>
+    <a class="version" href="../../develop/actions/setup-gcc.html">develop</a>
+    <a class="version is-current" href="setup-gcc.html">v1.8.7</a>
+    <a class="version" href="../../v1.8.6/actions/setup-gcc.html">v1.8.6</a>
+    <a class="version" href="../../v1.8.5/actions/setup-gcc.html">v1.8.5</a>
+    <a class="version" href="../../v1.8.4/actions/setup-gcc.html">v1.8.4</a>
+    <a class="version" href="../../v1.8.3/actions/setup-gcc.html">v1.8.3</a>
+    <a class="version" href="../../v1.8.2/actions/setup-gcc.html">v1.8.2</a>
+    <a class="version" href="../../v1.8.1/actions/setup-gcc.html">v1.8.1</a>
+    <a class="version" href="../../v1.8.0/actions/setup-gcc.html">v1.8.0</a>
+    <a class="version" href="../../v1.7.0/actions/setup-gcc.html">v1.7.0</a>
+    <a class="version" href="../../v1.6.2/actions/setup-gcc.html">v1.6.2</a>
+    <a class="version" href="../../v1.6.1/actions/setup-gcc.html">v1.6.1</a>
+    <a class="version" href="../../v1.6.0/actions/setup-gcc.html">v1.6.0</a>
+    <a class="version" href="../../v1.5.0/actions/setup-gcc.html">v1.5.0</a>
+    <a class="version" href="../../v1.4.1/actions/setup-gcc.html">v1.4.1</a>
+    <a class="version" href="../../v1.4.0/actions/setup-gcc.html">v1.4.0</a>
+    <a class="version" href="../../v1.3.0/actions/setup-gcc.html">v1.3.0</a>
+    <a class="version" href="../../v1.2.1/actions/setup-gcc.html">v1.2.1</a>
+    <a class="version" href="../../v1.2.0/actions/setup-gcc.html">v1.2.0</a>
+    <a class="version" href="../../v1.1.0/actions/setup-gcc.html">v1.1.0</a>
+    <a class="version is-missing" href="../../v1.0.0/index.html">v1.0.0</a>
+  </div>
+</div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Setup GCC</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>Set up a specific version of a GCC compiler and add it to the PATH.
+In most workflows, this is used as an auxiliary action for the setup-cpp action.</p>
+</div>
+<div class="paragraph">
+<p>This allows us to test a C++ library with any GCC version, and not only the versions
+circumstantially provided by apt-get.</p>
+</div>
+<div class="paragraph">
+<p>This action uses a number of alternatives to find or install GCC:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The GCC path provided to 'path'</p>
+</li>
+<li>
+<p>Any other version of GCC it can find in the system</p>
+</li>
+<li>
+<p>Any other version of GCC available from APT</p>
+</li>
+<li>
+<p>A version of GCC from our own binary releases</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The action will <strong>not</strong> attempt to install GCC from source files, which is the only
+officially supported method but impossible to run in CI because the machines would take
+hours to do that.</p>
+</div>
+<div class="paragraph">
+<p>If a version of GCC is not available by any other methods above, the GCC binaries for
+a given platform can be built locally with a
+<a href="https://github.com/alandefreitas/cpp-actions/tree/develop/setup-gcc" target="_blank" rel="noopener">script</a>
+provided in this repository and added to our binary release.</p>
+</div>
+<div class="paragraph">
+<p>In most workflows, this is used as an auxiliary action for the <a href="setup-cpp.html" class="xref page">Setup C++</a> action,
+which already calls this action if necessary.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next steps</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>After setting up the proper C++ compiler for a matrix entry, the next step in your workflow should usually be
+<a href="package-install.html" class="xref page">Install Packages</a>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_input_parameters"><a class="anchor" href="#_input_parameters"></a>Input Parameters</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 60%;">
+<col style="width: 20%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Parameter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Version range or exact version of GCC to use, using SemVer&#8217;s version range syntax.</p>
+<p class="tableblock">By default, it uses any version available in the environment.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>*</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>path</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Path to the gcc or g++ executable. We attempt to find GCC at this path first.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>check-latest</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">By default, when GCC is not available, this action will install the minimum version in the version spec.
+This ensures the code respects its contract in terms of what minimum GCC version is supported.</p>
+<p class="tableblock">Set this option if you want the action to check for the latest available version that satisfies the version spec
+instead.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>update-environment</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Set this option if you want the action to update environment variables.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_outputs"><a class="anchor" href="#_outputs"></a>Outputs</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 80%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Output</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the gcc executable.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the g++ executable.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>dir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the GCC directory containing the executable.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The installed GCC version. Useful when given a version range as input.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-major</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The installed GCC version major. Useful when given a version range as input.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-minor</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The installed GCC version minor. Useful when given a version range as input.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-patch</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The installed GCC version patch. Useful when given a version range as input.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+    <footer class="footer">
+  <p>This page was built using the Antora UI adapted by <a href="https://github.com/cppalliance/site-docs" target="_blank">cppalliance/site-docs</a>.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+  <p>
+    <a href="https://github.com/alandefreitas/cpp-actions" target="_blank">alandefreitas/cpp-actions</a>
+  </p>
+</footer>
+<script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+<script src="../../../_/js/vendor/lunr.js"></script>
+<script src="../../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../../.." data-snippet-length="100" data-stylesheet="../../../_/css/search.css"></script>
+<script async src="../../../search-index.js"></script>
+<script async src="../../../_/js/vendor/tabs.js" data-sync-storage-key="preferred-tab"></script>
+    <script>
+      var element = document.querySelector('.search-result-dropdown-menu');
+      if (element) {
+        // Apply styles and additional class to element
+        element.style.display = 'none';
+        var element = document.querySelector('.search-result-dropdown-menu');
+        var arrow = document.createElement('div');
+        arrow.classList.add('search-result-dropdown-menu');
+        element.appendChild(arrow);
+      }
+
+      function onSearch() {
+        var searchInput = document.getElementById('search-input');
+        if (searchInput.value) {
+          element.style.display = 'block';
+        } else {
+          element.style.display = 'none';
+        }
+      }
+
+      function onSearchChange(search_active) {
+        var searchInputAlgolia = document.getElementById('search-input-algolia');
+        var searchInput = document.getElementById('search-input');
+        if (search_active === "algolia") {
+          searchInputAlgolia.style.display = 'block';
+          // searchInputAlgolia.style.lineHeight = '2.001';
+          searchInput.style.display = 'none';
+          setupAlgoliaDocsearch();
+        } else {
+          searchInputAlgolia.style.display = 'none';
+          searchInput.style.display = 'block';
+        }
+      }
+
+      // Add an event listener to the document
+      document.addEventListener("click", function(event) {
+        var searchInput = document.getElementById('search-input');
+        // Check if the click was outside of the modal
+        if (event.target !== element && event.target !== searchInput) {
+
+          // Hide the modal
+          searchInput.value = "";
+          onSearch();
+        }
+      });
+    </script>
+  </body>
+</html>
