@@ -1094,14 +1094,14 @@ function generateOutput(changes, changeTypePriority, args, repoUrl, authors, par
 
             // Scopes
             for (const [scope, scopedChanges] of Object.entries(scopeChanges)) {
-                const multiline = scope !== null && scopedChanges.length > 1
-                if (multiline) {
+                const indentedScope = (scope !== null && scope !== 'null' && scope !== 'undefined') && scopedChanges.length > 1
+                if (indentedScope) {
                     output += `- ${scope}:\n`
                 }
                 // Scope changes
                 for (const commit of scopedChanges) {
                     // Padding
-                    if (multiline) {
+                    if (indentedScope) {
                         output += '    '
                     }
                     output += '- '
@@ -1112,7 +1112,7 @@ function generateOutput(changes, changeTypePriority, args, repoUrl, authors, par
                     }
 
                     // Scope prefix
-                    if (scope !== null && !multiline) {
+                    if (scope !== null && !indentedScope) {
                         output += `${scope}: `
                     }
 
