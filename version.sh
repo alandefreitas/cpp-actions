@@ -29,6 +29,15 @@ for dir in */; do
     fi
 done
 
+common_packages=()
+
+# ./common subdirectory
+for dir in common/*/; do
+    if [ -f "$dir/package.json" ]; then
+        common_packages+=("$dir")
+    fi
+done
+
 echo "==== Composite actions ===="
 for project in "${projects_with_action[@]}"; do
     echo "$project"
@@ -41,3 +50,12 @@ for project in "${projects_with_package[@]}"; do
     npm version "$version" --no-git-tag-version
     cd ..
 done
+
+echo "Javascript projects:"
+for common_package in "${common_packages[@]}"; do
+    cd "$common_package" || exit
+    echo "==== Building $common_package ===="
+    npm version "$version" --no-git-tag-version
+    cd ../..
+done
+

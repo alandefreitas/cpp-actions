@@ -1542,37 +1542,6 @@ async function main(inputs) {
     }
 }
 
-function toBooleanInput(input) {
-    if (typeof input === 'boolean') {
-        return input
-    }
-    if (input === undefined || input === null) {
-        return undefined
-    }
-    if (typeof input === 'number') {
-        return input !== 0
-    }
-    if (typeof input !== 'string') {
-        return undefined
-    }
-    if (['true', '1', 'on', 'yes', 'y'].includes(input.toLowerCase())) {
-        return true
-    } else if (['false', '0', 'off', 'no', 'n'].includes(input.toLowerCase())) {
-        return false
-    } else {
-        return undefined
-    }
-}
-
-function toIntegerInput(input) {
-    const parsedInt = parseInt(input)
-    if (isNaN(parsedInt)) {
-        return undefined
-    } else {
-        return parsedInt
-    }
-}
-
 function parseExtraArgs(extra_args) {
     function fnlog(msg) {
         trace_commands.log('parseExtraArgs: ' + msg)

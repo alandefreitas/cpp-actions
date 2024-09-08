@@ -80,6 +80,7 @@ def extract_include_paths(command):
 
     return include_paths
 
+
 def format_time(microseconds):
     if microseconds < 1000:
         return f"{round(microseconds, 2)} µs"
@@ -95,6 +96,7 @@ def format_time(microseconds):
     else:
         hours = round(microseconds / 3600000000, 2)
         return f"{hours} h"
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Installs the dependencies needed to test a Boost library.')
@@ -313,7 +315,6 @@ if __name__ == '__main__':
         json.dump({'traceEvents': sorted(combined_data, key=lambda k: k['ts'])}, f)
         log('Saved to ', os.path.abspath(output_path))
 
-
     # Report
     output = '# Time Trace\n\n'
     output += '## Summary\n\n'
@@ -339,15 +340,15 @@ if __name__ == '__main__':
 
 
     def section_table(column_name, data):
-        section_output = f'| {column_name} | %    | Total Time | Avg. | Count |\n'
-        section_output += '| --------- | ---------- | ---------- | ------------ | ----- |\n'
-
         data = dict(sorted(data.items(), key=lambda x: x[1][1], reverse=True))
         acc = 0
         for [_, v] in data.items():
             [_, time] = v
             acc += time
 
+        section_output = f'Total Time: {format_time(acc)}\n\n'
+        section_output += f'| {column_name} | %    | Total Time | Avg. | Count |\n'
+        section_output += '| --------- | ---------- | ---------- | ------------ | ----- |\n'
         n = 0
         for [file, v] in data.items():
             [count, time] = v
@@ -417,6 +418,7 @@ if __name__ == '__main__':
 
     def is_std_symbol(symbol):
         return symbol.startswith('std::') or symbol.startswith('__gnu_cxx::')
+
 
     output += '## Project Symbols\n\n'
     output += '### Parse\n\n'
