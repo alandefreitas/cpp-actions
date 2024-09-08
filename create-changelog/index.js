@@ -1132,7 +1132,11 @@ function generateOutput(changes, changeTypePriority, args, repoUrl, authors, par
                     // Footer keys
                     if (commit.footers) {
                         const footerStrings = Object.entries(commit.footers).map(([key, value]) =>
-                            value.startsWith('#') ? `${key} ${value}` : `${key}: ${value}`
+                            typeof value !== 'string' ?
+                                `${key}: ${gh_inputs.makeValueString(value)}` :
+                                value.startsWith('#') ?
+                                    `${key} ${value}` :
+                                    `${key}: ${value}`
                         )
                         if (footerStrings.length > 0) {
                             output += ` (${footerStrings.join(', ')})`
