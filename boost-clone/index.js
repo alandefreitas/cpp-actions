@@ -348,15 +348,17 @@ async function initializeSubmodules(inputs, allModules, gitFeatures, exceptions,
     const depthArgs = gitFeatures.supportsDepth ? ['--depth', '1'] : []
     const gitArgs = jobsArgs.concat(depthArgs).concat(['-q'])
 
-    const initialSubmoduleSubPaths = Array.from(allModules)
-        .map((module) => `libs/${module}`)
-        .concat(['tools/build', 'tools/cmake'])
-    for (const moduleSubPath of initialSubmoduleSubPaths) {
+    const allModulesSubPaths = new Set(Array.from(allModules).map((module) => `libs/${module}`))
+    const essentialModuleSubPaths = new Set(['libs/config', 'libs/headers', 'tools/boost_install', 'tools/build', 'tools/cmake'])
+    const initialModuleSubpaths = new Set(Array.from(allModulesSubPaths).concat(Array.from(essentialModuleSubPaths)))
+    for (const moduleSubPath of initialModuleSubpaths) {
         const args = ['submodule', 'update'].concat(gitArgs).concat(['--init', moduleSubPath])
         await exec.exec(`"${gitFeatures.gitPath}"`, args, {cwd: inputs.boost_dir})
     }
 
     let initializedModules = new Set(allModules)
+    initializedModules.add('config')
+    initializedModules.add('headers')
     let scannedModules = new Set()
     let remainingModules = new Set(initializedModules)
     while (remainingModules.size > 0) {
