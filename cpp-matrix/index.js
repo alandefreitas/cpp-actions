@@ -1165,6 +1165,16 @@ function registerHelpers() {
         args.pop()
         return args.every((it) => it)
     })
+    Handlebars.registerHelper('or', function(...args) {
+        const numArgs = args.length
+        if (numArgs === 3) return args[0] || args[1]
+        if (numArgs < 3) throw new Error('{{or}} helper expects at least 2 arguments')
+        args.pop()
+        return args.some((it) => it)
+    })
+    Handlebars.registerHelper('not', function(value) {
+        return !value
+    })
     Handlebars.registerHelper('eq', function(a, b) {
         return a === b
     })
@@ -1176,16 +1186,6 @@ function registerHelpers() {
     })
     Handlebars.registerHelper('ine', function(a, b) {
         return a.toLowerCase() !== b.toLowerCase()
-    })
-    Handlebars.registerHelper('or', function(...args) {
-        const numArgs = args.length
-        if (numArgs === 3) return args[0] || args[1]
-        if (numArgs < 3) throw new Error('{{or}} helper expects at least 2 arguments')
-        args.pop()
-        return args.some((it) => it)
-    })
-    Handlebars.registerHelper('not', function(value) {
-        return !value
     })
 }
 
