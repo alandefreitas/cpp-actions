@@ -429,6 +429,11 @@ function normalizeType(s) {
 
 async function populateConventional(commit, repoUrl, versionPattern, tags) {
     for (const line of commit.message.split('\n')) {
+        if (!line)
+        {
+            continue
+        }
+
         if (!commit.subject) {
             // Is subject
             commit.subject = line
@@ -452,10 +457,14 @@ async function populateConventional(commit, repoUrl, versionPattern, tags) {
         }
 
         // Subject populated: parse as body, footer, or tag
-        const footerRegex = /(([^ ]+): )|(([^ ]+) #)|((BREAKING CHANGE): )/
-        const m = line.match(footerRegex)
+        // This regular expression matches lines that represent footers in a commit message.
+        // It matches the following patterns:
+        // 1. `([^ ]+): ` - A key followed by a colon and a space (e.g., "Fixes: ")
+        // 2. `([^ ]+) #` - A key followed by a space and a hash symbol (e.g., "Issue #")
+        // 3. `(BREAKING CHANGE): ` - The literal string "BREAKING CHANGE" followed by a colon and a space
+        const footerKeyRegex = /^(([^ ]+): )|(([^ ]+) #)|((BREAKING CHANGE): )/
+        const m = line.match(footerKeyRegex)
         if (m) {
-            // is a footer
             const footerKey = m[1] ? m[2] : m[3] ? m[4] : m[5] ? m[6] : null
             if (footerKey) {
                 const offset = m[1] || m[5] ? 2 : 1
@@ -467,6 +476,7 @@ async function populateConventional(commit, repoUrl, versionPattern, tags) {
             continue
         }
 
+        // Check for a footer with no key and value
         if (['breaking', 'breaking-change', 'breaking change'].includes(line.toLowerCase())) {
             // footer with no key and value
             // -> the whole message is breaking change footer
@@ -477,7 +487,7 @@ async function populateConventional(commit, repoUrl, versionPattern, tags) {
         // #<tag-expr>
         // The commit can contain a tag, which is just a string identifier
         // for whatever purpose the user wants to use it for.
-        const tagRegex = /#(\S+)/
+        const tagRegex = /^\s*#(\S+)\s*$/
         const tagMatch = line.match(tagRegex)
         if (tagMatch) {
             commit.tags.push(tagMatch[1])
