@@ -597,38 +597,57 @@ async function getLocalCommits(projectPath, repoUrl, versionPattern, tags) {
 }
 
 function removeCommitDuplicates(commits) {
+    /** @type {Commit[]} */
     const uniqueCommits = []
-    const seenValues = new Set()
+    /** @type {Set<string>} */
+    const visitedCommits = new Set()
 
     for (const commit of commits) {
-        const comparisonValues = JSON.stringify([commit.type, commit.scope, commit.description])
-        if (!seenValues.has(comparisonValues)) {
+        const commitStr = JSON.stringify([commit.type, commit.scope, commit.description])
+        const isNewCommit = !visitedCommits.has(commitStr)
+        if (isNewCommit) {
             uniqueCommits.push(commit)
-            seenValues.add(comparisonValues)
-        } else {
-            let idx = -1
-            for (let i = 0; i < uniqueCommits.length; i++) {
-                const comparisonValues2 = JSON.stringify([uniqueCommits[i].type, uniqueCommits[i].scope, uniqueCommits[i].description])
-                if (comparisonValues === comparisonValues2) {
-                    idx = i
-                    break
-                }
-            }
-            if (idx !== -1) {
-                if (uniqueCommits[idx].body !== commit.body) {
-                    uniqueCommits[idx].body += commit.body
-                }
-                for (const [footerKey, footerValue] of Object.entries(commit.footers)) {
-                    if (!uniqueCommits[idx].footers.includes(footerKey)) {
-                        uniqueCommits[idx].footers.push(footerKey)
-                    }
-                }
-                if (commit.breaking) {
-                    uniqueCommits[idx].breaking = true
-                }
-                uniqueCommits[idx].extra_hashes.push(commit.hash)
+            visitedCommits.add(commitStr)
+            continue
+        }
+
+        // The commit has already been included in the list
+        // Find the commit we put on the list
+        let idx = -1
+        for (let i = 0; i < uniqueCommits.length; i++) {
+            const otherCommitStr = JSON.stringify([uniqueCommits[i].type, uniqueCommits[i].scope, uniqueCommits[i].description])
+            if (commitStr === otherCommitStr) {
+                idx = i
+                break
             }
         }
+        const cannotFindCommit = idx === -1
+        if (cannotFindCommit) {
+            continue
+        }
+
+        // Merge the commit with the one we put on the list
+        if (uniqueCommits[idx].body !== commit.body) {
+            uniqueCommits[idx].body += commit.body
+        }
+        // Merge footers
+        for (const [footerKey, footerValue] of Object.entries(commit.footers)) {
+            if (!uniqueCommits[idx].footers.hasOwnProperty(footerKey)) {
+                uniqueCommits[idx].footers[footerKey] = footerValue;
+            }
+        }
+        // Merge tags
+        for (const tag of commit.tags) {
+            if (!uniqueCommits[idx].tags.includes(tag)) {
+                uniqueCommits[idx].tags.push(tag)
+            }
+        }
+        // Merge breaking
+        if (commit.breaking) {
+            uniqueCommits[idx].breaking = true
+        }
+        // Merge extra hashes
+        uniqueCommits[idx].extra_hashes.push(commit.hash)
     }
 
     return uniqueCommits
