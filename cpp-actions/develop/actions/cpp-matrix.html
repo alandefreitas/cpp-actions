@@ -547,14 +547,14 @@ existing values in the matrix. For instance, consider an entry in the matrix tha
 the <code>x86</code> factor set to true.</p>
 </div>
 <div class="paragraph">
-<p>When using <code>b2</code>, we should set <code>address-model=32</code> for this entry. Otherwise, we should set
+<p>Assume we are using <code>b2</code> and should set <code>address-model=32</code> for this entry. Otherwise, we should set
 <code>address-model=64</code>. With GitHub expressions, we can generate this value based on the <code>x86</code> factor:</p>
 </div>
 <div class="paragraph">
 <p><code>b2 address-model={{ matrix.x86 &amp;&amp; '32' || '64' }}</code></p>
 </div>
 <div class="paragraph">
-<p>If this pattern needs to be repeated in many entries, this pattern might become cumbersome.
+<p>If this pattern needs to be repeated in many entries, it might become cumbersome.
 In this case, the action allows the user to define extra values to be injected in each entry
 of the matrix. These values can be used to generate new values based on existing values in
 the matrix with handlebars. You could set the following extra values in each entry of the matrix:</p>
@@ -569,6 +569,94 @@ run: |
   b2 address-model={{ matrix.address-model }}</code></pre>
 </div>
 </div>
+<div class="paragraph">
+<p>or</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">extra-values: |
+    address-model-arg: address-model={{#if x86}}32{{else}}64{{/if}}
+
+# ...
+run: |
+  b2 {{ matrix.address-model-arg }}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The syntax for each entry in the <code>extra-values</code> input is a key-value pair, where the key is the name of the
+value to be injected in the matrix and the value is a handlebars expression that generates the value based on
+other values in the matrix. The handlebars expression can access previous values in the matrix, including
+other extra values.</p>
+</div>
+<div class="paragraph">
+<p>Besides referencing other values in the matrix, the handlebars expressions can also use the
+built-in <a href="https://handlebarsjs.com/guide/builtin-helpers.html">helpers</a> provided by Handlebars and the
+predefined helpers defined by the action:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Helper</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>lowercase</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Converts the value to lowercase</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>uppercase</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Converts the value to uppercase</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>contains</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Checks if the value contains a substring</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>startsWith</code> / <code>starts-with</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Checks if the value starts with a substring</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>endsWith</code> / <code>ends-with</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Checks if the value ends with a substring</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>substring</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extracts a substring from the value</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>and</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Logical AND operator</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>or</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Logical OR operator</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>not</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Logical NOT operator</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>eq</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Equality operator</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ieq</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Case-insensitive equality operator</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ne</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Inequality operator</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ine</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Case-insensitive inequality operator</p></td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 <div class="sect1">
