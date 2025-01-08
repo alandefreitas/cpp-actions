@@ -278,7 +278,6 @@ async function main(version, paths, check_latest, update_environment) {
     }
 
     // Create outputs
-    core.startGroup('📤 Set outputs')
     let cc = output_path
     let cxx = output_path
     let bindir = ''
@@ -368,7 +367,6 @@ async function main(version, paths, check_latest, update_environment) {
             }
         }
     }
-    core.endGroup()
     return {output_path, cc, cxx, bindir, dir, version: release, version_major, version_minor, version_patch}
 }
 
