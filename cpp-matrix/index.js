@@ -655,7 +655,7 @@ function setCompilerContainer(entry, inputs, compilerName, minSubrangeVersion, s
             entry['container'] = 'ubuntu:24.04'
         } else if (semver.satisfies(minSubrangeVersion, '>=13')) {
             entry['runs-on'] = 'ubuntu-22.04'
-            entry['container'] = 'ubuntu:23.04'
+            entry['container'] = 'ubuntu:24.04'
         } else if (semver.satisfies(minSubrangeVersion, '>=9')) {
             entry['runs-on'] = 'ubuntu-22.04'
             if (inputs.use_containers) {
@@ -675,10 +675,10 @@ function setCompilerContainer(entry, inputs, compilerName, minSubrangeVersion, s
     } else if (compilerName === 'clang') {
         if (semver.satisfies(minSubrangeVersion, '>=17')) {
             entry['runs-on'] = 'ubuntu-22.04'
-            entry['container'] = 'ubuntu:23.10'
+            entry['container'] = 'ubuntu:24.04'
         } else if (semver.satisfies(minSubrangeVersion, '>=16')) {
             entry['runs-on'] = 'ubuntu-22.04'
-            entry['container'] = 'ubuntu:23.04'
+            entry['container'] = 'ubuntu:24.04'
         } else if (semver.satisfies(minSubrangeVersion, '>=15')) {
             entry['runs-on'] = 'ubuntu-22.04'
             if (inputs.use_containers) {
