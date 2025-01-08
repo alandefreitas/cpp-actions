@@ -2,9 +2,23 @@ const {
     main,
     set_trace_commands,
     toIntegerInput,
-    normalizePath,
     run
 } = require('./index')
+const trace_commands = require('trace-commands')
+
+function normalizePath(path) {
+    let p = path
+    if (p.startsWith('~/') || p.startsWith('~\\')) {
+        const isWindows = process.platform === 'win32'
+        if (isWindows) {
+            p = p.replace('~', process.env.HOME || process.env.USERPROFILE)
+        } else {
+            p = p.replace('~', process.env.HOME)
+        }
+    }
+    p = p.replace(/\\/g, '/')
+    return p
+}
 
 function parseArgs() {
     const args = process.argv.slice(2)
@@ -83,7 +97,7 @@ function parseArgs() {
 
 async function runLocal() {
     const inputs = parseArgs()
-    set_trace_commands(true)
+    trace_commands.set_trace_commands(true)
     try {
         await main(inputs)
     } catch (error) {

@@ -27,6 +27,9 @@ class Commit {
         this.footers = {}
         this.breaking = false
 
+        // Extensions to conventional fields (#<tag-expr>)
+        this.tags = []
+
         // whether the commit is conventional or not
         this.conventional = true
 
@@ -34,7 +37,7 @@ class Commit {
         this.issue = null
         this.gh_issue_username = null
 
-        // delimiter
+        // delimiter (git tag or version pattern)
         this.tag = null
         this.is_parent_release = false
     }
@@ -168,9 +171,9 @@ async function adjustParameters(inputs) {
             console.log(`Repository Branch ${inputs.repo_branch} from local path`)
         }
     }
-    if (!inputs.access_token) {
-        inputs.access_token = process.env['GITHUB_TOKEN']
-        if (inputs.access_token) {
+    if (!inputs.github_token) {
+        inputs.github_token = process.env['GITHUB_TOKEN']
+        if (inputs.github_token) {
             console.log(`Access token **** from GITHUB_TOKEN`)
         }
     }
@@ -357,6 +360,44 @@ async function getIssueAuthor(repoUrl, issueNumber, accessToken) {
     return null
 }
 
+function isValidType(s) {
+    // A valid type according to `normalizeType`
+    // Used to identify tags that can be converted to types
+    const recognizedTypes = [
+        'doc',
+        'docs',
+        'documentation',
+        'fix',
+        'fixes',
+        'bugfix',
+        'chore',
+        'work',
+        'chores',
+        'maintenance',
+        'feat',
+        'feature',
+        'refactor',
+        'cleanup',
+        'perf',
+        'performance',
+        'test',
+        'testing',
+        'tests',
+        'release',
+        'version',
+        'ci',
+        'integration',
+        'breaking',
+        'break',
+        'revert',
+        'undo',
+        'style',
+        'build',
+        'improvement'
+    ]
+    return recognizedTypes.includes(s)
+}
+
 function normalizeType(s) {
     if (!s) {
         return 'other'
@@ -407,31 +448,47 @@ async function populateConventional(commit, repoUrl, versionPattern, tags) {
                 commit.breaking = commit.subject.includes('BREAKING')
                 commit.conventional = false
             }
-        } else {
-            // Is body or footer
-            const m = line.match(/(([^ ]+): )|(([^ ]+) #)|((BREAKING CHANGE): )/)
-            if (m) {
-                // is a footer
-                const footerKey = m[1] ? m[2] : m[3] ? m[4] : m[5] ? m[6] : null
-                if (footerKey) {
-                    const offset = m[1] || m[5] ? 2 : 1
-                    commit.footers[footerKey] = line.slice(footerKey.length + offset).trim()
-                    if (footerKey.toLowerCase().startsWith('breaking')) {
-                        commit.breaking = true
-                    }
-                }
-            } else if (['breaking', 'breaking-change', 'breaking change'].includes(line.toLowerCase())) {
-                // footer with no key and value
-                // -> the whole message is breaking change footer
-                commit.breaking = true
-            } else {
-                // this is a line from the body
-                if (!commit.body) {
-                    commit.body += line
-                } else {
-                    commit.body += '\n' + line
+            continue
+        }
+
+        // Subject populated: parse as body, footer, or tag
+        const footerRegex = /(([^ ]+): )|(([^ ]+) #)|((BREAKING CHANGE): )/
+        const m = line.match(footerRegex)
+        if (m) {
+            // is a footer
+            const footerKey = m[1] ? m[2] : m[3] ? m[4] : m[5] ? m[6] : null
+            if (footerKey) {
+                const offset = m[1] || m[5] ? 2 : 1
+                commit.footers[footerKey] = line.slice(footerKey.length + offset).trim()
+                if (footerKey.toLowerCase().startsWith('breaking')) {
+                    commit.breaking = true
                 }
             }
+            continue
+        }
+
+        if (['breaking', 'breaking-change', 'breaking change'].includes(line.toLowerCase())) {
+            // footer with no key and value
+            // -> the whole message is breaking change footer
+            commit.breaking = true
+            continue
+        }
+
+        // #<tag-expr>
+        // The commit can contain a tag, which is just a string identifier
+        // for whatever purpose the user wants to use it for.
+        const tagRegex = /#(\S+)/
+        const tagMatch = line.match(tagRegex)
+        if (tagMatch) {
+            commit.tags.push(tagMatch[1])
+            continue
+        }
+
+        // No special syntax: this is a line from the body
+        if (!commit.body) {
+            commit.body += line
+        } else {
+            commit.body += '\n' + line
         }
     }
 
@@ -450,6 +507,16 @@ async function populateConventional(commit, repoUrl, versionPattern, tags) {
         if (commit.hash === tag.sha) {
             commit.tag = tag.name
             break
+        }
+    }
+
+    // Attribute type from one of the tags if possible
+    if (!commit.type || commit.type === 'other') {
+        for (const tag of commit.tags) {
+            if (isValidType(tag)) {
+                commit.type = normalizeType(tag)
+                break
+            }
         }
     }
 
@@ -489,7 +556,6 @@ async function getLocalCommits(projectPath, repoUrl, versionPattern, tags) {
 
     const commitLogLines = commitLogOutput.split('\n')
     let commit = new Commit()
-    let msg = ''
 
     for (const line of commitLogLines) {
         if (line === '') continue
@@ -1078,8 +1144,6 @@ function generateOutput(changes, changeTypePriority, args, repoUrl, authors, par
 
     for (const changeType of changeTypePriority) {
         if (changes.hasOwnProperty(changeType)) {
-            const scopeChanges = changes[changeType] || {}
-
             // Title
             if (Object.keys(changes).length > 1 || (Object.keys(changes).length > 0 && changeType !== 'other')) {
                 if (output) {
@@ -1093,7 +1157,8 @@ function generateOutput(changes, changeTypePriority, args, repoUrl, authors, par
             }
 
             // Scopes
-            for (const [scope, scopedChanges] of Object.entries(scopeChanges)) {
+            const typeChanges = changes[changeType] || {}
+            for (const [scope, scopedChanges] of Object.entries(typeChanges)) {
                 const indentedScope = (scope !== null && scope !== 'null' && scope !== 'undefined') && scopedChanges.length > 1
                 if (indentedScope) {
                     output += `- ${scope}:\n`
@@ -1112,7 +1177,7 @@ function generateOutput(changes, changeTypePriority, args, repoUrl, authors, par
                     }
 
                     // Scope prefix
-                    if (scope !== null && !indentedScope) {
+                    if (indentedScope) {
                         output += `${scope}: `
                     }
 
@@ -1218,7 +1283,7 @@ async function main(inputs) {
     core.endGroup()
 
     core.startGroup('🏷️ Identifying tags')
-    let tags = await processTags(inputs.source_dir, inputs.tag_pattern, inputs.repoUrl, inputs.access_token)
+    let tags = await processTags(inputs.source_dir, inputs.tag_pattern, inputs.repoUrl, inputs.github_token)
     core.endGroup()
 
     core.startGroup('📜 Identifying commits')
@@ -1228,7 +1293,7 @@ async function main(inputs) {
         inputs.version_pattern,
         tags,
         inputs.repo_branch,
-        inputs.access_token,
+        inputs.github_token,
         inputs.check_unconventional)
 
     // Limit the number of commits
@@ -1239,12 +1304,12 @@ async function main(inputs) {
     core.endGroup()
 
     core.startGroup('👤 Populating GitHub usernames')
-    await populateGithubUsernames(commits, inputs.access_token)
+    await populateGithubUsernames(commits, inputs.github_token)
     core.endGroup()
 
     // Populate issue data
     core.startGroup('🔗 Populating issue data')
-    const authors = await populateIssueData(commits, inputs.repoUrl, inputs.repoOwner, inputs.access_token)
+    const authors = await populateIssueData(commits, inputs.repoUrl, inputs.repoOwner, inputs.github_token)
     core.endGroup()
 
     // Identify non-regular contributors
