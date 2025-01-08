@@ -1045,14 +1045,12 @@ async function main(inputs) {
                 .filter((input) => input !== '/m32')
                 .join(' ')
         }
-        if (inputs.build_type) {
-            if (!generator_is_multi_config) {
-                configure_args.push('-D')
-                configure_args.push(`CMAKE_BUILD_TYPE=${inputs.build_type}`)
-            } else {
-                configure_args.push('-D')
-                configure_args.push(`CMAKE_CONFIGURATION_TYPES=${inputs.build_type}`)
-            }
+        if (inputs.build_type && !generator_is_multi_config) {
+            // When the generator is multi-config, the build type is set
+            // when building the target. `CMAKE_CONFIGURATION_TYPES`
+            // should not be set in this case.
+            configure_args.push('-D')
+            configure_args.push(`CMAKE_BUILD_TYPE=${inputs.build_type}`)
         }
         if (inputs.toolchain) {
             configure_args.push('-D')
@@ -1186,7 +1184,7 @@ async function main(inputs) {
                 build_args.push('--parallel')
                 build_args.push(`${inputs.jobs}`)
             }
-            if (inputs.build_type) {
+            if (inputs.build_type && generator_is_multi_config) {
                 build_args.push('--config')
                 build_args.push(inputs.build_type || 'Release')
             }
@@ -1229,7 +1227,7 @@ async function main(inputs) {
                 test_args.push('--parallel')
                 test_args.push(`${inputs.jobs}`)
             }
-            if (inputs.build_type) {
+            if (inputs.build_type && generator_is_multi_config) {
                 test_args.push('--build-config')
                 test_args.push(inputs.build_type || 'Release')
             }
@@ -1283,7 +1281,7 @@ async function main(inputs) {
                 install_args.push('--build')
             }
             install_args.push(std_build_dir)
-            if (inputs.build_type) {
+            if (inputs.build_type && generator_is_multi_config) {
                 install_args.push('--config')
                 install_args.push(inputs.build_type || 'Release')
             }
@@ -1367,7 +1365,7 @@ async function main(inputs) {
             for (const package_generator of inputs.package_generators) {
                 core.info(`⚙️ Generating package with generator "${package_generator}"`)
                 let cpack_args = ['-G', package_generator]
-                if (inputs.build_type) {
+                if (inputs.build_type && generator_is_multi_config) {
                     cpack_args.push('-C')
                     cpack_args.push(inputs.build_type || 'Release')
                 }
