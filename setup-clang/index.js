@@ -203,7 +203,10 @@ async function main(version, paths, check_latest, update_environment) {
 
         const ubuntuName = setup_program.getCurrentUbuntuName()
         trace_commands.log(`Ubuntu version name: ${ubuntuName}`)
-        if (ubuntuName !== null && allVersionMajors.length !== 0 && ['bionic', 'focal', 'jammy', 'kinetic', 'lunar', 'mantic'].includes(ubuntuName)) {
+        trace_commands.log(`allVersionMajors.length: ${allVersionMajors.length}`)
+        if (ubuntuName !== null && allVersionMajors.length !== 0) {
+            core.info(`Adding APT repositories for Clang ${version} major versions [${allVersionMajors.join(', ')}]`)
+
             // Adding a key requires gnupg
             await setup_program.find_program_with_apt(['gnupg'], '*', true)
 
@@ -248,6 +251,7 @@ async function main(version, paths, check_latest, update_environment) {
             }
         }
 
+        core.info(`Searching for Clang ${version} with APT`)
         const __ret = await setup_program.find_program_with_apt(['clang'], version, check_latest)
         output_version = __ret.output_version
         output_path = __ret.output_path
