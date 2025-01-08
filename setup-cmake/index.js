@@ -350,10 +350,10 @@ async function run() {
             cmake_file: gh_inputs.getInput('cmake-file'),
             path: gh_inputs.getInput('path'),
             cmake_path: gh_inputs.getInput('cmake-path'),
-            cache: gh_inputs.getBool('cache'),
-            check_latest: gh_inputs.getBool('check-latest'),
-            update_environment: gh_inputs.getBool('update-environment'),
-            trace_commands: gh_inputs.getBool('trace-commands')
+            cache: gh_inputs.getBoolean('cache'),
+            check_latest: gh_inputs.getBoolean('check-latest'),
+            update_environment: gh_inputs.getBoolean('update-environment'),
+            trace_commands: gh_inputs.getBoolean('trace-commands')
         }
 
         if (inputs.cmake_path) {
