@@ -454,22 +454,61 @@ function splitRanges(range, versions, policy = SubrangePolicies.ONE_PER_MAJOR) {
     return subranges
 }
 
+/*
+    It's very common for compilers to not fully comply with the standards they claim to support, even
+    for the old standards. The criteria used by this action for determining if a compiler supports a
+    standard is based on the whether the compiler claims to support the standard by providing a corresponding
+    `-std=c++XX` flag to enable the standard.
+ */
 function compilerSupportsStd(compiler, version, cxxstd) {
     if (compiler === 'gcc') {
-        return (cxxstd <= 2020 && semver.satisfies(version, '>=11')) ||
-            (cxxstd <= 2017 && semver.satisfies(version, '>=7')) ||
-            (cxxstd <= 2014 && semver.satisfies(version, '>=6')) ||
-            (cxxstd <= 2011 && semver.satisfies(version, '>=4')) ||
+        return (cxxstd <= 2023 && semver.satisfies(version, '>=11.1')) ||
+            (cxxstd <= 2020 && semver.satisfies(version, '>=10.1')) ||
+            (cxxstd <= 2017 && semver.satisfies(version, '>=5.1')) ||
+            (cxxstd <= 2014 && semver.satisfies(version, '>=4.9.0')) ||
+            (cxxstd <= 2011 && semver.satisfies(version, '>=4.7.1')) ||
             cxxstd <= 2003
     }
     if (compiler === 'clang') {
-        return (cxxstd <= 2020 && semver.satisfies(version, '>=12')) ||
-            (cxxstd <= 2017 && semver.satisfies(version, '>=6')) ||
-            (cxxstd <= 2014 && semver.satisfies(version, '>=4')) ||
+        return (cxxstd <= 2023 && semver.satisfies(version, '>=17')) ||
+            (cxxstd <= 2020 && semver.satisfies(version, '>=10')) ||
+            (cxxstd <= 2017 && semver.satisfies(version, '>=5')) ||
+            (cxxstd <= 2014 && semver.satisfies(version, '>=3.5')) ||
             (cxxstd <= 2011 && semver.satisfies(version, '>=3')) ||
             cxxstd <= 2003
     }
     if (compiler === 'msvc') {
+        /* MSVC has two versioning systems:
+
+           - Compiler Version (e.g., 19.XX.YYYYY)
+           - Toolset Version (e.g., 14.X)
+
+           This function depends on the toolset version because
+           it's the most common way to refer to the compiler version
+           in C++ projects.
+
+           If you know the compiler version, you can get the toolset
+           version with:
+
+           #include <iostream>
+           #include <string>
+
+           std::string
+           toolset_version()
+           {
+               // Deduce major version: 1900 → 14, 2000 → 15, etc.
+               int major = (_MSC_VER / 100) - 6;
+               // Deduce minor version: 1920 → 2 (14.2)
+               int minor = _MSC_VER % 100;
+               return "14." + std::to_string(minor);
+           }
+
+           int main() {
+               std::cout << "Toolset Version: " << toolset_version() << std::endl;
+               return 0;
+           }
+
+         */
         return (cxxstd <= 2020 && semver.satisfies(version, '>=14.30')) ||
             (cxxstd <= 2017 && semver.satisfies(version, '>=14.20')) ||
             (cxxstd <= 2014 && semver.satisfies(version, '>=14.11')) ||
