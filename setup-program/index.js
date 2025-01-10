@@ -356,13 +356,13 @@ async function find_program_with_apt(names, version, check_latest) {
     // Find program "name" with APT
     try {
         fnlog(`Searching for ${names.join(', ')} with APT`)
+        if (isSudoRequired()) {
+            await exec.exec(`sudo -n apt-get update`, [], {ignoreReturnCode: true})
+        } else {
+            await exec.exec(`apt-get update`, [], {ignoreReturnCode: true})
+        }
         let package_names = []
         for (const name of names) {
-            if (isSudoRequired()) {
-                await exec.exec(`sudo -n apt-get update`, [], {ignoreReturnCode: true})
-            } else {
-                await exec.exec(`apt-get update`, [], {ignoreReturnCode: true})
-            }
             const search_expression = `${escapeRegExp(name)}(-[0-9\\.]+)?`
             fnlog(`Searching for packages matching ${search_expression}`)
             const output = await exec.getExecOutput('apt-cache', ['search', `^${search_expression}$`])
@@ -614,7 +614,7 @@ async function fetchGitTags(repo, options = {}) {
         }
         // Install git if we have to
         if (!git_path) {
-            await find_program_with_apt(['git'], '*', false)
+            await find_program_with_apt(['git'], '*', true)
             git_path = await findGit()
         }
         // Still no git? Fail
