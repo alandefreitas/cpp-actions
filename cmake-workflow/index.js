@@ -1679,7 +1679,7 @@ async function run() {
             cxx: gh_inputs.getNormalizedPath('cxx', {fallbackEnv: 'CXX'}),
             cxxflags: gh_inputs.getInput('cxxflags', {fallbackEnv: 'CXXFLAGS'}),
             cxxstd: gh_inputs.getArray('cxxstd', undefined, undefined, {fallbackEnv: 'CXXSTD'}),
-            shared: gh_inputs.getTribool('shared', {fallbackEnv: 'BUILD_SHARED_LIB'}),
+            shared: gh_inputs.getTribool('shared', {fallbackEnv: 'BUILD_SHARED_LIBS'}),
             toolchain: gh_inputs.getNormalizedPath('toolchain', {fallbackEnv: 'CMAKE_TOOLCHAIN_FILE'}),
             generator: gh_inputs.getInput('generator', {fallbackEnv: 'CMAKE_GENERATOR'}),
             generator_toolset: gh_inputs.getInput('generator-toolset', {fallbackEnv: 'CMAKE_GENERATOR_TOOLSET'}),
