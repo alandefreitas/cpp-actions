@@ -472,7 +472,8 @@ function compilerSupportsStd(compiler, version, cxxstd) {
     if (compiler === 'clang') {
         return (cxxstd <= 2023 && semver.satisfies(version, '>=17')) ||
             (cxxstd <= 2020 && semver.satisfies(version, '>=10')) ||
-            (cxxstd <= 2017 && semver.satisfies(version, '>=5')) ||
+            // clang >=5 technically supports c++17, but compliance is terrible
+            (cxxstd <= 2017 && semver.satisfies(version, '>=6')) ||
             (cxxstd <= 2014 && semver.satisfies(version, '>=3.5')) ||
             (cxxstd <= 2011 && semver.satisfies(version, '>=3')) ||
             cxxstd <= 2003
