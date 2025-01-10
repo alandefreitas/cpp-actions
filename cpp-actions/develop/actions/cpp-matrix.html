@@ -861,10 +861,27 @@ is <code>one-per-major-minor</code>.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>standards</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A semver range describing what C standards should be tested.</p>
-<p class="tableblock">The compiler ranges are adjusted to only include compilers that support any subrange of these requirements.</p>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A semver range describing what C standards should be tested. For instance, `&gt;=11` indicates that
+the library should be tested with C11 and later standards.</p>
 <p class="tableblock">These requirements can include C standards as 2 or 4 digits versions, such as 11, 2011, 98, or 1998.
-2 digit versions are normalized into the 4 digits form so that 11 &gt; 98 (2011 &gt; 1998).</p></td>
+2 digit versions are normalized into the 4 digits form so that 11 &gt; 98 (2011 &gt; 1998).</p>
+<p class="tableblock">The action will generate entries for each compiler version that satisfies the requirements.
+The compiler ranges defined in `compilers` are adjusted to only include compilers that support any
+subrange of these requirements. Compilers that don't support any of the standards in the range will
+be excluded from the matrix.</p>
+<p class="tableblock">Each entry in the matrix will include the `cxxstd` key with a list of standards to be tested with that
+compiler version. This list will include the `max-standards` latest standards supported by the compiler
+specified in that entry. For instance, if `max-standards` is `3` and the compiler supports
+'11,14,17,20,23' given the the `standards` requirement `&gt;=11`, the `cxxstd` field of the entry
+will include the standards `20,23` will be tested by this compiler. This allows the matrix to be
+more focused on the latest standards supported by each compiler (the ones that are more likely to be
+contain compatibility issues) while still testing all standards required by the library in the matrix.</p>
+<p class="tableblock">It's very common for compilers to not fully comply with the standards they claim to support, even
+for the old standards. The criteria used by this action for determining if a compiler supports a
+standard is based on the whether the compiler claims to support the standard by providing a corresponding
+`-std=cXX` flag to enable the standard. This criteria is easy to follow, minimizes surprises, covers
+the most common bugs, and ensures users the library is compliant with all standard flags
+supported by the compilers.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>&gt;=11</code></p></td>
 </tr>
 <tr>
