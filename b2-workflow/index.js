@@ -162,8 +162,10 @@ async function main(inputs) {
     if (inputs.threading) {
         b2_args.push(`threading=${inputs.threading}`)
     }
-    if (inputs.shared) {
+    if (inputs.shared === true) {
         b2_args.push('link=shared')
+    } else if (inputs.shared === false) {
+        b2_args.push('link=static')
     }
 
     // The user can provide these options as a boolean (true/false) or as any

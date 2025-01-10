@@ -96,10 +96,13 @@ inputs:
   shared:
     description: |
       Determines if the `link` option should be `shared` so that it creates shared libraries.
+      When the input is `true`, the `link` option is `shared`. When it is `false`, the `link` option is `static`.
       
       If the input is not specified, the action will use the value defined by the environment variable `BUILD_SHARED_LIBS`.
       
-      If the environment variable is not specified, the action will use the default value as identified by B2.
+      If the environment variable is not specified, the action will use the default value as identified by B2,
+      which sets no value for the `link` option and defaults to `shared`.
+
     required: false
     default: ''
   toolset:
