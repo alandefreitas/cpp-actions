@@ -290,10 +290,7 @@ function getKeyValues(name, delimiter = ':', options = defaultOptions) {
 }
 
 function parseMap(lines, delimiter = ':') {
-    return parseKeyValues(lines, delimiter).reduce((acc, {key, value}) => {
-        acc[key] = value
-        return acc
-    })
+    return Object.fromEntries(parseKeyValues(lines, delimiter).map(({key, value}) => [key, value]))
 }
 
 function getMap(name, delimiter = ':', options = defaultOptions) {
