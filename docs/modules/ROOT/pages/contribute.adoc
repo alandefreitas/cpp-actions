@@ -1,6 +1,42 @@
-= Contribute
+= Contributor Guide
 
 If there's a platform where one of the actions does not work, feel free to submit a PR with adaptations and tests.
 
+== Building
 
+Contributing to the repository is relatively easy.
+All actions are vanilla JavaScript.
+The only caveat — especially for C++ programmers unfamiliar with the JavaScript ecosystem — is that the JavaScript code needs to be compiled, and the compiled output must be committed to the repository.
+This is a requirement of how GitHub Actions work.
+A `build.sh` script in the root directory iterates all actions, builds them, and runs the tests.
 
+So far, we’ve accepted nearly all contributions — except those that break composability or introduce hard-coded values tied to a specific library.
+
+== Testing
+
+The ultimate test is whether it works in CI.
+The ci.yml workflow exercises all actions with all supported features, using a toy project that's quick and inexpensive to compile.
+So, we spend little time testing the actions here instead of finding bugs while trying to use the actions for other real libraries that are much more expensive to test.
+
+Each action also has an `index.test.js` where we can test the internal logic of more complex functions.
+It's impossible to replicate the environment perfectly in these tests, so the ultimate test is always CI.
+
+As a result, it's common to test the entire repository by pushing changes to a branch and observing the results in CI.
+If needed, we iterate via force-pushes until the branch is ready for a PR.
+In theory, we could use https://github.com/nektos/act[nektos/act] for that, but, at best, it won't cover all environments.
+
+== Design Rationale
+
+This project began as a GitHub Actions port of the scripts in https://github.com/boostorg/boost-ci[boost-ci], aimed at improving maintainability and composability.
+Since then, it has evolved to include:
+
+* Some low-hanging fruit, like using features provided by GitHub Actions and including features that would be very hard to implement in bash (like caching Boost dependencies for a library).
+* Frequently requested features for individual actions (e.g., advanced CMake configurations).
+* Features that went beyond the original scope of boost-ci, previously handled via bash (e.g., test coverage).
+* Entirely new actions useful for broader project workflows (e.g., profiling or generating changelogs from commits).
+* Supporting new tools: users expect support for emerging compilers and platforms.
+While we can’t support what doesn’t exist yet, some actions attempt to make reasonable predictions based on version numbers.
+
+The repository's evolution explains much of the design rationale.
+For instance, the `cmake-workflow` action is very generic: it can even be used to compile and install a library needed in another step.
+However, the `B2-workflow` action only works for Boost libraries, and many assumptions wouldn't make sense in a standalone project using B2.
