@@ -9,6 +9,9 @@ const os = require('os')
 const httpm = require('@actions/http-client')
 const trace_commands = require('trace-commands')
 const gh_inputs = require('gh-inputs')
+const gccDefaultTags = require('./gcc-tags.json')
+const clangDefaultTags = require('./clang-tags.json')
+const cmakeDefaultTags = require('./cmake-tags.json')
 
 function isExecutable(path) {
     if (!fs.existsSync(path) || fs.lstatSync(path).isDirectory()) {
@@ -604,6 +607,7 @@ async function sleep(ms) {
 
 
 async function fetchGitTags(repo, options = {}) {
+    const { maxRetries = 10, defaultTags = [] } = options
     try {
         // Find git in PATH
         let git_path = null
@@ -621,7 +625,6 @@ async function fetchGitTags(repo, options = {}) {
         if (!git_path) {
             throw new Error('Git not found')
         }
-        const maxRetries = options.maxRetries || 10
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 const args = ['ls-remote', '--tags', repo]
@@ -654,7 +657,15 @@ async function fetchGitTags(repo, options = {}) {
                     trace_commands.log(`Retrying in ${delay} milliseconds...`)
                     await sleep(delay)
                 } else {
-                    throw new Error('Max retries reached. Error fetching Git tags: ' + error.message)
+                    if (defaultTags.length > 0)
+                    {
+                        trace_commands.log('Using default tags: ' + defaultTags)
+                        return defaultTags
+                    }
+                    else
+                    {
+                        throw new Error('Max retries reached. Error fetching Git tags: ' + error.message)
+                    }
                 }
             }
         }
@@ -663,14 +674,15 @@ async function fetchGitTags(repo, options = {}) {
     }
 }
 
-async function findVersionsFromTags(name, repo, file, regex) {
+async function findVersionsFromTags(name, repo, file, regex, defaultTags = []) {
     const versionsFromFile = readVersionsFromFile(file)
     if (versionsFromFile !== null) {
         trace_commands.log(`${name} versions (from file): ` + versionsFromFile)
         return versionsFromFile
     }
     const tags = await fetchGitTags(repo, {
-        maxRetries: 10
+        maxRetries: 3,
+        defaultTags
     })
     let versions = []
     for (const tag of tags) {
@@ -690,7 +702,8 @@ async function findGCCVersions() {
         'GCC',
         'git://gcc.gnu.org/git/gcc.git',
         'gcc-versions.txt',
-        /^refs\/tags\/releases\/gcc-(\d+\.\d+\.\d+)$/)
+        /^refs\/tags\/releases\/gcc-(\d+\.\d+\.\d+)$/,
+        gccDefaultTags)
 }
 
 async function findClangVersions() {
@@ -698,7 +711,8 @@ async function findClangVersions() {
         'Clang',
         'https://github.com/llvm/llvm-project',
         'clang-versions.txt',
-        /^refs\/tags\/llvmorg-(\d+\.\d+\.\d+)$/)
+        /^refs\/tags\/llvmorg-(\d+\.\d+\.\d+)$/,
+        clangDefaultTags)
 }
 
 async function findCMakeVersions() {
@@ -706,7 +720,8 @@ async function findCMakeVersions() {
         'CMake',
         'https://github.com/Kitware/CMake.git',
         'cmake-versions.txt',
-        /^refs\/tags\/v(\d+\.\d+\.\d+)$/)
+        /^refs\/tags\/v(\d+\.\d+\.\d+)$/,
+        cmakeDefaultTags)
 }
 
 
