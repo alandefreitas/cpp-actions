@@ -38,6 +38,55 @@ fetch_tags "git://gcc.gnu.org/git/gcc.git" "setup-program/gcc-tags.json"
 fetch_tags "https://github.com/llvm/llvm-project" "setup-program/clang-tags.json"
 fetch_tags "https://github.com/Kitware/CMake.git" "setup-program/cmake-tags.json"
 
+ubuntu_versions_json() {
+    local url="http://changelogs.ubuntu.com/meta-release"
+
+    # Check if curl is available
+    if ! command -v curl &> /dev/null; then
+        echo "Warning: 'curl' is not installed. Cannot fetch Ubuntu versions."
+        return 1
+    fi
+
+    local temp_file
+    temp_file=$(mktemp)
+    curl -s "$url" > "$temp_file"
+
+    local json="{"
+    local version=""
+    local dist=""
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        if [[ $line == Version:* ]]; then
+            version=$(echo "$line" | cut -d: -f2- | xargs)
+            version=$(echo "$version" | sed 's/ *LTS.*//')  # Strip "LTS" and beyond
+        elif [[ $line == Dist:* ]]; then
+            dist=$(echo "$line" | cut -d: -f2- | xargs)
+        elif [[ -z $line ]]; then
+            # End of block: if both version and dist are set, add to json
+            if [[ -n $version && -n $dist ]]; then
+                json+="\"$version\":\"$dist\","
+            fi
+            version=""
+            dist=""
+        fi
+    done < "$temp_file"
+
+    # Catch any final block not followed by a newline
+    if [[ -n $version && -n $dist ]]; then
+        json+="\"$version\":\"$dist\","
+    fi
+
+    # Finalize JSON
+    json="${json%,}}"
+
+    echo "$json" > setup-program/ubuntu-versions.json
+    echo "Created setup-program/ubuntu-versions.json"
+
+    rm "$temp_file"
+}
+
+ubuntu_versions_json
+
 projects_with_package=()
 projects_with_action=()
 

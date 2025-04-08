@@ -12,6 +12,7 @@ const gh_inputs = require('gh-inputs')
 const gccDefaultTags = require('./gcc-tags.json')
 const clangDefaultTags = require('./clang-tags.json')
 const cmakeDefaultTags = require('./cmake-tags.json')
+const ubuntuVersionNames = require('./ubuntu-versions.json')
 
 function isExecutable(path) {
     if (!fs.existsSync(path) || fs.lstatSync(path).isDirectory()) {
@@ -623,6 +624,10 @@ async function fetchGitTags(repo, options = {}) {
         }
         // Still no git? Fail
         if (!git_path) {
+            if (defaultTags.length > 0)
+            {
+                return defaultTags
+            }
             throw new Error('Git not found')
         }
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -817,26 +822,11 @@ function getCurrentUbuntuVersion() {
 function getCurrentUbuntuName() {
     const version = getCurrentUbuntuVersion()
     if (version) {
-        if (version === '18.04') {
-            return 'bionic'
-        } else if (version === '20.04') {
-            return 'focal'
-        } else if (version === '20.10') {
-            return 'groovy'
-        } else if (version === '21.04') {
-            return 'hirsute'
-        } else if (version === '21.10') {
-            return 'impish'
-        } else if (version === '22.04') {
-            return 'jammy'
-        } else if (version === '22.10') {
-            return 'kinetic'
-        } else if (version === '23.04') {
-            return 'lunar'
-        } else if (version === '23.10') {
-            return 'mantic'
-        } else if (version === '24.04') {
-            return 'noble'
+        // look for "version" key in "ubuntuVersionNames"
+        for (const [key, value] of Object.entries(ubuntuVersionNames)) {
+            if (version.startsWith(key) || key.startsWith(version)) {
+                return value
+            }
         }
     }
     trace_commands.log(`setup-program::getCurrentUbuntuName: Ubuntu name for version ${version} not supported`)

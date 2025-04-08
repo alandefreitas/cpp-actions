@@ -9,6 +9,7 @@ const httpm = require('@actions/http-client')
 const setup_program = require('setup-program')
 const trace_commands = require('trace-commands')
 const gh_inputs = require('gh-inputs')
+const ubuntuVersionNames = require('./../setup-program/ubuntu-versions.json')
 
 function removeClangPrefix(version) {
     // Remove "clang-" or "clang++-" prefix
@@ -70,12 +71,10 @@ function clangDownloadCandidates(version, allVersions, check_latest) {
 
     // Get list of all ubuntu version candidates in order of preference
     // based on distance from the current ubuntu version
-    let ubuntu_versions = []
-    for (ubuntuMajor of ['10', '12', '14', '16', '18', '20', '21', '22', '23']) {
-        for (ubuntuMinor of ['04', '10']) {
-            ubuntu_versions.push(`${ubuntuMajor}.${ubuntuMinor}`)
-        }
-    }
+    let ubuntu_versions = Object.keys(ubuntuVersionNames)
+    // Some versions in the map include patch components. We want
+    // to remove these to keep only the major and the minor.
+    ubuntu_versions = ubuntu_versions.map((v) => v.split('.')[0] + '.' + v.split('.')[1])
 
     // Sort the ubuntu versions based on the distance from the current ubuntu
     // version

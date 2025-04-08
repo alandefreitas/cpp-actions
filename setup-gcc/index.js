@@ -101,6 +101,13 @@ async function main(version, paths, check_latest, update_environment) {
 
     // Install program from a valid URL
     if (output_version === null) {
+        // This doesn't work well and should be deprecated. Maintaining
+        // our GCC binaries is not worth the effort because there would
+        // be too many combinations of binaries per version, the binaries
+        // don't work on all platforms, and they are not replicating
+        // whatever the user is more likely to have on their system.
+        // This will naturally be deprecated and newer versions of
+        // ubuntu and gcc will be used in the future.
         core.startGroup('Download GCC from release binaries')
         core.info(`Fetching GCC ${version} from release binaries`)
         // Determine the release to install and version candidates to fallback to
