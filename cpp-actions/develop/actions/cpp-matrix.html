@@ -807,7 +807,7 @@ in the <code>/__e/node20</code> directory.</p>
     force-factors: 'mingw: No-Deps
 
       '
-    extra-values: 'vcpkg-packages: {{#if fetch-content}}fmt{{/if}}
+    extra-values: 'vcpkg-packages: {{#if (not fetch-content)}}fmt{{/if}}
 
       address-model: {{#if x86}}32{{else}}64{{/if}}
 
