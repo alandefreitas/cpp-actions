@@ -20,7 +20,7 @@ if (NOT CPP_ACTIONS_NO_DEPS)
         include(FetchContent)
         FetchContent_Declare(
                 fmt
-                URL https://github.com/fmtlib/fmt/releases/download/10.0.0/fmt-10.0.0.zip
+                URL https://github.com/fmtlib/fmt/releases/download/11.1.4/fmt-11.1.4.zip
         )
         FetchContent_GetProperties(fmt)
         if (NOT fmt_POPULATED)
