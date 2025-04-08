@@ -650,7 +650,7 @@ async function fetchGitTags(repo, options = {}) {
                     trace_commands.log('Error fetching Git tags: ' + error.message)
                     trace_commands.log(`Attempt ${attempt} of ${maxRetries}`)
                     // Exponential backoff
-                    const delay = Math.pow(2, attempt - 1) * 1000
+                    const delay = Math.max(60000, Math.pow(2, attempt - 1) * 1000)
                     trace_commands.log(`Retrying in ${delay} milliseconds...`)
                     await sleep(delay)
                 } else {
