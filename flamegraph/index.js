@@ -149,23 +149,41 @@ function isSubpath(childPath, parentPath) {
     return childPathAbs.startsWith(parentPathAbs + path.sep)
 }
 
-function addFilenameDetail(event, includePaths, sourceDir, buildDir) {
+/**
+ * Adjust the args.detail field of the event to be a path relative
+ * to the sourceDir or buildDir.
+ *
+ * @param event {Object} The event to adjust
+ * @param includePaths {Set<string>} The include paths to check
+ * @param sourceDir {string} The source directory
+ * @param buildDir {string} The build directory
+ */
+function adjustEventDetailFilename(event, includePaths, sourceDir, buildDir) {
+    function fnlog(msg) {
+        trace_commands.log(`adjustEventDetailFilename: ${msg}`)
+    }
+
+    fnlog(`Adjust event detail filename`)
     const eventDetailIsExistingFile =
         event.args &&
         event.args.detail &&
         typeof event.args.detail === 'string'
     if (!eventDetailIsExistingFile) {
+        fnlog(`Event does not have a detail field to adjust`)
         return
     }
     if (event.name === 'ParseFunctionDefinition') {
         // Can't resolve a function definition
+        fnlog(`Event is a function definition, can't resolve the file`)
         return
     }
     // Some paths contain a spelling, such as:
     // unistd.h:27:1 <Spelling=/usr/include/x86_64-linux-gnu/sys/cdefs.h:133:24>
     const spellingIndex = event.args.detail.indexOf(' <Spelling=')
     if (spellingIndex !== -1) {
+        fnlog(`Event has a spelling field, removing it from ${event.args.detail}`)
         event.args.detail = event.args.detail.slice(0, spellingIndex)
+        fnlog(`Event detail: ${event.args.detail}`)
     }
     // Some paths contains a final location suffix, such
     // unistd.h:27:1
@@ -173,13 +191,19 @@ function addFilenameDetail(event, includePaths, sourceDir, buildDir) {
     const locationRegex = /:[0-9]+:[0-9]+$/
     event.args.detail = event.args.detail.replace(locationRegex, '')
     if (isSubpath(event.args.detail, sourceDir)) {
+        fnlog(`Event is a source file ${event.args.detail}`)
         event.args.detail = path.relative(sourceDir, event.args.detail)
+        fnlog(`Event detail: ${event.args.detail}`)
     } else if (isSubpath(event.args.detail, buildDir)) {
+        fnlog(`Event is a build file ${event.args.detail}`)
         event.args.detail = path.relative(buildDir, event.args.detail)
+        fnlog(`Event detail: ${event.args.detail}`)
     } else {
         for (const includePath of includePaths) {
             if (isSubpath(event.args.detail, includePath)) {
+                fnlog(`Event is an include file ${event.args.detail}`)
                 event.args.detail = path.relative(includePath, event.args.detail)
+                fnlog(`Event detail: ${event.args.detail}`)
                 break
             }
         }
@@ -204,6 +228,7 @@ function addFilenameDetail(event, includePaths, sourceDir, buildDir) {
         // and detail headers
         event.args.detail = `<${event.args.detail}>`
     }
+    fnlog(`Final event detail: ${event.args.detail}`)
 }
 
 class TimestampRange {
@@ -254,7 +279,12 @@ class TimestampRanges {
  * @param {string} displayFilename
  */
 function updateReportData(event, reportData, parsingRegions, instantiationRegions, displayFilename) {
+    function fnlog(msg) {
+        trace_commands.log(`adjustEventDetailFilename: ${msg}`)
+    }
+
     if (event.name === 'Source') {
+        fnlog(`Adding source event ${event.name} (${event.ph}) with duration ${event.dur}`)
         // Add to total
         const ts = event.ts
         const dur = event.dur
@@ -264,9 +294,15 @@ function updateReportData(event, reportData, parsingRegions, instantiationRegion
             parsingRegions.addRange(ts, ts + dur)
         }
         // Add to file total
-        const file = event.args.detail
+        // ! Some Source events don't have a filename. We default to
+        // the display filename
+        const file =
+            'args' in event && 'detail' in event.args ?
+                event.args.detail :
+                displayFilename
         reportData.addFileParseData(file, 1, dur)
     } else if (event.name.startsWith('Parse') && event.args && event.args.detail) {
+        fnlog(`Adding parse event ${event.name} (${event.ph}) with duration ${event.dur}`)
         // const fileParseEventNames = ['ParseDeclarationOrFunctionDefinition', 'ParseTranslationUnit', 'ParseFunctionDefinition']
         const fileParseEventNames = ['ParseDeclarationOrFunctionDefinition']
         if (fileParseEventNames.includes(event.name)) {
@@ -278,6 +314,7 @@ function updateReportData(event, reportData, parsingRegions, instantiationRegion
         const symbol = event.args.detail
         reportData.addSymbolParseData(symbol, 1, dur)
     } else if (event.name.startsWith('Instantiate') && event.args && event.args.detail) {
+        fnlog(`Adding instantiate event ${event.name} (${event.ph}) with duration ${event.dur}`)
         // Add to total
         const ts = event.ts
         const dur = event.dur
@@ -290,26 +327,34 @@ function updateReportData(event, reportData, parsingRegions, instantiationRegion
         const symbol = event.args.detail
         reportData.addSymbolInstantiateData(symbol, 1, dur)
     } else if (event.name === 'PerformPendingInstantiations') {
+        fnlog(`Adding perform pending instantiations event ${event.name} (${event.ph}) with duration ${event.dur}`)
         // Add to total
         const ts = event.ts
         const dur = event.dur
         reportData.total_instantiations.update(1, dur)
         instantiationRegions.addRange(ts, ts + dur)
     } else if (event.name === 'Frontend') {
+        fnlog(`Adding frontend event ${event.name} (${event.ph}) with duration ${event.dur}`)
         reportData.total_frontend.update(1, event.dur)
     } else if (event.name === 'Backend') {
+        fnlog(`Adding backend event ${event.name} (${event.ph}) with duration ${event.dur}`)
         reportData.total_backend.update(1, event.dur)
     } else if (event.name === 'Optimizer') {
+        fnlog(`Adding optimizer event ${event.name} (${event.ph}) with duration ${event.dur}`)
         reportData.total_optimize.update(1, event.dur)
     } else if (event.name === 'CodeGenPasses') {
+        fnlog(`Adding codegen passes event ${event.name} (${event.ph}) with duration ${event.dur}`)
         reportData.total_codegen.update(1, event.dur)
     } else if (event.name === 'ExecuteCompiler') {
+        fnlog(`Adding execute compiler event ${event.name} (${event.ph}) with duration ${event.dur}`)
         // Add to total
         const ts = event.ts
         const dur = event.dur
         reportData.total_compile.update(1, dur)
         // Add to files total
         reportData.addFileCompileData(displayFilename, 1, dur)
+    } else {
+        fnlog(`Unknown event type ${event.name} (Ignored)`)
     }
 }
 
@@ -496,7 +541,7 @@ async function combineTraces(sourceDir, buildDir) {
     fnlog(`Loaded ${includePaths.size} include paths`)
 
     /** @type {ReportData} */
-    let reportData = new ReportData()
+    let aggregateReport = new ReportData()
 
     // Combine traces
     /** @type {number} */
@@ -521,43 +566,46 @@ async function combineTraces(sourceDir, buildDir) {
                 continue
             }
 
-            let event = {...traceEvent}
-            addFilenameDetail(event, includePaths, sourceDir, buildDir)
-            updateReportData(event, reportData, parsingRegions, instantiationRegions, displayFilename)
+            fnlog(`Processing event ${traceEvent.name} (${traceEvent.ph}) with duration ${traceEvent.dur} in ${displayFilename}`)
+            fnlog(`traceEvent: ${JSON.stringify(traceEvent)}`)
+            let eventObj = {...traceEvent}
+            fnlog(`Event Object: ${JSON.stringify(eventObj)}`)
+            adjustEventDetailFilename(eventObj, includePaths, sourceDir, buildDir)
+            updateReportData(eventObj, aggregateReport, parsingRegions, instantiationRegions, displayFilename)
 
             // Keep track of the main ExecuteCompiler event, which exists for each file
-            if (event.name === 'ExecuteCompiler') {
-                fileTotalTime = event.dur
+            if (eventObj.name === 'ExecuteCompiler') {
+                fileTotalTime = eventObj.dur
                 fnlog(`${displayFilename} took ${fileTotalTime}`)
                 // Also set the file name in ExecuteCompiler
-                if (!event.args) {
-                    event.args = {}
+                if (!eventObj.args) {
+                    eventObj.args = {}
                 }
-                event.args.detail = displayFilename
+                eventObj.args.detail = displayFilename
             }
 
             // Replace source event names with filename
-            if (event.name === 'Source') {
-                if (event.args && event.args.detail) {
-                    event.name = event.args.detail
+            if (eventObj.name === 'Source') {
+                if (eventObj.args && eventObj.args.detail) {
+                    eventObj.name = eventObj.args.detail
                 } else {
-                    event.name = displayFilename
+                    eventObj.name = displayFilename
                 }
-                event.cat = 'Source'
+                eventObj.cat = 'Source'
             }
 
             // Offset combined data by start time to make events
             // sequential in the combined timeline
-            event.ts += startTime
+            eventObj.ts += startTime
 
             // Put all events in the same pid
             // Different pids tend to be rendered in different tabs in some
             // visualizers, which is not what we want
-            event.pid = 0
-            event.tid = 0
+            eventObj.pid = 0
+            eventObj.tid = 0
 
             // Add event to combined data
-            combinedEvents.push(event)
+            combinedEvents.push(eventObj)
         }
 
         // Increase the start time for the next file
@@ -569,7 +617,7 @@ async function combineTraces(sourceDir, buildDir) {
     const combinedTrace = {
         traceEvents: combinedEvents
     }
-    return {combinedTrace, reportData}
+    return {combinedTrace, reportData: aggregateReport}
 }
 
 class Event {
