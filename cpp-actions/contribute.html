@@ -3,7 +3,7 @@
   <head>
         <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Contribute :: C++ Actions</title>
+    <title>Contributor Guide :: C++ Actions</title>
     <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/contribute.html">
     <meta name="generator" content="Antora 3.1.3">
     <link rel="stylesheet" href="../_/css/site.css">
@@ -120,7 +120,7 @@
         <div id="topbar-nav" class="navbar-menu">
                 <div class="navbar-item is-hoverable">
                         <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions
-                            : Contribute</a>
+                            : Contributor Guide</a>
                 </div>
                     <div class="navbar-item is-hoverable">
                         <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions" target="_blank">GitHub</a>
@@ -223,7 +223,7 @@
 </ul>
   </li>
   <li class="nav-item is-current-page" data-depth="1">
-    <a class="nav-link" href="contribute.html">Contribute</a>
+    <a class="nav-link" href="contribute.html">Contributor Guide</a>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="license.html">License</a>
@@ -325,7 +325,7 @@
     <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="index.html">C++ Actions</a></li>
-    <li><a href="contribute.html">Contribute</a></li>
+    <li><a href="contribute.html">Contributor Guide</a></li>
   </ul>
 </nav>
     <div class="page-versions">
@@ -363,9 +363,81 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Contribute</h1>
+<h1 class="page">Contributor Guide</h1>
+<div id="preamble">
+<div class="sectionbody">
 <div class="paragraph">
 <p>If there&#8217;s a platform where one of the actions does not work, feel free to submit a PR with adaptations and tests.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_building"><a class="anchor" href="#_building"></a>Building</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Contributing to the repository is relatively easy.
+All actions are vanilla JavaScript.
+The only caveat — especially for C++ programmers unfamiliar with the JavaScript ecosystem — is that the JavaScript code needs to be compiled, and the compiled output must be committed to the repository.
+This is a requirement of how GitHub Actions work.
+A <code>build.sh</code> script in the root directory iterates all actions, builds them, and runs the tests.</p>
+</div>
+<div class="paragraph">
+<p>So far, we’ve accepted nearly all contributions — except those that break composability or introduce hard-coded values tied to a specific library.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_testing"><a class="anchor" href="#_testing"></a>Testing</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The ultimate test is whether it works in CI.
+The ci.yml workflow exercises all actions with all supported features, using a toy project that&#8217;s quick and inexpensive to compile.
+So, we spend little time testing the actions here instead of finding bugs while trying to use the actions for other real libraries that are much more expensive to test.</p>
+</div>
+<div class="paragraph">
+<p>Each action also has an <code>index.test.js</code> where we can test the internal logic of more complex functions.
+It&#8217;s impossible to replicate the environment perfectly in these tests, so the ultimate test is always CI.</p>
+</div>
+<div class="paragraph">
+<p>As a result, it&#8217;s common to test the entire repository by pushing changes to a branch and observing the results in CI.
+If needed, we iterate via force-pushes until the branch is ready for a PR.
+In theory, we could use <a href="https://github.com/nektos/act">nektos/act</a> for that, but, at best, it won&#8217;t cover all environments.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_design_rationale"><a class="anchor" href="#_design_rationale"></a>Design Rationale</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This project began as a GitHub Actions port of the scripts in <a href="https://github.com/boostorg/boost-ci">boost-ci</a>, aimed at improving maintainability and composability.
+Since then, it has evolved to include:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Some low-hanging fruit, like using features provided by GitHub Actions and including features that would be very hard to implement in bash (like caching Boost dependencies for a library).</p>
+</li>
+<li>
+<p>Frequently requested features for individual actions (e.g., advanced CMake configurations).</p>
+</li>
+<li>
+<p>Features that went beyond the original scope of boost-ci, previously handled via bash (e.g., test coverage).</p>
+</li>
+<li>
+<p>Entirely new actions useful for broader project workflows (e.g., profiling or generating changelogs from commits).</p>
+</li>
+<li>
+<p>Supporting new tools: users expect support for emerging compilers and platforms.
+While we can’t support what doesn’t exist yet, some actions attempt to make reasonable predictions based on version numbers.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The repository&#8217;s evolution explains much of the design rationale.
+For instance, the <code>cmake-workflow</code> action is very generic: it can even be used to compile and install a library needed in another step.
+However, the <code>B2-workflow</code> action only works for Boost libraries, and many assumptions wouldn&#8217;t make sense in a standalone project using B2.</p>
+</div>
+</div>
 </div>
 </article>
   </div>
