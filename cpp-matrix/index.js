@@ -162,12 +162,21 @@ function findMSVCVersions() {
     // MSVC is not open source, so we assume the versions available from github runner images are available
     // See:
     // https://en.wikipedia.org/wiki/Microsoft_Visual_C%2B%2B
+    // It would be nice is there were a way to programmatically get the
+    // available images and versions during the build process.
+    // We currently need to access:
+    // https://github.com/actions/runner-images?tab=readme-ov-file#available-images
+    // then check the versions available for each image.
 
-    // windows-2019 -> ['10.0.40219', '12.0.40660', '14.29.30139', '14.40.33810']
-    // windows-2022 -> ['12.0.40660', '14.40.33810']
-    // https://github.com/actions/runner-images/blob/main/images/win/Windows2019-Readme.md#microsoft-visual-c
-    // https://github.com/actions/runner-images/blob/main/images/win/Windows2022-Readme.md#microsoft-visual-c
-    return ['10.0.40219', '12.0.40660', '14.29.30139', '14.40.33810']
+    // https://github.com/actions/runner-images/blob/main/images/windows/Windows2019-Readme.md#microsoft-visual-c
+    const windows2019 = ['10.0.40219', '12.0.40660', '14.29.30139', '14.42.34438']
+    // https://github.com/actions/runner-images/blob/main/images/windows/Windows2022-Readme.md#microsoft-visual-c
+    const windows2022 = ['12.0.40660', '14.42.34438']
+    // https://github.com/actions/runner-images/blob/main/images/windows/Windows2025-Readme.md#microsoft-visual-c
+    const windows2025 = ['12.0.40660', '14.42.34438']
+
+    // Merge the arrays and remove duplicates
+    return [...new Set([...windows2019, ...windows2022, ...windows2025])]
 }
 
 async function findCompilerVersions(compiler) {
