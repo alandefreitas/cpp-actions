@@ -699,7 +699,10 @@ function applyForcedFactors(entry, suggestionMap, subrange) {
 function setCompilerContainer(entry, inputs, compilerName, minSubrangeVersion, subrange) {
     // runs-on / container
     if (compilerName === 'gcc') {
-        if (semver.satisfies(minSubrangeVersion, '>=14')) {
+        if (semver.satisfies(minSubrangeVersion, '>=15')) {
+            entry['runs-on'] = 'ubuntu-22.04'
+            entry['container'] = 'ubuntu:25.04'
+        } else if (semver.satisfies(minSubrangeVersion, '>=14')) {
             entry['runs-on'] = 'ubuntu-22.04'
             entry['container'] = 'ubuntu:24.04'
         } else if (semver.satisfies(minSubrangeVersion, '>=13')) {
