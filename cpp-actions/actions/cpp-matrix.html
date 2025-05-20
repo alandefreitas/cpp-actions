@@ -374,13 +374,13 @@
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>The C Matrix Action is designed to automate the generation of a comprehensive test matrix for your
-C libraries given their requirements. It simplifies the process of defining the contract of what
+<p>The C&#43;&#43; Matrix Action is designed to automate the generation of a comprehensive test matrix for your
+C&#43;&#43; libraries given their requirements. It simplifies the process of defining the contract of what
 platforms your library supports and testing your project across a proper selected subset of revelant
 compiler versions and platforms.</p>
 </div>
 <div class="paragraph">
-<p>With this action, you can define a set of requirements to test your C++ library. It will then generate
+<p>With this action, you can define a set of requirements to test your C&#43;&#43; library. It will then generate
 a test matrix by combining the specified requirements into a fractional factorial design to ensure all
 proper combinations are tested in a systematic manner. This approach significantly increases the chances
 of catching compatibility issues early on and helps in delivering a robust and reliable library to users.</p>
@@ -429,7 +429,7 @@ and create your workflow as usual with the parameters from the matrix:</p>
       - name: Clone library
         uses: actions/checkout@v3
 
-      - name: Setup C++ Compiler
+      - name: Setup C&amp;#43;&amp;#43; Compiler
         uses: alandefreitas/cpp-actions/setup-cpp@master
         id: setup-cpp
         with:
@@ -444,7 +444,7 @@ and create your workflow as usual with the parameters from the matrix:</p>
           cxxstd: ${{ matrix.cxxstd }}
           cxxflags: ${{ matrix.cxxstd }}
 
-      # And you've safely tested your C++ library just like that...</code></pre>
+      # And you've safely tested your C&amp;#43;&amp;#43; library just like that...</code></pre>
 </div>
 </div>
 </div>
@@ -697,9 +697,10 @@ intermediary versions of clang with the range <code>clang &gt;=3.8 &lt;5 || &gt;
 recent versions are covered, while eliminating intermediary versions.</p>
 </div>
 <div class="paragraph">
-<p>Semver ranges can also help when a bug is found in a specific compiler version. Consider someone has reported
-a bug in GCC 8.1, and you want to keep track of that. The semver range <code>gcc &gt;=4.8 &lt;7 || 8.1 || &gt;=10</code> would ensure
-version GCC8.1 specifically, and not any other version is the range <code>&gt;=8.0.0 &lt;9.0.0</code> is tested.</p>
+<p>Semver ranges can also help when a bug is found in a specific compiler version. Consider you&#8217;re testing
+<code>gcc &gt;=4.8</code> and someone has reported a bug in GCC 8.1. Now you want to keep track of GCC 8.1 specifically.
+The semver range <code>gcc &gt;=4.8 &lt;8 || 8.1 || &gt;=9</code> would ensure version GCC 8.1 specifically, and not any other
+version is the range <code>&gt;=8.0.0 &lt;9.0.0</code> is tested.</p>
 </div>
 <div class="admonitionblock note">
 <table>
