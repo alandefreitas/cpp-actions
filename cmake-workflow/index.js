@@ -1731,7 +1731,7 @@ async function run() {
         if (singleExtraArgs) {
             await main(inputs)
         } else {
-            // Run workflow for each key-value pair in the extra_args map
+            // Run a workflow for each key-value pair in the extra_args map
             let isFirst = true
             for (const key in inputs.extra_args) {
                 core.startGroup(`🧩 Running workflow "${key}"`)

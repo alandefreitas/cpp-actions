@@ -219,10 +219,11 @@ description: |
   intermediary versions of clang with the range `clang >=3.8 <5 || >=10`, which ensure old versions are 
   recent versions are covered, while eliminating intermediary versions.
   
-  Semver ranges can also help when a bug is found in a specific compiler version. Consider someone has reported 
-  a bug in GCC 8.1, and you want to keep track of that. The semver range `gcc >=4.8 <7 || 8.1 || >=10` would ensure
-  version GCC8.1 specifically, and not any other version is the range `>=8.0.0 <9.0.0` is tested.
-  
+  Semver ranges can also help when a bug is found in a specific compiler version. Consider you're testing
+  `gcc >=4.8` and someone has reported a bug in GCC 8.1. Now you want to keep track of GCC 8.1 specifically.
+  The semver range `gcc >=4.8 <8 || 8.1 || >=9` would ensure version GCC 8.1 specifically, and not any other
+  version is the range `>=8.0.0 <9.0.0` is tested.
+
   NOTE: The action still accepts open ranges to test the latest versions of a compiler. However, additional actions
   might be needed to test the latest compilers, which may not be implemented in this version of the project. 
   Therefore, users are still recommended to avoid open ranges or to update the action's version to support the 

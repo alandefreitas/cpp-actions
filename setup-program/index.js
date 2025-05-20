@@ -140,10 +140,6 @@ async function find_program_in_path(paths, version, check_latest) {
             }
 
             if (fs.lstatSync(path).isDirectory()) {
-                continue
-            }
-
-            if (fs.lstatSync(path).isDirectory()) {
                 fnlog(`Path ${path} is a directory. Skipping it.`)
                 continue
             }
