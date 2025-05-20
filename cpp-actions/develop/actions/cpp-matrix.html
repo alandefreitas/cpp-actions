@@ -700,9 +700,10 @@ intermediary versions of clang with the range <code>clang &gt;=3.8 &lt;5 || &gt;
 recent versions are covered, while eliminating intermediary versions.</p>
 </div>
 <div class="paragraph">
-<p>Semver ranges can also help when a bug is found in a specific compiler version. Consider someone has reported
-a bug in GCC 8.1, and you want to keep track of that. The semver range <code>gcc &gt;=4.8 &lt;7 || 8.1 || &gt;=10</code> would ensure
-version GCC8.1 specifically, and not any other version is the range <code>&gt;=8.0.0 &lt;9.0.0</code> is tested.</p>
+<p>Semver ranges can also help when a bug is found in a specific compiler version. Consider you&#8217;re testing
+<code>gcc &gt;=4.8</code> and someone has reported a bug in GCC 8.1. Now you want to keep track of GCC 8.1 specifically.
+The semver range <code>gcc &gt;=4.8 &lt;8 || 8.1 || &gt;=9</code> would ensure version GCC 8.1 specifically, and not any other
+version is the range <code>&gt;=8.0.0 &lt;9.0.0</code> is tested.</p>
 </div>
 <div class="admonitionblock note">
 <table>
