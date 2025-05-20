@@ -332,6 +332,7 @@ for action in actions:
     action_name = data['name']
     action_description = data['description']
     action_description = action_description.replace('$\\{{', '${{')
+    action_description = action_description.replace("C++", "{cpp}")
     inputs = data['inputs']
     outputs = data['outputs'] if 'outputs' in data else []
 
