@@ -377,13 +377,13 @@
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>The C Matrix Action is designed to automate the generation of a comprehensive test matrix for your
-C libraries given their requirements. It simplifies the process of defining the contract of what
+<p>The C&#43;&#43; Matrix Action is designed to automate the generation of a comprehensive test matrix for your
+C&#43;&#43; libraries given their requirements. It simplifies the process of defining the contract of what
 platforms your library supports and testing your project across a proper selected subset of revelant
 compiler versions and platforms.</p>
 </div>
 <div class="paragraph">
-<p>With this action, you can define a set of requirements to test your C++ library. It will then generate
+<p>With this action, you can define a set of requirements to test your C&#43;&#43; library. It will then generate
 a test matrix by combining the specified requirements into a fractional factorial design to ensure all
 proper combinations are tested in a systematic manner. This approach significantly increases the chances
 of catching compatibility issues early on and helps in delivering a robust and reliable library to users.</p>
@@ -432,7 +432,7 @@ and create your workflow as usual with the parameters from the matrix:</p>
       - name: Clone library
         uses: actions/checkout@v3
 
-      - name: Setup C++ Compiler
+      - name: Setup C&amp;#43;&amp;#43; Compiler
         uses: alandefreitas/cpp-actions/setup-cpp@develop
         id: setup-cpp
         with:
@@ -447,7 +447,7 @@ and create your workflow as usual with the parameters from the matrix:</p>
           cxxstd: ${{ matrix.cxxstd }}
           cxxflags: ${{ matrix.cxxstd }}
 
-      # And you've safely tested your C++ library just like that...</code></pre>
+      # And you've safely tested your C&amp;#43;&amp;#43; library just like that...</code></pre>
 </div>
 </div>
 </div>
