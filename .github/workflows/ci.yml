@@ -34,7 +34,7 @@ jobs:
         uses: ./cpp-matrix
         id: cpp-matrix
         with:
-          standards: '>=11'
+          standards: '>=14'
           compilers: |
             gcc >=4.8 <6 || >=9
             clang >=3.8 <6 || >11
