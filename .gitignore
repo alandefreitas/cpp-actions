@@ -78,6 +78,7 @@ gh-md-toc
 *.app
 
 # Common packages
+# We don't need their dist in github actions
 common/*/dist
 common/trace-commands/dist
 common/gh-inputs/dist
