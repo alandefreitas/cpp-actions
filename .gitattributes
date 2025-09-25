@@ -1,3 +1,11 @@
 */dist/** text eol=lf
-*/common/dist/** text eol=lf
+*/common/*/dist/** text eol=lf
 *.sh text eol=lf
+
+*/dist/index.js binary
+*/dist/index.js.map binary
+*/dist/sourcemap-register.js binary
+
+*/common/*/dist/index.js binary
+*/common/*/dist/index.js.map binary
+*/common/*/dist/sourcemap-register.js binary
