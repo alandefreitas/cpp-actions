@@ -1187,6 +1187,7 @@ function sortMatrix(matrix, inputs) {
 }
 
 function registerHelpers() {
+    // String operators
     Handlebars.registerHelper('lowercase', function(value) {
         return value.toLowerCase()
     })
@@ -1209,7 +1210,7 @@ function registerHelpers() {
     Handlebars.registerHelper('substr', function(str, start, end) {
         return str.substring(start, end)
     })
-
+    // Logical operators
     Handlebars.registerHelper('and', function(...args) {
         const numArgs = args.length
         if (numArgs === 3) return args[0] && args[1]
@@ -1227,6 +1228,10 @@ function registerHelpers() {
     Handlebars.registerHelper('not', function(value) {
         return !value
     })
+    Handlebars.registerHelper('select', function(condition, trueValue, falseValue) {
+        return condition ? trueValue : falseValue
+    })
+    // Relational operators
     Handlebars.registerHelper('eq', function(a, b) {
         return a === b
     })
@@ -1238,6 +1243,22 @@ function registerHelpers() {
     })
     Handlebars.registerHelper('ine', function(a, b) {
         return a.toLowerCase() !== b.toLowerCase()
+    })
+    Handlebars.registerHelper('lt', function(a, b) {
+        return a < b
+    })
+    Handlebars.registerHelper('le', function(a, b) {
+        return a <= b
+    })
+    Handlebars.registerHelper('gt', function(a, b) {
+        return a > b
+    })
+    Handlebars.registerHelper('ge', function(a, b) {
+        return a >= b
+    })
+    // Conversion operators
+    Handlebars.registerHelper('toNumber', function(value) {
+        return Number(value)
     })
 }
 
