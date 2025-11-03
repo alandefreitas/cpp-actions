@@ -823,10 +823,10 @@ async function resolveInputParameters(inputs, setupCMakeOutputs) {
         inputs.build_dir = path.resolve(inputs.source_dir, applyPresetMacros(inputs.build_dir, inputs))
     }
     if (inputs.install_prefix) {
-        inputs.install_prefix = path.resolve(applyPresetMacros(inputs.install_prefix, inputs))
+        inputs.install_prefix = normalizePath(path.resolve(applyPresetMacros(inputs.install_prefix, inputs)))
     }
     if (inputs.package_dir) {
-        inputs.package_dir = path.resolve(inputs.build_dir, applyPresetMacros(inputs.package_dir, inputs))
+        inputs.package_dir = normalizePath(path.resolve(inputs.build_dir, applyPresetMacros(inputs.package_dir, inputs)))
     }
 
     // Apply preset macros to the inputs that accept them
@@ -1774,5 +1774,7 @@ if (require.main === module) {
 }
 
 module.exports = {
-    main
+    main,
+    _resolveInputParameters: resolveInputParameters,
+    _normalizePathForCMake: normalizePath
 }
