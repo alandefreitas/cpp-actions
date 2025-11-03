@@ -8,10 +8,20 @@ const io = require('@actions/io')
 const os = require('os')
 const semver = require('semver')
 const crypto = require('crypto')
-const uuidV4 = require('uuid').v4
 const trace_commands = require('trace-commands')
 const gh_inputs = require('gh-inputs')
 const setup_program = require('setup-program')
+
+function uuidV4() {
+    if (typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID()
+    }
+    const buffer = crypto.randomBytes(16)
+    buffer[6] = (buffer[6] & 0x0f) | 0x40
+    buffer[8] = (buffer[8] & 0x3f) | 0x80
+    const hex = buffer.toString('hex')
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
 
 function formatTime(ms) {
     if (ms < 1000) {
