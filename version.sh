@@ -1,6 +1,8 @@
+#!/usr/bin/env bash
 # Description: Set the version of all actions package.json
+set -euo pipefail
 
-version=$1
+version=${1:-}
 # Validate if the input version was provided
 if [ -z "$version" ]; then
     echo "Error: No version provided."
@@ -13,49 +15,30 @@ if ! [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     exit 1
 fi
 
-projects_with_package=()
-projects_with_action=()
+package_dirs=()
 
 for dir in */; do
-    # Ignore the docs directory
     if [ "$dir" == "docs/" ]; then
         continue
     fi
-
-    if [ -f "$dir/package.json" ]; then
-        projects_with_package+=("$dir")
-    elif [ -f "$dir/action.yml" ]; then
-        projects_with_action+=("$dir")
+    if [ -f "${dir}package.json" ]; then
+        package_dirs+=("$dir")
     fi
 done
 
-common_packages=()
+while IFS= read -r common_dir; do
+    package_dirs+=("$common_dir")
+done < <(find common -mindepth 1 -maxdepth 1 -type d -exec test -f "{}/package.json" \; -printf '%p/\n')
 
-# ./common subdirectory
-for dir in common/*/; do
-    if [ -f "$dir/package.json" ]; then
-        common_packages+=("$dir")
-    fi
+if ((${#package_dirs[@]} == 0)); then
+    echo "No package.json files found. Exiting."
+    exit 0
+fi
+
+for dir in "${package_dirs[@]}"; do
+    (
+        cd "$dir"
+        echo "==== Updating version in $dir ===="
+        npm version "$version" --no-git-tag-version
+    )
 done
-
-echo "==== Composite actions ===="
-for project in "${projects_with_action[@]}"; do
-    echo "$project"
-done
-
-echo "Javascript projects:"
-for project in "${projects_with_package[@]}"; do
-    cd "$project" || exit
-    echo "==== Building $project ===="
-    npm version "$version" --no-git-tag-version
-    cd ..
-done
-
-echo "Javascript projects:"
-for common_package in "${common_packages[@]}"; do
-    cd "$common_package" || exit
-    echo "==== Building $common_package ===="
-    npm version "$version" --no-git-tag-version
-    cd ../..
-done
-
