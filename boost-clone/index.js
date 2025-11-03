@@ -13,6 +13,17 @@ const os = require('os')
 
 const boostSuperProjectRepo = 'https://github.com/boostorg/boost.git'
 
+function toSortedArray(iterable) {
+    if (!iterable) {
+        return []
+    }
+    return Array.from(iterable).map((value) => value).sort()
+}
+
+function hashObject(value) {
+    return crypto.createHash('sha1').update(JSON.stringify(value)).digest('hex')
+}
+
 async function findGitFeatures(inputs) {
     const gitPath = await setup_program.findGit()
     const {exitCode: exitCode, stdout} = await exec.getExecOutput(`"${gitPath}"`, ['--version'])
@@ -236,6 +247,9 @@ async function generateCacheKey(inputs, allModules, gitFeatures) {
         trace_commands.log(`generateCacheKey: ${msg}`)
     }
 
+    const allModulesSorted = toSortedArray(allModules)
+    const patchesSorted = toSortedArray(inputs.patches)
+
     const boostHash = await getGitHash(boostSuperProjectRepo, inputs.branch, gitFeatures)
     fnlog(`Boost hash at ${inputs.branch}: ${boostHash}`)
 
@@ -244,11 +258,11 @@ async function generateCacheKey(inputs, allModules, gitFeatures) {
         // Optimistic caching: only modules and patches define the key
         // Pessimistic caching: we'll clone all modules, so we only need the
         // hash of the super-project
-        for (const module of allModules) {
+        for (const module of allModulesSorted) {
             const moduleRepoUrl = getModuleRepoUrl(module)
             const moduleRepoExists = await setup_program.urlExists(moduleRepoUrl)
             if (moduleRepoExists) {
-                const moduleHash = await getGitHash(moduleRepoUrl, inputs.branch)
+                const moduleHash = await getGitHash(moduleRepoUrl, inputs.branch, gitFeatures)
                 fnlog(`Hash for module ${module}: ${moduleHash}`)
                 moduleHashes[module] = moduleHash
             } else {
@@ -258,8 +272,8 @@ async function generateCacheKey(inputs, allModules, gitFeatures) {
     }
 
     let patchHashes = {}
-    for (const patch of inputs.patches) {
-        const patchHash = await getGitHash(patch, inputs.branch)
+    for (const patch of patchesSorted) {
+        const patchHash = await getGitHash(patch, inputs.branch, gitFeatures)
         fnlog(`Hash for patch ${patch}: ${patchHash}`)
         patchHashes[patch] = patchHash
     }
@@ -268,19 +282,35 @@ async function generateCacheKey(inputs, allModules, gitFeatures) {
     const modulesAndPatchesHash = crypto.createHash('sha1').update(concatenatedHashes).digest('hex')
     fnlog(`Modules hash (direct dependencies and patches): ${modulesAndPatchesHash}`)
 
+    const configHash = hashObject({
+        branch: inputs.branch,
+        modules: allModulesSorted,
+        modules_scan_paths: toSortedArray(inputs.modules_scan_paths),
+        modules_exclude_paths: toSortedArray(inputs.modules_exclude_paths),
+        scan_modules_dir: toSortedArray(inputs.scan_modules_dir),
+        scan_modules_ignore: toSortedArray(inputs.scan_modules_ignore),
+        optimistic_caching: inputs.optimistic_caching
+    })
+    fnlog(`Configuration hash: ${configHash}`)
+
+    // The cache key is composed of distinct SHA-1 fragments:
+    // - boostHash: captures changes in the Boost super-project.
+    // - modulesAndPatchesHash: captures hashes of explicitly requested modules and patches.
+    // - configHash: captures every configuration knob that influences scanning behavior.
+    // Each fragment encodes disjoint information so that changes in any dimension invalidate the key.
     const cacheKey =
         // No modules or patches specified, we'll clone all modules
-        allModules.length === 0 && inputs.patches.length === 0 ?
-            `boost-source-${boostHash}` :
+        allModulesSorted.length === 0 && patchesSorted.length === 0 ?
+            `boost-source-${boostHash}-${configHash}` :
             inputs.optimistic_caching ?
                 // Optimistic caching: only modules and patches define the key
-                `boost-source-${modulesAndPatchesHash}` :
+                `boost-source-${modulesAndPatchesHash}-${configHash}` :
                 // Pessimistic caching with no patches: we'll clone all modules
-                inputs.patches.length === 0 ?
-                    `boost-source-${boostHash}` :
+                patchesSorted.length === 0 ?
+                    `boost-source-${boostHash}-${configHash}` :
                     // Pessimistic caching with patches: invalidate cache
                     // when any module or patch changes
-                    `boost-source-${boostHash}-${modulesAndPatchesHash}`
+                    `boost-source-${boostHash}-${modulesAndPatchesHash}-${configHash}`
     fnlog(`Cache key: ${cacheKey}`)
 
     return cacheKey
@@ -479,7 +509,7 @@ async function main(inputs) {
         core.endGroup()
     }
 
-    if (allModules.length === 0) {
+    if (allModules.size === 0) {
         core.startGroup('🔧 Initialize All Boost Submodules')
         await initializeAllSubmodules(inputs, gitFeatures)
         core.endGroup()
@@ -562,5 +592,6 @@ if (require.main === module) {
 }
 
 module.exports = {
-    main
+    main,
+    generateCacheKey
 }

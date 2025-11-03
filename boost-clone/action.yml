@@ -26,9 +26,26 @@ description: |
   
   For a project with about 5 boost dependencies, caching saves about 4 minutes in the workflow. When there's no
   cache, the scanning scripting saves us about 3 minutes.
+
+  == Cache key details
+  
+  The action derives its cache key from three independent SHA-1 fragments:
+  
+  * `boostHash` – the Boost super-project revision (covers pessimistic caching paths).
+  * `modulesAndPatchesHash` – hashes of explicitly requested modules plus optional patch repositories.
+  * `configHash` – the normalized configuration (branch, scan include/exclude lists, directories, ignore set, and the optimistic flag).
+  
+  Only the fragments relevant to the chosen caching mode are included: optimistic caching uses `modulesAndPatchesHash`
+  plus `configHash` (and falls back to `boostHash` when no modules or patches are provided) because module hashes
+  already capture upstream changes; pessimistic caching always includes `boostHash` and only appends `modulesAndPatchesHash`
+  when patches are present to avoid redundant invalidations.
+  
+  These fragments are concatenated with `-` separators (for example, `boost-source-${modulesAndPatchesHash}-${configHash}`),
+  so any change in source revision, requested modules/patches, or configuration forces a new cache key while still
+  avoiding needless cache churn.
   
   == Next steps
-  
+
   After cloning boost modules for your C++ project, the next step in your workflow should usually be
   xref:actions/cmake-workflow.adoc[]. If you are developing a Boost library, it is also usual for the next
   step to be the xref:actions/b2-workflow.adoc[].
