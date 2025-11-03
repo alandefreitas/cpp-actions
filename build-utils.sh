@@ -1,4 +1,4 @@
-# Description: Build all the javascript projects in the repository
+# Description: Helper functions for build.sh script
 
 #!/bin/bash
 
