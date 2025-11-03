@@ -46,12 +46,42 @@ TAG=${1:-}
 if [ -z "$TAG" ]; then
     echo "==== Determine tag ===="
     LATEST_TAG=$(git ls-remote --tags origin | grep -o 'v[0-9]*\.[0-9]*\.[0-9]*' | sort -V | tail -n 1)
-    IFS='.' read -r -a VERSION_PARTS <<< "${LATEST_TAG:1}"
-    PATCH=$((VERSION_PARTS[2] + 1))
-    TAG="v${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$PATCH"
-    read -r -p "Suggested tag is $TAG. Is this appropriate? (y/n): " CONFIRM
-    if [ "$CONFIRM" != "y" ]; then
-        read -r -p "Please enter the desired tag: " TAG
+    if [ -z "$LATEST_TAG" ]; then
+        echo "No existing tags found on origin. Defaulting to initial release tag v0.1.0."
+        read -r -p "Enter desired tag (press enter to accept v0.1.0): " TAG
+        TAG=${TAG:-v0.1.0}
+    else
+        IFS='.' read -r -a VERSION_PARTS <<< "${LATEST_TAG:1}"
+        MAJOR=${VERSION_PARTS[0]}
+        MINOR=${VERSION_PARTS[1]}
+        PATCH=${VERSION_PARTS[2]}
+        PATCH_SUGGESTED=$((PATCH + 1))
+        MINOR_SUGGESTED=$((MINOR + 1))
+
+        FEAT_COMMITS_RAW=$(git log --format=%s "$LATEST_TAG"..HEAD | grep -E '^feat(\(|:)' || true)
+        if [ -n "$FEAT_COMMITS_RAW" ]; then
+            echo "Feature commits since $LATEST_TAG:"
+            while IFS= read -r COMMIT_MSG; do
+                [ -z "$COMMIT_MSG" ] && continue
+                echo "  - $COMMIT_MSG"
+            done <<< "$FEAT_COMMITS_RAW"
+            MINOR_TAG="v${MAJOR}.${MINOR_SUGGESTED}.0"
+            PATCH_TAG="v${MAJOR}.${MINOR}.${PATCH_SUGGESTED}"
+            echo "Suggested tags:"
+            echo "  - Minor bump (includes these features): $MINOR_TAG"
+            echo "  - Patch bump: $PATCH_TAG"
+            read -r -p "Enter desired tag (copy one of the suggestions or provide a custom value): " TAG
+            if [ -z "$TAG" ]; then
+                TAG=$PATCH_TAG
+                echo "Defaulting to patch bump: $TAG"
+            fi
+        else
+            TAG="v${MAJOR}.${MINOR}.${PATCH_SUGGESTED}"
+            read -r -p "Suggested tag is $TAG (no feature commits detected). Is this appropriate? (y/n): " CONFIRM
+            if [ "$CONFIRM" != "y" ]; then
+                read -r -p "Please enter the desired tag: " TAG
+            fi
+        fi
     fi
 fi
 
