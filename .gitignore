@@ -83,3 +83,6 @@ common/*/dist
 common/trace-commands/dist
 common/gh-inputs/dist
 
+# Local agent notes
+AGENTS.md
+*/AGENTS.md
