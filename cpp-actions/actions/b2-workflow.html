@@ -160,9 +160,6 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="../design.html">Design Rationale</a>
-  </li>
-  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -226,6 +223,9 @@
     <a class="nav-link" href="../contribute.html">Contributor Guide</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../design.html">Design Rationale</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../license.html">License</a>
   </li>
 </ul>
@@ -247,6 +247,9 @@
         </li>
         <li class="version">
           <a href="../develop/index.html">develop</a>
+        </li>
+        <li class="version">
+          <a href="../v1.9.0/index.html">v1.9.0</a>
         </li>
         <li class="version">
           <a href="../v1.8.12/index.html">v1.8.12</a>
@@ -346,6 +349,7 @@
   <div class="version-menu">
     <a class="version is-current" href="b2-workflow.html">master</a>
     <a class="version" href="../develop/actions/b2-workflow.html">develop</a>
+    <a class="version" href="../v1.9.0/actions/b2-workflow.html">v1.9.0</a>
     <a class="version" href="../v1.8.12/actions/b2-workflow.html">v1.8.12</a>
     <a class="version" href="../v1.8.11/actions/b2-workflow.html">v1.8.11</a>
     <a class="version" href="../v1.8.10/actions/b2-workflow.html">v1.8.10</a>
@@ -394,17 +398,28 @@ and fetching dependencies with <a href="package-install.html" class="xref page">
 compiling <code>b2</code> if needed and generating a proper <code>user-config.jam</code> file to define the path to the C&#43;&#43; compiler
 provided by the <code>cxx</code> input.</p>
 </div>
-<div class="admonitionblock note">
+<div class="admonitionblock important">
 <table>
 <tr>
 <td class="icon">
-<i class="fa icon-note" title="Note"></i>
+<i class="fa icon-important" title="Important"></i>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>This action is useful for Boost library proposals, where B2 support is mandatory. It assumes
-the library being tested is in the <code>libs</code> directory of the Boost super-project and that
-<code>source-dir</code> is the root of the super-project.</p>
+<p><strong>Scope</strong></p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Boost layout required.</strong> The action assumes the library under test lives in the Boost super-project structure (<code>source-dir/libs/&lt;library&gt;</code>). It configures <code>b2</code> and generates <code>user-config.jam</code> with that layout in mind.</p>
+</li>
+<li>
+<p><strong>Workflow intent.</strong> It streamlines the workflow Boost maintainers follow after provisioning a compiler and dependencies: bootstrap <code>b2</code>, apply toolchain settings, and run the requested module tests.</p>
+</li>
+<li>
+<p><strong>Future work.</strong> Support for standalone B2 projects would need different assumptions about paths, bootstrap steps, and cache strategy. We plan to track that in dedicated issues so contributors can tackle each gap incrementally.</p>
+</li>
+</ul>
 </div>
 </td>
 </tr>
@@ -554,6 +569,17 @@ this input is used to set the build variant.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The list of modules we should test with B2 in the <code>libs</code> directory of the Boost super-project.</p>
 <p class="tableblock">The directory <code>libs/&lt;module&gt;/test</code> will be provided for each module in the list. ⚠️ This parameter is required.</p></td>
 <td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>module-target</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Subdirectory or explicit target to append to each module.</p>
+<p class="tableblock">When this input is left as the default (<code>test</code>), every module listed above contributes the argument
+<code>libs/&lt;module&gt;/test</code> to the B2 invocation. Setting the input to <code>example</code> would instead append
+<code>libs/&lt;module&gt;/example</code>. If a module entry already contains a path or target separators (for example
+<code>libs/filesystem/example</code> or <code>libs/filesystem//unit_tests</code>), the action forwards it verbatim without prefixing it.</p>
+<p class="tableblock">This input accepts a single value or a list separated by spaces, commas, or new lines. When multiple values are
+provided they are applied positionally to the module list, and the final value is reused for any remaining modules.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>test</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>extra-args</code></p></td>

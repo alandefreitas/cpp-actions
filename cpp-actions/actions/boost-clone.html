@@ -160,9 +160,6 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="../design.html">Design Rationale</a>
-  </li>
-  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -226,6 +223,9 @@
     <a class="nav-link" href="../contribute.html">Contributor Guide</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../design.html">Design Rationale</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../license.html">License</a>
   </li>
 </ul>
@@ -247,6 +247,9 @@
         </li>
         <li class="version">
           <a href="../develop/index.html">develop</a>
+        </li>
+        <li class="version">
+          <a href="../v1.9.0/index.html">v1.9.0</a>
         </li>
         <li class="version">
           <a href="../v1.8.12/index.html">v1.8.12</a>
@@ -346,6 +349,7 @@
   <div class="version-menu">
     <a class="version is-current" href="boost-clone.html">master</a>
     <a class="version" href="../develop/actions/boost-clone.html">develop</a>
+    <a class="version" href="../v1.9.0/actions/boost-clone.html">v1.9.0</a>
     <a class="version" href="../v1.8.12/actions/boost-clone.html">v1.8.12</a>
     <a class="version" href="../v1.8.11/actions/boost-clone.html">v1.8.11</a>
     <a class="version" href="../v1.8.10/actions/boost-clone.html">v1.8.10</a>
@@ -405,6 +409,38 @@ to implicitly determine what modules should be cloned.</p>
 <div class="paragraph">
 <p>For a project with about 5 boost dependencies, caching saves about 4 minutes in the workflow. When there&#8217;s no
 cache, the scanning scripting saves us about 3 minutes.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_cache_key_details"><a class="anchor" href="#_cache_key_details"></a>Cache key details</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The action derives its cache key from three independent SHA-1 fragments:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>boostHash</code> – the Boost super-project revision (covers pessimistic caching paths).</p>
+</li>
+<li>
+<p><code>modulesAndPatchesHash</code> – hashes of explicitly requested modules plus optional patch repositories.</p>
+</li>
+<li>
+<p><code>configHash</code> – the normalized configuration (branch, scan include/exclude lists, directories, ignore set, and the optimistic flag).</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Only the fragments relevant to the chosen caching mode are included: optimistic caching uses <code>modulesAndPatchesHash</code>
+plus <code>configHash</code> (and falls back to <code>boostHash</code> when no modules or patches are provided) because module hashes
+already capture upstream changes; pessimistic caching always includes <code>boostHash</code> and only appends <code>modulesAndPatchesHash</code>
+when patches are present to avoid redundant invalidations.</p>
+</div>
+<div class="paragraph">
+<p>These fragments are concatenated with <code>-</code> separators (for example, <code>boost-source-${modulesAndPatchesHash}-${configHash}</code>),
+so any change in source revision, requested modules/patches, or configuration forces a new cache key while still
+avoiding needless cache churn.</p>
 </div>
 </div>
 </div>

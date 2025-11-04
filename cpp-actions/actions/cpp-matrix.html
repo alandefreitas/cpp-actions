@@ -159,9 +159,6 @@
             <ul class="nav-list">
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="../design.html">Design Rationale</a>
-  </li>
   <li class="nav-item is-current-page" data-depth="1">
     <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
   </li>
@@ -226,6 +223,9 @@
     <a class="nav-link" href="../contribute.html">Contributor Guide</a>
   </li>
   <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../design.html">Design Rationale</a>
+  </li>
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../license.html">License</a>
   </li>
 </ul>
@@ -247,6 +247,9 @@
         </li>
         <li class="version">
           <a href="../develop/index.html">develop</a>
+        </li>
+        <li class="version">
+          <a href="../v1.9.0/index.html">v1.9.0</a>
         </li>
         <li class="version">
           <a href="../v1.8.12/index.html">v1.8.12</a>
@@ -345,6 +348,7 @@
   <div class="version-menu">
     <a class="version is-current" href="cpp-matrix.html">master</a>
     <a class="version" href="../develop/actions/cpp-matrix.html">develop</a>
+    <a class="version" href="../v1.9.0/actions/cpp-matrix.html">v1.9.0</a>
     <a class="version" href="../v1.8.12/actions/cpp-matrix.html">v1.8.12</a>
     <a class="version" href="../v1.8.11/actions/cpp-matrix.html">v1.8.11</a>
     <a class="version" href="../v1.8.10/actions/cpp-matrix.html">v1.8.10</a>
@@ -579,7 +583,7 @@ the matrix with handlebars. You could set the following extra values in each ent
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">extra-values: |
-    address-model: {{#if x86}}32{{else}}64{{/if}}
+  address-model: \{{#if x86}}32\{{else}}64\{{/if}}
 
 # ...
 run: |
@@ -592,7 +596,7 @@ run: |
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">extra-values: |
-    address-model-arg: address-model={{#if x86}}32{{else}}64{{/if}}
+  address-model-arg: address-model=\{{#if x86}}32\{{else}}64\{{/if}}
 
 # ...
 run: |
@@ -821,9 +825,9 @@ in the <code>/__e/node20</code> directory.</p>
     force-factors: 'mingw: No-Deps
 
       '
-    extra-values: 'vcpkg-packages: {{#if (not fetch-content)}}fmt{{/if}}
+    extra-values: 'vcpkg-packages: \{{#if (not fetch-content)}}fmt\{{/if\}}
 
-      address-model: {{#if x86}}32{{else}}64{{/if}}
+      address-model: \{{#if x86}}32\{{else}}64\{{/if\}}
 
       '</code></pre>
 </div>
