@@ -16,7 +16,6 @@
     "@actions/exec": "^1.1.1",
     "@actions/io": "^2.0.0",
     "semver": "^7.7.3",
-    "setup-program": "file:../setup-program",
     "setup-gcc": "file:../setup-gcc",
     "setup-clang": "file:../setup-clang",
     "trace-commands": "file:../common/trace-commands",
