@@ -163,9 +163,6 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="../design.html">Design Rationale</a>
-  </li>
-  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -227,6 +224,9 @@
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contributor Guide</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../design.html">Design Rationale</a>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../license.html">License</a>
@@ -543,7 +543,11 @@ CMake workflow steps as integration tests for CMake.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-path</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The cmake executable.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Ordered list of candidate paths to the cmake executable.</p>
+<p class="tableblock">Entries follow the same rules as the underlying <code>setup-cmake</code> action:</p>
+<p class="tableblock">- Provide absolute/relative file paths when you want to pin a specific binary; on Windows we will also probe <code>.exe</code>, <code>.cmd</code>, and <code>.bat</code> if no extension is given.
+- Provide a bare name such as <code>cmake</code> to reuse whatever version is already available on PATH.</p>
+<p class="tableblock">Separate multiple entries with the platform path delimiter (<code>:</code> on Unix-like systems, <code>;</code> on Windows) or new lines. They are evaluated in order, and each must still satisfy the <code>cmake-version</code> range. Set <code>cmake-version: '*'</code> if you intentionally want to skip version filtering.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake</code></p></td>
 </tr>
 <tr>

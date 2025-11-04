@@ -163,9 +163,6 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="../design.html">Design Rationale</a>
-  </li>
-  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -227,6 +224,9 @@
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contributor Guide</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../design.html">Design Rationale</a>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../license.html">License</a>
@@ -437,13 +437,17 @@ replaced.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>path</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Path to the cmake executable. The action attempts to find cmake at this path first.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Ordered list of candidate paths to the cmake executable.</p>
+<p class="tableblock">Each entry can be an absolute/relative file path or a basename:</p>
+<p class="tableblock">- If the entry is a file path, we try it as-is (and on Windows we also check <code>.exe</code>, <code>.cmd</code>, <code>.bat</code> if no extension was provided).
+- If the entry is just a basename (for example <code>cmake</code>), it is forwarded to the system PATH search so any existing installation is reused.</p>
+<p class="tableblock">Multiple entries can be provided by separating them with the platform path delimiter (<code>:</code> on Unix-like systems, <code>;</code> on Windows) or new lines. They are evaluated in order until an executable that satisfies the requested <code>version</code> range is located. To accept any version without filtering, set <code>version: '*'</code>.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-path</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The cmake executable. We attempt to find cmake at this path first.</p>
-<p class="tableblock">This option is available for backwards compatibility and has priority over <code>path</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Alias for <code>path</code> preserved for backwards compatibility.</p>
+<p class="tableblock">When provided, these entries are evaluated before <code>path</code> using the same semantics, including the version check.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>

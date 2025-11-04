@@ -162,9 +162,6 @@
             <ul class="nav-list">
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
-  <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="../design.html">Design Rationale</a>
-  </li>
   <li class="nav-item is-current-page" data-depth="1">
     <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
   </li>
@@ -227,6 +224,9 @@
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contributor Guide</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../design.html">Design Rationale</a>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../license.html">License</a>
@@ -582,7 +582,7 @@ the matrix with handlebars. You could set the following extra values in each ent
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">extra-values: |
-    address-model: {{#if x86}}32{{else}}64{{/if}}
+  address-model: \{{#if x86}}32\{{else}}64\{{/if}}
 
 # ...
 run: |
@@ -595,7 +595,7 @@ run: |
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">extra-values: |
-    address-model-arg: address-model={{#if x86}}32{{else}}64{{/if}}
+  address-model-arg: address-model=\{{#if x86}}32\{{else}}64\{{/if}}
 
 # ...
 run: |
@@ -824,9 +824,9 @@ in the <code>/__e/node20</code> directory.</p>
     force-factors: 'mingw: No-Deps
 
       '
-    extra-values: 'vcpkg-packages: {{#if (not fetch-content)}}fmt{{/if}}
+    extra-values: 'vcpkg-packages: \{{#if (not fetch-content)}}fmt\{{/if\}}
 
-      address-model: {{#if x86}}32{{else}}64{{/if}}
+      address-model: \{{#if x86}}32\{{else}}64\{{/if\}}
 
       '</code></pre>
 </div>

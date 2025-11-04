@@ -163,9 +163,6 @@
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="../design.html">Design Rationale</a>
-  </li>
-  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="cpp-matrix.html">C++ Matrix Action</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -227,6 +224,9 @@
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../contribute.html">Contributor Guide</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../design.html">Design Rationale</a>
   </li>
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="../license.html">License</a>
@@ -397,17 +397,28 @@ and fetching dependencies with <a href="package-install.html" class="xref page">
 compiling <code>b2</code> if needed and generating a proper <code>user-config.jam</code> file to define the path to the C&#43;&#43; compiler
 provided by the <code>cxx</code> input.</p>
 </div>
-<div class="admonitionblock note">
+<div class="admonitionblock important">
 <table>
 <tr>
 <td class="icon">
-<i class="fa icon-note" title="Note"></i>
+<i class="fa icon-important" title="Important"></i>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>This action is useful for Boost library proposals, where B2 support is mandatory. It assumes
-the library being tested is in the <code>libs</code> directory of the Boost super-project and that
-<code>source-dir</code> is the root of the super-project.</p>
+<p><strong>Scope</strong></p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Boost layout required.</strong> The action assumes the library under test lives in the Boost super-project structure (<code>source-dir/libs/&lt;library&gt;</code>). It configures <code>b2</code> and generates <code>user-config.jam</code> with that layout in mind.</p>
+</li>
+<li>
+<p><strong>Workflow intent.</strong> It streamlines the workflow Boost maintainers follow after provisioning a compiler and dependencies: bootstrap <code>b2</code>, apply toolchain settings, and run the requested module tests.</p>
+</li>
+<li>
+<p><strong>Future work.</strong> Support for standalone B2 projects would need different assumptions about paths, bootstrap steps, and cache strategy. We plan to track that in dedicated issues so contributors can tackle each gap incrementally.</p>
+</li>
+</ul>
 </div>
 </td>
 </tr>
