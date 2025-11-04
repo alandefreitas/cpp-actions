@@ -40,16 +40,22 @@ inputs:
 
   path:
     description: |
-      Path to the cmake executable. The action attempts to find cmake at this path first.
-
+      Ordered list of candidate paths to the cmake executable.
+      
+      Each entry can be an absolute/relative file path or a basename:
+      
+      - If the entry is a file path, we try it as-is (and on Windows we also check `.exe`, `.cmd`, `.bat` if no extension was provided).
+      - If the entry is just a basename (for example `cmake`), it is forwarded to the system PATH search so any existing installation is reused.
+      
+      Multiple entries can be provided by separating them with the platform path delimiter (`:` on Unix-like systems, `;` on Windows) or new lines. They are evaluated in order until an executable that satisfies the requested `version` range is located. To accept any version without filtering, set `version: '*'`.
     required: false
     default: 'cmake'
 
   cmake-path:
     description: |
-      The cmake executable. We attempt to find cmake at this path first.
+      Alias for `path` preserved for backwards compatibility.
       
-      This option is available for backwards compatibility and has priority over `path`.
+      When provided, these entries are evaluated before `path` using the same semantics, including the version check.
 
     required: false
     default: ''

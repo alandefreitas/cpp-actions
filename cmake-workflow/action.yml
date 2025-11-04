@@ -61,7 +61,15 @@ inputs:
   # CMake options
   # ======================================
   cmake-path:
-    description: 'The cmake executable'
+    description: |
+      Ordered list of candidate paths to the cmake executable.
+      
+      Entries follow the same rules as the underlying `setup-cmake` action:
+      
+      - Provide absolute/relative file paths when you want to pin a specific binary; on Windows we will also probe `.exe`, `.cmd`, and `.bat` if no extension is given.
+      - Provide a bare name such as `cmake` to reuse whatever version is already available on PATH.
+      
+      Separate multiple entries with the platform path delimiter (`:` on Unix-like systems, `;` on Windows) or new lines. They are evaluated in order, and each must still satisfy the `cmake-version` range. Set `cmake-version: '*'` if you intentionally want to skip version filtering.
     required: false
     default: 'cmake'
 

@@ -105,6 +105,23 @@ async function program_satisfies(exec_path, semver_requirements) {
     return null
 }
 
+/**
+ * Attempt to resolve an executable by inspecting a list of user-supplied paths.
+ *
+ * Behaviour depends on each entry:
+ * - Basename entries (e.g. "cmake") are treated as hints and forwarded to
+ *   {@link find_program_in_system_paths}, so PATH and cached locations are
+ *   still searched with the current version requirement.
+ * - Absolute or relative paths are treated as candidate files. On Windows, we
+ *   also probe typical executable extensions (".exe", ".cmd", ".bat") when the
+ *   entry has no extension. Each candidate must exist, be executable, and
+ *   satisfy the supplied semver range; otherwise it is skipped.
+ *
+ * The function keeps track of the "best" candidate according to the
+ * check_latest flag: the earliest satisfying version when false, the latest
+ * when true. Returning {output_version: null, output_path: null} means no valid
+ * executable met the constraint (use version="*" to opt out of filtering).
+ */
 async function find_program_in_path(paths, version, check_latest) {
     function fnlog(msg) {
         trace_commands.log('find_program_in_path: ' + msg)
