@@ -168,15 +168,15 @@ function findMSVCVersions() {
     // https://github.com/actions/runner-images?tab=readme-ov-file#available-images
     // then check the versions available for each image.
 
-    // https://github.com/actions/runner-images/blob/main/images/windows/Windows2019-Readme.md#microsoft-visual-c
-    const windows2019 = ['10.0.40219', '12.0.40660', '14.29.30139', '14.42.34438']
+    // Windows Server 2022 image
     // https://github.com/actions/runner-images/blob/main/images/windows/Windows2022-Readme.md#microsoft-visual-c
     const windows2022 = ['12.0.40660', '14.42.34438']
+    // Windows Server 2025 image
     // https://github.com/actions/runner-images/blob/main/images/windows/Windows2025-Readme.md#microsoft-visual-c
     const windows2025 = ['12.0.40660', '14.42.34438']
 
     // Merge the arrays and remove duplicates
-    return [...new Set([...windows2019, ...windows2022, ...windows2025])]
+    return [...new Set([...windows2022, ...windows2025])]
 }
 
 async function findCompilerVersions(compiler) {
@@ -756,10 +756,13 @@ function setCompilerContainer(entry, inputs, compilerName, minSubrangeVersion, s
             entry['container'] = 'ubuntu:16.04'
         }
     } else if (compilerName === 'msvc') {
-        if (semver.satisfies(minSubrangeVersion, '>=14.30')) {
-            entry['runs-on'] = 'windows-2022'
+        if (semver.satisfies(minSubrangeVersion, '>=14.42')) {
+            entry['runs-on'] = 'windows-2025'
         } else {
-            entry['runs-on'] = 'windows-2019'
+            if (semver.valid(minSubrangeVersion) && semver.satisfies(minSubrangeVersion, '<14.30')) {
+                core.warning(`Combination "${subrange}" requires an MSVC toolset older than 14.30. windows-2019 runners were retired on 2025-06-30, so this job will run on windows-2022 where older toolsets may be unavailable.`)
+            }
+            entry['runs-on'] = 'windows-2022'
         }
     } else if (compilerName === 'apple-clang') {
         entry['runs-on'] = 'macos-14'
