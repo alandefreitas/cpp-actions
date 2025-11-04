@@ -331,18 +331,6 @@ fi
 
 require_clean_worktree "Rebase introduced tracked changes (e.g., conflict resolution artifacts). Review and resolve them before proceeding."
 
-echo "==== Stage release artifacts ===="
-if [ -z "$(git status --porcelain)" ]; then
-    echo "No changes detected after dependency updates and rebuild. Exiting to avoid an empty release commit."
-    exit 1
-fi
-ask_consent "Stage all release artifacts before committing." git add -A
-
-echo "==== Create release commit ===="
-ask_consent "Create commit documenting release $TAG." git commit -m "chore(release): $TAG"
-
-require_clean_worktree "Commit left tracked changes (hooks may have reformatted files). Ensure the tree is clean before pushing."
-
 # Step 6: Push changes in the local master branch to remote master
 echo "==== Push master ===="
 ask_consent "Push master to origin to publish the release commit before tagging." git push origin master
