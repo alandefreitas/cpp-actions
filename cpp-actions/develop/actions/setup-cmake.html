@@ -252,6 +252,12 @@
           <a href="../index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../../v1.8.12/index.html">v1.8.12</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.8.11/index.html">v1.8.11</a>
+        </li>
+        <li class="version">
           <a href="../../v1.8.10/index.html">v1.8.10</a>
         </li>
         <li class="version">
@@ -343,6 +349,8 @@
   <div class="version-menu">
     <a class="version" href="../../actions/setup-cmake.html">master</a>
     <a class="version is-current" href="setup-cmake.html">develop</a>
+    <a class="version" href="../../v1.8.12/actions/setup-cmake.html">v1.8.12</a>
+    <a class="version" href="../../v1.8.11/actions/setup-cmake.html">v1.8.11</a>
     <a class="version" href="../../v1.8.10/actions/setup-cmake.html">v1.8.10</a>
     <a class="version" href="../../v1.8.9/actions/setup-cmake.html">v1.8.9</a>
     <a class="version" href="../../v1.8.8/actions/setup-cmake.html">v1.8.8</a>
@@ -386,6 +394,11 @@
 <div class="paragraph">
 <p>In most workflows, this is used as an auxiliary action for the <a href="cmake-workflow.html" class="xref page">CMake Workflow</a> action,
 which already calls this action if necessary.</p>
+</div>
+<div class="paragraph">
+<p>Note: <code>check-latest</code> only influences which version is fetched when a download is required. If the runner already
+provides a CMake build that satisfies the requested version range, that installation is reused instead of being
+replaced.</p>
 </div>
 </div>
 </div>
