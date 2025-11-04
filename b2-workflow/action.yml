@@ -9,11 +9,13 @@ description: |
   compiling `b2` if needed and generating a proper `user-config.jam` file to define the path to the C++ compiler 
   provided by the `cxx` input. 
   
-  [NOTE]
+  [IMPORTANT]
   ====
-  This action is useful for Boost library proposals, where B2 support is mandatory. It assumes
-  the library being tested is in the `libs` directory of the Boost super-project and that
-  `source-dir` is the root of the super-project.
+  **Scope**
+  
+  * **Boost layout required.** The action assumes the library under test lives in the Boost super-project structure (`source-dir/libs/<library>`). It configures `b2` and generates `user-config.jam` with that layout in mind.
+  * **Workflow intent.** It streamlines the workflow Boost maintainers follow after provisioning a compiler and dependencies: bootstrap `b2`, apply toolchain settings, and run the requested module tests.
+  * **Future work.** Support for standalone B2 projects would need different assumptions about paths, bootstrap steps, and cache strategy. We plan to track that in dedicated issues so contributors can tackle each gap incrementally.
   ====
   
   == Next steps
