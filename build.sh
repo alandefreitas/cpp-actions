@@ -11,6 +11,24 @@ generate_ubuntu_versions_json
 
 projects_with_package=()
 projects_with_action=()
+build_results=()
+doc_results=()
+
+print_summary() {
+    if [ "${#build_results[@]}" -gt 0 ]; then
+        echo "==== ⚙️ Build+Test Summary ===="
+        for result in "${build_results[@]}"; do
+            echo "$result"
+        done
+    fi
+
+    if [ "${#doc_results[@]}" -gt 0 ]; then
+        echo "==== 📄 Documentation Summary ===="
+        for result in "${doc_results[@]}"; do
+            echo "$result"
+        done
+    fi
+}
 
 for dir in */; do
     # Ignore the docs directory
@@ -83,15 +101,48 @@ else
         pid=${pids[$idx]}
         project=${project_names[$idx]}
         if ! wait "$pid"; then
-            echo "❌ Build failed for ${project%/}" >&2
+            build_results+=("❌ Build or tests failed for ${project%/}")
             build_failed=1
         else
-            echo "✅ Build succeeded for ${project%/}"
+            build_results+=("✅ Build and tests succeeded for ${project%/}")
         fi
     done
 
     if [ "$build_failed" -ne 0 ]; then
         echo "One or more projects failed. See logs above for details." >&2
+        print_summary
         exit 1
     fi
+
+    echo "==== Regenerating documentation ===="
+
+    doc_parse_failed=0
+    antora_failed=0
+
+    if python docs/parse_actions.py; then
+        doc_results+=("✅ Generated pages from YAML")
+    else
+        echo "❌ Generating pages from YAML failed" >&2
+        doc_results+=("❌ Generated pages from YAML")
+        doc_parse_failed=1
+    fi
+
+    if (
+        cd docs || exit 1
+        npx antora --fetch --stacktrace local-antora-playbook.yml
+    ); then
+        doc_results+=("✅ Antora site build succeeded")
+    else
+        echo "❌ Antora site build failed" >&2
+        doc_results+=("❌ Antora site build failed")
+        antora_failed=1
+    fi
+
+    if [ "$doc_parse_failed" -ne 0 ] || [ "$antora_failed" -ne 0 ]; then
+        echo "Documentation tasks failed. See logs above for details." >&2
+        print_summary
+        exit 1
+    fi
+
+    print_summary
 fi

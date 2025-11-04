@@ -40,7 +40,7 @@ description: |
   already capture upstream changes; pessimistic caching always includes `boostHash` and only appends `modulesAndPatchesHash`
   when patches are present to avoid redundant invalidations.
   
-  These fragments are concatenated with `-` separators (for example, `boost-source-${modulesAndPatchesHash}-${configHash}`),
+  These fragments are concatenated with `-` separators (for example, `boost-source-$\{modulesAndPatchesHash\}-$\{configHash\}`),
   so any change in source revision, requested modules/patches, or configuration forces a new cache key while still
   avoiding needless cache churn.
   

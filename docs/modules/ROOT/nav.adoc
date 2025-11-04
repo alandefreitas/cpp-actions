@@ -1,4 +1,3 @@
-* xref:design.adoc[]
 * xref:actions/cpp-matrix.adoc[]
 * Compilers
 ** xref:actions/setup-cpp.adoc[]
@@ -16,5 +15,6 @@
 ** xref:actions/flamegraph.adoc[]
 ** xref:actions/create-changelog.adoc[]
 * xref:contribute.adoc[]
+* xref:design.adoc[]
 * xref:license.adoc[]
 

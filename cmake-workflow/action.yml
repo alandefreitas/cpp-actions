@@ -43,7 +43,7 @@ description: |
   defined in it for inputs that are not defined.
   
   The action also supports preset macros in the input values. For instance, if the `build-dir` is defined as
-  `${sourceDir}/build/${hostSystemName}`, the action will replace this value with the actual values of the variables
+  `$\{sourceDir\}/build/$\{hostSystemName\}`, the action will replace this value with the actual values of the variables
   defined in the input options.
   
   == Next steps

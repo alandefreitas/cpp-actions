@@ -153,7 +153,7 @@ description: |
   [source,yml]
   ----
   extra-values: |
-      address-model: {{#if x86}}32{{else}}64{{/if}}
+    address-model: \{{#if x86}}32\{{else}}64\{{/if}}
   
   # ...
   run: |
@@ -165,7 +165,7 @@ description: |
   [source,yml]
   ----
   extra-values: |
-      address-model-arg: address-model={{#if x86}}32{{else}}64{{/if}}
+    address-model-arg: address-model=\{{#if x86}}32\{{else}}64\{{/if}}
   
   # ...
   run: |

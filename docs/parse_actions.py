@@ -412,6 +412,10 @@ for action in actions:
             mapping['steps'] = [example]
             yaml_output = yaml.dump(mapping, Dumper=OrderedDumper)
             yaml_output = re.sub(r'\{(\d+)\}', r'\{\1\}', yaml_output)
+            yaml_output = yaml_output.replace('{{#', '\\{{#')
+            yaml_output = yaml_output.replace('{{/', '\\{{/')
+            yaml_output = yaml_output.replace('{{else}}', '\\{{else\\}}')
+            yaml_output = yaml_output.replace('\\{{/if}}', '\\{{/if\\}}')
             output += f'[source,yml,subs="attributes+"]\n----\n{yaml_output}----\n\n'
 
     output += f'== Input Parameters\n\n'
