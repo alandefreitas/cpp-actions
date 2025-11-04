@@ -28,7 +28,7 @@ done
 
 while IFS= read -r common_dir; do
     package_dirs+=("$common_dir")
-done < <(find common -mindepth 1 -maxdepth 1 -type d -exec test -f "{}/package.json" \; -printf '%p/\n')
+done < <(find common -mindepth 1 -maxdepth 1 -type d -exec sh -c 'if [ -f "$1/package.json" ]; then printf "%s/\n" "$1"; fi' _ {} \;)
 
 if ((${#package_dirs[@]} == 0)); then
     echo "No package.json files found. Exiting."
@@ -39,6 +39,11 @@ for dir in "${package_dirs[@]}"; do
     (
         cd "$dir"
         echo "==== Updating version in $dir ===="
+        current_version=$(node -pe "require('./package.json').version" 2>/dev/null || echo "")
+        if [ "$current_version" = "$version" ]; then
+            echo "Version already $version; skipping."
+            exit 0
+        fi
         npm version "$version" --no-git-tag-version
     )
 done

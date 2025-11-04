@@ -20,7 +20,7 @@ done
 # Include shared helpers in common/*
 while IFS= read -r common_dir; do
     projects_with_package+=("$common_dir")
-done < <(find common -mindepth 1 -maxdepth 1 -type d -exec test -f "{}/package.json" \; -printf '%p/\n')
+done < <(find common -mindepth 1 -maxdepth 1 -type d -exec sh -c 'if [ -f "$1/package.json" ]; then printf "%s/\n" "$1"; fi' _ {} \;)
 
 echo "==== Composite actions ===="
 if ((${#projects_with_action[@]})); then
