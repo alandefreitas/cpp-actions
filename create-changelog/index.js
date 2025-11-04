@@ -1206,7 +1206,7 @@ function generateOutput(changes, changeTypePriority, args, repoUrl, authors, par
                     }
 
                     // Scope prefix
-                    if (indentedScope) {
+                    if (!indentedScope && scope !== null && scope !== 'null' && scope !== 'undefined') {
                         output += `${scope}: `
                     }
 
