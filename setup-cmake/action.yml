@@ -7,6 +7,10 @@ description: |
   In most workflows, this is used as an auxiliary action for the xref:actions/cmake-workflow.adoc[] action,
   which already calls this action if necessary.
 
+  Note: `check-latest` only influences which version is fetched when a download is required. If the runner already
+  provides a CMake build that satisfies the requested version range, that installation is reused instead of being
+  replaced.
+
 
 inputs:
   version:
