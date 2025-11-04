@@ -56,8 +56,9 @@ restore_workspace() {
 
     if [ ${#ORIG_UNTRACKED[@]} -gt 0 ]; then
         for path in "${ORIG_UNTRACKED[@]}"; do
+            git reset --quiet HEAD -- "$path" >/dev/null 2>&1 || true
             if git ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then
-                git update-index --force-remove -- "$path" >/dev/null 2>&1
+                git update-index --force-remove -- "$path" >/dev/null 2>&1 || true
             fi
         done
     fi
