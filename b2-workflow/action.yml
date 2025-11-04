@@ -151,11 +151,26 @@ inputs:
   modules:
     description: |
       The list of modules we should test with B2 in the `libs` directory of the Boost super-project.
-      
+
       The directory `libs/<module>/test` will be provided for each module in the list.
 
     required: true
     default: ''
+
+  module-target:
+    description: |
+      Subdirectory or explicit target to append to each module.
+
+      When this input is left as the default (`test`), every module listed above contributes the argument
+      `libs/<module>/test` to the B2 invocation. Setting the input to `example` would instead append
+      `libs/<module>/example`. If a module entry already contains a path or target separators (for example
+      `libs/filesystem/example` or `libs/filesystem//unit_tests`), the action forwards it verbatim without prefixing it.
+
+      This input accepts a single value or a list separated by spaces, commas, or new lines. When multiple values are
+      provided they are applied positionally to the module list, and the final value is reused for any remaining modules.
+
+    required: false
+    default: 'test'
 
   extra-args:
     description: 'Extra arguments.'

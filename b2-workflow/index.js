@@ -254,8 +254,26 @@ async function main(inputs) {
     /*
         Modules
      */
-    for (const module of inputs.modules) {
-        b2_args.push(`libs/${module}/test`)
+    const moduleTargetsRaw = Array.isArray(inputs.module_target) ? inputs.module_target : []
+    let moduleTargets = moduleTargetsRaw
+        .map((target) => (target && target.trim ? target.trim() : target))
+        .filter((target) => target)
+    if (moduleTargets.length === 0) {
+        moduleTargets = ['test']
+    }
+    for (let index = 0; index < inputs.modules.length; ++index) {
+        const moduleEntry = inputs.modules[index]
+        const module = moduleEntry && moduleEntry.trim ? moduleEntry.trim() : moduleEntry
+        if (!module) {
+            continue
+        }
+        const hasExplicitTarget = module.includes('/') || module.includes('\\') || module.includes(':')
+        if (hasExplicitTarget) {
+            b2_args.push(module)
+        } else {
+            const target = moduleTargets[Math.min(index, moduleTargets.length - 1)]
+            b2_args.push(`libs/${module}/${target}`)
+        }
     }
 
     /*
@@ -296,6 +314,7 @@ async function run() {
             toolset: gh_inputs.getInput('toolset', {fallbackEnv: 'B2_TOOLSET'}),
             build_type: gh_inputs.getLowerCaseInput(['build-variant', 'build-type'], {fallbackEnv: ['B2_BUILD_VARIANT', 'B2_BUILD_TYPE']}),
             modules: gh_inputs.getArray('modules', /[,; ]/),
+            module_target: gh_inputs.getArray('module-target', /[,; ]/),
             extra_args: gh_inputs.getBashArguments('extra-args'),
             // B2-specific options
             warnings_as_errors: gh_inputs.getBoolOrString('warnings-as-errors'),
