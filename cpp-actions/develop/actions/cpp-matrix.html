@@ -708,7 +708,7 @@ entries ordered according to these criteria.</p>
 <div class="paragraph">
 <p>The requirement parameters support semver ranges, including range disjunctions. For instance, consider the default
 compiler range <code>clang &gt;=3.8</code>, which might test your library with too many versions of clang. You could remove
-intermediary versions of clang with the range <code>clang &gt;=3.8 &lt;5 || &gt;=10</code>, which ensure old versions are
+intermediary versions of clang with the range <code>clang &gt;=3.8 &lt;5 || &gt;=10</code>, which ensures old versions and
 recent versions are covered, while eliminating intermediary versions.</p>
 </div>
 <div class="paragraph">
@@ -762,7 +762,7 @@ these files to determine what the matrix should be according to project conventi
 <div class="sectionbody">
 <div class="paragraph">
 <p>If you need to run tests on old compilers, the matrix entries might include old containers.
-GitHub Actions stopped supporting many old container since it moved to Node 20.</p>
+GitHub Actions stopped supporting many old containers since it moved to Node 20.</p>
 </div>
 <div class="paragraph">
 <p>A <a href="https://github.com/actions/runner/issues/2906#issuecomment-2109514798">workaround</a> is to set
