@@ -216,7 +216,7 @@ description: |
   
   The requirement parameters support semver ranges, including range disjunctions. For instance, consider the default
   compiler range `clang >=3.8`, which might test your library with too many versions of clang. You could remove
-  intermediary versions of clang with the range `clang >=3.8 <5 || >=10`, which ensure old versions are 
+  intermediary versions of clang with the range `clang >=3.8 <5 || >=10`, which ensures old versions and 
   recent versions are covered, while eliminating intermediary versions.
   
   Semver ranges can also help when a bug is found in a specific compiler version. Consider you're testing
@@ -249,7 +249,7 @@ description: |
   == Patching Node on old containers
   
   If you need to run tests on old compilers, the matrix entries might include old containers.
-  GitHub Actions stopped supporting many old container since it moved to Node 20. 
+  GitHub Actions stopped supporting many old containers since it moved to Node 20. 
   
   A https://github.com/actions/runner/issues/2906#issuecomment-2109514798[workaround] is to set
   the `volumes` key of the container object so that the user can provide its own Node installation.
