@@ -560,6 +560,132 @@ function compilerEmoji(compiler) {
     return '🛠️'
 }
 
+/**
+ * Convert a string or `semver.SemVer` object to a human-readable string label for logs and warnings.
+ * We cannot rely on `semver.format` because callers pass raw strings, partial objects, or nulls,
+ * so this helper tolerates every intermediate shape without extra guards.
+ * Example: `versionToString(semver.parse('14.42.34438'))` → `'14.42.34438'`.
+ * @param {import('semver').SemVer|string|undefined|null} version - Raw version value to stringify.
+ * @returns {string} Canonical textual representation (falls back to `unknown`).
+ */
+function versionToString(version) {
+    if (typeof version === 'string') {
+        return version
+    }
+    if (!version) {
+        return 'unknown'
+    }
+    if (typeof version.version === 'string' && version.version.length !== 0) {
+        return version.version
+    }
+    const parts = []
+    for (const key of ['major', 'minor', 'patch']) {
+        if (version[key] !== undefined && version[key] !== null) {
+            parts.push(version[key])
+        }
+    }
+    if (parts.length === 0) {
+        return 'unknown'
+    }
+    return parts.join('.')
+}
+
+/**
+ * Join a list of version strings while removing duplicates to keep warnings concise.
+ * Example: `formatVersionList(['14.2', '14.2', '14.3'])` → `'14.2, 14.3'`.
+ * @param {Array<string>} versions - Version labels already converted with `versionToString`.
+ * @returns {string} Comma-separated string or `none` when the list is empty.
+ */
+function formatVersionList(versions) {
+    if (!versions || versions.length === 0) {
+        return 'none'
+    }
+    return Array.from(new Set(versions)).join(', ')
+}
+
+/**
+ * Represent numeric standard requirements as the common `C++YY` label for diagnostics.
+ * Example: `formatStandardLabel(2023)` → `'C++2023'`.
+ * @param {number|string} std - Parsed standard major (e.g., 2023) or free-form string.
+ * @returns {string} Labeled string such as `C++23`.
+ */
+function formatStandardLabel(std) {
+    if (typeof std === 'number') {
+        return `C++${std}`
+    }
+    return std
+}
+
+/**
+ * Emit a single GitHub warning explaining why a compiler produced no matrix entries.
+ * Example: `warnEmptyCompilerEntries('msvc', '>=14.40', ['14.42.34438'], [2026], '>=26')` logs which requirements matched individually and why none intersected.
+ * @param {string} compilerName - Normalized compiler key (e.g., `msvc`).
+ * @param {string} range - User-supplied semver range string.
+ * @param {Array<string>} availableVersions - Known versions for the compiler.
+ * @param {Array<number>} requestedStds - Parsed list of requested C++ standards (major numbers).
+ * @param {string} standardsInput - Original standards expression for messaging.
+ */
+function warnEmptyCompilerEntries(compilerName, range, availableVersions, requestedStds, standardsInput) {
+    // Human-readable compiler label for messaging
+    const humanName = humanizeCompilerName(compilerName)
+    // Parse all known versions into semver objects (filtering invalid ones)
+    const parsedVersions = availableVersions
+        .map(v => semver.parse(v, {}))
+        .filter(v => v !== null)
+
+    // If we have zero known versions, warn immediately and bail
+    if (parsedVersions.length === 0) {
+        core.warning(`${humanName}: No matrix entries were generated because no published ${humanName} versions are known to cpp-matrix, so the requirement "${range}" cannot be evaluated.`)
+        return
+    }
+
+    // Helper to check if a parsed version satisfies the requested range (with defensive error handling)
+    const matchesRange = (version) => {
+        if (!range || range === '*' || range.trim() === '') {
+            return true
+        }
+        try {
+            return semver.satisfies(version, range)
+        } catch (error) {
+            core.warning(`${humanName}: Unable to evaluate requirement "${range}" (${error.message}). No entries were generated.`)
+            return false
+        }
+    }
+
+    // Precompute which versions satisfy the range requirement alone
+    const rangeMatches = parsedVersions.filter(matchesRange).map(versionToString)
+    // Bucket to hold per-standard details and union of compatible versions
+    const stdDetails = []
+    const stdMatchSet = new Set()
+
+    // Handle cases where the normalized standards input collapsed to an empty set
+    if (requestedStds.length === 0) {
+        stdDetails.push(`Standard requirement "${standardsInput || '*'}" resolved to an empty set. Provide at least one C++ version (e.g., '>=11').`)
+    } else {
+        // For each requested standard, record which versions claim support
+        for (const std of requestedStds) {
+            const matches = parsedVersions
+                .filter(v => compilerSupportsStd(compilerName, v, std))
+                .map(versionToString)
+            matches.forEach(v => stdMatchSet.add(v))
+            stdDetails.push(`Standard ${formatStandardLabel(std)}: ${formatVersionList(matches)}`)
+        }
+    }
+
+    // Intersection between version range matches and standard matches identifies truly valid combinations
+    const combinedMatches = requestedStds.length === 0 ? [] : rangeMatches.filter(v => stdMatchSet.has(v))
+
+    // Core message plus bullet list of supporting details
+    let message = `${humanName}: No matrix entries were generated because no known ${humanName} versions satisfy every requested requirement simultaneously.`
+    const detailLines = [`- Version requirement "${range || '*'}": ${formatVersionList(rangeMatches)}`]
+    detailLines.push(...stdDetails.map(line => `- ${line}`))
+    if (requestedStds.length !== 0) {
+        detailLines.push(`- Combined matches: ${formatVersionList(combinedMatches)}`)
+    }
+    // Emit the final warning as a multiline message
+    core.warning(`${message}\n${detailLines.join('\n')}`)
+}
+
 function getCompilerCxxStds(entry, inputs, allCompilerVersions, cxxstds, compilerName, minSubrangeVersion) {
     // The versions of cxxstd we should test with this compiler
     let compiler_cxxs = []
@@ -1371,6 +1497,14 @@ async function generateMatrix(inputs) {
             matrix.push(entry)
             fnlog(`Entry: ${JSON.stringify(entry)}`)
         }
+        if (earliestIdx === matrix.length) {
+            fnlog(`${compilerName}: 0 basic entries`)
+            if (inputs.warn_no_matches) {
+                warnEmptyCompilerEntries(compilerName, range, allCompilerVersions, cxxstds, inputs.standards)
+            }
+            continue
+        }
+
         fnlog(`Apply factors for ${compilerName}`)
         const latestIdx = matrix.length - 1
         fnlog(`${compilerName}: ${latestIdx - earliestIdx} basic entries`)
@@ -1783,6 +1917,7 @@ async function run() {
             sanitizer_build_type: gh_inputs.getInput('sanitizer-build-type').trim() || 'Release',
             x86_build_type: gh_inputs.getInput('x86-build-type').trim() || 'Release',
             use_containers: gh_inputs.getBoolean('use-containers'),
+            warn_no_matches: gh_inputs.getBoolean('warn-no-matches', {defaultValue: true}),
 
             // Output file
             output_file: gh_inputs.getNormalizedPath('output-file'),

@@ -139,4 +139,26 @@ describe('generateMatrix', () => {
         const table = await generateTable(matrix, inputs)
         expect(table.length === 0).toBe(false)
     })
+
+    test('warns when compiler has no compatible entries', async () => {
+        const warnSpy = jest.spyOn(core, 'warning').mockImplementation(() => {})
+        const inputs = {
+            compiler_versions: {msvc: '>=14.0.0'},
+            subrange_policy: {'': 'one-per-major'},
+            standards: normalizeCppVersionRequirement('>=26'),
+            latest_factors: {},
+            factors: {},
+            combinatorial_factors: {},
+            warn_no_matches: true,
+            trace_commands: false,
+            log_matrix: false,
+            generate_summary: false
+        }
+        try {
+            await generateMatrix(inputs)
+            expect(warnSpy).toHaveBeenCalled()
+        } finally {
+            warnSpy.mockRestore()
+        }
+    })
 })
