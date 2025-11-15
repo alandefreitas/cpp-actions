@@ -1155,6 +1155,14 @@ saved for later use.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the action.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>warn-no-matches</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Emit a GitHub warning whenever a compiler configuration results in zero matrix entries because
+no known versions can satisfy the requested version range and C++ standard requirements simultaneously.
+Leave this enabled to catch unintended gaps; set it to <code>false</code> if you deliberately provide
+unsatisfiable requirements and do not want the additional annotation.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
 </tbody>
 </table>
 </div>
