@@ -19,6 +19,7 @@ cpp_modules
 docs/node_modules
 docs/build
 docs/generated-files
+docs/.pydeps
 node_modules/
 
 # IDE settings
@@ -86,3 +87,4 @@ common/gh-inputs/dist
 # Local agent notes
 AGENTS.md
 */AGENTS.md
+.issues

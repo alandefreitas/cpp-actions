@@ -119,12 +119,39 @@ else
     doc_parse_failed=0
     antora_failed=0
 
-    if python docs/parse_actions.py; then
-        doc_results+=("✅ Generated pages from YAML")
+    docs_python_target="docs/.pydeps"
+    docs_pythonpath="$docs_python_target${PYTHONPATH:+:$PYTHONPATH}"
+
+    # Detect whether PyYAML is already available (either globally or in docs/.pydeps)
+    if PYTHONPATH="$docs_pythonpath" python - <<'PY' >/dev/null 2>&1
+import sys
+try:
+    import yaml
+except ModuleNotFoundError:
+    sys.exit(1)
+PY
+    then
+        doc_results+=("✅ Docs Python requirements already satisfied")
     else
-        echo "❌ Generating pages from YAML failed" >&2
-        doc_results+=("❌ Generated pages from YAML")
-        doc_parse_failed=1
+        # Install docs-only Python deps into docs/.pydeps to avoid touching the global site-packages
+        if python -m pip install --no-cache-dir --upgrade --target "$docs_python_target" -r docs/requirements.txt >/dev/null; then
+            doc_results+=("✅ Installed docs Python requirements")
+        else
+            echo "❌ Installing docs Python requirements failed" >&2
+            doc_results+=("❌ Installed docs Python requirements")
+            doc_parse_failed=1
+        fi
+    fi
+
+    if [ "$doc_parse_failed" -eq 0 ]; then
+        # Generate the Antora source pages with the vendored dependencies available via PYTHONPATH
+        if PYTHONPATH="$docs_pythonpath" python docs/parse_actions.py; then
+            doc_results+=("✅ Generated pages from YAML")
+        else
+            echo "❌ Generating pages from YAML failed" >&2
+            doc_results+=("❌ Generated pages from YAML")
+            doc_parse_failed=1
+        fi
     fi
 
     if (

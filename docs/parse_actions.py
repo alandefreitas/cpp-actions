@@ -1,7 +1,20 @@
 import os
+import sys
 import re
-import yaml
 from collections import OrderedDict
+
+
+# Prefer a vendored dependency directory (`docs/.pydeps`) before falling back to site packages.
+# This mirrors what build.sh installs into when regenerating docs, keeping the main environment clean.
+deps_dir = os.path.join(os.path.dirname(__file__), '.pydeps')
+if os.path.isdir(deps_dir):
+    sys.path.insert(0, deps_dir)
+
+try:
+    # PyYAML is the only extra dependency we need, so import it lazily after wiring PYTHONPATH.
+    import yaml
+except ModuleNotFoundError as exc:
+    raise SystemExit('Missing PyYAML – run "python -m pip install --target docs/.pydeps -r docs/requirements.txt" before building docs.') from exc
 
 
 # Define a subclass of FullLoader that returns an OrderedDict
