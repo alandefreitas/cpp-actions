@@ -170,10 +170,10 @@ function findMSVCVersions() {
 
     // Windows Server 2022 image
     // https://github.com/actions/runner-images/blob/main/images/windows/Windows2022-Readme.md#microsoft-visual-c
-    const windows2022 = ['12.0.40660', '14.42.34438']
+    const windows2022 = ['14.29.30133', '14.44.35207']
     // Windows Server 2025 image
     // https://github.com/actions/runner-images/blob/main/images/windows/Windows2025-Readme.md#microsoft-visual-c
-    const windows2025 = ['12.0.40660', '14.42.34438']
+    const windows2025 = ['14.29.30133', '14.44.35207']
 
     // Merge the arrays and remove duplicates
     return [...new Set([...windows2022, ...windows2025])]
@@ -928,9 +928,44 @@ function setCompilerB2Toolset(entry, inputs, compilerName, subrange) {
     }
 }
 
+function runsOnLabels(entry) {
+    let runsOn = entry['runs-on']
+    if (!runsOn) {
+        return []
+    }
+    if (!Array.isArray(runsOn)) {
+        runsOn = [runsOn]
+    }
+    return runsOn
+        .filter((label) => typeof label === 'string')
+        .map((label) => label.toLowerCase())
+}
+
+function inferVisualStudioGeneratorFromRunsOn(entry) {
+    const labels = runsOnLabels(entry)
+    const hasLabel = (needle) => labels.some((label) => label.includes(needle))
+
+    if (hasLabel('windows-2025') || hasLabel('windows-2022')) {
+        return 'Visual Studio 17 2022'
+    }
+    if (hasLabel('windows-2019')) {
+        return 'Visual Studio 16 2019'
+    }
+    if (hasLabel('windows-2016') || hasLabel('windows-2017')) {
+        return 'Visual Studio 15 2017'
+    }
+    return null
+}
+
 function setCompilerCMakeGenerator(entry, inputs, compilerName, minSubrangeVersion, maxSubrangeVersion, subrange) {
     // Recommended cmake generator
     if (compilerName === 'msvc') {
+        const generatorFromRunsOn = inferVisualStudioGeneratorFromRunsOn(entry)
+        if (generatorFromRunsOn) {
+            entry['generator'] = generatorFromRunsOn
+            return
+        }
+
         const year = getVisualCppYear(minSubrangeVersion)
         if (minSubrangeVersion === maxSubrangeVersion || year === getVisualCppYear(maxSubrangeVersion)) {
             if (year === '2022') {

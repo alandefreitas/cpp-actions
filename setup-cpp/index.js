@@ -6,7 +6,7 @@ const exec = require('@actions/exec')
 const path = require('path')
 const setup_gcc = require('setup-gcc')
 const setup_clang = require('setup-clang')
-const setup_msvc = require('./msvc-dev-cmd')
+const setup_msvc = require('setup-msvc')
 const trace_commands = require('trace-commands')
 const gh_inputs = require('gh-inputs')
 
@@ -105,18 +105,28 @@ async function run() {
                 version_patch = SetupResult.version_patch
             }
         } else if (compiler === 'msvc') {
-            trace_commands.log(`compiler: ${compiler}... forwarding to setupMSVCCompiler.`)
+            trace_commands.log(`compiler: ${compiler}... forwarding to setup-msvc.`)
             const arch = process.env['PROCESSOR_ARCHITECTURE'] || 'x64'
             let msvcOutputs
             try {
-                msvcOutputs = await setup_msvc.setupMSVCCompiler(arch, '', '', '', '', '')
+                msvcOutputs = await setup_msvc.main(
+                    inputs.version,
+                    arch,
+                    '',
+                    '',
+                    false,
+                    false,
+                    ''
+                )
             } catch (error) {
                 core.setFailed(error.message)
                 return
             }
+            core.startGroup('📗 MSVC Environment Variables')
             for (const [key, value] of Object.entries(process.env)) {
                 trace_commands.log(`${key}: ${value}`)
             }
+            core.endGroup()
             output_path = msvcOutputs.cc
             cc = msvcOutputs.cc
             cxx = msvcOutputs.cxx

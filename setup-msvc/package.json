@@ -1,5 +1,5 @@
 {
-  "name": "setup-cpp",
+  "name": "setup-msvc",
   "version": "1.9.0",
   "description": "",
   "main": "index.js",
@@ -15,12 +15,9 @@
     "@actions/core": "^1.11.1",
     "@actions/exec": "^1.1.1",
     "@actions/io": "^2.0.0",
+    "gh-inputs": "file:../common/gh-inputs",
     "semver": "^7.7.3",
-    "setup-gcc": "file:../setup-gcc",
-    "setup-clang": "file:../setup-clang",
-    "setup-msvc": "file:../setup-msvc",
-    "trace-commands": "file:../common/trace-commands",
-    "gh-inputs": "file:../common/gh-inputs"
+    "trace-commands": "file:../common/trace-commands"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.38.4",

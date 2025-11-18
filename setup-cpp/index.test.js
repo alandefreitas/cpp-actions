@@ -1,5 +1,5 @@
 const setupCpp = require('./index')
-const msvc = require('./msvc-dev-cmd')
+const msvc = require('setup-msvc')
 
 test('normalize compiler', async () => {
   const compiler = await setupCpp.normalizeCompiler('gcc-4.9.2', '*')

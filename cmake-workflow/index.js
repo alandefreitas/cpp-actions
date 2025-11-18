@@ -721,6 +721,17 @@ async function setupDefaultGenerator(inputs) {
             inputs.generator = 'Unix Makefiles'
         }
     }
+
+    if (process.platform === 'win32') {
+        const preferredVsGenerator = 'Visual Studio 17 2022'
+        const needsOverride = !inputs.generator
+            || inputs.generator === 'Visual Studio'
+            || /^Visual Studio\s+(1[0-6])/.test(inputs.generator)
+        if (needsOverride) {
+            fnlog(`Overriding Windows generator to "${preferredVsGenerator}"`)
+            inputs.generator = preferredVsGenerator
+        }
+    }
     fnlog(`Default generator: ${inputs.generator}`)
 }
 

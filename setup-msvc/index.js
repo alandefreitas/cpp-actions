@@ -1,26 +1,3 @@
-// Adapted from https://github.com/ilammy/msvc-dev-cmd/blob/master/index.js
-// Credits to Oleksii Lozovskyi
-// MIT License
-
-// Copyright 2019 ilammy
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy of
-// this software and associated documentation files (the "Software"), to deal in
-// the Software without restriction, including without limitation the rights to
-// use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-// the Software, and to permit persons to whom the Software is furnished to do so,
-// subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-// FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-// COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-// IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-// CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
 const core = require('@actions/core')
 const child_process = require('child_process')
 const fs = require('fs')
@@ -29,6 +6,8 @@ const process = require('process')
 const io = require('@actions/io')
 const exec = require('@actions/exec')
 const semver = require('semver')
+const trace_commands = require('trace-commands')
+const gh_inputs = require('gh-inputs')
 
 const PROGRAM_FILES_X86 = process.env['ProgramFiles(x86)']
 const PROGRAM_FILES = [process.env['ProgramFiles(x86)'], process.env['ProgramFiles']]
@@ -52,6 +31,37 @@ const RELEASE_YEAR_TO_PRODUCT_VERSION = {
 }
 
 const YEARS = Object.keys(RELEASE_YEAR_TO_PRODUCT_VERSION)
+
+function getDefaultArch() {
+    return process.env['PROCESSOR_ARCHITECTURE'] || 'x64'
+}
+
+function listInstalledToolsets(vcvarsallPath) {
+    if (!vcvarsallPath) {
+        return []
+    }
+    const vcRoot = path.dirname(path.dirname(path.dirname(vcvarsallPath)))
+    const toolsetRoot = path.join(vcRoot, 'Tools', 'MSVC')
+    if (!fs.existsSync(toolsetRoot)) {
+        return []
+    }
+    return fs.readdirSync(toolsetRoot, {withFileTypes: true})
+        .filter((dirent) => dirent.isDirectory())
+        .map((dirent) => dirent.name)
+}
+
+function selectToolsetVersion(requestedVersion, installedVersions) {
+    if (!requestedVersion || requestedVersion === '*') {
+        return null
+    }
+    const normalizedInstalled = installedVersions
+        .map((version) => ({version, semver: semver.coerce(version)}))
+        .filter(({semver: s}) => s !== null)
+        .sort((a, b) => semver.rcompare(a.semver, b.semver))
+
+    const satisfying = normalizedInstalled.find(({semver: s}) => semver.satisfies(s, requestedVersion, {includePrerelease: true}))
+    return satisfying ? satisfying.version : null
+}
 
 /**
  * Extracts the MSVC toolset version from the compiler path as a fallback when the environment omits it.
@@ -99,8 +109,6 @@ function releaseYearToProductVersion(releaseYearOrProduct) {
     return releaseYearOrProduct
 }
 
-exports.releaseYearToProductVersion = releaseYearToProductVersion
-
 /**
  * Converts a Visual Studio product version into the release-year form (e.g., 17.0 → 2022).
  *
@@ -140,8 +148,6 @@ function productVersionToReleaseYear(productVersionOrYear) {
     return productVersionOrYear
 }
 
-exports.productVersionToReleaseYear = productVersionToReleaseYear
-
 const VSWHERE_PATH = `${PROGRAM_FILES_X86}\\Microsoft Visual Studio\\Installer`
 
 /**
@@ -168,8 +174,6 @@ function findWithVswhere(pattern, version_pattern) {
     }
     return null
 }
-
-exports.findWithVswhere = findWithVswhere
 
 /**
  * Searches for the vcvarsall.bat script using vswhere first and then conventional install paths.
@@ -232,8 +236,6 @@ function findVcvarsall(vsversion) {
     throw new Error('Microsoft Visual Studio not found')
 }
 
-exports.findVcvarsall = findVcvarsall
-
 /**
  * Determines whether the provided environment variable name is PATH-like.
  *
@@ -295,7 +297,10 @@ function deduplicatePathValue(path) {
  * located. If the environment contains multiple Visual Studio versions the
  * `vsversion` filter keeps the selection deterministic.
  */
-async function setupMSVCCompiler(arch, sdk, toolset, uwp, spectre, vsversion) {
+async function configureMSVCEnvironment(arch, sdk, toolset, uwp, spectre, vsversion) {
+    if (!arch) {
+        arch = getDefaultArch()
+    }
     if (process.platform !== 'win32') {
         throw new Error('MSVC compiler setup is only supported on Windows environments')
     }
@@ -326,16 +331,31 @@ async function setupMSVCCompiler(arch, sdk, toolset, uwp, spectre, vsversion) {
     if (sdk) {
         args.push(sdk)
     }
-    if (toolset) {
-        args.push(`-vcvars_ver=${toolset}`)
+
+
+    core.startGroup('🔍 Find vcvarsall.bat')
+    const vcvarsallPath = findVcvarsall(vsversion)
+    const installedToolsets = listInstalledToolsets(vcvarsallPath)
+    core.startGroup('📦 Installed MSVC toolsets')
+    if (installedToolsets.length > 0) {
+        core.info(`Available toolsets: [${installedToolsets.join(', ')}]`)
+    } else {
+        core.info(`No MSVC toolset folders were detected under ${path.join(path.dirname(path.dirname(path.dirname(vcvarsallPath))), 'Tools', 'MSVC')}`)
+    }
+    core.endGroup()
+    const resolvedToolset = selectToolsetVersion(toolset, installedToolsets)
+    if (toolset && !resolvedToolset) {
+        core.startGroup('⚠️ Toolset warning')
+        core.warning(`Requested toolset version '${toolset}' not found. Available versions: [${installedToolsets.join(', ')}]. Falling back to Visual Studio default.`)
+        core.endGroup()
+    }
+    if (resolvedToolset) {
+        args.push(`-vcvars_ver=${resolvedToolset}`)
     }
     if (spectre == 'true') {
         args.push('-vcvars_spectre_libs=spectre')
     }
-
-
-    core.startGroup('Find vcvarsall.bat')
-    const vcvars = `"${findVcvarsall(vsversion)}" ${args.join(' ')}`
+    const vcvars = `"${vcvarsallPath}" ${args.join(' ')}`
     core.debug(`vcvars command-line: ${vcvars}`)
 
     const cmd_output_string = child_process.execSync(`set && cls && ${vcvars} && cls && set`, {shell: 'cmd'}).toString()
@@ -372,7 +392,7 @@ async function setupMSVCCompiler(arch, sdk, toolset, uwp, spectre, vsversion) {
     // Now look at the new environment and export everything that changed.
     // These are the variables set by vsvars.bat. Also export everything
     // that was not there during the first sweep: those are new variables.
-    core.startGroup('Environment variables')
+    core.startGroup('📘 Environment Variables')
     for (let string of new_environment) {
         // vsvars.bat likes to print some fluff at the beginning.
         // Skip lines that don't look like environment variables.
@@ -406,6 +426,27 @@ async function setupMSVCCompiler(arch, sdk, toolset, uwp, spectre, vsversion) {
     const compilerVersion = await getMSVCCompilerVersion(compilerPath)
 
     return buildMSVCOutputs(compilerPath, process.env, {compilerVersion})
+}
+
+async function main(version, arch, sdk, toolset, uwp, spectre, vsversion) {
+    const resolvedArch = arch || getDefaultArch()
+    const resolvedToolset = toolset || (version && version !== '*' ? version : '')
+    const normalizedUwp = uwp ? 'true' : 'false'
+    const normalizedSpectre = spectre ? 'true' : 'false'
+
+    const outputs = await configureMSVCEnvironment(
+        resolvedArch,
+        sdk || '',
+        resolvedToolset,
+        normalizedUwp,
+        normalizedSpectre,
+        vsversion || ''
+    )
+
+    return {
+        ...outputs,
+        version: outputs.release
+    }
 }
 
 /**
@@ -514,31 +555,54 @@ function buildMSVCOutputs(compilerPath, env = process.env, metadata = {}) {
     }
 }
 
-exports.buildMSVCOutputs = buildMSVCOutputs
-exports.setupMSVCCompiler = setupMSVCCompiler
+async function run() {
+    try {
+        const inputs = {
+            version: gh_inputs.getInput('version', {defaultValue: '*'}),
+            arch: gh_inputs.getInput('arch', {defaultValue: getDefaultArch()}),
+            sdk: gh_inputs.getInput('sdk', {defaultValue: ''}),
+            toolset: gh_inputs.getInput('toolset', {defaultValue: ''}),
+            vsversion: gh_inputs.getInput('visual-studio-version', {defaultValue: ''}),
+            uwp: gh_inputs.getBoolean('uwp'),
+            spectre: gh_inputs.getBoolean('spectre'),
+            trace_commands: gh_inputs.getBoolean('trace-commands')
+        }
 
-/**
- * Entry point when the module is executed as an action, forwarding inputs to setupMSVCCompiler.
- *
- * @returns {Promise<void>} Resolves when configuration succeeds; rejects on errors.
- *
- * @example
- * // Invoked automatically by GitHub Actions runtime when this file is listed as main
- * main()
- */
-async function main() {
-    var arch = core.getInput('arch')
-    const sdk = core.getInput('sdk')
-    const toolset = core.getInput('toolset')
-    const uwp = core.getInput('uwp')
-    const spectre = core.getInput('spectre')
-    const vsversion = core.getInput('vsversion')
+        if (inputs.trace_commands) {
+            trace_commands.set_trace_commands(true)
+        }
 
-    await setupMSVCCompiler(arch, sdk, toolset, uwp, spectre, vsversion)
+        core.startGroup('📥 Action Inputs')
+        gh_inputs.printInputObject(inputs)
+        core.endGroup()
+
+        const outputs = await main(
+            inputs.version,
+            inputs.arch,
+            inputs.sdk,
+            inputs.toolset,
+            inputs.uwp,
+            inputs.spectre,
+            inputs.vsversion
+        )
+
+        core.startGroup('📤 Action Outputs')
+        gh_inputs.setOutputObject(outputs)
+        core.endGroup()
+    } catch (error) {
+        core.setFailed(error.message)
+    }
 }
 
 if (require.main === module) {
-    main().catch((e) => {
-        core.setFailed('Could not setup Developer Command Prompt: ' + e.message)
+    run().catch((error) => {
+        core.setFailed(error.message)
     })
+}
+
+module.exports = {
+    main,
+    buildMSVCOutputs,
+    releaseYearToProductVersion,
+    productVersionToReleaseYear
 }
