@@ -344,6 +344,8 @@
   "llvmorg-21.1.4^{}",
   "llvmorg-21.1.5",
   "llvmorg-21.1.5^{}",
+  "llvmorg-21.1.6",
+  "llvmorg-21.1.6^{}",
   "llvmorg-22-init",
   "llvmorg-22-init^{}",
   "llvmorg-3.0.0",

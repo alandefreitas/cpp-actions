@@ -3,6 +3,7 @@
 ** xref:actions/setup-cpp.adoc[]
 ** xref:actions/setup-gcc.adoc[]
 ** xref:actions/setup-clang.adoc[]
+** xref:actions/setup-msvc.adoc[]
 * Tools
 ** xref:actions/package-install.adoc[]
 ** xref:actions/boost-clone.adoc[]

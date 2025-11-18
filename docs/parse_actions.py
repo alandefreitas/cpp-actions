@@ -66,8 +66,24 @@ def sort_step(d):
 readme_base = os.path.join('README.base.adoc')
 action_pages_dir = os.path.join('docs', 'generated-files', 'modules', 'ROOT', 'pages', 'actions')
 example_path = os.path.join('.github', 'workflows', 'ci.yml')
-actions = ['cpp-matrix', 'setup-cpp', 'package-install', 'cmake-workflow', 'boost-clone', 'b2-workflow',
-           'create-changelog', 'flamegraph', 'setup-cmake', 'setup-gcc', 'setup-clang', 'setup-program']
+repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+
+
+def discover_actions(root_dir):
+    """Return the sorted list of directories that represent GitHub Actions."""
+    action_dirs = []
+    for entry in sorted(os.listdir(root_dir)):
+        entry_path = os.path.join(root_dir, entry)
+        if not os.path.isdir(entry_path):
+            continue
+        if entry == 'docs':
+            continue
+        if os.path.isfile(os.path.join(entry_path, 'action.yml')):
+            action_dirs.append(entry)
+    return action_dirs
+
+
+actions = discover_actions(repo_root)
 
 with open(example_path, 'r') as f:
     ci_yml = yaml.load(f, Loader=OrderedLoader)
