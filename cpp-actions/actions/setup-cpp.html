@@ -175,6 +175,9 @@
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="setup-clang.html">Setup Clang Action</a>
   </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-msvc.html">Setup MSVC Action</a>
+  </li>
 </ul>
   </li>
   <li class="nav-item" data-depth="1">
@@ -448,6 +451,10 @@ refer to the <strong>MSVC toolset version</strong>. Use this number when you dep
 The action still reports the release year and product version in its outputs for reference, but they are
 not used for resolution.</p>
 </div>
+<div class="paragraph">
+<p>Use the <code>arch</code> input when you need to force a specific MSVC architecture (for example <code>x86</code> or <code>arm64</code>). When
+omitted, the action falls back to the runner architecture.</p>
+</div>
 </div>
 <div class="sect2">
 <h3 id="_mingw_and_other_compilers"><a class="anchor" href="#_mingw_and_other_compilers"></a>MinGW and other compilers</h3>
@@ -485,7 +492,8 @@ version ultimately setup by the action.</p>
   id: setup-cpp
   with:
     compiler: ${{ matrix.compiler }}
-    version: ${{ matrix.version }}</code></pre>
+    version: ${{ matrix.version }}
+    arch: ${{ matrix.arch }}</code></pre>
 </div>
 </div>
 </div>
@@ -538,6 +546,12 @@ instead.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>arch</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Target architecture name forwarded to MSVC (for example <code>x86</code>, <code>x64</code>, <code>arm64</code>).
+When empty, the runner architecture is used. Non-MSVC compilers ignore this input.</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 </tbody>
 </table>

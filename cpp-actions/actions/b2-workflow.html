@@ -175,6 +175,9 @@
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="setup-clang.html">Setup Clang Action</a>
   </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-msvc.html">Setup MSVC Action</a>
+  </li>
 </ul>
   </li>
   <li class="nav-item" data-depth="1">
@@ -459,6 +462,7 @@ CMake workflow steps as integration tests for CMake.</p>
     cxx: ${{ steps.setup-cpp.outputs.cxx || '' }}
     cxxstd: ${{ matrix.cxxstd }}
     address-model: ${{ matrix.address-model }}
+    arch: ${{ matrix.arch }}
     asan: ${{ matrix.asan }}
     ubsan: ${{ matrix.ubsan }}
     tsan: ${{ matrix.tsan }}
@@ -542,6 +546,12 @@ which sets no value for the <code>link</code> option and defaults to <code>share
 <td class="tableblock halign-left valign-top"><p class="tableblock">B2 toolset name. The toolset is somewhat equivalent to a CMake generator.</p>
 <p class="tableblock">If not specified, the action will use the toolset defined by the environment variable <code>B2_TOOLSET</code>.</p>
 <p class="tableblock">If the environment variable is not specified, the action will use the default toolset detected by B2.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>arch</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Target architecture hint (for example <code>x86</code>, <code>x64</code>, <code>arm64</code>). When provided, the action derives sensible defaults
+for the B2 <code>address-model</code> and <code>architecture</code> properties unless they are explicitly set.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>

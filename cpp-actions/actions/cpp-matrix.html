@@ -175,6 +175,9 @@
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="setup-clang.html">Setup Clang Action</a>
   </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-msvc.html">Setup MSVC Action</a>
+  </li>
 </ul>
   </li>
   <li class="nav-item" data-depth="1">
@@ -827,7 +830,7 @@ in the <code>/__e/node20</code> directory.</p>
       '
     extra-values: 'vcpkg-packages: \{{#if (not fetch-content)}}fmt\{{/if\}}
 
-      address-model: \{{#if x86}}32\{{else}}64\{{/if\}}
+      address-model: \{{#if (eq arch ''x86'')}}32\{{else}}64\{{/if\}}
 
       '</code></pre>
 </div>

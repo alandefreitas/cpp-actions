@@ -175,6 +175,9 @@
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="setup-clang.html">Setup Clang Action</a>
   </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="setup-msvc.html">Setup MSVC Action</a>
+  </li>
 </ul>
   </li>
   <li class="nav-item" data-depth="1">
@@ -507,6 +510,7 @@ CMake workflow steps as integration tests for CMake.</p>
     source-dir: tests
     generator: ${{ matrix.generator }}
     generator-toolset: ${{ matrix.generator-toolset }}
+    arch: ${{ matrix.arch }}
     toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
     build-type: ${{ matrix.build-type }}
     run-tests: true
@@ -699,6 +703,13 @@ standard number with the exception of the latest standard.</p></td>
 <p class="tableblock">The option will be applied in the command line as the <code>-A</code> option.</p>
 <p class="tableblock">If not specified, the action will use the architecture defined by the environment variable <code>CMAKE_GENERATOR_ARCHITECTURE</code>.</p>
 <p class="tableblock">If the environment variable is not specified, the action will use the default toolset for the generator.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>arch</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Target architecture hint (for example <code>x86</code>, <code>x64</code>, <code>arm64</code>). When <code>generator-architecture</code> is not set and the
+chosen generator is Visual Studio, the action derives the appropriate <code>-A</code> switch from this value. Other
+generators ignore this input.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
