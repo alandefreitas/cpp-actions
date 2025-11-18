@@ -3,8 +3,8 @@
   <head>
         <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Setup CMake :: C++ Actions</title>
-    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/setup-cmake.html">
+    <title>Setup MSVC :: C++ Actions</title>
+    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/develop/actions/setup-msvc.html">
     <meta name="generator" content="Antora 3.1.3">
     <link rel="stylesheet" href="../../../_/css/site.css">
     <link rel="stylesheet" href="../../../_/css/vendor/tabs.css">
@@ -123,7 +123,7 @@
         <div id="topbar-nav" class="navbar-menu">
                 <div class="navbar-item is-hoverable">
                         <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions
-                            : Setup CMake</a>
+                            : Setup MSVC</a>
                 </div>
                     <div class="navbar-item is-hoverable">
                         <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions" target="_blank">GitHub</a>
@@ -178,7 +178,7 @@
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="setup-clang.html">Setup Clang Action</a>
   </li>
-  <li class="nav-item" data-depth="2">
+  <li class="nav-item is-current-page" data-depth="2">
     <a class="nav-link" href="setup-msvc.html">Setup MSVC Action</a>
   </li>
 </ul>
@@ -193,7 +193,7 @@
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="boost-clone.html">Boost Clone Action</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="2">
+  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="setup-cmake.html">Setup CMake Action</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -346,40 +346,40 @@
     <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">C++ Actions</a></li>
-    <li>Tools</li>
-    <li><a href="setup-cmake.html">Setup CMake Action</a></li>
+    <li>Compilers</li>
+    <li><a href="setup-msvc.html">Setup MSVC Action</a></li>
   </ul>
 </nav>
     <div class="page-versions">
   <button class="version-menu-toggle" title="Show other versions of page">develop</button>
   <div class="version-menu">
-    <a class="version" href="../../actions/setup-cmake.html">master</a>
-    <a class="version is-current" href="setup-cmake.html">develop</a>
-    <a class="version" href="../../v1.9.0/actions/setup-cmake.html">v1.9.0</a>
-    <a class="version" href="../../v1.8.12/actions/setup-cmake.html">v1.8.12</a>
-    <a class="version" href="../../v1.8.11/actions/setup-cmake.html">v1.8.11</a>
-    <a class="version" href="../../v1.8.10/actions/setup-cmake.html">v1.8.10</a>
-    <a class="version" href="../../v1.8.9/actions/setup-cmake.html">v1.8.9</a>
-    <a class="version" href="../../v1.8.8/actions/setup-cmake.html">v1.8.8</a>
-    <a class="version" href="../../v1.8.7/actions/setup-cmake.html">v1.8.7</a>
-    <a class="version" href="../../v1.8.6/actions/setup-cmake.html">v1.8.6</a>
-    <a class="version" href="../../v1.8.5/actions/setup-cmake.html">v1.8.5</a>
-    <a class="version" href="../../v1.8.4/actions/setup-cmake.html">v1.8.4</a>
-    <a class="version" href="../../v1.8.3/actions/setup-cmake.html">v1.8.3</a>
-    <a class="version" href="../../v1.8.2/actions/setup-cmake.html">v1.8.2</a>
-    <a class="version" href="../../v1.8.1/actions/setup-cmake.html">v1.8.1</a>
-    <a class="version" href="../../v1.8.0/actions/setup-cmake.html">v1.8.0</a>
-    <a class="version" href="../../v1.7.0/actions/setup-cmake.html">v1.7.0</a>
-    <a class="version" href="../../v1.6.2/actions/setup-cmake.html">v1.6.2</a>
-    <a class="version" href="../../v1.6.1/actions/setup-cmake.html">v1.6.1</a>
-    <a class="version" href="../../v1.6.0/actions/setup-cmake.html">v1.6.0</a>
-    <a class="version" href="../../v1.5.0/actions/setup-cmake.html">v1.5.0</a>
-    <a class="version" href="../../v1.4.1/actions/setup-cmake.html">v1.4.1</a>
-    <a class="version" href="../../v1.4.0/actions/setup-cmake.html">v1.4.0</a>
-    <a class="version" href="../../v1.3.0/actions/setup-cmake.html">v1.3.0</a>
-    <a class="version" href="../../v1.2.1/actions/setup-cmake.html">v1.2.1</a>
-    <a class="version" href="../../v1.2.0/actions/setup-cmake.html">v1.2.0</a>
-    <a class="version" href="../../v1.1.0/actions/setup-cmake.html">v1.1.0</a>
+    <a class="version is-missing" href="../../index.html">master</a>
+    <a class="version is-current" href="setup-msvc.html">develop</a>
+    <a class="version is-missing" href="../../v1.9.0/index.html">v1.9.0</a>
+    <a class="version is-missing" href="../../v1.8.12/index.html">v1.8.12</a>
+    <a class="version is-missing" href="../../v1.8.11/index.html">v1.8.11</a>
+    <a class="version is-missing" href="../../v1.8.10/index.html">v1.8.10</a>
+    <a class="version is-missing" href="../../v1.8.9/index.html">v1.8.9</a>
+    <a class="version is-missing" href="../../v1.8.8/index.html">v1.8.8</a>
+    <a class="version is-missing" href="../../v1.8.7/index.html">v1.8.7</a>
+    <a class="version is-missing" href="../../v1.8.6/index.html">v1.8.6</a>
+    <a class="version is-missing" href="../../v1.8.5/index.html">v1.8.5</a>
+    <a class="version is-missing" href="../../v1.8.4/index.html">v1.8.4</a>
+    <a class="version is-missing" href="../../v1.8.3/index.html">v1.8.3</a>
+    <a class="version is-missing" href="../../v1.8.2/index.html">v1.8.2</a>
+    <a class="version is-missing" href="../../v1.8.1/index.html">v1.8.1</a>
+    <a class="version is-missing" href="../../v1.8.0/index.html">v1.8.0</a>
+    <a class="version is-missing" href="../../v1.7.0/index.html">v1.7.0</a>
+    <a class="version is-missing" href="../../v1.6.2/index.html">v1.6.2</a>
+    <a class="version is-missing" href="../../v1.6.1/index.html">v1.6.1</a>
+    <a class="version is-missing" href="../../v1.6.0/index.html">v1.6.0</a>
+    <a class="version is-missing" href="../../v1.5.0/index.html">v1.5.0</a>
+    <a class="version is-missing" href="../../v1.4.1/index.html">v1.4.1</a>
+    <a class="version is-missing" href="../../v1.4.0/index.html">v1.4.0</a>
+    <a class="version is-missing" href="../../v1.3.0/index.html">v1.3.0</a>
+    <a class="version is-missing" href="../../v1.2.1/index.html">v1.2.1</a>
+    <a class="version is-missing" href="../../v1.2.0/index.html">v1.2.0</a>
+    <a class="version is-missing" href="../../v1.1.0/index.html">v1.1.0</a>
     <a class="version is-missing" href="../../v1.0.0/index.html">v1.0.0</a>
   </div>
 </div>
@@ -389,23 +389,44 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Setup CMake</h1>
+<h1 class="page">Setup MSVC</h1>
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>Set up a specific version of a CMake compiler and add it to the PATH.</p>
+<p>Configure the Microsoft Visual C&#43;&#43; (MSVC) toolchain and expose consistent compiler outputs.</p>
 </div>
 <div class="paragraph">
-<p>This action will also set-up any dependencies required by CMake.</p>
+<p>MSVC advertises four overlapping version identifiers:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Release year</strong> – marketing name such as 2022 or 2026.</p>
+</li>
+<li>
+<p><strong>Product version</strong> – IDE channel numbers like 17.11.</p>
+</li>
+<li>
+<p><strong>MSVC toolset version</strong> – compiler/toolchain identifier such as 14.44.35207. This is the value used by <code>version</code>.</p>
+</li>
+<li>
+<p><strong>MSVC compiler version</strong> – the <code>cl.exe</code> front-end version reported by <code>cl /Bv</code> (for example 19.44.35219).</p>
+</li>
+</ul>
 </div>
 <div class="paragraph">
-<p>In most workflows, this is used as an auxiliary action for the <a href="cmake-workflow.html" class="xref page">CMake Workflow</a> action,
-which already calls this action if necessary.</p>
+<p>This action finds an installed Visual Studio toolchain, runs <code>vcvarsall.bat</code> to configure the Developer
+Command Prompt, and emits all of these identifiers so downstream steps can unambiguously select the toolchain.
+Unlike GCC or Clang, this action does not download MSVC – it configures the version already available on the runner.</p>
 </div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next steps</h2>
+<div class="sectionbody">
 <div class="paragraph">
-<p>Note: <code>check-latest</code> only influences which version is fetched when a download is required. If the runner already
-provides a CMake build that satisfies the requested version range, that installation is reused instead of being
-replaced.</p>
+<p>After setting up the proper C&#43;&#43; compiler for a matrix entry, the next step in your workflow should usually be
+<a href="package-install.html" class="xref page">Install Packages</a>.</p>
 </div>
 </div>
 </div>
@@ -426,60 +447,42 @@ replaced.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>version</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Version range or exact version of CMake to use, using SemVer&#8217;s version range syntax.</p>
-<p class="tableblock">Reads from <code>cmake-file</code> input if unset.</p>
-<p class="tableblock">By default, it uses any version available in the environment.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>&gt;=3.0.2</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">MSVC toolset version (SemVer range). When provided, it is forwarded to <code>vcvarsall.bat</code> via <code>-vcvars_ver</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>*</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>architecture</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The target architecture (x86, x64). By default, this value is inferred.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>arch</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Target architecture passed to vcvarsall (for example x86, x64, arm64).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>x64</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>sdk</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Optional Windows SDK version to pass to vcvarsall.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-file</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">File containing the CMake version to use in a cmake_minimum_required command.</p>
-<p class="tableblock">Example: A CMakeLists.txt file containing a call to cmake_minimum_required.".</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>CMakeLists.txt</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>path</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Ordered list of candidate paths to the cmake executable.</p>
-<p class="tableblock">Each entry can be an absolute/relative file path or a basename:</p>
-<p class="tableblock">- If the entry is a file path, we try it as-is (and on Windows we also check <code>.exe</code>, <code>.cmd</code>, <code>.bat</code> if no extension was provided).
-- If the entry is just a basename (for example <code>cmake</code>), it is forwarded to the system PATH search so any existing installation is reused.</p>
-<p class="tableblock">Multiple entries can be provided by separating them with the platform path delimiter (<code>:</code> on Unix-like systems, <code>;</code> on Windows) or new lines. They are evaluated in order until an executable that satisfies the requested <code>version</code> range is located. To accept any version without filtering, set <code>version: '*'</code>.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-path</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Alias for <code>path</code> preserved for backwards compatibility.</p>
-<p class="tableblock">When provided, these entries are evaluated before <code>path</code> using the same semantics, including the version check.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>toolset</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Explicit MSVC toolset version override. When empty we fall back to <code>version</code>.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Used to specify whether the CMake installation should be cached in the case CMake needs to be downloaded.</p>
-<p class="tableblock">As binaries are provided for all versions of CMake, this option is deprecated and will be removed in
-a future release.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>visual-studio-version</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Visual Studio product version or year constraint forwarded to vswhere/vcvarsall.</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>check-latest</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">By default, when CMake is not available, this action will install the minimum version in the version spec.
-This ensures the code respects its contract in terms of what minimum CMake version is supported.</p>
-<p class="tableblock">Set this option if you want the action to check for the latest available version that satisfies the version spec
-instead.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>uwp</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Set to true to request the UWP environment (appends 'uwp' when invoking vcvarsall).</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>update-environment</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Set this option if you want the action to update environment variables.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>spectre</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Set to true to request Spectre-mitigated libraries.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the action.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 </tbody>
@@ -500,48 +503,52 @@ instead.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>path</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the CMake executable.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Absolute path to cl.exe.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Absolute path to the C&#43;&#43; compiler (same as cl.exe).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>bindir</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Directory that contains cl.exe.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to the CMake directory.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Root Visual C&#43;&#43; installation directory.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>version</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The installed CMake version. Useful when given a version range as input.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Resolved MSVC toolset version (matches <code>version</code>).</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-major</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The installed CMake version major. Useful when given a version range as input.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">MSVC toolset major version.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-minor</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The installed CMake version minor. Useful when given a version range as input.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">MSVC toolset minor version.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-patch</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The installed CMake version patch. Useful when given a version range as input.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">MSVC toolset patch version.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache-hit</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A boolean value to indicate a cache entry was found</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>msvc-toolset-version</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Exact MSVC toolset version reported by the environment.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>supports-path-to-build</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Whether CMake supports the -B &lt;path-to-build&gt; syntax</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>msvc-product-version</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Visual Studio product version (channel).</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>supports-parallel-build</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Whether CMake supports the -j &lt;threads&gt; syntax</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>msvc-release-year</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Visual Studio release year derived from the product version.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>supports-build-multiple-targets</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Whether CMake supports the --target with multiple targets</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>supports-cmake-install</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Whether CMake supports the cmake --install</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>msvc-compiler-version</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">cl.exe front-end version read from <code>cl /Bv</code>.</p></td>
 </tr>
 </tbody>
 </table>
