@@ -105,22 +105,27 @@ async function run() {
                 version_patch = SetupResult.version_patch
             }
         } else if (compiler === 'msvc') {
-            trace_commands.log(`compiler: ${compiler}... forwarding to setupMSVCDevCmd.`)
+            trace_commands.log(`compiler: ${compiler}... forwarding to setupMSVCCompiler.`)
             const arch = process.env['PROCESSOR_ARCHITECTURE'] || 'x64'
-            setup_msvc.setupMSVCDevCmd(arch, '', '', '', '', '')
-            output_path = process.env['Path']
+            let msvcOutputs
+            try {
+                msvcOutputs = await setup_msvc.setupMSVCCompiler(arch, '', '', '', '', '')
+            } catch (error) {
+                core.setFailed(error.message)
+                return
+            }
             for (const [key, value] of Object.entries(process.env)) {
                 trace_commands.log(`${key}: ${value}`)
             }
-            cc = ''
-            cxx = ''
-            bindir = process.env['VCINSTALLDIR'] + '\\bin'
-            dir = path.dirname(bindir)
-            const semverRelease = semver.coerce(process.env.VisualStudioVersion)
-            release = semverRelease ? semverRelease.toString() : '0.0.0'
-            version_major = semverRelease ? semverRelease.major : 0
-            version_minor = semverRelease ? semverRelease.minor : 0
-            version_patch = semverRelease ? semverRelease.patch : 0
+            output_path = msvcOutputs.cc
+            cc = msvcOutputs.cc
+            cxx = msvcOutputs.cxx
+            bindir = msvcOutputs.bindir
+            dir = msvcOutputs.dir
+            release = msvcOutputs.release
+            version_major = msvcOutputs.version_major
+            version_minor = msvcOutputs.version_minor
+            version_patch = msvcOutputs.version_patch
         } else if (['mingw', 'mingw32', 'mingw64', 'gcc', 'clang', 'clang-cl'].includes(compiler)) {
             core.startGroup(`🔍 Searching for ${compiler}`)
             trace_commands.log(`compiler: ${compiler}... looking for compiler in PATH.`)

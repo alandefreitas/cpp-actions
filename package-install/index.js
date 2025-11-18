@@ -206,6 +206,23 @@ function escapePath(path) {
     return path
 }
 
+function isMSVCCompilerExecutable(executablePath) {
+    if (!executablePath) {
+        return false
+    }
+    const normalized = executablePath.replace(/[\/]+/g, '/').toLowerCase()
+    return normalized.endsWith('/cl.exe')
+}
+
+async function readCompilerVersion(executablePath) {
+    if (!executablePath) {
+        return ''
+    }
+    const args = isMSVCCompilerExecutable(executablePath) ? ['/Bv'] : ['--version']
+    const result = await exec.getExecOutput(escapePath(executablePath), args, {ignoreReturnCode: true})
+    return result.stdout.trim()
+}
+
 async function vcpkg_main(inputs) {
     /*
         Infer any vcpkg parameters necessary and
@@ -265,7 +282,7 @@ async function vcpkg_main(inputs) {
         if (inputs.cxx === path.basename(inputs.cxx)) {
             inputs.cxx = await io.which(inputs.cxx, true)
         }
-        const compilerVersionOutput = (await exec.getExecOutput(escapePath(inputs.cxx), ['--version'])).stdout.trim()
+        const compilerVersionOutput = await readCompilerVersion(inputs.cxx)
         const regex = /[0-9]+\.[0-9]+\.[0-9]+/
         const matches = compilerVersionOutput.match(regex)
         const compilerVersion = matches ? matches[0] : ''
@@ -276,7 +293,7 @@ async function vcpkg_main(inputs) {
         if (inputs.cc === path.basename(inputs.cc)) {
             inputs.cc = await io.which(inputs.cc, true)
         }
-        const compilerVersionOutput = (await exec.getExecOutput(escapePath(inputs.cc), ['--version'])).stdout.trim()
+        const compilerVersionOutput = await readCompilerVersion(inputs.cc)
         const regex = /[0-9]+\.[0-9]+\.[0-9]+/
         const matches = compilerVersionOutput.match(regex)
         const compilerVersion = matches ? matches[0] : ''
