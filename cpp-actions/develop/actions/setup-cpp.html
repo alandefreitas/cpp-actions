@@ -409,13 +409,51 @@ the requirement equivalent to <code>&gt;=10.0.0 &lt;11.0.0</code> while <code>9.
 <p>If the <code>compiler</code> parameter does not include a version requirement, the <code>version</code> parameter can be used to provide
 a version semver string in the npm format with the compiler requirements.</p>
 </div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_compiler_behavior"><a class="anchor" href="#_compiler_behavior"></a>Compiler behavior</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_gcc_and_clang"><a class="anchor" href="#_gcc_and_clang"></a>GCC and Clang</h3>
 <div class="paragraph">
 <p>If the compiler is GCC or Clang, this action routes to the appropriate <a href="setup-gcc.html" class="xref page">Setup GCC</a> or
 <a href="setup-clang.html" class="xref page">Setup Clang</a> actions.</p>
 </div>
-<div class="paragraph">
-<p>If the compiler is MSVC, this action will setup the developer command prompt for Microsoft Visual C\\.</p>
 </div>
+<div class="sect2">
+<h3 id="_msvc"><a class="anchor" href="#_msvc"></a>MSVC</h3>
+<div class="paragraph">
+<p>If the compiler is MSVC, this action will set up the developer command prompt for Microsoft Visual C&#43;&#43;.</p>
+</div>
+<div class="paragraph">
+<p>Visual Studio exposes four overlapping version concepts:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Release year</strong> – marketing name such as 2022 or 2026.</p>
+</li>
+<li>
+<p><strong>Product version</strong> – IDE channel numbers like 17.11.</p>
+</li>
+<li>
+<p><strong>MSVC toolset version</strong> – compiler/toolchain identifier such as 14.42.</p>
+</li>
+<li>
+<p><strong>MSVC compiler version</strong> – the cl.exe front-end version reported by <code>cl /Bv</code> (for example 19.44.35219).</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>When you pass <code>compiler: msvc</code>, the <code>version</code> input and any inline requirements (for example <code>msvc-14.42</code>)
+refer to the <strong>MSVC toolset version</strong>. Use this number when you depend on a specific cl.exe toolchain.
+The action still reports the release year and product version in its outputs for reference, but they are
+not used for resolution.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_mingw_and_other_compilers"><a class="anchor" href="#_mingw_and_other_compilers"></a>MinGW and other compilers</h3>
 <div class="paragraph">
 <p>If the compiler is MinGW, this action will look for g++ and gcc in the directories listed in the PATH environment
 variable.</p>
@@ -426,6 +464,7 @@ variable.</p>
 <div class="paragraph">
 <p>If the compiler is GCC or Clang, the outputs include the paths to the compilers as well as the compiler
 version ultimately setup by the action.</p>
+</div>
 </div>
 </div>
 </div>
@@ -538,7 +577,7 @@ instead.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>version</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The installed compiler version. Useful when given a version range as input.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The installed compiler version. For MSVC this is the MSVC toolset version; for other compilers it is their native version string.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-major</code></p></td>
@@ -551,6 +590,22 @@ instead.</p></td>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-patch</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The installed compiler version patch. Useful when given a version range as input.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>msvc-toolset-version</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">When using MSVC, the toolset version resolved for cl.exe (for example 14.44.35207).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>msvc-product-version</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">When using MSVC, the Visual Studio product version (for example 17.11).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>msvc-release-year</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">When using MSVC, the mapped Visual Studio release year (for example 2022).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>msvc-compiler-version</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">When using MSVC, the cl.exe front-end version reported by <code>cl /Bv</code> (for example 19.44.35219).</p></td>
 </tr>
 </tbody>
 </table>
