@@ -162,3 +162,84 @@ describe('generateMatrix', () => {
         }
     })
 })
+
+test('msvc x86 entries prefer arch metadata over /m32 flags', async () => {
+    const compilerVersions = {
+        msvc: '>=14.0.0'
+    }
+    const inputs = {
+        compiler_versions: compilerVersions,
+        standards: normalizeCppVersionRequirement('>=11'),
+        subrange_policy: {'': 'one-per-major'},
+        max_standards: 1,
+        latest_factors: {},
+        factors: {msvc: ['x86']},
+        combinatorial_factors: {},
+        force_factors: [],
+        extra_values: [],
+        runs_on: [],
+        containers: [],
+        generators: [],
+        generator_toolsets: [],
+        b2_toolsets: [],
+        ccflags: [],
+        cxxflags: [],
+        install: [],
+        triplets: [],
+        build_types: [],
+        default_build_type: 'Release',
+        sanitizer_build_type: 'Release',
+        x86_build_type: 'Release',
+        use_containers: false,
+        warn_no_matches: false,
+        output_file: '',
+        log_matrix: false,
+        generate_summary: false,
+        trace_commands: false
+    }
+    const matrix = await generateMatrix(inputs)
+    const msvcX86Entry = matrix.find(entry => entry.compiler === 'msvc' && entry.x86 === true)
+    expect(msvcX86Entry).toBeDefined()
+    expect(msvcX86Entry.cxxflags).not.toMatch(/\/m32/)
+    expect(msvcX86Entry.ccflags).not.toMatch(/\/m32/)
+    expect(msvcX86Entry.arch).toBe('x86')
+})
+
+test('non-x86 entries default arch to x64 unless overridden', async () => {
+    const compilerVersions = {
+        gcc: '>=10'
+    }
+    const inputs = {
+        compiler_versions: compilerVersions,
+        standards: normalizeCppVersionRequirement('>=17'),
+        subrange_policy: {'': 'one-per-major'},
+        max_standards: 1,
+        latest_factors: {},
+        factors: {},
+        combinatorial_factors: {},
+        force_factors: [],
+        extra_values: [],
+        runs_on: [],
+        containers: [],
+        generators: [],
+        generator_toolsets: [],
+        b2_toolsets: [],
+        ccflags: [],
+        cxxflags: [],
+        install: [],
+        triplets: [],
+        build_types: [],
+        default_build_type: 'Release',
+        sanitizer_build_type: 'Release',
+        x86_build_type: 'Release',
+        use_containers: false,
+        warn_no_matches: false,
+        output_file: '',
+        log_matrix: false,
+        generate_summary: false,
+        trace_commands: false
+    }
+    const matrix = await generateMatrix(inputs)
+    const gccEntry = matrix.find(entry => entry.compiler === 'gcc')
+    expect(gccEntry.arch).toBe('x64')
+})

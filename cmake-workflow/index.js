@@ -297,6 +297,44 @@ function numberOfCpus() {
     return result
 }
 
+function normalizeArchitectureInput(arch) {
+    if (!arch) {
+        return ''
+    }
+    const token = arch.toLowerCase()
+    if (['x86', 'win32', 'ia32', 'i386', 'i486', 'i586', 'i686'].includes(token)) {
+        return 'x86'
+    }
+    if (['x64', 'amd64', 'x86_64', 'x86-64'].includes(token)) {
+        return 'x64'
+    }
+    if (['arm', 'arm32'].includes(token)) {
+        return 'arm'
+    }
+    if (['arm64', 'aarch64'].includes(token)) {
+        return 'arm64'
+    }
+    return arch
+}
+
+function deriveGeneratorArchitectureFromArch(arch, generator) {
+    const normalizedArch = normalizeArchitectureInput(arch)
+    if (!normalizedArch) {
+        return ''
+    }
+    const generatorIsVisualStudio = generator && generator.startsWith('Visual Studio')
+    if (!generatorIsVisualStudio) {
+        return ''
+    }
+    const mapping = {
+        x86: 'Win32',
+        x64: 'x64',
+        arm: 'ARM',
+        arm64: 'ARM64'
+    }
+    return mapping[normalizedArch] || ''
+}
+
 function makeArgsString(args) {
     let res = []
     for (const arg of args) {
@@ -733,6 +771,13 @@ async function setupDefaultGenerator(inputs) {
         }
     }
     fnlog(`Default generator: ${inputs.generator}`)
+    if (!inputs.generator_architecture && inputs.arch) {
+        const derivedArch = deriveGeneratorArchitectureFromArch(inputs.arch, inputs.generator)
+        if (derivedArch) {
+            inputs.generator_architecture = derivedArch
+            core.info(`🎯 Derived CMake generator architecture "${derivedArch}" from arch "${inputs.arch}"`)
+        }
+    }
 }
 
 async function resolveInputParameters(inputs, setupCMakeOutputs) {
@@ -1695,6 +1740,7 @@ async function run() {
             generator: gh_inputs.getInput('generator', {fallbackEnv: 'CMAKE_GENERATOR'}),
             generator_toolset: gh_inputs.getInput('generator-toolset', {fallbackEnv: 'CMAKE_GENERATOR_TOOLSET'}),
             generator_architecture: gh_inputs.getInput('generator-architecture', {fallbackEnv: 'CMAKE_GENERATOR_ARCHITECTURE'}),
+            arch: gh_inputs.getInput('arch'),
             build_type: gh_inputs.getInput('build-type', {fallbackEnv: 'CMAKE_BUILD_TYPE'}),
             build_target: gh_inputs.getArray('build-target'),
             extra_args: parseExtraArgs(gh_inputs.getMultilineInput('extra-args')),
@@ -1733,6 +1779,7 @@ async function run() {
         if (inputs.trace_commands) {
             trace_commands.set_trace_commands(true)
         }
+        inputs.arch = normalizeArchitectureInput(inputs.arch)
 
         core.startGroup('📥 Action Inputs')
         gh_inputs.printInputObject(inputs)
@@ -1787,5 +1834,7 @@ if (require.main === module) {
 module.exports = {
     main,
     _resolveInputParameters: resolveInputParameters,
-    _normalizePathForCMake: normalizePath
+    _normalizePathForCMake: normalizePath,
+    _deriveGeneratorArchitectureFromArch: deriveGeneratorArchitectureFromArch,
+    _normalizeArchitectureInput: normalizeArchitectureInput
 }

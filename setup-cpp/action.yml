@@ -38,6 +38,9 @@ description: |
   The action still reports the release year and product version in its outputs for reference, but they are
   not used for resolution.
   
+  Use the `arch` input when you need to force a specific MSVC architecture (for example `x86` or `arm64`). When
+  omitted, the action falls back to the runner architecture.
+  
   === MinGW and other compilers
   
   If the compiler is MinGW, this action will look for g++ and gcc in the directories listed in the PATH environment
@@ -94,6 +97,13 @@ inputs:
     description: 'Trace commands executed by the workflow.'
     required: false
     default: 'false'
+
+  arch:
+    description: |
+      Target architecture name forwarded to MSVC (for example `x86`, `x64`, `arm64`).
+      When empty, the runner architecture is used. Non-MSVC compilers ignore this input.
+    required: false
+    default: ''
 
 outputs:
   cc:

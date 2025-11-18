@@ -118,6 +118,13 @@ inputs:
     required: false
     default: ''
 
+  arch:
+    description: |
+      Target architecture hint (for example `x86`, `x64`, `arm64`). When provided, the action derives sensible defaults
+      for the B2 `address-model` and `architecture` properties unless they are explicitly set.
+    required: false
+    default: ''
+
   build-variant:
     description: |
       Custom build variants. If the provided variant is a CMake build-type, the 

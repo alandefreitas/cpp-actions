@@ -17,9 +17,53 @@ function numberOfCpus() {
     return result
 }
 
+function normalizeArchitectureInput(arch) {
+    if (!arch) {
+        return ''
+    }
+    const token = arch.toLowerCase()
+    if (['x86', 'win32', 'ia32', 'i386', 'i486', 'i586', 'i686'].includes(token)) {
+        return 'x86'
+    }
+    if (['x64', 'amd64', 'x86_64', 'x86-64'].includes(token)) {
+        return 'x64'
+    }
+    if (['arm', 'arm32'].includes(token)) {
+        return 'arm'
+    }
+    if (['arm64', 'aarch64'].includes(token)) {
+        return 'arm64'
+    }
+    return arch
+}
+
+function deriveB2ArchConfig(arch) {
+    const normalizedArch = normalizeArchitectureInput(arch)
+    if (!normalizedArch) {
+        return {normalizedArch: ''}
+    }
+    if (normalizedArch === 'x86') {
+        return {normalizedArch, addressModel: '32', architecture: 'x86'}
+    }
+    if (normalizedArch === 'x64') {
+        return {normalizedArch, addressModel: '64', architecture: 'x86'}
+    }
+    if (normalizedArch === 'arm') {
+        return {normalizedArch, addressModel: '32', architecture: 'arm'}
+    }
+    if (normalizedArch === 'arm64') {
+        return {normalizedArch, addressModel: '64', architecture: 'arm'}
+    }
+    return {normalizedArch}
+}
+
 async function main(inputs) {
     function fnlog(msg) {
         trace_commands.log('b2-workflow: ' + msg)
+    }
+    const archConfig = deriveB2ArchConfig(inputs.arch)
+    if (archConfig.normalizedArch) {
+        inputs.arch = archConfig.normalizedArch
     }
 
     // ----------------------------------------------
@@ -115,6 +159,9 @@ async function main(inputs) {
         Basic configuration options
      */
     let b2_args = []
+    if (!inputs.address_model && archConfig.addressModel) {
+        inputs.address_model = archConfig.addressModel
+    }
     if (inputs.build_dir) {
         b2_args.push(`--build-dir=${inputs.build_dir}`)
     }
@@ -125,6 +172,9 @@ async function main(inputs) {
     }
     if (inputs.address_model) {
         b2_args.push(`address-model=${inputs.address_model}`)
+    }
+    if (archConfig.architecture) {
+        b2_args.push(`architecture=${archConfig.architecture}`)
     }
     if (inputs.cxxstd) {
         b2_args.push(`cxxstd=${inputs.cxxstd}`)
@@ -312,6 +362,7 @@ async function run() {
             cxxstd: gh_inputs.getInput('cxxstd', {fallbackEnv: 'CXXSTD'}),
             shared: gh_inputs.getTribool('shared', {fallbackEnv: 'BUILD_SHARED_LIBS'}),
             toolset: gh_inputs.getInput('toolset', {fallbackEnv: 'B2_TOOLSET'}),
+            arch: gh_inputs.getInput('arch'),
             build_type: gh_inputs.getLowerCaseInput(['build-variant', 'build-type'], {fallbackEnv: ['B2_BUILD_VARIANT', 'B2_BUILD_TYPE']}),
             modules: gh_inputs.getArray('modules', /[,; ]/),
             module_target: gh_inputs.getArray('module-target', /[,; ]/),
@@ -354,6 +405,7 @@ async function run() {
         if (inputs.trace_commands) {
             trace_commands.set_trace_commands(true)
         }
+        inputs.arch = normalizeArchitectureInput(inputs.arch)
         fnlog(`🧩 b2-workflow.trace_commands: ${trace_commands}`)
 
         core.startGroup('📥 Action Inputs')

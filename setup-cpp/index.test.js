@@ -7,6 +7,14 @@ test('normalize compiler', async () => {
   expect(compiler.version).toEqual('4.9.2')
 })
 
+test('resolveMSVCArch normalizes tokens and falls back to env or defaults', () => {
+  expect(setupCpp.resolveMSVCArch('x86', 'AMD64')).toEqual('x86')
+  expect(setupCpp.resolveMSVCArch('ARM64', 'AMD64')).toEqual('arm64')
+  expect(setupCpp.resolveMSVCArch('', 'AMD64')).toEqual('x64')
+  expect(setupCpp.resolveMSVCArch('', '')).toEqual('x64')
+  expect(setupCpp.resolveMSVCArch('weird-arch', 'AMD64')).toEqual('weird-arch')
+})
+
 test('build MSVC outputs uses Visual Studio metadata when available', () => {
   const compilerPath = 'C\\VS\\VC\\Tools\\MSVC\\14.40.33807\\bin\\Hostx64\\x64\\cl.exe'
   const env = {

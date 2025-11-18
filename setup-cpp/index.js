@@ -44,6 +44,38 @@ function normalizeCompiler(compiler, version) {
     }
 }
 
+function normalizeMSVCArchToken(arch) {
+    if (!arch) {
+        return ''
+    }
+    const token = arch.toLowerCase()
+    if (['x86', 'win32', 'i386', 'i486', 'i586', 'i686', 'ia32'].includes(token)) {
+        return 'x86'
+    }
+    if (['x64', 'amd64', 'x86_64', 'x86-64'].includes(token)) {
+        return 'x64'
+    }
+    if (['arm64', 'aarch64'].includes(token)) {
+        return 'arm64'
+    }
+    if (['arm', 'arm32'].includes(token)) {
+        return 'arm'
+    }
+    return arch
+}
+
+function resolveMSVCArch(requestedArch, envArch) {
+    const normalizedRequested = normalizeMSVCArchToken(requestedArch)
+    if (normalizedRequested) {
+        return normalizedRequested
+    }
+    const normalizedEnv = normalizeMSVCArchToken(envArch)
+    if (normalizedEnv) {
+        return normalizedEnv
+    }
+    return 'x64'
+}
+
 async function run() {
     try {
         const inputs = {
@@ -52,12 +84,15 @@ async function run() {
             path: gh_inputs.getArray('path', /[:;]/),
             check_latest: gh_inputs.getBoolean('check-latest'),
             update_environment: gh_inputs.getBoolean('update-environment'),
-            trace_commands: gh_inputs.getBoolean('trace-commands')
+            trace_commands: gh_inputs.getBoolean('trace-commands'),
+            arch: gh_inputs.getInput('arch')
         }
 
         if (inputs.trace_commands) {
             trace_commands.set_trace_commands(true)
         }
+
+        inputs.arch = normalizeMSVCArchToken(inputs.arch)
 
         const {compiler, version} = normalizeCompiler(inputs.compiler, inputs.version)
         inputs.compiler = compiler
@@ -106,7 +141,8 @@ async function run() {
             }
         } else if (compiler === 'msvc') {
             trace_commands.log(`compiler: ${compiler}... forwarding to setup-msvc.`)
-            const arch = process.env['PROCESSOR_ARCHITECTURE'] || 'x64'
+            const arch = resolveMSVCArch(inputs.arch, process.env['PROCESSOR_ARCHITECTURE'])
+            inputs.arch = arch
             let msvcOutputs
             try {
                 msvcOutputs = await setup_msvc.main(
@@ -231,5 +267,6 @@ if (require.main === module) {
 }
 
 module.exports = {
-    normalizeCompiler
+    normalizeCompiler,
+    resolveMSVCArch
 }

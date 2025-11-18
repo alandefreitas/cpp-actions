@@ -290,6 +290,14 @@ inputs:
 
     required: false
     default: ''
+
+  arch:
+    description: |
+      Target architecture hint (for example `x86`, `x64`, `arm64`). When `generator-architecture` is not set and the
+      chosen generator is Visual Studio, the action derives the appropriate `-A` switch from this value. Other
+      generators ignore this input.
+    required: false
+    default: ''
   build-type:
     description: |
       Build type.

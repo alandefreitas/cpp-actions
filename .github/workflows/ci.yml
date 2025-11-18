@@ -57,7 +57,7 @@ jobs:
           trace-commands: true
           extra-values: |
             vcpkg-packages: {{#if (not fetch-content)}}fmt{{/if}}
-            address-model: {{#if x86}}32{{else}}64{{/if}}
+            address-model: {{#if (eq arch 'x86')}}32{{else}}64{{/if}}
 
   build:
     needs: cpp-matrix
@@ -109,6 +109,7 @@ jobs:
           # For other libraries, any logic might be acceptable here.
           version: ${{ matrix.version }}
           trace-commands: true
+          arch: ${{ matrix.arch }}
 
       # We're not really going to use doxygen. This is only here to test the action.
       - name: Setup Doxygen
@@ -160,6 +161,7 @@ jobs:
           cxx: ${{ steps.setup-cpp.outputs.cxx || '' }}
           cxxstd: ${{ matrix.cxxstd }}
           address-model: ${{ matrix.address-model }}
+          arch: ${{ matrix.arch }}
           asan: ${{ matrix.asan }}
           ubsan: ${{ matrix.ubsan }}
           tsan: ${{ matrix.tsan }}
@@ -173,6 +175,7 @@ jobs:
           source-dir: tests
           generator: ${{ matrix.generator }}
           generator-toolset: ${{ matrix.generator-toolset }}
+          arch: ${{ matrix.arch }}
           toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
           build-type: ${{ matrix.build-type }}
           run-tests: true

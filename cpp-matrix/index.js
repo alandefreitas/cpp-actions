@@ -1149,6 +1149,10 @@ async function setRecommendedFlags(entry, inputs) {
     entry['cxxflags'] = ''
     entry['ccflags'] = ''
     entry['install'] = ''
+    const wantsX86 = entry['x86'] === true
+    const entryArch = typeof entry['arch'] === 'string' && entry['arch'].trim() !== '' ? entry['arch'].trim() : null
+    const normalizedArch = entryArch ? entryArch.toLowerCase() : (wantsX86 ? 'x86' : 'x64')
+    entry['arch'] = normalizedArch
 
     // Flags for asan
     let sanitizers = []
@@ -1199,11 +1203,8 @@ async function setRecommendedFlags(entry, inputs) {
     }
 
     // Flags for x86
-    if ('x86' in entry && entry['x86'] === true) {
-        if (entry['compiler'] === 'msvc') {
-            entry['cxxflags'] += ' /m32'
-            entry['ccflags'] += ' /m32'
-        } else if (entry['compiler'] === 'clang') {
+    if (wantsX86) {
+        if (entry['compiler'] === 'clang') {
             entry['cxxflags'] += ' -m32'
             entry['ccflags'] += ' -m32'
         }
@@ -1248,7 +1249,7 @@ async function setRecommendedFlags(entry, inputs) {
     entry['ccflags'] = entry['ccflags'].trim()
 
     // Include vcpkg triplet recommendations (vcpkg help triplet)
-    const arch_prefix = entry['x86'] ? 'x86' : 'x64'
+    const arch_prefix = entry['arch'] || 'x64'
     if (['msvc', 'clang-cl'].includes(entry['compiler'])) {
         entry['triplet'] = `${arch_prefix}-windows`
     } else if (entry['compiler'] === 'mingw') {

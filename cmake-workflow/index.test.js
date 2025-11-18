@@ -57,3 +57,8 @@ test('resolveInputParameters normalizes Windows package_dir to avoid escape sequ
     }
 })
 
+test('deriveGeneratorArchitectureFromArch maps Visual Studio targets', () => {
+    expect(main._deriveGeneratorArchitectureFromArch('x86', 'Visual Studio 17 2022')).toBe('Win32')
+    expect(main._deriveGeneratorArchitectureFromArch('arm64', 'Visual Studio 17 2022')).toBe('ARM64')
+    expect(main._deriveGeneratorArchitectureFromArch('x64', 'Ninja')).toBe('')
+})

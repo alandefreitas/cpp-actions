@@ -35,6 +35,7 @@ function createInputs(overrides = {}) {
         cxxstd: '',
         shared: undefined,
         toolset: '',
+        arch: '',
         build_type: '',
         modules: ['filesystem'],
         module_target: [],
@@ -114,4 +115,14 @@ test('applies per-module targets when multiple values are provided', async () =>
     const buildArgs = exec.getExecOutput.mock.calls[2][1]
     expect(buildArgs).toContain('libs/filesystem/test')
     expect(buildArgs).toContain('libs/chrono/example')
+})
+
+test('derives address model and architecture from arch input when unspecified', async () => {
+    const inputs = createInputs({
+        arch: 'arm64'
+    })
+    await main(inputs)
+    const buildArgs = exec.getExecOutput.mock.calls[2][1]
+    expect(buildArgs).toContain('address-model=64')
+    expect(buildArgs).toContain('architecture=arm')
 })
