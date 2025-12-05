@@ -1,4 +1,6 @@
 const core = require('@actions/core')
+const exec = require('@actions/exec')
+const io = require('@actions/io')
 const tc = require('@actions/tool-cache')
 const semver = require('semver')
 const fs = require('fs')
@@ -149,6 +151,101 @@ function generateCMakeURL(version, architecture, fnlog) {
     return cmake_url
 }
 
+function isDebianLike(osReleaseContents) {
+    const lower = osReleaseContents.toLowerCase()
+    const idLike = lower.match(/^id_like=(.+)$/m)
+    const idLine = lower.match(/^id=(.+)$/m)
+    const tokens = []
+    if (idLike && idLike[1]) {
+        tokens.push(...idLike[1].replace(/"/g, '').split(/\s+/))
+    }
+    if (idLine && idLine[1]) {
+        tokens.push(...idLine[1].replace(/"/g, '').split(/\s+/))
+    }
+    return tokens.some((token) => token === 'debian' || token === 'ubuntu')
+}
+
+async function ensureGit({subgroups = true, fnlog = () => {}} = {}) {
+    const runnerOS = (process.env['RUNNER_OS'] || process.platform).toLowerCase()
+    let git_path = null
+
+    try {
+        git_path = await io.which('git')
+    } catch (error) {
+        git_path = null
+    }
+
+    if (git_path) {
+        fnlog(`git already available at ${git_path}`)
+        return git_path
+    }
+
+    if (subgroups) {
+        core.startGroup('🔧 Ensure git availability')
+    }
+    fnlog('git not found in PATH; attempting installation when supported')
+
+    if (runnerOS !== 'linux') {
+        core.info('git is missing and automatic installation is only attempted on Debian/Ubuntu runners; please pre-install git on this platform.')
+        if (subgroups) {
+            core.endGroup()
+        }
+        return null
+    }
+
+    let osRelease = ''
+    try {
+        osRelease = fs.readFileSync('/etc/os-release', 'utf8')
+    } catch (error) {
+        fnlog('Unable to read /etc/os-release; skipping automatic git installation.')
+        if (subgroups) {
+            core.endGroup()
+        }
+        return null
+    }
+
+    if (!isDebianLike(osRelease)) {
+        core.info('git is missing but runner is not Debian/Ubuntu; skipping automatic installation.')
+        if (subgroups) {
+            core.endGroup()
+        }
+        return null
+    }
+
+    const aptBase = setup_program.isSudoRequired() ? ['sudo', '-n', 'apt-get'] : ['apt-get']
+    const execOpts = {ignoreReturnCode: true, silent: true}
+
+    fnlog('Running apt-get update to refresh package metadata before installing git')
+    const updateCode = await exec.exec(aptBase[0], [...aptBase.slice(1), 'update'], execOpts)
+    if (updateCode !== 0) {
+        core.info(`apt-get update returned exit code ${updateCode}; continuing to git install attempt`)
+    }
+
+    fnlog('Installing git via apt-get')
+    const installCode = await exec.exec(aptBase[0], [...aptBase.slice(1), 'install', '-y', 'git'], execOpts)
+    if (installCode !== 0) {
+        core.info(`apt-get install git returned exit code ${installCode}; rechecking git presence`)
+    }
+
+    let gitAfterInstall = null
+    try {
+        gitAfterInstall = await io.which('git')
+    } catch (error) {
+        gitAfterInstall = null
+    }
+
+    if (subgroups) {
+        core.endGroup()
+    }
+
+    if (!gitAfterInstall) {
+        throw new Error('git is required to resolve CMake tags but could not be installed automatically')
+    }
+
+    fnlog(`git installed at ${gitAfterInstall}`)
+    return gitAfterInstall
+}
+
 async function main(inputs, subgroups = true) {
     function fnlog(msg) {
         trace_commands.log('setup-cmake: ' + msg)
@@ -163,6 +260,8 @@ async function main(inputs, subgroups = true) {
         check_latest,
         update_environment
     } = inputs
+
+    await ensureGit({subgroups, fnlog})
 
     // ----------------------------------------------
     // Look for CMake versions
@@ -390,5 +489,6 @@ if (require.main === module) {
 }
 
 module.exports = {
-    main
+    main,
+    ensureGit
 }
