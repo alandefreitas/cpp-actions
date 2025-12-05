@@ -1,6 +1,5 @@
-# Description: Build all the javascript projects in the repository
-
 #!/bin/bash
+# Description: Build all the javascript projects in the repository
 source "$(dirname "$0")/build-utils.sh"
 
 # Fetch default tags for tools whose versions the scripts need to know
@@ -11,13 +10,87 @@ generate_ubuntu_versions_json
 
 projects_with_package=()
 projects_with_action=()
-build_results=()
+prepare_results=()
+test_results=()
 doc_results=()
 
+run_install_and_prepare() {
+    local project="$1"
+    local project_name="${project%/}"
+
+    echo "==== Installing dependencies for $project_name ===="
+    if ! npm install --prefix "$project_name"; then
+        echo "npm install failed for $project_name" >&2
+        echo "Re-run locally: npm install --prefix \"$project_name\"" >&2
+        return 10
+    fi
+
+    echo "==== Building (npm run prepare) for $project_name ===="
+    if ! npm run prepare --prefix "$project_name"; then
+        echo "npm run prepare failed for $project_name" >&2
+        echo "Re-run locally: npm install --prefix \"$project_name\" && npm run prepare --prefix \"$project_name\"" >&2
+        return 20
+    fi
+
+    return 0
+}
+
+run_tests() {
+    local project="$1"
+    local project_name="${project%/}"
+
+    echo "==== Testing (npm test) for $project_name ===="
+    if ! npm test --prefix "$project_name"; then
+        echo "npm test failed for $project_name" >&2
+        echo "Re-run locally: npm install --prefix \"$project_name\" && npm test --prefix \"$project_name\"" >&2
+        return 30
+    fi
+
+    return 0
+}
+
+format_prepare_failure() {
+    local project_name="$1"
+    local status_code="$2"
+
+    case "$status_code" in
+        10)
+            echo "❌ $project_name: npm install failed (rerun: npm install --prefix \"$project_name\")"
+            ;;
+        20)
+            echo "❌ $project_name: build failed (rerun: npm install --prefix \"$project_name\" && npm run prepare --prefix \"$project_name\")"
+            ;;
+        *)
+            echo "❌ $project_name: unknown prepare failure (status $status_code)"
+            ;;
+    esac
+}
+
+format_test_failure() {
+    local project_name="$1"
+    local status_code="$2"
+
+    case "$status_code" in
+        30)
+            echo "❌ $project_name: tests failed (rerun: npm install --prefix \"$project_name\" && npm test --prefix \"$project_name\")"
+            ;;
+        *)
+            echo "❌ $project_name: unknown test failure (status $status_code)"
+            ;;
+    esac
+}
+
 print_summary() {
-    if [ "${#build_results[@]}" -gt 0 ]; then
-        echo "==== ⚙️ Build+Test Summary ===="
-        for result in "${build_results[@]}"; do
+    if [ "${#prepare_results[@]}" -gt 0 ]; then
+        echo "==== ⚙️ Prepare Summary ===="
+        for result in "${prepare_results[@]}"; do
+            echo "$result"
+        done
+    fi
+
+    if [ "${#test_results[@]}" -gt 0 ]; then
+        echo "==== 🧪 Test Summary ===="
+        for result in "${test_results[@]}"; do
             echo "$result"
         done
     fi
@@ -37,31 +110,33 @@ for dir in */; do
     fi
 
     if [ -f "$dir/package.json" ]; then
-        projects_with_package+=("$dir")
+        projects_with_package+=("${dir%/}")
     elif [ -f "$dir/action.yml" ]; then
-        projects_with_action+=("$dir")
+        projects_with_action+=("${dir%/}")
     fi
 done
 
-project_to_build=$1
+project_to_build=${1%/}
 
 if [ -n "$project_to_build" ]; then
     echo "Building specified project: $project_to_build"
     project_found=false
     for project in "${projects_with_package[@]}"; do
-        if [[ $project == "$project_to_build/" ]]; then
+        if [[ $project == "$project_to_build" ]]; then
             project_found=true
-            cd "$project_to_build" || exit 1
-            echo "==== Building $project_to_build ===="
-            if ! npm install; then
-                echo "npm install failed for $project_to_build" >&2
+            echo "==== Building $project_to_build (prepare stage) ===="
+            if ! run_install_and_prepare "$project_to_build"; then
+                status_code=$?
+                format_prepare_failure "$project_to_build" "$status_code" >&2
                 exit 1
             fi
-            if ! npm run all; then
-                echo "npm run all failed for $project_to_build" >&2
+
+            echo "==== Testing $project_to_build (test stage) ===="
+            if ! run_tests "$project_to_build"; then
+                status_code=$?
+                format_test_failure "$project_to_build" "$status_code" >&2
                 exit 1
             fi
-            cd ..
             break
         fi
     done
@@ -78,38 +153,62 @@ else
     echo "Javascript projects:"
     pids=()
     project_names=()
+    prepare_failed=0
     for project in "${projects_with_package[@]}"; do
         (
-          cd "$project" || exit
-          echo "==== Building $project ===="
-          if ! npm install; then
-              echo "npm install failed for ${project%/}" >&2
-              exit 1
-          fi
-          if ! npm run all; then
-              echo "npm run all failed for ${project%/}" >&2
-              exit 1
-          fi
-          cd ..
+          echo "==== Building $project (prepare stage) ===="
+          run_install_and_prepare "$project"
+          exit $?
         ) &
         pids+=($!)
         project_names+=("$project")
     done
 
-    build_failed=0
     for idx in "${!pids[@]}"; do
         pid=${pids[$idx]}
         project=${project_names[$idx]}
         if ! wait "$pid"; then
-            build_results+=("❌ Build or tests failed for ${project%/}")
-            build_failed=1
+            status_code=$?
+            prepare_results+=("$(format_prepare_failure "$project" "$status_code")")
+            prepare_failed=1
         else
-            build_results+=("✅ Build and tests succeeded for ${project%/}")
+            prepare_results+=("✅ ${project%/}: prepare succeeded")
         fi
     done
 
-    if [ "$build_failed" -ne 0 ]; then
-        echo "One or more projects failed. See logs above for details." >&2
+    if [ "$prepare_failed" -ne 0 ]; then
+        echo "One or more projects failed during prepare. Tests skipped." >&2
+        print_summary
+        exit 1
+    fi
+
+    echo "==== Testing projects ===="
+    test_pids=()
+    test_project_names=()
+    test_failed=0
+    for project in "${projects_with_package[@]}"; do
+        (
+          run_tests "$project"
+          exit $?
+        ) &
+        test_pids+=($!)
+        test_project_names+=("$project")
+    done
+
+    for idx in "${!test_pids[@]}"; do
+        pid=${test_pids[$idx]}
+        project=${test_project_names[$idx]}
+        if ! wait "$pid"; then
+            status_code=$?
+            test_results+=("$(format_test_failure "$project" "$status_code")")
+            test_failed=1
+        else
+            test_results+=("✅ ${project%/}: tests succeeded")
+        fi
+    done
+
+    if [ "$test_failed" -ne 0 ]; then
+        echo "One or more projects failed during tests." >&2
         print_summary
         exit 1
     fi
