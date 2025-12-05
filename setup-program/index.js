@@ -692,6 +692,25 @@ async function fetchGitTags(repo, options = {}) {
     }
 }
 
+let versionsCacheDir = null
+
+function defaultVersionsCacheDir() {
+    // Keep caches near the action code, not the caller's CWD
+    return path.join(__dirname, 'var', 'cache', 'setup-program')
+}
+
+function setVersionsCacheDir(dir) {
+    versionsCacheDir = dir
+}
+
+function resolveVersionsCachePath(filename) {
+    if (path.isAbsolute(filename)) {
+        return filename
+    }
+    const baseDir = versionsCacheDir || process.env.SETUP_PROGRAM_CACHE_DIR || defaultVersionsCacheDir()
+    return path.join(baseDir, filename)
+}
+
 async function findVersionsFromTags(name, repo, file, regex, defaultTags = []) {
     const versionsFromFile = readVersionsFromFile(file)
     if (versionsFromFile !== null) {
@@ -794,8 +813,9 @@ async function cloneGitRepo(repo, destPath, ref = undefined, options = {shallow:
 }
 
 function readVersionsFromFile(filename) {
+    const resolvedFilename = resolveVersionsCachePath(filename)
     try {
-        const fileContents = fs.readFileSync(filename, 'utf8')
+        const fileContents = fs.readFileSync(resolvedFilename, 'utf8')
         const versions = JSON.parse(fileContents)
         if (Array.isArray(versions)) {
             return versions
@@ -807,9 +827,11 @@ function readVersionsFromFile(filename) {
 }
 
 function saveVersionsToFile(versions, filename) {
+    const resolvedFilename = resolveVersionsCachePath(filename)
     try {
         const fileContents = JSON.stringify(versions)
-        fs.writeFileSync(filename, fileContents, 'utf8')
+        fs.mkdirSync(path.dirname(resolvedFilename), {recursive: true})
+        fs.writeFileSync(resolvedFilename, fileContents, 'utf8')
         trace_commands.log('Versions saved to file.')
     } catch (error) {
         trace_commands.log('Error saving versions to file: ' + error)
@@ -1447,5 +1469,7 @@ module.exports = {
     findClangVersions,
     findCMakeVersions,
     findGCCVersions,
-    urlExists
+    urlExists,
+    setVersionsCacheDir,
+    resolveVersionsCachePath
 }

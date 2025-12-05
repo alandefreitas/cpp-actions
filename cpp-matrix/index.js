@@ -8,6 +8,9 @@ const path = require('path')
 const trace_commands = require('trace-commands')
 const gh_inputs = require('gh-inputs')
 
+const defaultCacheDir = process.env.CPP_MATRIX_CACHE_DIR || path.join(__dirname, 'var', 'cache', 'cpp-matrix')
+setup_program.setVersionsCacheDir(defaultCacheDir)
+
 function parseCompilerRequirements(inputString) {
     const tokens = inputString.split(/[\n\s]+/)
     const compilers = {}

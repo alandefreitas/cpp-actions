@@ -1,10 +1,16 @@
+const path = require('path')
+const process = require('process')
+
+const cacheDir = path.join(__dirname, 'test-data', 'cache')
+process.env.CPP_MATRIX_CACHE_DIR = cacheDir
+
+const setup_program = require('setup-program')
+setup_program.setVersionsCacheDir(cacheDir)
+
 const main = require('./index')
 Object.assign(global, main)
 
-const process = require('process')
 const cp = require('child_process')
-const path = require('path')
-const setup_program = require('setup-program')
 
 const {
     generateMatrix,

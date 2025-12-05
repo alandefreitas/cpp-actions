@@ -21,6 +21,8 @@ docs/build
 docs/generated-files
 docs/.pydeps
 node_modules/
+var/cache/
+cpp-matrix/var/cache/
 
 # IDE settings
 .idea
