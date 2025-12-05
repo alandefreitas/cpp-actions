@@ -242,7 +242,7 @@ function getModuleRepoUrl(module) {
     return `https://github.com/boostorg/${module.replace('/', '_')}.git`
 }
 
-async function generateCacheKey(inputs, allModules, gitFeatures) {
+async function generateCacheKey(inputs, allModules, gitFeatures, options = {}) {
     function fnlog(msg) {
         trace_commands.log(`generateCacheKey: ${msg}`)
     }
@@ -313,7 +313,14 @@ async function generateCacheKey(inputs, allModules, gitFeatures) {
                     `boost-source-${boostHash}-${modulesAndPatchesHash}-${configHash}`
     fnlog(`Cache key: ${cacheKey}`)
 
-    return cacheKey
+    if (options.logInfo) {
+        core.info(`Caching mode: ${inputs.optimistic_caching ? 'optimistic' : 'pessimistic'}`)
+        core.info(`Cache key fragments -> boost: ${boostHash}, modules+patches: ${modulesAndPatchesHash}, config: ${configHash}`)
+        core.info(`Cache key: ${cacheKey}`)
+    }
+
+    const result = {cacheKey, fragments: {boostHash, modulesAndPatchesHash, configHash}}
+    return options.withFragments ? result : cacheKey
 }
 
 async function getCachedBoost(inputs, cacheKey) {
@@ -452,9 +459,38 @@ async function main(inputs) {
 
     let outputs = {boost_dir: inputs.boost_dir}
 
+    // Ensure cache path exists before interacting with the cache API
+    fs.mkdirSync(inputs.boost_dir, {recursive: true})
+
+    core.info(`Cache path: ${inputs.boost_dir}`)
+    core.info(`Cache enabled: ${inputs.cache}`)
+    core.info(`Optimistic caching: ${inputs.optimistic_caching}`)
+
     core.startGroup('📐 Identify git features')
     const gitFeatures = await findGitFeatures(inputs)
     core.endGroup()
+
+    core.startGroup('🔑 Calculate Boost Cache Key')
+    const {cacheKey: initialCacheKey} = await generateCacheKey(inputs, inputs.modules, gitFeatures, {logInfo: true, withFragments: true})
+    core.endGroup()
+    let cacheKey = initialCacheKey
+
+    const cacheAvailable = inputs.cache && cache.isFeatureAvailable()
+    if (inputs.cache && !cacheAvailable) {
+        core.info('GitHub cache service unavailable; continuing without cache')
+    }
+
+    if (cacheAvailable) {
+        core.startGroup('📦 Check Boost Cache')
+        const cacheHit = await getCachedBoost(inputs, cacheKey)
+        core.endGroup()
+        if (cacheHit) {
+            core.info('Cache hit: skipping downloads, scans, clone, and submodule init')
+            return outputs
+        }
+    } else if (!inputs.cache) {
+        core.info('Caching disabled via input; proceeding without cache')
+    }
 
     // Get gitmodules and exceptions
     core.startGroup('🌍 Download .gitmodules and exceptions.txt')
@@ -484,18 +520,8 @@ async function main(inputs) {
     }
 
     core.startGroup('🔑 Calculate Boost Cache Key')
-    const cacheKey = await generateCacheKey(inputs, allModules, gitFeatures)
+    cacheKey = await generateCacheKey(inputs, allModules, gitFeatures)
     core.endGroup()
-
-    if (inputs.cache) {
-        core.startGroup('📦 Check Boost Cache')
-        const cacheHit = await getCachedBoost(inputs, cacheKey)
-        core.endGroup()
-        if (cacheHit) {
-            // And we're done
-            return outputs
-        }
-    }
 
     // Clone boost
     core.startGroup('🚀 Clone Boost Super-project')
@@ -520,10 +546,13 @@ async function main(inputs) {
     }
 
     // Cache boost
-    if (inputs.cache) {
+    if (cacheAvailable) {
         core.startGroup(`📦 Cache Boost`)
+        core.info(`Saving cache for key: ${cacheKey}`)
         await cacheBoost(inputs, cacheKey)
         core.endGroup()
+    } else if (inputs.cache) {
+        core.info('Cache save skipped because cache service is unavailable')
     }
 
     return outputs
@@ -543,9 +572,9 @@ async function run() {
             modules_scan_paths: gh_inputs.getSet('modules-scan-paths'),
             modules_exclude_paths: gh_inputs.getSet('modules-exclude-paths'),
             // Caching
-            cache: gh_inputs.getBoolean('cache'),
-            optimistic_caching: gh_inputs.getBoolean('optimistic-caching'),
-            trace_commands: gh_inputs.getBoolean('trace-commands')
+            cache: gh_inputs.getBoolean('cache', {defaultValue: true}),
+            optimistic_caching: gh_inputs.getBoolean('optimistic-caching', {defaultValue: false}),
+            trace_commands: gh_inputs.getBoolean('trace-commands', {defaultValue: false})
         }
 
         // Remove any empty entry from scan_modules_dir
