@@ -33,6 +33,36 @@ function formatTime(ms) {
     return `${(ms / 1000 / 60).toFixed(1)}m`
 }
 
+/**
+ * Compare versions that may not be valid semver (e.g., four-part or distro-suffixed).
+ * Falls back to numeric component comparison when semver parsing fails.
+ */
+function semverGteLoose(version, threshold) {
+    const normalize = (v) => semver.valid(v) || semver.valid(semver.coerce(v))
+    const vNorm = normalize(version)
+    const tNorm = normalize(threshold)
+    const hasExtraSegments = (v) => v.split('.').length > 3
+    if (vNorm && tNorm && !hasExtraSegments(version) && !hasExtraSegments(threshold)) {
+        return semver.gte(vNorm, tNorm)
+    }
+
+    const toNumericParts = (v) => v.split(/[^0-9]+/).filter(Boolean).map(Number)
+    // Fallback: lexicographically compare numeric components to tolerate non-semver strings.
+    const vParts = toNumericParts(version)
+    const tParts = toNumericParts(threshold)
+    const len = Math.max(vParts.length, tParts.length)
+    for (let i = 0; i < len; i++) {
+        const a = vParts[i] || 0
+        const b = tParts[i] || 0
+        if (a > b) return true
+        if (a < b) return false
+    }
+    return true
+}
+
+/**
+ * Install apt sources, keys, and packages with retries and version-aware flags.
+ */
 async function apt_get_main(inputs) {
     function fnlog(msg) {
         trace_commands.log('apt_get_main: ' + msg)
@@ -85,8 +115,8 @@ async function apt_get_main(inputs) {
         const softwarePropertiesCommonVersion = stdout.trim()
 
         // Identify features of apt-add-repository command and set initial args
-        const aptAddRepoCommonArgs = semver.gte(softwarePropertiesCommonVersion, '0.96.24.20') ? ['-y', '-n'] : ['-y']
-        const aptAddRepoHasSourceArgs = semver.gte(softwarePropertiesCommonVersion, '0.98.10')
+        const aptAddRepoCommonArgs = semverGteLoose(softwarePropertiesCommonVersion, '0.96.24.20') ? ['-y', '-n'] : ['-y']
+        const aptAddRepoHasSourceArgs = semverGteLoose(softwarePropertiesCommonVersion, '0.98.10')
 
         // Iterate through each source and attempt to add it with retries
         for (const source of inputs.apt_get_sources) {
@@ -181,6 +211,9 @@ async function apt_get_main(inputs) {
     }
 }
 
+/**
+ * Create a temporary folder inside RUNNER_TEMP (or os tmp) with a uuid name.
+ */
 async function createTempFolder(dest) {
     dest = path.join(process.env['RUNNER_TEMP'] || os.tmpdir() || '', uuidV4())
     await io.mkdirP(dest)
@@ -415,6 +448,9 @@ async function vcpkg_main(inputs) {
     return outputs
 }
 
+/**
+ * Main entry: drive apt-get and vcpkg workflows based on provided inputs.
+ */
 async function main(inputs, force_install_vcpkg) {
     // ----------------------------------------------
     // apt-get
@@ -434,6 +470,9 @@ async function main(inputs, force_install_vcpkg) {
     return {}
 }
 
+/**
+ * GitHub Action entrypoint: load inputs, normalize, and execute main.
+ */
 async function run() {
     function fnlog(msg) {
         trace_commands.log('package-install: ' + msg)
@@ -513,5 +552,6 @@ if (require.main === module) {
 }
 
 module.exports = {
-    main
+    main,
+    semverGteLoose
 }

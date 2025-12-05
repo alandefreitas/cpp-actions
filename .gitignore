@@ -87,4 +87,5 @@ common/gh-inputs/dist
 # Local agent notes
 AGENTS.md
 */AGENTS.md
-.issues
+/.issues
+/.code
