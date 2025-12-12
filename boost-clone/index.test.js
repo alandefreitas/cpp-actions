@@ -173,3 +173,25 @@ test('main saves cache on miss and logs key fragments', async () => {
     expect(core.info).toHaveBeenCalledWith(expect.stringContaining('Cache key fragments'))
     expect(core.info).toHaveBeenCalledWith(expect.stringContaining('Saving cache for key'))
 })
+
+describe('pretty errors', () => {
+    it('logs once and fails once', async () => {
+        let runPromise
+        jest.isolateModules(() => {
+            jest.doMock('../common/pretty-errors/node_modules/@actions/core', () => ({
+                error: jest.fn(),
+                setFailed: jest.fn()
+            }))
+            const corePretty = require('../common/pretty-errors/node_modules/@actions/core')
+            const {reportAndSetFailed} = require('../common/pretty-errors')
+
+            runPromise = reportAndSetFailed(new Error('boost boom'), {title: 'Boost clone failed', includeStackInSetFailed: true}).then(() => {
+                expect(corePretty.error).toHaveBeenCalledTimes(1)
+                const failedArg = corePretty.setFailed.mock.calls[0][0]
+                expect(failedArg).toContain('boost boom')
+            })
+        })
+
+        await runPromise
+    })
+})

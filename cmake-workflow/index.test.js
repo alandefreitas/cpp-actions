@@ -62,3 +62,32 @@ test('deriveGeneratorArchitectureFromArch maps Visual Studio targets', () => {
     expect(main._deriveGeneratorArchitectureFromArch('arm64', 'Visual Studio 17 2022')).toBe('ARM64')
     expect(main._deriveGeneratorArchitectureFromArch('x64', 'Ninja')).toBe('')
 })
+
+describe('pretty errors', () => {
+    it('formats mapped errors with context and marks failure once', async () => {
+        let runPromise
+        jest.isolateModules(() => {
+            jest.doMock('../common/pretty-errors/node_modules/@actions/core', () => ({
+                error: jest.fn(),
+                setFailed: jest.fn()
+            }))
+            const corePretty = require('../common/pretty-errors/node_modules/@actions/core')
+            const {reportAndSetFailed} = require('../common/pretty-errors')
+
+            runPromise = reportAndSetFailed(new Error('workflow boom'), {
+                title: 'CMake workflow failed',
+                hint: 'hint',
+                locals: () => ({foo: 'bar'})
+            }).then(() => {
+                expect(corePretty.error).toHaveBeenCalledTimes(1)
+                const payload = corePretty.error.mock.calls[0][0]
+                expect(payload).toContain('CMake workflow failed')
+                expect(payload).toContain('workflow boom')
+                expect(payload).toContain('Locals')
+                expect(corePretty.setFailed).toHaveBeenCalledWith('workflow boom')
+            })
+        })
+
+        await runPromise
+    })
+})

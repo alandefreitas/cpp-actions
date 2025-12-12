@@ -32,6 +32,28 @@ test('find_program_in_system_paths', async () => {
   }
 })
 
+describe('pretty errors', () => {
+  it('logs once and fails once', async () => {
+    let runPromise
+    jest.isolateModules(() => {
+      jest.doMock('../common/pretty-errors/node_modules/@actions/core', () => ({
+        error: jest.fn(),
+        setFailed: jest.fn()
+      }))
+      const core = require('../common/pretty-errors/node_modules/@actions/core')
+      const {reportAndSetFailed} = require('../common/pretty-errors')
+
+      runPromise = reportAndSetFailed(new Error('program boom'), {title: 'Setup program failed', includeStackInSetFailed: true}).then(() => {
+        expect(core.error).toHaveBeenCalledTimes(1)
+        const failedArg = core.setFailed.mock.calls[0][0]
+        expect(failedArg).toContain('program boom')
+      })
+    })
+
+    await runPromise
+  })
+})
+
 // Unreliable for testing as it is
 // test('find_program_with_apt', async () => {
 //   if (process.platform === 'linux') {
@@ -46,4 +68,3 @@ test('find_program_in_system_paths', async () => {
 //     }
 //   }
 // })
-

@@ -9,6 +9,7 @@ const trace_commands = require('trace-commands')
 const setup_cmake = require('setup-cmake')
 const setup_program = require('setup-program')
 const gh_inputs = require('gh-inputs')
+const {reportAndSetFailed} = require('pretty-errors')
 
 function createCMakeConfigureAnnotations(output, inputs) {
     function fnlog(msg) {
@@ -1710,71 +1711,74 @@ function applyPresetMacros(value, allInputs) {
     }
 }
 
+let lastInputsForErrors = undefined
+
 async function run() {
     function fnlog(msg) {
         trace_commands.log('cmake-workflow: ' + msg)
     }
 
-    try {
-        let inputs = {
-            // CMake
-            cmake_path: gh_inputs.getInput('cmake-path'),
-            cmake_version: gh_inputs.getInput('cmake-version', {defaultValue: '*'}),
-            // Source project
-            source_dir: gh_inputs.getResolvedPath('source-dir'),
-            url: gh_inputs.getInput('url'),
-            git_repository: gh_inputs.getInput('git-repository'),
-            git_tag: gh_inputs.getInput('git-tag'),
-            download_dir: gh_inputs.getNormalizedPath('download-dir'),
-            patches: gh_inputs.getMultilineInput('patches'),
-            // Configure options
-            build_dir: gh_inputs.getNormalizedPath('build-dir'),
-            preset: gh_inputs.getInput('preset') || '',
-            cc: gh_inputs.getNormalizedPath('cc', {fallbackEnv: 'CC'}),
-            ccflags: gh_inputs.getInput('ccflags', {fallbackEnv: 'CFLAGS'}),
-            cxx: gh_inputs.getNormalizedPath('cxx', {fallbackEnv: 'CXX'}),
-            cxxflags: gh_inputs.getInput('cxxflags', {fallbackEnv: 'CXXFLAGS'}),
-            cxxstd: gh_inputs.getArray('cxxstd', undefined, undefined, {fallbackEnv: 'CXXSTD'}),
-            shared: gh_inputs.getTribool('shared', {fallbackEnv: 'BUILD_SHARED_LIBS'}),
-            toolchain: gh_inputs.getNormalizedPath('toolchain', {fallbackEnv: 'CMAKE_TOOLCHAIN_FILE'}),
-            generator: gh_inputs.getInput('generator', {fallbackEnv: 'CMAKE_GENERATOR'}),
-            generator_toolset: gh_inputs.getInput('generator-toolset', {fallbackEnv: 'CMAKE_GENERATOR_TOOLSET'}),
-            generator_architecture: gh_inputs.getInput('generator-architecture', {fallbackEnv: 'CMAKE_GENERATOR_ARCHITECTURE'}),
-            arch: gh_inputs.getInput('arch'),
-            build_type: gh_inputs.getInput('build-type', {fallbackEnv: 'CMAKE_BUILD_TYPE'}),
-            build_target: gh_inputs.getArray('build-target'),
-            extra_args: parseExtraArgs(gh_inputs.getMultilineInput('extra-args')),
-            export_compile_commands: gh_inputs.getTribool('export-compile-commands', {fallbackEnv: 'CMAKE_EXPORT_COMPILE_COMMANDS'}),
-            // Build options
-            jobs: gh_inputs.getInt('jobs', {fallbackEnv: 'CMAKE_JOBS', defaultValue: numberOfCpus()}),
-            // Test options
-            run_tests: gh_inputs.getTribool('run-tests', {fallbackEnv: 'CMAKE_RUN_TESTS'}),
-            configure_tests_flag: gh_inputs.getInput('configure-tests-flag'),
-            test_all_cxxstd: gh_inputs.getBoolean('test-all-cxxstd'),
-            // Install
-            install: gh_inputs.getTribool('install', {fallbackEnv: 'CMAKE_INSTALL'}),
-            install_all_cxxstd: gh_inputs.getTribool('install-all-cxxstd'),
-            install_prefix: gh_inputs.getNormalizedPath('install-prefix', {fallbackEnv: 'CMAKE_INSTALL_PREFIX'}),
-            // Package
-            package: gh_inputs.getTribool('package', {fallbackEnv: 'CMAKE_PACKAGE'}),
-            package_all_cxxstd: gh_inputs.getBoolean('package-all-cxxstd'),
-            package_name: gh_inputs.getInput('package-name'),
-            package_dir: gh_inputs.getNormalizedPath('package-dir'),
-            package_vendor: gh_inputs.getInput('package-vendor'),
-            package_generators: gh_inputs.getArray('package-generators', undefined, undefined, {fallbackEnv: 'CPACK_GENERATOR'}),
-            package_artifact: gh_inputs.getTribool('package-artifact', {
-                fallbackEnv: 'CMAKE_PACKAGE_ARTIFACT',
-                defaultValue: true
-            }),
-            package_retention_days: gh_inputs.getInt('package-retention-days', {defaultValue: 10}),
-            // Annotations and tracing
-            create_annotations: gh_inputs.getTribool('create-annotations', {
-                fallbackEnv: 'CMAKE_CREATE_ANNOTATIONS',
-                defaultValue: true
-            }),
-            ref_source_dir: gh_inputs.getResolvedPath('ref-source-dir', {fallbackEnv: 'GITHUB_WORKSPACE'}),
-            trace_commands: gh_inputs.getBoolean('trace-commands')
-        }
+    let inputs = {
+        // CMake
+        cmake_path: gh_inputs.getInput('cmake-path'),
+        cmake_version: gh_inputs.getInput('cmake-version', {defaultValue: '*'}),
+        // Source project
+        source_dir: gh_inputs.getResolvedPath('source-dir'),
+        url: gh_inputs.getInput('url'),
+        git_repository: gh_inputs.getInput('git-repository'),
+        git_tag: gh_inputs.getInput('git-tag'),
+        download_dir: gh_inputs.getNormalizedPath('download-dir'),
+        patches: gh_inputs.getMultilineInput('patches'),
+        // Configure options
+        build_dir: gh_inputs.getNormalizedPath('build-dir'),
+        preset: gh_inputs.getInput('preset') || '',
+        cc: gh_inputs.getNormalizedPath('cc', {fallbackEnv: 'CC'}),
+        ccflags: gh_inputs.getInput('ccflags', {fallbackEnv: 'CFLAGS'}),
+        cxx: gh_inputs.getNormalizedPath('cxx', {fallbackEnv: 'CXX'}),
+        cxxflags: gh_inputs.getInput('cxxflags', {fallbackEnv: 'CXXFLAGS'}),
+        cxxstd: gh_inputs.getArray('cxxstd', undefined, undefined, {fallbackEnv: 'CXXSTD'}),
+        shared: gh_inputs.getTribool('shared', {fallbackEnv: 'BUILD_SHARED_LIBS'}),
+        toolchain: gh_inputs.getNormalizedPath('toolchain', {fallbackEnv: 'CMAKE_TOOLCHAIN_FILE'}),
+        generator: gh_inputs.getInput('generator', {fallbackEnv: 'CMAKE_GENERATOR'}),
+        generator_toolset: gh_inputs.getInput('generator-toolset', {fallbackEnv: 'CMAKE_GENERATOR_TOOLSET'}),
+        generator_architecture: gh_inputs.getInput('generator-architecture', {fallbackEnv: 'CMAKE_GENERATOR_ARCHITECTURE'}),
+        arch: gh_inputs.getInput('arch'),
+        build_type: gh_inputs.getInput('build-type', {fallbackEnv: 'CMAKE_BUILD_TYPE'}),
+        build_target: gh_inputs.getArray('build-target'),
+        extra_args: parseExtraArgs(gh_inputs.getMultilineInput('extra-args')),
+        export_compile_commands: gh_inputs.getTribool('export-compile-commands', {fallbackEnv: 'CMAKE_EXPORT_COMPILE_COMMANDS'}),
+        // Build options
+        jobs: gh_inputs.getInt('jobs', {fallbackEnv: 'CMAKE_JOBS', defaultValue: numberOfCpus()}),
+        // Test options
+        run_tests: gh_inputs.getTribool('run-tests', {fallbackEnv: 'CMAKE_RUN_TESTS'}),
+        configure_tests_flag: gh_inputs.getInput('configure-tests-flag'),
+        test_all_cxxstd: gh_inputs.getBoolean('test-all-cxxstd'),
+        // Install
+        install: gh_inputs.getTribool('install', {fallbackEnv: 'CMAKE_INSTALL'}),
+        install_all_cxxstd: gh_inputs.getTribool('install-all-cxxstd'),
+        install_prefix: gh_inputs.getNormalizedPath('install-prefix', {fallbackEnv: 'CMAKE_INSTALL_PREFIX'}),
+        // Package
+        package: gh_inputs.getTribool('package', {fallbackEnv: 'CMAKE_PACKAGE'}),
+        package_all_cxxstd: gh_inputs.getBoolean('package-all-cxxstd'),
+        package_name: gh_inputs.getInput('package-name'),
+        package_dir: gh_inputs.getNormalizedPath('package-dir'),
+        package_vendor: gh_inputs.getInput('package-vendor'),
+        package_generators: gh_inputs.getArray('package-generators', undefined, undefined, {fallbackEnv: 'CPACK_GENERATOR'}),
+        package_artifact: gh_inputs.getTribool('package-artifact', {
+            fallbackEnv: 'CMAKE_PACKAGE_ARTIFACT',
+            defaultValue: true
+        }),
+        package_retention_days: gh_inputs.getInt('package-retention-days', {defaultValue: 10}),
+        // Annotations and tracing
+        create_annotations: gh_inputs.getTribool('create-annotations', {
+            fallbackEnv: 'CMAKE_CREATE_ANNOTATIONS',
+            defaultValue: true
+        }),
+        ref_source_dir: gh_inputs.getResolvedPath('ref-source-dir', {fallbackEnv: 'GITHUB_WORKSPACE'}),
+        trace_commands: gh_inputs.getBoolean('trace-commands')
+    }
+
+    lastInputsForErrors = inputs
 
         if (inputs.trace_commands) {
             trace_commands.set_trace_commands(true)
@@ -1819,16 +1823,23 @@ async function run() {
                 core.endGroup()
             }
         }
-    } catch (error) {
-        fnlog(error.stack)
-        core.setFailed(`${error.message}\n${error.stack}`)
-    }
 }
 
 if (require.main === module) {
-    run().catch((error) => {
-        core.setFailed(`${error.message}\n${error.stack}`)
-    })
+    (async () => {
+        try {
+            await run()
+        } catch (error) {
+            const hint = lastInputsForErrors?.trace_commands
+                ? 'Trace commands already enabled; if this looks like a bug, please open an issue at github.com/alandefreitas/cpp-actions with stack and logs.'
+                : 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) or ACTIONS_STEP_DEBUG=true to see underlying commands. If this keeps happening, please open an issue at github.com/alandefreitas/cpp-actions with the stack below.'
+            await reportAndSetFailed(error, {
+                title: 'CMake workflow failed',
+                hint,
+                locals: () => ({inputs: lastInputsForErrors})
+            })
+        }
+    })()
 }
 
 module.exports = {

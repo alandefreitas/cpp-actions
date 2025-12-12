@@ -6,6 +6,7 @@ const io = require('@actions/io')
 const os = require('os')
 const trace_commands = require('trace-commands')
 const gh_inputs = require('gh-inputs')
+const {reportAndSetFailed} = require('pretty-errors')
 
 function numberOfCpus() {
     const result = typeof os.availableParallelism === 'function'
@@ -346,13 +347,14 @@ async function main(inputs) {
 }
 
 
+let lastInputsForErrors = undefined
+
 async function run() {
     function fnlog(msg) {
         trace_commands.log('b2-workflow: ' + msg)
     }
 
-    try {
-        let inputs = {
+    let inputs = {
             // Configure options
             source_dir: gh_inputs.getResolvedPath('source-dir'),
             build_dir: gh_inputs.getNormalizedPath('build-dir'),
@@ -401,6 +403,8 @@ async function run() {
             trace_commands: gh_inputs.getBoolean('trace-commands')
         }
 
+    lastInputsForErrors = inputs
+
         // Apply trace commands
         if (inputs.trace_commands) {
             trace_commands.set_trace_commands(true)
@@ -412,16 +416,25 @@ async function run() {
         gh_inputs.printInputObject(inputs)
         core.endGroup()
 
-        await main(inputs)
-    } catch (error) {
-        core.setFailed(`${error.message}\n${error.stack}`)
-    }
+    await main(inputs)
 }
 
 if (require.main === module) {
-    run().catch((error) => {
-        core.setFailed(`${error.message}\n${error.stack}`)
-    })
+    (async () => {
+        try {
+            await run()
+        } catch (error) {
+            const hint = lastInputsForErrors?.trace_commands
+                ? 'Trace commands already enabled; if this looks like a bug, please open an issue at github.com/alandefreitas/cpp-actions with stack and logs.'
+                : 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. '
+            await reportAndSetFailed(error, {
+                title: 'B2 workflow failed',
+                hint,
+                locals: () => ({inputs: lastInputsForErrors}),
+                includeStackInSetFailed: true
+            })
+        }
+    })()
 }
 
 module.exports = {

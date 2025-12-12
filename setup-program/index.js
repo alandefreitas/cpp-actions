@@ -9,6 +9,7 @@ const os = require('os')
 const httpm = require('@actions/http-client')
 const trace_commands = require('trace-commands')
 const gh_inputs = require('gh-inputs')
+const {reportAndSetFailed} = require('pretty-errors')
 const gccDefaultTags = require('./gcc-tags.json')
 const clangDefaultTags = require('./clang-tags.json')
 const cmakeDefaultTags = require('./cmake-tags.json')
@@ -1312,32 +1313,37 @@ async function install_program_from_url(
     return {output_version, output_path}
 }
 
+let lastInputsForErrors = undefined
+
 async function run() {
     function fnlog(msg) {
         trace_commands.log('setup-program: ' + msg)
     }
 
-    try {
-        let inputs = {
-            name: gh_inputs.getArray('name', / /, undefined, {required: true}),
-            version: gh_inputs.getInput('version', {defaultValue: '*'}),
-            paths: gh_inputs.getArray('path', /[:;]/),
-            check_latest: gh_inputs.getBoolean('check-latest'),
-            update_environment: gh_inputs.getBoolean('update-environment'),
-            url: gh_inputs.getInput('url'),
-            install_prefix: gh_inputs.getInput('install-prefix'),
-            fail_on_error: gh_inputs.getBoolean('fail-on-error'),
-            trace_commands: gh_inputs.getBoolean('trace-commands')
-        }
+    let inputs = {
+        name: gh_inputs.getArray('name', / /, undefined, {required: true}),
+        version: gh_inputs.getInput('version', {defaultValue: '*'}),
+        paths: gh_inputs.getArray('path', /[:;]/),
+        check_latest: gh_inputs.getBoolean('check-latest'),
+        update_environment: gh_inputs.getBoolean('update-environment'),
+        url: gh_inputs.getInput('url'),
+        install_prefix: gh_inputs.getInput('install-prefix'),
+        fail_on_error: gh_inputs.getBoolean('fail-on-error'),
+        trace_commands: gh_inputs.getBoolean('trace-commands')
+    }
+
+    lastInputsForErrors = inputs
+
+    lastInputsForErrors = inputs
 
         // Get trace_commands input first
         if (inputs.trace_commands) {
             trace_commands.set_trace_commands(true)
         }
 
-        core.startGroup('📥 Action Inputs')
-        gh_inputs.printInputObject(inputs)
-        core.endGroup()
+    core.startGroup('📥 Action Inputs')
+    gh_inputs.printInputObject(inputs)
+    core.endGroup()
 
         // Set cache directory
         if (process.platform === 'darwin') {
@@ -1436,15 +1442,24 @@ async function run() {
             }
         }
         core.endGroup()
-    } catch (error) {
-        core.setFailed(`${error.message}\n${error.stack}`)
     }
-}
 
 if (require.main === module) {
-    run().catch((error) => {
-        core.setFailed(`${error.message}\n${error.stack}`)
-    })
+    (async () => {
+        try {
+            await run()
+        } catch (error) {
+            const hint = lastInputsForErrors?.trace_commands
+                ? 'Trace commands already enabled; if this looks like a bug, please open an issue at github.com/alandefreitas/cpp-actions with stack and logs.'
+                : 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. '
+            await reportAndSetFailed(error, {
+                title: 'Setup program failed',
+                hint,
+                locals: () => ({inputs: lastInputsForErrors}),
+                includeStackInSetFailed: true
+            })
+        }
+    })()
 }
 
 module.exports = {

@@ -10,6 +10,7 @@ const setup_program = require('setup-program')
 const trace_commands = require('trace-commands')
 const gh_inputs = require('gh-inputs')
 const os = require('os')
+const {reportAndSetFailed} = require('pretty-errors')
 
 const boostSuperProjectRepo = 'https://github.com/boostorg/boost.git'
 
@@ -558,9 +559,10 @@ async function main(inputs) {
     return outputs
 }
 
+let lastInputsForErrors = undefined
+
 async function run() {
-    try {
-        const inputs = {
+    const inputs = {
             boost_dir: gh_inputs.getInput('boost-dir'),
             branch: gh_inputs.getInput('branch', {defaultValue: 'master'}),
             // Modules to clone
@@ -584,40 +586,50 @@ async function run() {
 
         // If Boost dir is not provided, we will use a temporary directory
         // for it. This directory will be returned as an output.
-        if (!inputs.boost_dir) {
-            const pathSuffix = `boost-${inputs.branch}`
-            inputs.boost_dir = path.join(os.tmpdir(), pathSuffix)
-        }
-        inputs.boost_dir = path.resolve(inputs.boost_dir)
+    if (!inputs.boost_dir) {
+        const pathSuffix = `boost-${inputs.branch}`
+        inputs.boost_dir = path.join(os.tmpdir(), pathSuffix)
+    }
+    inputs.boost_dir = path.resolve(inputs.boost_dir)
 
         if (inputs.trace_commands) {
             trace_commands.set_trace_commands(true)
         }
 
-        core.startGroup('📥 Action Inputs')
-        gh_inputs.printInputObject(inputs)
+    lastInputsForErrors = inputs
+
+    core.startGroup('📥 Action Inputs')
+    gh_inputs.printInputObject(inputs)
+    core.endGroup()
+
+    const outputs = await main(inputs)
+
+    // Parse Final program / Setup version / Outputs
+    if (outputs.boost_dir) {
+        core.startGroup('📤 Action Outputs')
+        gh_inputs.setOutputObject(outputs)
         core.endGroup()
-
-        const outputs = await main(inputs)
-
-        // Parse Final program / Setup version / Outputs
-        if (outputs.boost_dir) {
-            core.startGroup('📤 Action Outputs')
-            gh_inputs.setOutputObject(outputs)
-            core.endGroup()
-        } else {
-            core.setFailed('Cannot clone Boost')
-        }
-    } catch (error) {
-        core.setFailed(`${error.message}\n${error.stack}`)
+    } else {
+        core.setFailed('Cannot clone Boost')
     }
 }
 
 if (require.main === module) {
-    run().catch((error) => {
-        console.error(error)
-        core.setFailed(`${error.message}\n${error.stack}`)
-    })
+    (async () => {
+        try {
+            await run()
+        } catch (error) {
+            const hint = lastInputsForErrors?.trace_commands
+                ? 'Trace commands already enabled; if this looks like a bug, please open an issue at github.com/alandefreitas/cpp-actions with stack and logs.'
+                : 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. '
+            await reportAndSetFailed(error, {
+                title: 'Boost clone failed',
+                hint,
+                locals: () => ({inputs: lastInputsForErrors}),
+                includeStackInSetFailed: true
+            })
+        }
+    })()
 }
 
 module.exports = {

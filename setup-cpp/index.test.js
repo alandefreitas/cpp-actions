@@ -47,3 +47,24 @@ test('build MSVC outputs falls back when metadata is missing', () => {
   expect(outputs.release).toEqual('14.40.33807')
   expect(outputs.version_major).toEqual(14)
 })
+
+describe('pretty errors', () => {
+  it('logs once and fails once', async () => {
+    let runPromise
+    jest.isolateModules(() => {
+      jest.doMock('../common/pretty-errors/node_modules/@actions/core', () => ({
+        error: jest.fn(),
+        setFailed: jest.fn()
+      }))
+      const core = require('../common/pretty-errors/node_modules/@actions/core')
+      const {reportAndSetFailed} = require('../common/pretty-errors')
+
+      runPromise = reportAndSetFailed(new Error('cpp boom'), {title: 'Setup C++ failed'}).then(() => {
+        expect(core.error).toHaveBeenCalledTimes(1)
+        expect(core.setFailed).toHaveBeenCalledWith('cpp boom')
+      })
+    })
+
+    await runPromise
+  })
+})

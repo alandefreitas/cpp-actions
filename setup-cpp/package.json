@@ -20,7 +20,8 @@
     "setup-clang": "file:../setup-clang",
     "setup-msvc": "file:../setup-msvc",
     "trace-commands": "file:../common/trace-commands",
-    "gh-inputs": "file:../common/gh-inputs"
+    "gh-inputs": "file:../common/gh-inputs",
+    "pretty-errors": "file:../common/pretty-errors"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.38.4",

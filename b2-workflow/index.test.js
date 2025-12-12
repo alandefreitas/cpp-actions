@@ -126,3 +126,25 @@ test('derives address model and architecture from arch input when unspecified', 
     expect(buildArgs).toContain('address-model=64')
     expect(buildArgs).toContain('architecture=arm')
 })
+
+describe('pretty errors', () => {
+    it('logs once and fails once', async () => {
+        let runPromise
+        jest.isolateModules(() => {
+            jest.doMock('../common/pretty-errors/node_modules/@actions/core', () => ({
+                error: jest.fn(),
+                setFailed: jest.fn()
+            }))
+            const core = require('../common/pretty-errors/node_modules/@actions/core')
+            const {reportAndSetFailed} = require('../common/pretty-errors')
+
+            runPromise = reportAndSetFailed(new Error('b2 boom'), {title: 'B2 workflow failed', includeStackInSetFailed: true}).then(() => {
+                expect(core.error).toHaveBeenCalledTimes(1)
+                const failedArg = core.setFailed.mock.calls[0][0]
+                expect(failedArg).toContain('b2 boom')
+            })
+        })
+
+        await runPromise
+    })
+})

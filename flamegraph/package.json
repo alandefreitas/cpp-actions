@@ -15,7 +15,8 @@
     "@actions/artifact": "^4.0.0",
     "@actions/core": "^1.11.1",
     "gh-inputs": "file:../common/gh-inputs",
-    "trace-commands": "file:../common/trace-commands"
+    "trace-commands": "file:../common/trace-commands",
+    "pretty-errors": "file:../common/pretty-errors"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.38.4",

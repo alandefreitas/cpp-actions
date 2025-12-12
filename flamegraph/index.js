@@ -4,6 +4,7 @@ const fs = require('fs')
 const path = require('path')
 const trace_commands = require('trace-commands')
 const gh_inputs = require('gh-inputs')
+const {reportAndSetFailed} = require('pretty-errors')
 const os = require('os')
 
 async function createReadmeFile(readmePath) {
@@ -2285,54 +2286,65 @@ async function main(inputs) {
     return {traces_path: combinedTracePath, svg_path: imagePath}
 }
 
+let lastInputsForErrors = undefined
+
 async function run() {
-    try {
-        const inputs = {
-            // Paths
-            source_dir: gh_inputs.getResolvedPath('source-dir'),
-            build_dir: gh_inputs.getResolvedPath('build-dir'),
-            output_path: gh_inputs.getNormalizedPath('output-path'),
-            report_path: gh_inputs.getNormalizedPath('report-path'),
-            // Artifacts
-            generate_svg: gh_inputs.getBoolean('generate-svg'),
-            generate_report: gh_inputs.getBoolean('generate-report'),
-            update_summary: gh_inputs.getBoolean('update-summary'),
-            github_token: gh_inputs.getInput(['github-token', 'github_token']),
-            upload_artifact: gh_inputs.getBoolean('upload-artifact'),
-            trace_commands: gh_inputs.getBoolean('trace-commands')
-        }
+    const inputs = {
+        // Paths
+        source_dir: gh_inputs.getResolvedPath('source-dir'),
+        build_dir: gh_inputs.getResolvedPath('build-dir'),
+        output_path: gh_inputs.getNormalizedPath('output-path'),
+        report_path: gh_inputs.getNormalizedPath('report-path'),
+        // Artifacts
+        generate_svg: gh_inputs.getBoolean('generate-svg'),
+        generate_report: gh_inputs.getBoolean('generate-report'),
+        update_summary: gh_inputs.getBoolean('update-summary'),
+        github_token: gh_inputs.getInput(['github-token', 'github_token']),
+        upload_artifact: gh_inputs.getBoolean('upload-artifact'),
+        trace_commands: gh_inputs.getBoolean('trace-commands')
+    }
 
-        inputs.output_path = path.resolve(inputs.build_dir, inputs.output_path)
-        inputs.report_path = path.resolve(inputs.build_dir, inputs.report_path)
+    lastInputsForErrors = inputs
 
-        if (inputs.trace_commands) {
-            trace_commands.set_trace_commands(true)
-        }
+    inputs.output_path = path.resolve(inputs.build_dir, inputs.output_path)
+    inputs.report_path = path.resolve(inputs.build_dir, inputs.report_path)
 
-        core.startGroup('📥 Action Inputs')
-        gh_inputs.printInputObject(inputs)
+    if (inputs.trace_commands) {
+        trace_commands.set_trace_commands(true)
+    }
+
+    core.startGroup('📥 Action Inputs')
+    gh_inputs.printInputObject(inputs)
+    core.endGroup()
+
+    const outputs = await main(inputs)
+
+    // Parse Final program / Setup version / Outputs
+    if (outputs && Object.keys(outputs).length) {
+        core.startGroup('📤 Action Outputs')
+        gh_inputs.setOutputObject(outputs)
         core.endGroup()
-
-        const outputs = await main(inputs)
-
-        // Parse Final program / Setup version / Outputs
-        if (Object.keys(outputs)) {
-            core.startGroup('📤 Action Outputs')
-            gh_inputs.setOutputObject(outputs)
-            core.endGroup()
-        } else {
-            core.setFailed('Cannot analyze time-traces')
-        }
-    } catch (error) {
-        core.setFailed(`${error.message}\n${error.stack}`)
+    } else {
+        core.setFailed('Cannot analyze time-traces')
     }
 }
 
 if (require.main === module) {
-    run().catch((error) => {
-        console.error(error)
-        core.setFailed(`${error.message}\n${error.stack}`)
-    })
+    (async () => {
+        try {
+            await run()
+        } catch (error) {
+            const hint = lastInputsForErrors?.trace_commands
+                ? 'Trace commands already enabled; if this looks like a bug, please open an issue at github.com/alandefreitas/cpp-actions with stack and logs.'
+                : 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. '
+            await reportAndSetFailed(error, {
+                title: 'Flamegraph failed',
+                hint,
+                locals: () => ({inputs: lastInputsForErrors}),
+                includeStackInSetFailed: true
+            })
+        }
+    })()
 }
 
 module.exports = {

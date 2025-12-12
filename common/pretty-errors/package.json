@@ -1,7 +1,7 @@
 {
-  "name": "setup-gcc",
-  "version": "1.9.0",
-  "description": "",
+  "name": "pretty-errors",
+  "version": "1.0.0",
+  "description": "Small helper to render source-mapped, Youch-formatted errors for GitHub Actions",
   "main": "index.js",
   "scripts": {
     "prepare": "ncc build index.js -o dist --source-map --license licenses.txt --minify",
@@ -13,14 +13,8 @@
   "license": "Boost Software License 1.0",
   "dependencies": {
     "@actions/core": "^1.11.1",
-    "@actions/exec": "^1.1.1",
-    "@actions/http-client": "^3.0.0",
-    "@actions/io": "^2.0.0",
-    "semver": "^7.7.3",
-    "setup-program": "file:../setup-program",
-    "trace-commands": "file:../common/trace-commands",
-    "gh-inputs": "file:../common/gh-inputs",
-    "pretty-errors": "file:../common/pretty-errors"
+    "stacktracey": "^2.1.8",
+    "youch-terminal": "^2.2.3"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.38.4",

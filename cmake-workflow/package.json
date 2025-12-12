@@ -19,7 +19,8 @@
     "setup-cmake": "file:../setup-cmake",
     "setup-program": "file:../setup-program",
     "trace-commands": "file:../common/trace-commands",
-    "gh-inputs": "file:../common/gh-inputs"
+    "gh-inputs": "file:../common/gh-inputs",
+    "pretty-errors": "file:../common/pretty-errors"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.38.4",

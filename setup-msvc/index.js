@@ -8,6 +8,7 @@ const exec = require('@actions/exec')
 const semver = require('semver')
 const trace_commands = require('trace-commands')
 const gh_inputs = require('gh-inputs')
+const {reportAndSetFailed} = require('pretty-errors')
 
 const PROGRAM_FILES_X86 = process.env['ProgramFiles(x86)']
 const PROGRAM_FILES = [process.env['ProgramFiles(x86)'], process.env['ProgramFiles']]
@@ -555,49 +556,60 @@ function buildMSVCOutputs(compilerPath, env = process.env, metadata = {}) {
     }
 }
 
+let lastInputsForErrors = undefined
+
 async function run() {
-    try {
-        const inputs = {
-            version: gh_inputs.getInput('version', {defaultValue: '*'}),
-            arch: gh_inputs.getInput('arch', {defaultValue: getDefaultArch()}),
-            sdk: gh_inputs.getInput('sdk', {defaultValue: ''}),
-            toolset: gh_inputs.getInput('toolset', {defaultValue: ''}),
-            vsversion: gh_inputs.getInput('visual-studio-version', {defaultValue: ''}),
-            uwp: gh_inputs.getBoolean('uwp'),
-            spectre: gh_inputs.getBoolean('spectre'),
-            trace_commands: gh_inputs.getBoolean('trace-commands')
-        }
-
-        if (inputs.trace_commands) {
-            trace_commands.set_trace_commands(true)
-        }
-
-        core.startGroup('📥 Action Inputs')
-        gh_inputs.printInputObject(inputs)
-        core.endGroup()
-
-        const outputs = await main(
-            inputs.version,
-            inputs.arch,
-            inputs.sdk,
-            inputs.toolset,
-            inputs.uwp,
-            inputs.spectre,
-            inputs.vsversion
-        )
-
-        core.startGroup('📤 Action Outputs')
-        gh_inputs.setOutputObject(outputs)
-        core.endGroup()
-    } catch (error) {
-        core.setFailed(error.message)
+    const inputs = {
+        version: gh_inputs.getInput('version', {defaultValue: '*'}),
+        arch: gh_inputs.getInput('arch', {defaultValue: getDefaultArch()}),
+        sdk: gh_inputs.getInput('sdk', {defaultValue: ''}),
+        toolset: gh_inputs.getInput('toolset', {defaultValue: ''}),
+        vsversion: gh_inputs.getInput('visual-studio-version', {defaultValue: ''}),
+        uwp: gh_inputs.getBoolean('uwp'),
+        spectre: gh_inputs.getBoolean('spectre'),
+        trace_commands: gh_inputs.getBoolean('trace-commands')
     }
+
+    lastInputsForErrors = inputs
+
+    if (inputs.trace_commands) {
+        trace_commands.set_trace_commands(true)
+    }
+
+    core.startGroup('📥 Action Inputs')
+    gh_inputs.printInputObject(inputs)
+    core.endGroup()
+
+    const outputs = await main(
+        inputs.version,
+        inputs.arch,
+        inputs.sdk,
+        inputs.toolset,
+        inputs.uwp,
+        inputs.spectre,
+        inputs.vsversion
+    )
+
+    core.startGroup('📤 Action Outputs')
+    gh_inputs.setOutputObject(outputs)
+    core.endGroup()
 }
 
 if (require.main === module) {
-    run().catch((error) => {
-        core.setFailed(error.message)
-    })
+    (async () => {
+        try {
+            await run()
+        } catch (error) {
+            const hint = lastInputsForErrors?.trace_commands
+                ? 'Trace commands already enabled; if this looks like a bug, please open an issue at github.com/alandefreitas/cpp-actions with stack and logs.'
+                : 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. '
+            await reportAndSetFailed(error, {
+                title: 'Setup MSVC failed',
+                hint,
+                locals: () => ({inputs: lastInputsForErrors})
+            })
+        }
+    })()
 }
 
 module.exports = {

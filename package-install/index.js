@@ -11,6 +11,7 @@ const crypto = require('crypto')
 const trace_commands = require('trace-commands')
 const gh_inputs = require('gh-inputs')
 const setup_program = require('setup-program')
+const {reportAndSetFailed} = require('pretty-errors')
 
 function uuidV4() {
     if (typeof crypto.randomUUID === 'function') {
@@ -473,13 +474,14 @@ async function main(inputs, force_install_vcpkg) {
 /**
  * GitHub Action entrypoint: load inputs, normalize, and execute main.
  */
+let lastInputsForErrors = undefined
+
 async function run() {
     function fnlog(msg) {
         trace_commands.log('package-install: ' + msg)
     }
 
-    try {
-        let inputs = {
+    let inputs = {
             // packages
             vcpkg: gh_inputs.getArray('vcpkg'),
             apt_get: gh_inputs.getArray('apt-get'),
@@ -503,6 +505,8 @@ async function run() {
             // Annotations and tracing
             trace_commands: gh_inputs.getBoolean('trace-commands')
         }
+
+    lastInputsForErrors = inputs
 
         // Resolve paths
         if (inputs.trace_commands) {
@@ -533,22 +537,31 @@ async function run() {
         }
 
         core.startGroup('📥 Action Inputs')
-        gh_inputs.printInputObject(inputs)
-        core.endGroup()
+    gh_inputs.printInputObject(inputs)
+    core.endGroup()
 
         const outputs = await main(inputs)
         core.startGroup('📤 Action Outputs')
         gh_inputs.setOutputObject(outputs)
         core.endGroup()
-    } catch (error) {
-        core.setFailed(`${error.message}\n${error.stack}`)
-    }
 }
 
 if (require.main === module) {
-    run().catch((error) => {
-        core.setFailed(`${error.message}\n${error.stack}`)
-    })
+    (async () => {
+        try {
+            await run()
+        } catch (error) {
+            const hint = lastInputsForErrors?.trace_commands
+                ? 'Trace commands already enabled; if this looks like a bug, please open an issue at github.com/alandefreitas/cpp-actions with stack and logs.'
+                : 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. '
+            await reportAndSetFailed(error, {
+                title: 'Package install failed',
+                hint,
+                locals: () => ({inputs: lastInputsForErrors}),
+                includeStackInSetFailed: true
+            })
+        }
+    })()
 }
 
 module.exports = {

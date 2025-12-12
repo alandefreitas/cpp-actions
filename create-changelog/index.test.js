@@ -34,3 +34,24 @@ test('generateOutput avoids duplicating scope for multiline entries', () => {
     expect(output).not.toContain('setup-cmake: Enhance cmake path descriptions.')
 })
 
+describe('pretty errors', () => {
+    it('logs once and fails once', async () => {
+        let runPromise
+        jest.isolateModules(() => {
+            jest.doMock('../common/pretty-errors/node_modules/@actions/core', () => ({
+                error: jest.fn(),
+                setFailed: jest.fn()
+            }))
+            const corePretty = require('../common/pretty-errors/node_modules/@actions/core')
+            const {reportAndSetFailed} = require('../common/pretty-errors')
+
+            runPromise = reportAndSetFailed(new Error('changelog boom'), {title: 'Create changelog failed', includeStackInSetFailed: true}).then(() => {
+                expect(corePretty.error).toHaveBeenCalledTimes(1)
+                const failedArg = corePretty.setFailed.mock.calls[0][0]
+                expect(failedArg).toContain('changelog boom')
+            })
+        })
+
+        await runPromise
+    })
+})

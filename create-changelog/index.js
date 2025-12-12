@@ -5,6 +5,7 @@ const exec = require('@actions/exec')
 const axios = require('axios')
 const trace_commands = require('trace-commands')
 const gh_inputs = require('gh-inputs')
+const {reportAndSetFailed} = require('pretty-errors')
 
 class Commit {
     constructor() {
@@ -1376,62 +1377,66 @@ async function main(inputs) {
     }
 }
 
+let lastInputsForErrors = undefined
+
 async function run() {
     function fnlog(msg) {
         trace_commands.log('create-changelog: ' + msg)
     }
 
-    try {
-        let inputs = {
-            // Configure options
-            source_dir: gh_inputs.getNormalizedPath('source-dir'),
-            version_pattern: gh_inputs.getRegex('version-pattern'),
-            tag_pattern: gh_inputs.getRegex('tag-pattern'),
-            output_path: gh_inputs.getNormalizedPath('output-path'),
-            limit: gh_inputs.getInt('limit'),
-            thank_non_regular: gh_inputs.getBoolean('thank-non-regular'),
-            check_unconventional: gh_inputs.getBoolean('check-unconventional'),
-            link_commits: gh_inputs.getBoolean('link-commits'),
-            github_token: gh_inputs.getInput('github-token'),
-            update_summary: gh_inputs.getBoolean('update-summary'),
-            trace_commands: gh_inputs.getBoolean('trace-commands')
-        }
-
-        // Resolve paths
-        inputs.source_dir = path.resolve(inputs.source_dir)
-        // output path, if relative, is relative to the source directory
-        inputs.output_path = path.resolve(inputs.source_dir, inputs.output_path)
-
-        // Set trace_commands when in debug mode or when
-        // the user explicitly sets it to true.
-        // This enables the log() function to print to the console.
-        if (inputs.trace_commands) {
-            trace_commands.set_trace_commands(true)
-        }
-
-        // Print a summary of the inputs
-        core.startGroup('📥 Action Inputs')
-        gh_inputs.printInputObject(inputs)
-        core.endGroup()
-
-        try {
-            await main(inputs)
-        } catch (error) {
-            // Print stack trace
-            fnlog(error.stack)
-            // Print error message
-            core.error(error)
-            core.setFailed(error.message)
-        }
-    } catch (error) {
-        core.setFailed(error.message)
+    let inputs = {
+        // Configure options
+        source_dir: gh_inputs.getNormalizedPath('source-dir'),
+        version_pattern: gh_inputs.getRegex('version-pattern'),
+        tag_pattern: gh_inputs.getRegex('tag-pattern'),
+        output_path: gh_inputs.getNormalizedPath('output-path'),
+        limit: gh_inputs.getInt('limit'),
+        thank_non_regular: gh_inputs.getBoolean('thank-non-regular'),
+        check_unconventional: gh_inputs.getBoolean('check-unconventional'),
+        link_commits: gh_inputs.getBoolean('link-commits'),
+        github_token: gh_inputs.getInput('github-token'),
+        update_summary: gh_inputs.getBoolean('update-summary'),
+        trace_commands: gh_inputs.getBoolean('trace-commands')
     }
+
+    lastInputsForErrors = inputs
+
+    // Resolve paths
+    inputs.source_dir = path.resolve(inputs.source_dir)
+    // output path, if relative, is relative to the source directory
+    inputs.output_path = path.resolve(inputs.source_dir, inputs.output_path)
+
+    // Set trace_commands when in debug mode or when
+    // the user explicitly sets it to true.
+    // This enables the log() function to print to the console.
+    if (inputs.trace_commands) {
+        trace_commands.set_trace_commands(true)
+    }
+
+    // Print a summary of the inputs
+    core.startGroup('📥 Action Inputs')
+    gh_inputs.printInputObject(inputs)
+    core.endGroup()
+
+    await main(inputs)
 }
 
 if (require.main === module) {
-    run().catch((error) => {
-        core.setFailed(`${error.message}\n${error.stack}`)
-    })
+    (async () => {
+        try {
+            await run()
+        } catch (error) {
+            const hint = lastInputsForErrors?.trace_commands
+                ? 'Trace commands already enabled; if this looks like a bug, please open an issue at github.com/alandefreitas/cpp-actions with stack and logs.'
+                : 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. '
+            await reportAndSetFailed(error, {
+                title: 'Create changelog failed',
+                hint,
+                locals: () => ({inputs: lastInputsForErrors}),
+                includeStackInSetFailed: true
+            })
+        }
+    })()
 }
 
 module.exports = {

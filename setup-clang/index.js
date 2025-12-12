@@ -9,6 +9,7 @@ const httpm = require('@actions/http-client')
 const setup_program = require('setup-program')
 const trace_commands = require('trace-commands')
 const gh_inputs = require('gh-inputs')
+const {reportAndSetFailed} = require('pretty-errors')
 const ubuntuVersionNames = require('./../setup-program/ubuntu-versions.json')
 
 function removeClangPrefix(version) {
@@ -369,45 +370,55 @@ async function main(version, paths, check_latest, update_environment) {
     return {output_path, cc, cxx, bindir, dir, version: release, version_major, version_minor, version_patch}
 }
 
+let lastInputsForErrors = undefined
+
 async function run() {
-    try {
-        const inputs = {
-            version: removeClangPrefix(gh_inputs.getInput('version', {defaultValue: '*'})),
-            path: gh_inputs.getArray('path', /[:;]/),
-            check_latest: gh_inputs.getBoolean('check-latest'),
-            update_environment: gh_inputs.getBoolean('update-environment'),
-            trace_commands: gh_inputs.getBoolean('trace-commands')
-        }
+    const inputs = {
+        version: removeClangPrefix(gh_inputs.getInput('version', {defaultValue: '*'})),
+        path: gh_inputs.getArray('path', /[:;]/),
+        check_latest: gh_inputs.getBoolean('check-latest'),
+        update_environment: gh_inputs.getBoolean('update-environment'),
+        trace_commands: gh_inputs.getBoolean('trace-commands')
+    }
 
-        if (inputs.trace_commands) {
-            trace_commands.set_trace_commands(true)
-        }
+    lastInputsForErrors = inputs
 
-        core.startGroup('📥 Action Inputs')
-        gh_inputs.printInputObject(inputs)
+    if (inputs.trace_commands) {
+        trace_commands.set_trace_commands(true)
+    }
+
+    core.startGroup('📥 Action Inputs')
+    gh_inputs.printInputObject(inputs)
+    core.endGroup()
+
+    const outputs = await main(
+        inputs.version, inputs.path, inputs.check_latest, inputs.update_environment)
+
+    // Parse Final program / Setup version / Outputs
+    if (outputs.output_path) {
+        core.startGroup('📤 Action Outputs')
+        gh_inputs.setOutputObject(outputs)
         core.endGroup()
-
-        const outputs = await main(
-            inputs.version, inputs.path, inputs.check_latest, inputs.update_environment)
-
-        // Parse Final program / Setup version / Outputs
-        if (outputs.output_path) {
-            core.startGroup('📤 Action Outputs')
-            gh_inputs.setOutputObject(outputs)
-            core.endGroup()
-        } else {
-            core.setFailed('Cannot setup Clang')
-        }
-    } catch (error) {
-        core.setFailed(error.message)
+    } else {
+        core.setFailed('Cannot setup Clang')
     }
 }
 
 if (require.main === module) {
-    run().catch((error) => {
-        console.error(error)
-        core.setFailed(error.message)
-    })
+    (async () => {
+        try {
+            await run()
+        } catch (error) {
+            const hint = lastInputsForErrors?.trace_commands
+                ? 'Trace commands already enabled; if this looks like a bug, please open an issue at github.com/alandefreitas/cpp-actions with stack and logs.'
+                : 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. '
+            await reportAndSetFailed(error, {
+                title: 'Setup Clang failed',
+                hint,
+                locals: () => ({inputs: lastInputsForErrors})
+            })
+        }
+    })()
 }
 
 module.exports = {

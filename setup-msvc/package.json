@@ -17,7 +17,8 @@
     "@actions/io": "^2.0.0",
     "gh-inputs": "file:../common/gh-inputs",
     "semver": "^7.7.3",
-    "trace-commands": "file:../common/trace-commands"
+    "trace-commands": "file:../common/trace-commands",
+    "pretty-errors": "file:../common/pretty-errors"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.38.4",

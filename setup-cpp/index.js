@@ -9,6 +9,7 @@ const setup_clang = require('setup-clang')
 const setup_msvc = require('setup-msvc')
 const trace_commands = require('trace-commands')
 const gh_inputs = require('gh-inputs')
+const {reportAndSetFailed} = require('pretty-errors')
 
 function normalizeCompiler(compiler, version) {
     let parts = compiler.split(/-|\s/)
@@ -76,31 +77,34 @@ function resolveMSVCArch(requestedArch, envArch) {
     return 'x64'
 }
 
+let lastInputsForErrors = undefined
+
 async function run() {
-    try {
-        const inputs = {
-            compiler: gh_inputs.getInput('compiler', {defaultValue: '*'}),
-            version: gh_inputs.getInput('version', {defaultValue: '*'}),
-            path: gh_inputs.getArray('path', /[:;]/),
-            check_latest: gh_inputs.getBoolean('check-latest'),
-            update_environment: gh_inputs.getBoolean('update-environment'),
-            trace_commands: gh_inputs.getBoolean('trace-commands'),
-            arch: gh_inputs.getInput('arch')
-        }
+    const inputs = {
+        compiler: gh_inputs.getInput('compiler', {defaultValue: '*'}),
+        version: gh_inputs.getInput('version', {defaultValue: '*'}),
+        path: gh_inputs.getArray('path', /[:;]/),
+        check_latest: gh_inputs.getBoolean('check-latest'),
+        update_environment: gh_inputs.getBoolean('update-environment'),
+        trace_commands: gh_inputs.getBoolean('trace-commands'),
+        arch: gh_inputs.getInput('arch')
+    }
 
-        if (inputs.trace_commands) {
-            trace_commands.set_trace_commands(true)
-        }
+    lastInputsForErrors = inputs
 
-        inputs.arch = normalizeMSVCArchToken(inputs.arch)
+    if (inputs.trace_commands) {
+        trace_commands.set_trace_commands(true)
+    }
 
-        const {compiler, version} = normalizeCompiler(inputs.compiler, inputs.version)
-        inputs.compiler = compiler
-        inputs.version = version
+    inputs.arch = normalizeMSVCArchToken(inputs.arch)
 
-        core.startGroup('📥 Action Inputs')
-        gh_inputs.printInputObject(inputs)
-        core.endGroup()
+    const {compiler, version} = normalizeCompiler(inputs.compiler, inputs.version)
+    inputs.compiler = compiler
+    inputs.version = version
+
+    core.startGroup('📥 Action Inputs')
+    gh_inputs.printInputObject(inputs)
+    core.endGroup()
 
 
         let output_path = null
@@ -237,33 +241,40 @@ async function run() {
         }
 
         // Parse Final program / Setup version / Outputs
-        if (output_path !== null && output_path !== undefined) {
-            const outputs = {
-                cc: cc,
-                cxx: cxx,
-                bindir: bindir,
-                dir: dir,
-                version: release,
-                version_major: version_major,
-                version_minor: version_minor,
-                version_patch: version_patch
-            }
-            core.startGroup('📤 Action Outputs')
-            gh_inputs.setOutputObject(outputs)
-            core.endGroup()
-        } else {
-            core.setFailed(`Cannot setup ${compiler}`)
+    if (output_path !== null && output_path !== undefined) {
+        const outputs = {
+            cc: cc,
+            cxx: cxx,
+            bindir: bindir,
+            dir: dir,
+            version: release,
+            version_major: version_major,
+            version_minor: version_minor,
+            version_patch: version_patch
         }
-    } catch
-        (error) {
-        core.setFailed(error.message)
+        core.startGroup('📤 Action Outputs')
+        gh_inputs.setOutputObject(outputs)
+        core.endGroup()
+    } else {
+        core.setFailed(`Cannot setup ${compiler}`)
     }
 }
 
 if (require.main === module) {
-    run().catch((error) => {
-        core.setFailed(error.message)
-    })
+    (async () => {
+        try {
+            await run()
+        } catch (error) {
+            const hint = lastInputsForErrors?.trace_commands
+                ? 'Trace commands already enabled; if this looks like a bug, please open an issue at github.com/alandefreitas/cpp-actions with stack and logs.'
+                : 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. '
+            await reportAndSetFailed(error, {
+                title: 'Setup C++ failed',
+                hint,
+                locals: () => ({inputs: lastInputsForErrors})
+            })
+        }
+    })()
 }
 
 module.exports = {

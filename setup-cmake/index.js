@@ -8,6 +8,7 @@ const setup_program = require('setup-program')
 const path = require('path')
 const trace_commands = require('trace-commands')
 const gh_inputs = require('gh-inputs')
+const {reportAndSetFailed} = require('pretty-errors')
 
 function updateCMakeVersionFromFile(cmake_file, version, allVersions) {
     function fnlog(msg) {
@@ -437,55 +438,66 @@ async function main(inputs, subgroups = true) {
     }
 }
 
+let lastInputsForErrors = undefined
+
 async function run() {
     function fnlog(msg) {
         trace_commands.log('setup-cmake: ' + msg)
     }
 
-    try {
-        const inputs = {
-            version: gh_inputs.getInput('version', {defaultValue: '*'}),
-            architecture: gh_inputs.getInput('architecture'),
-            cmake_file: gh_inputs.getInput('cmake-file'),
-            path: gh_inputs.getInput('path'),
-            cmake_path: gh_inputs.getInput('cmake-path'),
-            cache: gh_inputs.getBoolean('cache'),
-            check_latest: gh_inputs.getBoolean('check-latest'),
-            update_environment: gh_inputs.getBoolean('update-environment'),
-            trace_commands: gh_inputs.getBoolean('trace-commands')
-        }
+    const inputs = {
+        version: gh_inputs.getInput('version', {defaultValue: '*'}),
+        architecture: gh_inputs.getInput('architecture'),
+        cmake_file: gh_inputs.getInput('cmake-file'),
+        path: gh_inputs.getInput('path'),
+        cmake_path: gh_inputs.getInput('cmake-path'),
+        cache: gh_inputs.getBoolean('cache'),
+        check_latest: gh_inputs.getBoolean('check-latest'),
+        update_environment: gh_inputs.getBoolean('update-environment'),
+        trace_commands: gh_inputs.getBoolean('trace-commands')
+    }
 
-        if (inputs.cmake_path) {
-            inputs.path = inputs.cmake_path
-        }
+    lastInputsForErrors = inputs
 
-        if (inputs.trace_commands) {
-            trace_commands.set_trace_commands(true)
-        }
+    if (inputs.cmake_path) {
+        inputs.path = inputs.cmake_path
+    }
 
-        core.startGroup('📥 Action Inputs')
-        gh_inputs.printInputObject(inputs)
+    if (inputs.trace_commands) {
+        trace_commands.set_trace_commands(true)
+    }
+
+    core.startGroup('📥 Action Inputs')
+    gh_inputs.printInputObject(inputs)
+    core.endGroup()
+
+    const outputs = await main(inputs)
+    // Parse Final program / Setup version / Outputs
+    if (outputs['path']) {
+        core.startGroup('📤 Action Outputs')
+        gh_inputs.setOutputObject(outputs)
         core.endGroup()
-
-        const outputs = await main(inputs)
-        // Parse Final program / Setup version / Outputs
-        if (outputs['path']) {
-            core.startGroup('📤 Action Outputs')
-            gh_inputs.setOutputObject(outputs)
-            core.endGroup()
-        } else {
-            core.setFailed('Cannot setup CMake')
-        }
-    } catch (error) {
-        fnlog(error.stack)
-        core.setFailed(`${error.message}\n${error.stack}`)
+    } else {
+        core.setFailed('Cannot setup CMake')
     }
 }
 
 if (require.main === module) {
-    run().catch((error) => {
-        core.setFailed(`${error.message}\n${error.stack}`)
-    })
+    (async () => {
+        try {
+            await run()
+        } catch (error) {
+            const hint = lastInputsForErrors?.trace_commands
+                ? 'Trace commands already enabled; if this looks like a bug, please open an issue at github.com/alandefreitas/cpp-actions with stack and logs.'
+                : 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. '
+            await reportAndSetFailed(error, {
+                title: 'Setup CMake failed',
+                hint,
+                locals: () => ({inputs: lastInputsForErrors}),
+                includeStackInSetFailed: true
+            })
+        }
+    })()
 }
 
 module.exports = {
