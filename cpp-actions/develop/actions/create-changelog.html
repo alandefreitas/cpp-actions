@@ -453,7 +453,134 @@ perform a shallow clone and the Changelog will only include the latest commit.</
 </div>
 </div>
 <div class="sect1">
-<h2 id="_example"><a class="anchor" href="#_example"></a>Example</h2>
+<h2 id="_standalone_cli"><a class="anchor" href="#_standalone_cli"></a>Standalone CLI</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This action can also be used as a standalone command-line tool to generate changelogs locally,
+outside of GitHub Actions workflows. This is useful for:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Previewing changelog output before creating a release</p>
+</li>
+<li>
+<p>Generating changelogs for local development</p>
+</li>
+<li>
+<p>Integrating changelog generation into custom scripts</p>
+</li>
+</ul>
+</div>
+<div class="sect2">
+<h3 id="_installation"><a class="anchor" href="#_installation"></a>Installation</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Clone the repository
+git clone https://github.com/alandefreitas/cpp-actions.git
+cd cpp-actions/create-changelog
+
+# Install dependencies and build
+npm install
+npm run build</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_usage"><a class="anchor" href="#_usage"></a>Usage</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Run from the create-changelog directory
+npm run create-changelog -- --source_dir /path/to/your/repo
+
+# Or run the compiled script directly
+node lib/create-changelog.js --source_dir /path/to/your/repo</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_cli_options"><a class="anchor" href="#_cli_options"></a>CLI Options</h3>
+<div class="paragraph">
+<p>All action inputs are available as CLI options with underscores instead of hyphens:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Option</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>--source_dir &lt;path&gt;</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Source directory to analyze (default: current directory)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>--output_path &lt;path&gt;</code> or <code>-o &lt;path&gt;</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Output file path (default: CHANGELOG.md)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>--version_pattern &lt;regex&gt;</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Regex to identify version commits (default: <code>^v\d+\.\d+\.\d+$</code>)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>--tag_pattern &lt;regex&gt;</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Regex to identify release tags (default: <code>^v\d+\.\d+\.\d+$</code>)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>--limit &lt;number&gt;</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Maximum commits to process (default: 0 = unlimited)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>--thank_non_regular &lt;true|false&gt;</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Thank non-regular contributors (default: true)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>--check_unconventional &lt;true|false&gt;</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Warn about non-conventional commits (default: true)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>--link_commits &lt;true|false&gt;</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Include commit links (default: true)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>--github_token &lt;token&gt;</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">GitHub token for API access (default: $GITHUB_TOKEN)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>--update_summary &lt;true|false&gt;</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Update workflow summary (default: false, CLI only)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>--trace_commands &lt;true|false&gt;</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enable verbose logging (default: true)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_example"><a class="anchor" href="#_example"></a>Example</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Generate changelog for current directory
+node lib/create-changelog.js
+
+# Generate changelog with custom output path
+node lib/create-changelog.js -o RELEASE_NOTES.md
+
+# Generate changelog for a specific repository
+node lib/create-changelog.js --source_dir ~/projects/my-repo --limit 50</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_example_2"><a class="anchor" href="#_example_2"></a>Example</h2>
 <div class="sectionbody">
 <div class="listingblock">
 <div class="content">

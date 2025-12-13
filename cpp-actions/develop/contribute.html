@@ -412,10 +412,10 @@
 <p><strong>Understand the layout:</strong> Each GitHub Action lives in its own top-level directory (for example <code>setup-cmake/</code>, <code>cmake-workflow/</code>, or <code>cpp-matrix/</code>). Make your edits inside the action you are targeting so changes stay scoped.</p>
 </li>
 <li>
-<p><strong>Edit source files:</strong> Update code under the <code>&lt;action-name&gt;</code> directory and leave generated assets alone until you rebuild with the provided scripts (see below).</p>
+<p><strong>Edit source files:</strong> Update TypeScript code under <code>&lt;action-name&gt;/src/</code> and leave generated assets alone until you rebuild with the provided scripts (see below).</p>
 </li>
 <li>
-<p><strong>Run focused checks:</strong> Execute <code>npm run all --prefix &lt;action-name&gt;</code> to reinstall dependencies, rebuild the bundle, and run Jest for that action.</p>
+<p><strong>Run focused checks:</strong> Execute <code>npm run prepare -w &lt;action-name&gt;</code> to rebuild the bundle, then <code>npx jest --selectProjects &lt;action-name&gt;</code> to run tests for that action.</p>
 </li>
 <li>
 <p><strong>Validate the full suite:</strong> Finish by running <code>./build.sh</code> at the repository root to regenerate every action bundle and rerun all tests.</p>
@@ -428,11 +428,12 @@
 <div class="text-center imageblock"><div class="mermaid content" style="width: 100%; ">flowchart TD
   decide{Pick an action}
   scope[Work inside action directory]
-  edit[Update source files]
-  localTest["npm run all --prefix &lt;action-name&gt;"]
+  edit[Update TypeScript in src/]
+  localBuild["npm run prepare -w &lt;action-name&gt;"]
+  localTest["npx jest --selectProjects &lt;action-name&gt;"]
   repoTest["./build.sh"]
   commit["Commit source + &lt;action-name&gt;/dist"]
-  decide --> scope --> edit --> localTest --> repoTest --> commit</div></div>
+  decide --> scope --> edit --> localBuild --> localTest --> repoTest --> commit</div></div>
 </div>
 </div>
 <div class="sect1">
@@ -455,13 +456,43 @@
 <div class="sectionbody">
 <div class="paragraph">
 <p>Contributing to the repository is relatively easy.
-All actions are vanilla JavaScript.
-The only caveat — especially for C++ programmers unfamiliar with the JavaScript ecosystem — is that the JavaScript code needs to be compiled, and the compiled output must be committed to the repository.
-This is a requirement of how GitHub Actions work.
-A <code>build.sh</code> script in the root directory iterates all actions, builds them, and runs the tests.</p>
+All actions are written in TypeScript, which compiles to JavaScript and is then bundled into a single file using <a href="https://github.com/vercel/ncc">ncc</a>.
+The only caveat — especially for C++ programmers unfamiliar with the JavaScript ecosystem — is that the compiled output must be committed to the repository.
+This is a requirement of how GitHub Actions work.</p>
 </div>
 <div class="paragraph">
-<p>So far, we’ve accepted nearly all contributions — except those that break composability or introduce hard-coded values tied to a specific library.</p>
+<p>The repository uses <a href="https://docs.npmjs.com/cli/v10/using-npm/workspaces">npm workspaces</a> to manage dependencies across all packages.
+A single <code>npm install</code> at the root installs dependencies for all actions.
+The <code>build.sh</code> script in the root directory iterates all actions, builds them, and runs the tests.</p>
+</div>
+<div class="paragraph">
+<p>So far, we&#8217;ve accepted nearly all contributions — except those that break composability or introduce hard-coded values tied to a specific library.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_project_structure"><a class="anchor" href="#_project_structure"></a>Project Structure</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-asciidoc hljs" data-lang="asciidoc">cpp-actions/
+├── package.json           # Root workspace config
+├── jest.config.js         # Centralized test config
+├── tsconfig.base.json     # Shared TypeScript settings
+├── build.sh               # Build all actions
+├── setup-cmake/           # Example action
+│   ├── action.yml         # Action metadata
+│   ├── src/
+│   │   ├── index.ts       # Main source
+│   │   └── index.test.ts  # Tests
+│   ├── lib/               # Compiled JS (gitignored)
+│   └── dist/              # Bundled output (committed)
+├── common/                # Shared libraries
+│   ├── gh-inputs/         # Input parsing utilities
+│   ├── pretty-errors/     # Error formatting
+│   └── trace-commands/    # Debug logging
+└── docs/                  # Documentation site</code></pre>
+</div>
 </div>
 </div>
 </div>
@@ -474,7 +505,7 @@ The ci.yml workflow exercises all actions with all supported features, using a t
 So, we spend little time testing the actions here instead of finding bugs while trying to use the actions for other real libraries that are much more expensive to test.</p>
 </div>
 <div class="paragraph">
-<p>Each action also has an <code>index.test.js</code> where we can test the internal logic of more complex functions.
+<p>Each action also has an <code>index.test.ts</code> where we can test the internal logic of more complex functions.
 It&#8217;s impossible to replicate the environment perfectly in these tests, so the ultimate test is always CI.</p>
 </div>
 <div class="paragraph">
