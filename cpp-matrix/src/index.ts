@@ -891,7 +891,7 @@ function applyForcedFactors(entry: MatrixEntry, suggestionMap: CompilerSuggestio
     return false;
 }
 
-function setCompilerContainer(entry: MatrixEntry, inputs: Inputs, compilerName: string, minSubrangeVersion: semver.SemVer, subrange: string): void {
+function setCompilerContainer(entry: MatrixEntry, inputs: Inputs, compilerName: string, minSubrangeVersion: semver.SemVer, _subrange: string): void {
     // runs-on / container
     if (compilerName === 'gcc') {
         if (semver.satisfies(minSubrangeVersion, '>=15')) {
@@ -954,9 +954,8 @@ function setCompilerContainer(entry: MatrixEntry, inputs: Inputs, compilerName: 
         if (semver.satisfies(minSubrangeVersion, '>=14.42')) {
             entry['runs-on'] = 'windows-2025';
         } else {
-            if (semver.valid(minSubrangeVersion) && semver.satisfies(minSubrangeVersion, '<14.30')) {
-                core.warning(`Combination "${subrange}" requires an MSVC toolset older than 14.30. windows-2019 runners were retired on 2025-06-30, so this job will run on windows-2022 where older toolsets may be unavailable.`);
-            }
+            // v142 (14.29) toolset is available on windows-2022 via
+            // Microsoft.VisualStudio.ComponentGroup.VC.Tools.142.x86.x64
             entry['runs-on'] = 'windows-2022';
         }
     } else if (compilerName === 'apple-clang') {
