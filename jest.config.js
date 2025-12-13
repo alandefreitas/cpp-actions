@@ -56,7 +56,7 @@ const actionProjects = actionPackages.map(pkg => ({
     roots: ['<rootDir>/src'],
     transform: {
         '^.+\\.tsx?$': ['ts-jest', {
-            tsconfig: '<rootDir>/.config/tsconfig.json'
+            tsconfig: path.join(rootDir, 'tsconfig.test.json')
         }]
     },
     moduleNameMapper: commonModuleMapper
@@ -70,7 +70,7 @@ const commonProjects = commonPackages.map(pkg => ({
     roots: ['<rootDir>/src'],
     transform: {
         '^.+\\.tsx?$': ['ts-jest', {
-            tsconfig: '<rootDir>/.config/tsconfig.json'
+            tsconfig: path.join(rootDir, 'tsconfig.test.json')
         }]
     }
 }));
