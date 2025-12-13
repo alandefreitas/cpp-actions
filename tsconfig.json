@@ -1,0 +1,21 @@
+{
+  "files": [],
+  "references": [
+    { "path": "common/gh-inputs/.config" },
+    { "path": "common/pretty-errors/.config" },
+    { "path": "common/trace-commands/.config" },
+    { "path": "b2-workflow/.config" },
+    { "path": "boost-clone/.config" },
+    { "path": "cmake-workflow/.config" },
+    { "path": "cpp-matrix/.config" },
+    { "path": "create-changelog/.config" },
+    { "path": "flamegraph/.config" },
+    { "path": "package-install/.config" },
+    { "path": "setup-clang/.config" },
+    { "path": "setup-cmake/.config" },
+    { "path": "setup-cpp/.config" },
+    { "path": "setup-gcc/.config" },
+    { "path": "setup-msvc/.config" },
+    { "path": "setup-program/.config" }
+  ]
+}

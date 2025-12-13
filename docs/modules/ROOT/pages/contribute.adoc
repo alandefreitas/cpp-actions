@@ -7,8 +7,8 @@ If there's a platform where one of the actions does not work, feel free to submi
 * **Ground yourself in the design rationale:** Remember that every action stays independent and overrideable—nothing is hard-coded for a single project, and contributors are expected to compose the pieces that fit their workflows rather than baking in assumptions.
 * **Review the action metadata:** Read `<action-name>/action.yml` before changing behavior so your updates match the documented inputs and outputs.
 * **Understand the layout:** Each GitHub Action lives in its own top-level directory (for example `setup-cmake/`, `cmake-workflow/`, or `cpp-matrix/`). Make your edits inside the action you are targeting so changes stay scoped.
-* **Edit source files:** Update code under the `<action-name>` directory and leave generated assets alone until you rebuild with the provided scripts (see below).
-* **Run focused checks:** Execute `npm run all --prefix <action-name>` to reinstall dependencies, rebuild the bundle, and run Jest for that action.
+* **Edit source files:** Update TypeScript code under `<action-name>/src/` and leave generated assets alone until you rebuild with the provided scripts (see below).
+* **Run focused checks:** Execute `npm run prepare -w <action-name>` to rebuild the bundle, then `npx jest --selectProjects <action-name>` to run tests for that action.
 * **Validate the full suite:** Finish by running `./build.sh` at the repository root to regenerate every action bundle and rerun all tests.
 * **Commit regenerated artifacts:** Include the refreshed `<action-name>/dist` output in the same commit as your source changes so the published action matches the repository.
 
@@ -18,11 +18,12 @@ If there's a platform where one of the actions does not work, feel free to submi
 flowchart TD
   decide{Pick an action}
   scope[Work inside action directory]
-  edit[Update source files]
-  localTest["npm run all --prefix &lt;action-name&gt;"]
+  edit[Update TypeScript in src/]
+  localBuild["npm run prepare -w &lt;action-name&gt;"]
+  localTest["npx jest --selectProjects &lt;action-name&gt;"]
   repoTest["./build.sh"]
   commit["Commit source + &lt;action-name&gt;/dist"]
-  decide --> scope --> edit --> localTest --> repoTest --> commit
+  decide --> scope --> edit --> localBuild --> localTest --> repoTest --> commit
 ....
 
 == Maintain Documentation
@@ -33,12 +34,38 @@ flowchart TD
 == Understand the Build Workflow
 
 Contributing to the repository is relatively easy.
-All actions are vanilla JavaScript.
-The only caveat — especially for C++ programmers unfamiliar with the JavaScript ecosystem — is that the JavaScript code needs to be compiled, and the compiled output must be committed to the repository.
+All actions are written in TypeScript, which compiles to JavaScript and is then bundled into a single file using https://github.com/vercel/ncc[ncc].
+The only caveat — especially for C++ programmers unfamiliar with the JavaScript ecosystem — is that the compiled output must be committed to the repository.
 This is a requirement of how GitHub Actions work.
-A `build.sh` script in the root directory iterates all actions, builds them, and runs the tests.
 
-So far, we’ve accepted nearly all contributions — except those that break composability or introduce hard-coded values tied to a specific library.
+The repository uses https://docs.npmjs.com/cli/v10/using-npm/workspaces[npm workspaces] to manage dependencies across all packages.
+A single `npm install` at the root installs dependencies for all actions.
+The `build.sh` script in the root directory iterates all actions, builds them, and runs the tests.
+
+So far, we've accepted nearly all contributions — except those that break composability or introduce hard-coded values tied to a specific library.
+
+== Project Structure
+
+[source]
+----
+cpp-actions/
+├── package.json           # Root workspace config
+├── jest.config.js         # Centralized test config
+├── tsconfig.base.json     # Shared TypeScript settings
+├── build.sh               # Build all actions
+├── setup-cmake/           # Example action
+│   ├── action.yml         # Action metadata
+│   ├── src/
+│   │   ├── index.ts       # Main source
+│   │   └── index.test.ts  # Tests
+│   ├── lib/               # Compiled JS (gitignored)
+│   └── dist/              # Bundled output (committed)
+├── common/                # Shared libraries
+│   ├── gh-inputs/         # Input parsing utilities
+│   ├── pretty-errors/     # Error formatting
+│   └── trace-commands/    # Debug logging
+└── docs/                  # Documentation site
+----
 
 == Verify in CI
 
@@ -46,7 +73,7 @@ The ultimate test is whether it works in CI.
 The ci.yml workflow exercises all actions with all supported features, using a toy project that's quick and inexpensive to compile.
 So, we spend little time testing the actions here instead of finding bugs while trying to use the actions for other real libraries that are much more expensive to test.
 
-Each action also has an `index.test.js` where we can test the internal logic of more complex functions.
+Each action also has an `index.test.ts` where we can test the internal logic of more complex functions.
 It's impossible to replicate the environment perfectly in these tests, so the ultimate test is always CI.
 
 As a result, it's common to test the entire repository by pushing changes to a branch and observing the results in CI.

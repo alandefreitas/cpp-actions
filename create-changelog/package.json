@@ -1,12 +1,17 @@
 {
-  "name": "b2-workflow",
+  "name": "create-changelog",
   "version": "1.9.0",
   "description": "",
-  "main": "index.js",
+  "main": "lib/index.js",
+  "bin": {
+    "create-changelog": "lib/create-changelog.js"
+  },
   "scripts": {
-    "prepare": "ncc build index.js -o dist --source-map --license licenses.txt --minify",
-    "create-changelog": "node create-changelog.js",
-    "test": "jest",
+    "build": "tsc -p .config/tsconfig.json",
+    "prepare": "npm run build && ncc build lib/index.js -o dist --source-map --license licenses.txt --minify",
+    "create-changelog": "node lib/create-changelog.js",
+    "typecheck": "tsc -p .config/tsconfig.json --noEmit",
+    "test": "jest --config ../jest.config.js --selectProjects create-changelog",
     "all": "npm run prepare && npm run test"
   },
   "keywords": [],
@@ -16,12 +21,8 @@
     "@actions/core": "^1.11.1",
     "@actions/exec": "^1.1.1",
     "axios": "^1.13.1",
-    "trace-commands": "file:../common/trace-commands",
-    "gh-inputs": "file:../common/gh-inputs",
-    "pretty-errors": "file:../common/pretty-errors"
-  },
-  "devDependencies": {
-    "@vercel/ncc": "^0.38.4",
-    "jest": "^30.2.0"
+    "trace-commands": "*",
+    "gh-inputs": "*",
+    "pretty-errors": "*"
   }
 }

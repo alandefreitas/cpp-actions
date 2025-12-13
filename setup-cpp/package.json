@@ -2,10 +2,12 @@
   "name": "setup-cpp",
   "version": "1.9.0",
   "description": "",
-  "main": "index.js",
+  "main": "lib/index.js",
   "scripts": {
-    "prepare": "ncc build index.js -o dist --source-map --license licenses.txt --minify",
-    "test": "jest",
+    "build": "tsc -p .config/tsconfig.json",
+    "prepare": "npm run build && ncc build lib/index.js -o dist --source-map --license licenses.txt --minify",
+    "typecheck": "tsc -p .config/tsconfig.json --noEmit",
+    "test": "jest --config ../jest.config.js --selectProjects setup-cpp",
     "all": "npm run prepare && npm run test"
   },
   "keywords": [],
@@ -16,15 +18,14 @@
     "@actions/exec": "^1.1.1",
     "@actions/io": "^2.0.0",
     "semver": "^7.7.3",
-    "setup-gcc": "file:../setup-gcc",
-    "setup-clang": "file:../setup-clang",
-    "setup-msvc": "file:../setup-msvc",
-    "trace-commands": "file:../common/trace-commands",
-    "gh-inputs": "file:../common/gh-inputs",
-    "pretty-errors": "file:../common/pretty-errors"
+    "setup-gcc": "*",
+    "setup-clang": "*",
+    "setup-msvc": "*",
+    "trace-commands": "*",
+    "gh-inputs": "*",
+    "pretty-errors": "*"
   },
   "devDependencies": {
-    "@vercel/ncc": "^0.38.4",
-    "jest": "^30.2.0"
+    "@types/semver": "^7.5.0"
   }
 }

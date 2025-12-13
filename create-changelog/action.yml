@@ -49,6 +49,95 @@ description: |
   
   This parameter can also be used as a limit on the number of commits the action should consider.
 
+  == Standalone CLI
+
+  This action can also be used as a standalone command-line tool to generate changelogs locally,
+  outside of GitHub Actions workflows. This is useful for:
+
+  * Previewing changelog output before creating a release
+  * Generating changelogs for local development
+  * Integrating changelog generation into custom scripts
+
+  === Installation
+
+  [source,bash]
+  ----
+  # Clone the repository
+  git clone https://github.com/alandefreitas/cpp-actions.git
+  cd cpp-actions/create-changelog
+
+  # Install dependencies and build
+  npm install
+  npm run build
+  ----
+
+  === Usage
+
+  [source,bash]
+  ----
+  # Run from the create-changelog directory
+  npm run create-changelog -- --source_dir /path/to/your/repo
+
+  # Or run the compiled script directly
+  node lib/create-changelog.js --source_dir /path/to/your/repo
+  ----
+
+  === CLI Options
+
+  All action inputs are available as CLI options with underscores instead of hyphens:
+
+  [cols="1,3"]
+  |===
+  | Option | Description
+
+  | `--source_dir <path>`
+  | Source directory to analyze (default: current directory)
+
+  | `--output_path <path>` or `-o <path>`
+  | Output file path (default: CHANGELOG.md)
+
+  | `--version_pattern <regex>`
+  | Regex to identify version commits (default: `^v\d+\.\d+\.\d+$`)
+
+  | `--tag_pattern <regex>`
+  | Regex to identify release tags (default: `^v\d+\.\d+\.\d+$`)
+
+  | `--limit <number>`
+  | Maximum commits to process (default: 0 = unlimited)
+
+  | `--thank_non_regular <true\|false>`
+  | Thank non-regular contributors (default: true)
+
+  | `--check_unconventional <true\|false>`
+  | Warn about non-conventional commits (default: true)
+
+  | `--link_commits <true\|false>`
+  | Include commit links (default: true)
+
+  | `--github_token <token>`
+  | GitHub token for API access (default: $GITHUB_TOKEN)
+
+  | `--update_summary <true\|false>`
+  | Update workflow summary (default: false, CLI only)
+
+  | `--trace_commands <true\|false>`
+  | Enable verbose logging (default: true)
+  |===
+
+  === Example
+
+  [source,bash]
+  ----
+  # Generate changelog for current directory
+  node lib/create-changelog.js
+
+  # Generate changelog with custom output path
+  node lib/create-changelog.js -o RELEASE_NOTES.md
+
+  # Generate changelog for a specific repository
+  node lib/create-changelog.js --source_dir ~/projects/my-repo --limit 50
+  ----
+
 inputs:
   source-dir:
     description: |

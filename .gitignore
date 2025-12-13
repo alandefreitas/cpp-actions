@@ -21,6 +21,10 @@ docs/build
 docs/generated-files
 docs/.pydeps
 node_modules/
+
+# TypeScript compiled output (intermediate, not bundled)
+lib/
+*.tsbuildinfo
 var/cache/
 cpp-matrix/var/cache/
 
@@ -89,5 +93,7 @@ common/gh-inputs/dist
 # Local agent notes
 AGENTS.md
 */AGENTS.md
+CLAUDE.md
+*/CLAUDE.md
 /.issues
 /.code

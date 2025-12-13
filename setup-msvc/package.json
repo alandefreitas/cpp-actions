@@ -2,10 +2,12 @@
   "name": "setup-msvc",
   "version": "1.9.0",
   "description": "",
-  "main": "index.js",
+  "main": "lib/index.js",
   "scripts": {
-    "prepare": "ncc build index.js -o dist --source-map --license licenses.txt --minify",
-    "test": "jest",
+    "build": "tsc -p .config/tsconfig.json",
+    "prepare": "npm run build && ncc build lib/index.js -o dist --source-map --license licenses.txt --minify",
+    "test": "jest --config ../jest.config.js --selectProjects setup-msvc",
+    "typecheck": "tsc -p .config/tsconfig.json --noEmit",
     "all": "npm run prepare && npm run test"
   },
   "keywords": [],
@@ -15,13 +17,12 @@
     "@actions/core": "^1.11.1",
     "@actions/exec": "^1.1.1",
     "@actions/io": "^2.0.0",
-    "gh-inputs": "file:../common/gh-inputs",
+    "gh-inputs": "*",
     "semver": "^7.7.3",
-    "trace-commands": "file:../common/trace-commands",
-    "pretty-errors": "file:../common/pretty-errors"
+    "trace-commands": "*",
+    "pretty-errors": "*"
   },
   "devDependencies": {
-    "@vercel/ncc": "^0.38.4",
-    "jest": "^30.2.0"
+    "@types/semver": "^7.5.8"
   }
 }

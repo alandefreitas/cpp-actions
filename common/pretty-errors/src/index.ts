@@ -1,0 +1,173 @@
+import * as core from '@actions/core';
+import * as fs from 'fs';
+import { fileURLToPath } from 'url';
+import type {
+    ErrorReportOptions,
+    SourceContext,
+    YouchFrame,
+    YouchPayload,
+    StackTraceyFrame,
+    StackTraceyInstance,
+    ExtendedError
+} from './types';
+
+export type { ErrorReportOptions, SourceContext, YouchFrame, YouchPayload };
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const youchTerminal = require('youch-terminal');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const StackTracey = require('stacktracey');
+
+function isNodeFrame(frame: StackTraceyFrame): boolean {
+    if (frame.native) return true;
+    const filename = frame.file || '';
+    if (filename.startsWith('node:')) return true;
+    return false;
+}
+
+interface ReadContextOptions {
+    pre?: number;
+    post?: number;
+}
+
+function readContext(
+    frame: StackTraceyFrame,
+    options: ReadContextOptions = {}
+): Promise<SourceContext | null> {
+    const { pre = 5, post = 5 } = options;
+
+    return new Promise((resolve) => {
+        let filePath = frame.file;
+        if (!filePath) return resolve(null);
+
+        try {
+            filePath = filePath.startsWith('file:') ? fileURLToPath(filePath) : filePath;
+        } catch {
+            // keep original path if URL conversion fails
+        }
+
+        fs.readFile(filePath, 'utf-8', (err, contents) => {
+            if (err) return resolve(null);
+            const lines = contents.split(/\r?\n/);
+            const lineNumber = frame.line;
+            resolve({
+                pre: lines.slice(Math.max(0, lineNumber - (pre + 1)), lineNumber - 1),
+                line: lines[lineNumber - 1] || '',
+                post: lines.slice(lineNumber, lineNumber + post)
+            });
+        });
+    });
+}
+
+async function buildYouchLikePayload(error: ExtendedError | null | undefined): Promise<YouchPayload> {
+    const stack: StackTraceyInstance = new StackTracey(error?.stack || '');
+    const frames: YouchFrame[] = await Promise.all(
+        stack.items
+            .filter((frame: StackTraceyFrame) => frame.file)
+            .map(async (frame: StackTraceyFrame): Promise<YouchFrame> => {
+                const context = await readContext(frame);
+                let filePath = frame.file || '';
+                try {
+                    if (filePath.startsWith('file:')) {
+                        filePath = fileURLToPath(filePath).replaceAll('\\', '/');
+                    }
+                } catch {
+                    // keep original path
+                }
+                return {
+                    file: frame.fileRelative || frame.file || '',
+                    filePath,
+                    line: frame.line,
+                    column: frame.column,
+                    callee: frame.callee || frame.calleeShort || 'anonymous',
+                    calleeShort: frame.calleeShort || frame.callee || 'anonymous',
+                    context: context || { pre: [], line: '', post: [] },
+                    isModule: !!frame.thirdParty,
+                    isNative: !!frame.native,
+                    isApp: !isNodeFrame(frame)
+                };
+            })
+    );
+
+    return {
+        error: {
+            message: error?.message,
+            name: error?.name,
+            status: error?.status,
+            frames
+        }
+    };
+}
+
+async function renderTerminal(error: ExtendedError | null | undefined): Promise<string> {
+    if (!error) {
+        return '<no error>';
+    }
+
+    try {
+        const payload = await buildYouchLikePayload(error);
+        return youchTerminal(payload) as string;
+    } catch (renderErr) {
+        const fallbackStack = error.stack || String(error);
+        const message = renderErr instanceof Error ? renderErr.message : String(renderErr);
+        return `Pretty renderer failed: ${message}\n${fallbackStack}`;
+    }
+}
+
+/**
+ * Render a human-friendly, source-aware stack and fail the action once.
+ * This implementation is self-contained and avoids external templates/files.
+ */
+export async function reportAndSetFailed(
+    error: Error | ExtendedError,
+    options: ErrorReportOptions = {}
+): Promise<void> {
+    const {
+        title = 'Action failed',
+        hint: providedHint,
+        locals,
+        includeStackInSetFailed = false
+    } = options;
+
+    const defaultHint = 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true or ACTIONS_STEP_DEBUG=true) for more logs. If this keeps happening, please open an issue at github.com/alandefreitas/cpp-actions.';
+    const hint = providedHint === undefined ? defaultHint : providedHint;
+
+    const rendered = await renderTerminal(error);
+
+    let localsBlock = '';
+    const resolvedLocals = typeof locals === 'function' ? locals() : locals;
+    if (resolvedLocals) {
+        try {
+            localsBlock = `\nLocals: ${JSON.stringify(resolvedLocals, null, 2)}`;
+        } catch (jsonErr) {
+            const message = jsonErr instanceof Error ? jsonErr.message : String(jsonErr);
+            localsBlock = `\nLocals: <unserializable: ${message}>`;
+        }
+    }
+
+    const hintBlock = hint ? `\n${hint}` : '';
+    const message = `${title}: ${error.message}\n${rendered}${localsBlock}${hintBlock}`;
+    core.error(message);
+
+    if (includeStackInSetFailed) {
+        core.setFailed(`${error.message}\n${error.stack}`);
+    } else {
+        core.setFailed(error.message);
+    }
+}
+
+/**
+ * withPrettyErrors is retained for backward compatibility but simply
+ * delegates; actions should prefer direct try/catch with reportAndSetFailed.
+ */
+export async function withPrettyErrors<T>(
+    fn: () => Promise<T>,
+    options: ErrorReportOptions = {}
+): Promise<T | undefined> {
+    try {
+        return await fn();
+    } catch (error) {
+        await reportAndSetFailed(error as Error, options);
+        return undefined;
+    }
+}

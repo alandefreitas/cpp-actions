@@ -1,0 +1,37 @@
+{
+  "name": "cpp-actions-monorepo",
+  "private": true,
+  "description": "GitHub Actions for C++ projects",
+  "workspaces": [
+    "common/gh-inputs",
+    "common/pretty-errors",
+    "common/trace-commands",
+    "b2-workflow",
+    "boost-clone",
+    "cmake-workflow",
+    "cpp-matrix",
+    "create-changelog",
+    "flamegraph",
+    "package-install",
+    "setup-clang",
+    "setup-cmake",
+    "setup-cpp",
+    "setup-gcc",
+    "setup-msvc",
+    "setup-program"
+  ],
+  "scripts": {
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "build": "npm run build --workspaces --if-present",
+    "prepare": "npm run prepare --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "@vercel/ncc": "^0.38.4",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.0",
+    "typescript": "^5.6.0"
+  }
+}

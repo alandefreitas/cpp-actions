@@ -1,11 +1,12 @@
 {
-  "name": "setup-clang",
+  "name": "flamegraph",
   "version": "1.9.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "prepare": "ncc build index.js -o dist --source-map --license licenses.txt --minify",
-    "test": "jest",
+    "build": "tsc -p .config/tsconfig.json",
+    "prepare": "npm run build && ncc build lib/index.js -o dist --source-map --license licenses.txt --minify",
+    "test": "jest --config ../jest.config.js --selectProjects flamegraph",
     "all": "npm run prepare && npm run test"
   },
   "keywords": [],
@@ -14,12 +15,8 @@
   "dependencies": {
     "@actions/artifact": "^4.0.0",
     "@actions/core": "^1.11.1",
-    "gh-inputs": "file:../common/gh-inputs",
-    "trace-commands": "file:../common/trace-commands",
-    "pretty-errors": "file:../common/pretty-errors"
-  },
-  "devDependencies": {
-    "@vercel/ncc": "^0.38.4",
-    "jest": "^30.2.0"
+    "gh-inputs": "*",
+    "trace-commands": "*",
+    "pretty-errors": "*"
   }
 }

@@ -1,11 +1,14 @@
 {
   "name": "gh-inputs",
   "version": "1.9.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Enhanced GitHub Actions input handling utilities",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "scripts": {
-    "prepare": "ncc build index.js -o dist --source-map --license licenses.txt --minify",
-    "test": "jest",
+    "build": "tsc -p .config/tsconfig.json",
+    "prepare": "npm run build && ncc build lib/index.js -o dist --source-map --license licenses.txt --minify",
+    "typecheck": "tsc -p .config/tsconfig.json --noEmit",
+    "test": "jest --config ../../jest.config.js --selectProjects gh-inputs",
     "all": "npm run prepare && npm run test"
   },
   "keywords": [],
@@ -13,9 +16,5 @@
   "license": "Boost Software License 1.0",
   "dependencies": {
     "@actions/core": "^1.11.1"
-  },
-  "devDependencies": {
-    "@vercel/ncc": "^0.38.4",
-    "jest": "^30.2.0"
   }
 }

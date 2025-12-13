@@ -2,10 +2,13 @@
   "name": "pretty-errors",
   "version": "1.0.0",
   "description": "Small helper to render source-mapped, Youch-formatted errors for GitHub Actions",
-  "main": "index.js",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "scripts": {
-    "prepare": "ncc build index.js -o dist --source-map --license licenses.txt --minify",
-    "test": "jest",
+    "build": "tsc -p .config/tsconfig.json",
+    "prepare": "npm run build && ncc build lib/index.js -o dist --source-map --license licenses.txt --minify",
+    "typecheck": "tsc -p .config/tsconfig.json --noEmit",
+    "test": "jest --config ../../jest.config.js --selectProjects pretty-errors",
     "all": "npm run prepare && npm run test"
   },
   "keywords": [],
@@ -15,9 +18,5 @@
     "@actions/core": "^1.11.1",
     "stacktracey": "^2.1.8",
     "youch-terminal": "^2.2.3"
-  },
-  "devDependencies": {
-    "@vercel/ncc": "^0.38.4",
-    "jest": "^30.2.0"
   }
 }

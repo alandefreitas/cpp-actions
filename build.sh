@@ -1,5 +1,7 @@
 #!/bin/bash
-# Description: Build all the javascript projects in the repository
+# Description: Build all JavaScript/TypeScript projects in the repository
+# TypeScript projects: tsc compiles to JS first, then ncc bundles to dist/
+# Uses npm workspaces for dependency management
 source "$(dirname "$0")/build-utils.sh"
 
 # Fetch default tags for tools whose versions the scripts need to know
@@ -14,21 +16,14 @@ prepare_results=()
 test_results=()
 doc_results=()
 
-run_install_and_prepare() {
+run_prepare() {
     local project="$1"
     local project_name="${project%/}"
 
-    echo "==== Installing dependencies for $project_name ===="
-    if ! npm install --prefix "$project_name"; then
-        echo "npm install failed for $project_name" >&2
-        echo "Re-run locally: npm install --prefix \"$project_name\"" >&2
-        return 10
-    fi
-
     echo "==== Building (npm run prepare) for $project_name ===="
-    if ! npm run prepare --prefix "$project_name"; then
+    if ! npm run prepare -w "$project_name"; then
         echo "npm run prepare failed for $project_name" >&2
-        echo "Re-run locally: npm install --prefix \"$project_name\" && npm run prepare --prefix \"$project_name\"" >&2
+        echo "Re-run locally: npm run prepare -w \"$project_name\"" >&2
         return 20
     fi
 
@@ -38,11 +33,18 @@ run_install_and_prepare() {
 run_tests() {
     local project="$1"
     local project_name="${project%/}"
+    local display_name
+    # Extract display name (last component of path for common modules)
+    if [[ "$project_name" == common/* ]]; then
+        display_name="${project_name##*/}"
+    else
+        display_name="$project_name"
+    fi
 
-    echo "==== Testing (npm test) for $project_name ===="
-    if ! npm test --prefix "$project_name"; then
-        echo "npm test failed for $project_name" >&2
-        echo "Re-run locally: npm install --prefix \"$project_name\" && npm test --prefix \"$project_name\"" >&2
+    echo "==== Testing (jest --selectProjects) for $project_name ===="
+    if ! npx jest --selectProjects "$display_name"; then
+        echo "jest failed for $project_name" >&2
+        echo "Re-run locally: npx jest --selectProjects \"$display_name\"" >&2
         return 30
     fi
 
@@ -54,11 +56,8 @@ format_prepare_failure() {
     local status_code="$2"
 
     case "$status_code" in
-        10)
-            echo "❌ $project_name: npm install failed (rerun: npm install --prefix \"$project_name\")"
-            ;;
         20)
-            echo "❌ $project_name: build failed (rerun: npm install --prefix \"$project_name\" && npm run prepare --prefix \"$project_name\")"
+            echo "❌ $project_name: build failed (rerun: npm run prepare -w \"$project_name\")"
             ;;
         *)
             echo "❌ $project_name: unknown prepare failure (status $status_code)"
@@ -69,10 +68,16 @@ format_prepare_failure() {
 format_test_failure() {
     local project_name="$1"
     local status_code="$2"
+    local display_name
+    if [[ "$project_name" == common/* ]]; then
+        display_name="${project_name##*/}"
+    else
+        display_name="$project_name"
+    fi
 
     case "$status_code" in
         30)
-            echo "❌ $project_name: tests failed (rerun: npm install --prefix \"$project_name\" && npm test --prefix \"$project_name\")"
+            echo "❌ $project_name: tests failed (rerun: npx jest --selectProjects \"$display_name\")"
             ;;
         *)
             echo "❌ $project_name: unknown test failure (status $status_code)"
@@ -103,6 +108,7 @@ print_summary() {
     fi
 }
 
+# Find projects in root directory
 for dir in */; do
     # Ignore the docs directory
     if [ "$dir" == "docs/" ]; then
@@ -116,6 +122,13 @@ for dir in */; do
     fi
 done
 
+# Find shared library projects in common/ directory
+for dir in common/*/; do
+    if [ -f "$dir/package.json" ]; then
+        projects_with_package+=("${dir%/}")
+    fi
+done
+
 project_to_build=${1%/}
 
 if [ -n "$project_to_build" ]; then
@@ -125,7 +138,7 @@ if [ -n "$project_to_build" ]; then
         if [[ $project == "$project_to_build" ]]; then
             project_found=true
             echo "==== Building $project_to_build (prepare stage) ===="
-            if ! run_install_and_prepare "$project_to_build"; then
+            if ! run_prepare "$project_to_build"; then
                 status_code=$?
                 format_prepare_failure "$project_to_build" "$status_code" >&2
                 exit 1
@@ -150,14 +163,20 @@ else
         echo "$project"
     done
 
-    echo "Javascript projects:"
+    echo "==== Installing dependencies (npm workspaces) ===="
+    if ! npm install; then
+        echo "npm install failed" >&2
+        exit 1
+    fi
+
+    echo "JavaScript/TypeScript projects:"
     pids=()
     project_names=()
     prepare_failed=0
     for project in "${projects_with_package[@]}"; do
         (
           echo "==== Building $project (prepare stage) ===="
-          run_install_and_prepare "$project"
+          run_prepare "$project"
           exit $?
         ) &
         pids+=($!)

@@ -1,11 +1,13 @@
 {
-  "name": "b2-workflow",
+  "name": "package-install",
   "version": "1.9.0",
   "description": "",
-  "main": "index.js",
+  "main": "lib/index.js",
   "scripts": {
-    "prepare": "ncc build index.js -o dist --source-map --license licenses.txt --minify",
-    "test": "jest",
+    "build": "tsc -p .config/tsconfig.json",
+    "prepare": "npm run build && ncc build lib/index.js -o dist --source-map --license licenses.txt --minify",
+    "typecheck": "tsc -p .config/tsconfig.json --noEmit",
+    "test": "jest --config ../jest.config.js --selectProjects package-install",
     "all": "npm run prepare && npm run test"
   },
   "keywords": [],
@@ -18,13 +20,12 @@
     "@actions/io": "^2.0.0",
     "@actions/tool-cache": "^2.0.2",
     "semver": "^7.7.3",
-    "trace-commands": "file:../common/trace-commands",
-    "gh-inputs": "file:../common/gh-inputs",
-    "setup-program": "file:../setup-program",
-    "pretty-errors": "file:../common/pretty-errors"
+    "trace-commands": "*",
+    "gh-inputs": "*",
+    "setup-program": "*",
+    "pretty-errors": "*"
   },
   "devDependencies": {
-    "@vercel/ncc": "^0.38.4",
-    "jest": "^30.2.0"
+    "@types/semver": "^7.5.0"
   }
 }
