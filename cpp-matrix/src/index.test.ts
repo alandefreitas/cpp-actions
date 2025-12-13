@@ -316,3 +316,79 @@ test('non-x86 entries default arch to x64 unless overridden', async () => {
     const gccEntry = matrix.find(entry => entry.compiler === 'gcc');
     expect(gccEntry?.arch).toBe('x64');
 });
+
+test('generates entries for compilers with no known versions', async () => {
+    // This test verifies that apple-clang, mingw, and clang-cl (which have no
+    // version tracking) still generate matrix entries with version "*"
+    const compilerVersions = {
+        'apple-clang': '*',
+        'mingw': '*',
+        'clang-cl': '*'
+    };
+    const inputs = {
+        compiler_versions: compilerVersions,
+        standards: normalizeCppVersionRequirement('>=14'),
+        subrange_policy: { '': 'one-per-major' },
+        max_standards: 2,
+        latest_factors: {},
+        factors: {},
+        combinatorial_factors: {},
+        force_factors: [],
+        extra_values: [],
+        runs_on: [],
+        containers: [],
+        generators: [],
+        generator_toolsets: [],
+        b2_toolsets: [],
+        ccflags: [],
+        cxxflags: [],
+        install: [],
+        triplets: [],
+        build_types: [],
+        default_build_type: 'Release',
+        sanitizer_build_type: 'Release',
+        x86_build_type: 'Release',
+        use_containers: false,
+        warn_no_matches: true, // Should NOT warn because entries should be generated
+        output_file: undefined,
+        log_matrix: false,
+        generate_summary: false,
+        trace_commands: false
+    };
+    const warnSpy = jest.spyOn(core, 'warning').mockImplementation(() => { });
+    try {
+        const matrix = await generateMatrix(inputs);
+
+        // Verify entries were generated for each compiler
+        const appleClangEntry = matrix.find(entry => entry.compiler === 'apple-clang');
+        expect(appleClangEntry).toBeDefined();
+        expect(appleClangEntry?.version).toBe('*');
+        expect(appleClangEntry?.cxx).toBe('clang++');
+        expect(appleClangEntry?.cc).toBe('clang');
+        expect(appleClangEntry?.['runs-on']).toBe('macos-14');
+
+        const mingwEntry = matrix.find(entry => entry.compiler === 'mingw');
+        expect(mingwEntry).toBeDefined();
+        expect(mingwEntry?.version).toBe('*');
+        expect(mingwEntry?.cxx).toBe('g++');
+        expect(mingwEntry?.cc).toBe('gcc');
+        expect(mingwEntry?.['runs-on']).toBe('windows-2022');
+
+        const clangClEntry = matrix.find(entry => entry.compiler === 'clang-cl');
+        expect(clangClEntry).toBeDefined();
+        expect(clangClEntry?.version).toBe('*');
+        expect(clangClEntry?.cxx).toBe('clang++-cl');
+        expect(clangClEntry?.cc).toBe('clang-cl');
+        expect(clangClEntry?.['runs-on']).toBe('windows-2022');
+
+        // No warnings should have been emitted about missing entries
+        // (warnings about no known versions should not appear)
+        const warningCalls = warnSpy.mock.calls.map(call => call[0]);
+        const missingEntriesWarnings = warningCalls.filter(msg =>
+            typeof msg === 'string' && msg.includes('No matrix entries were generated because no published')
+        );
+        expect(missingEntriesWarnings).toHaveLength(0);
+    } finally {
+        warnSpy.mockRestore();
+    }
+});

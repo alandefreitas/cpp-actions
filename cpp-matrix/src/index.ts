@@ -808,6 +808,35 @@ function setCompilerExecutableNames(entry: MatrixEntry, compilerName: string, mi
     }
 }
 
+function setCompilerExecutableNamesNoVersion(entry: MatrixEntry, compilerName: string): void {
+    // Set cxx/cc names for compilers without known version information.
+    // These compilers use the system-installed version.
+    if (compilerName === 'apple-clang') {
+        entry['cxx'] = `clang++`;
+        entry['cc'] = `clang`;
+    } else if (compilerName === 'clang-cl') {
+        entry['cxx'] = `clang++-cl`;
+        entry['cc'] = `clang-cl`;
+    } else if (compilerName === 'mingw') {
+        entry['cxx'] = `g++`;
+        entry['cc'] = `gcc`;
+    }
+    // For gcc, clang, and msvc we expect to have version information,
+    // so we don't set defaults here.
+}
+
+function setCompilerContainerNoVersion(entry: MatrixEntry, compilerName: string): void {
+    // Set runs-on for compilers without known version information.
+    // These compilers use the system-installed version on the runner.
+    if (compilerName === 'apple-clang') {
+        entry['runs-on'] = 'macos-14';
+    } else if (['mingw', 'clang-cl'].includes(compilerName)) {
+        entry['runs-on'] = 'windows-2022';
+    }
+    // For gcc, clang, and msvc we expect to have version information,
+    // so we don't set defaults here.
+}
+
 function isArrayOfObjects(val: unknown): val is CompilerSuggestion[] {
     return Array.isArray(val) && val.length > 0 && typeof val[0] === 'object';
 }
@@ -1034,7 +1063,7 @@ function setCompilerCMakeGenerator(entry: MatrixEntry, _inputs: Inputs, compiler
     }
 }
 
-function setEntryVersionFlags(entry: MatrixEntry, i: number, subranges: string[], minSubrangeVersion: semver.SemVer, maxSubrangeVersion: semver.SemVer): void {
+function setEntryVersionFlags(entry: MatrixEntry, i: number, subranges: string[], minSubrangeVersion: semver.SemVer | null, maxSubrangeVersion: semver.SemVer | null): void {
     // Latest/earliest/has-major/has-minor/has-patch/subrange-policy flags
     // subranges are ordered so the latest flag is the last entry
     // in the matrix for this compiler
@@ -1055,7 +1084,7 @@ function setEntryVersionFlags(entry: MatrixEntry, i: number, subranges: string[]
     // Flag with the subrange policy used
     if (entry['has-major'] === false) {
         entry['subrange-policy'] = 'system-version';
-    } else if (subranges.length === 1 || minSubrangeVersion.major !== maxSubrangeVersion.major) {
+    } else if (!minSubrangeVersion || !maxSubrangeVersion || subranges.length === 1 || minSubrangeVersion.major !== maxSubrangeVersion.major) {
         entry['subrange-policy'] = 'one-per-major';
     } else {
         entry['subrange-policy'] = 'one-per-minor';
@@ -1565,21 +1594,42 @@ export async function generateMatrix(inputs: Inputs): Promise<MatrixEntry[]> {
             const minSubrangeVersion = semver.parse(semver.minSatisfying(allCompilerVersions, subrange) || '');
             const maxSubrangeVersion = semver.parse(semver.maxSatisfying(allCompilerVersions, subrange) || '');
 
-            if (!minSubrangeVersion || !maxSubrangeVersion) {
+            // Handle the case when no versions are known for this compiler.
+            // We still generate an entry with version "*" so downstream jobs
+            // can test with whatever version is available on the runner.
+            const noKnownVersions = allCompilerVersions.length === 0;
+
+            if (!noKnownVersions && (!minSubrangeVersion || !maxSubrangeVersion)) {
+                // We have known versions but none match the subrange - skip
                 continue;
             }
 
-            const compiler_cxxstds = getCompilerCxxStds(
-                entry, inputs, allCompilerVersions, cxxstds, compilerName, minSubrangeVersion);
-            if (compiler_cxxstds === undefined) {
-                // This compiler version does not support any of the standards
-                // we want to test. Skip it.
-                continue;
+            let compiler_cxxstds: string[] = [];
+            if (noKnownVersions) {
+                // No known versions - we can't filter by C++ standard support,
+                // so we don't set cxxstd fields. The entry will test whatever
+                // standards the runner's compiler supports.
+            } else {
+                const result = getCompilerCxxStds(
+                    entry, inputs, allCompilerVersions, cxxstds, compilerName, minSubrangeVersion!);
+                if (result === undefined) {
+                    // This compiler version does not support any of the standards
+                    // we want to test. Skip it.
+                    continue;
+                }
+                compiler_cxxstds = result;
             }
+
             setEntrySemverComponents(entry, minSubrangeVersion, maxSubrangeVersion);
-            setCompilerExecutableNames(entry, compilerName, minSubrangeVersion);
-            setCompilerContainer(entry, inputs, compilerName, minSubrangeVersion, subrange);
-            setCompilerCMakeGenerator(entry, inputs, compilerName, minSubrangeVersion, maxSubrangeVersion, subrange);
+            if (minSubrangeVersion) {
+                setCompilerExecutableNames(entry, compilerName, minSubrangeVersion);
+                setCompilerContainer(entry, inputs, compilerName, minSubrangeVersion, subrange);
+                setCompilerCMakeGenerator(entry, inputs, compilerName, minSubrangeVersion, maxSubrangeVersion!, subrange);
+            } else {
+                // No known versions - set defaults based on compiler name
+                setCompilerExecutableNamesNoVersion(entry, compilerName);
+                setCompilerContainerNoVersion(entry, compilerName);
+            }
             setCompilerB2Toolset(entry, inputs, compilerName, subrange);
             setEntryVersionFlags(entry, i, subranges, minSubrangeVersion, maxSubrangeVersion);
             setEntryName(entry, compilerName, subrange, compiler_cxxstds);
