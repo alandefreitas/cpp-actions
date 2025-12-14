@@ -8,6 +8,11 @@ import * as trace_commands from 'trace-commands';
 import * as gh_inputs from 'gh-inputs';
 import { reportAndSetFailed } from 'pretty-errors';
 
+/**
+ * Returns the number of available CPU cores.
+ *
+ * @returns Number of available CPUs, minimum 1
+ */
 function numberOfCpus(): number {
     const result = typeof os.availableParallelism === 'function'
         ? os.availableParallelism()
@@ -18,6 +23,12 @@ function numberOfCpus(): number {
     return result;
 }
 
+/**
+ * Normalizes an architecture string to a standard format.
+ *
+ * @param arch - Architecture string to normalize
+ * @returns Normalized architecture: 'x86', 'x64', 'arm', 'arm64', or original
+ */
 function normalizeArchitectureInput(arch: string): string {
     if (!arch) {
         return '';
@@ -38,12 +49,27 @@ function normalizeArchitectureInput(arch: string): string {
     return arch;
 }
 
+/**
+ * Configuration for B2 architecture settings.
+ */
 interface ArchConfig {
+    /** Normalized architecture identifier (x86, x64, arm, arm64) */
     normalizedArch: string;
+    /** B2 address model (32 or 64 bit) */
     addressModel?: string;
+    /** B2 architecture family (x86 or arm) */
     architecture?: string;
 }
 
+/**
+ * Derives B2 architecture configuration from an architecture string.
+ *
+ * Maps architecture to appropriate address model (32/64 bit) and
+ * architecture family (x86/arm) for B2 build configuration.
+ *
+ * @param arch - Architecture string to derive configuration from
+ * @returns Architecture configuration with normalized values
+ */
 function deriveB2ArchConfig(arch: string): ArchConfig {
     const normalizedArch = normalizeArchitectureInput(arch);
     if (!normalizedArch) {
@@ -64,13 +90,29 @@ function deriveB2ArchConfig(arch: string): ArchConfig {
     return { normalizedArch };
 }
 
+/**
+ * Configuration for options that accept boolean or string values.
+ *
+ * Allows users to provide either true/false or custom string values
+ * for B2 options.
+ */
 interface BoolOrStringOption {
+    /** Input key name */
     key: string;
+    /** Corresponding B2 command-line key */
     b2_key: string;
+    /** Value to use when option is true */
     true_value: string;
+    /** Value to use when option is false, or undefined to omit */
     false_value: string | undefined;
 }
 
+/**
+ * Input configuration for the B2 workflow action.
+ *
+ * Contains all settings for configuring and running a Boost.Build workflow,
+ * including compiler settings, build options, sanitizers, and debug flags.
+ */
 interface Inputs {
     // Configure options
     source_dir: string;
@@ -127,6 +169,7 @@ interface Inputs {
  * and runs the specified build targets with the provided options.
  *
  * @param inputs - Configuration inputs including toolset, flags, source directory, and build options
+ * @throws Error if B2 bootstrap, headers, or build fails
  */
 export async function main(inputs: Inputs): Promise<void> {
     function fnlog(msg: string): void {
@@ -417,8 +460,14 @@ export async function main(inputs: Inputs): Promise<void> {
 }
 
 
+/** Captured inputs for error reporting context */
 let lastInputsForErrors: Inputs | undefined = undefined;
 
+/**
+ * Entry point for the B2 workflow GitHub Action.
+ *
+ * Parses action inputs, configures tracing, and executes the B2 workflow.
+ */
 async function run(): Promise<void> {
     function fnlog(msg: string): void {
         trace_commands.log('b2-workflow: ' + msg);

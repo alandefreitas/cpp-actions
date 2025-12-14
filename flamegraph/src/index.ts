@@ -25,6 +25,12 @@ async function createReadmeFile(readmePath: string): Promise<void> {
     fs.writeFileSync(readmePath, content);
 }
 
+/**
+ * Recursively finds all time-trace JSON files in a directory.
+ *
+ * @param dir - Directory to search
+ * @returns Set of absolute paths to trace files
+ */
 async function findTraceFiles(dir: string): Promise<Set<string>> {
     const traceFiles = new Set<string>();
     const files = fs.readdirSync(dir);
@@ -52,6 +58,9 @@ async function findTraceFiles(dir: string): Promise<Set<string>> {
     return traceFiles;
 }
 
+/**
+ * A single event from a Chrome trace file.
+ */
 interface TraceEvent {
     name: string;
     ph: string;
@@ -65,10 +74,19 @@ interface TraceEvent {
     cat?: string;
 }
 
+/**
+ * Structure of a Chrome trace file.
+ */
 interface Trace {
     traceEvents: TraceEvent[];
 }
 
+/**
+ * Opens and parses multiple trace files into memory.
+ *
+ * @param traceFiles - Set of trace file paths to open
+ * @returns Record mapping file paths to parsed trace data
+ */
 async function openTraceFiles(traceFiles: Set<string>): Promise<Record<string, Trace>> {
     const traces: Record<string, Trace> = {};
     for (const traceFile of traceFiles) {
@@ -78,6 +96,12 @@ async function openTraceFiles(traceFiles: Set<string>): Promise<Record<string, T
     return traces;
 }
 
+/**
+ * Searches for compile_commands.json starting from a directory and moving up.
+ *
+ * @param dir - Starting directory for the search
+ * @returns Path to compile_commands.json or undefined if not found
+ */
 async function findCompileCommands(dir: string): Promise<string | undefined> {
     let currentDir = path.resolve(dir);
     while (currentDir !== path.sep) {
@@ -90,11 +114,20 @@ async function findCompileCommands(dir: string): Promise<string | undefined> {
     return undefined;
 }
 
+/**
+ * A single compile command entry from compile_commands.json.
+ */
 interface CompileCommand {
     command: string;
     file: string;
 }
 
+/**
+ * Loads compile_commands.json from the build directory.
+ *
+ * @param dir - Directory to search for compile_commands.json
+ * @returns Array of compile command entries
+ */
 async function loadCompileCommands(dir: string): Promise<CompileCommand[]> {
     const compileCommandsPath = await findCompileCommands(dir);
     if (compileCommandsPath === undefined) {
@@ -104,6 +137,12 @@ async function loadCompileCommands(dir: string): Promise<CompileCommand[]> {
     }
 }
 
+/**
+ * Extracts include paths from a compile command string.
+ *
+ * @param compileCommand - The compile command string
+ * @returns Set of include paths found in the command
+ */
 async function extractIncludePaths(compileCommand: string): Promise<Set<string>> {
     const includePaths = new Set<string>();
     const isystemRegex = /-isystem\s+(\S+)/g;
@@ -118,6 +157,12 @@ async function extractIncludePaths(compileCommand: string): Promise<Set<string>>
     return includePaths;
 }
 
+/**
+ * Loads all include paths from compile commands and system defaults.
+ *
+ * @param compileCommands - Array of compile command entries
+ * @returns Set of all include paths
+ */
 async function loadIncludePaths(compileCommands: CompileCommand[]): Promise<Set<string>> {
     const includePaths = new Set<string>();
     for (const compileCommand of compileCommands) {
@@ -140,6 +185,15 @@ async function loadIncludePaths(compileCommands: CompileCommand[]): Promise<Set<
     return includePaths;
 }
 
+/**
+ * Gets a display-friendly filename for a trace file.
+ *
+ * @param filename - The original filename
+ * @param buildDir - Build directory path
+ * @param compileCommands - Array of compile command entries
+ * @param sourceDir - Source directory path
+ * @returns Shortened display filename
+ */
 function getDisplayFilename(filename: string, buildDir: string, compileCommands: CompileCommand[], sourceDir: string): string {
     // Make relative to buildDir
     let displayFilename = path.relative(buildDir, filename);
@@ -171,6 +225,13 @@ function getDisplayFilename(filename: string, buildDir: string, compileCommands:
     return displayFilename;
 }
 
+/**
+ * Checks if a path is a subpath of another path.
+ *
+ * @param childPath - The potential child path
+ * @param parentPath - The potential parent path
+ * @returns True if childPath is within parentPath
+ */
 function isSubpath(childPath: string, parentPath: string): boolean {
     const childPathAbs = path.resolve(childPath);
     const parentPathAbs = path.resolve(parentPath);
@@ -178,8 +239,12 @@ function isSubpath(childPath: string, parentPath: string): boolean {
 }
 
 /**
- * Adjust the args.detail field of the event to be a path relative
- * to the sourceDir or buildDir.
+ * Adjusts the args.detail field of an event to be a path relative to source or build dir.
+ *
+ * @param event - The trace event to adjust
+ * @param includePaths - Set of include paths for resolution
+ * @param sourceDir - Source directory path
+ * @param buildDir - Build directory path
  */
 function adjustEventDetailFilename(event: TraceEvent, includePaths: Set<string>, sourceDir: string, buildDir: string): void {
     function fnlog(msg: string) {
@@ -257,6 +322,9 @@ function adjustEventDetailFilename(event: TraceEvent, includePaths: Set<string>,
     fnlog(`Final event detail: ${event.args.detail}`);
 }
 
+/**
+ * Represents a timestamp range with start and end times.
+ */
 class TimestampRange {
     start: number;
     end: number;
@@ -267,6 +335,9 @@ class TimestampRange {
     }
 }
 
+/**
+ * Collection of timestamp ranges for tracking accounted-for time periods.
+ */
 class TimestampRanges {
     private ranges: TimestampRange[];
 
@@ -274,14 +345,31 @@ class TimestampRanges {
         this.ranges = [];
     }
 
+    /**
+     * Adds a new range to the collection.
+     *
+     * @param start - Start timestamp
+     * @param end - End timestamp
+     */
     addRange(start: number, end: number): void {
         this.ranges.push(new TimestampRange(start, end));
     }
 
+    /**
+     * Gets all ranges in the collection.
+     *
+     * @returns Array of timestamp ranges
+     */
     getRanges(): TimestampRange[] {
         return this.ranges;
     }
 
+    /**
+     * Checks if a timestamp falls within any range.
+     *
+     * @param ts - Timestamp to check
+     * @returns True if timestamp is within any range
+     */
     includes(ts: number): boolean {
         for (const range of this.ranges) {
             if (range.start <= ts && ts < range.end) {
@@ -293,7 +381,13 @@ class TimestampRanges {
 }
 
 /**
- * Update the report data with the event data.
+ * Updates the report data with event data for compilation analysis.
+ *
+ * @param event - The trace event to process
+ * @param reportData - Report data to update
+ * @param parsingRegions - Tracked parsing time regions
+ * @param instantiationRegions - Tracked instantiation time regions
+ * @param displayFilename - Display filename for the event
  */
 function updateReportData(event: TraceEvent, reportData: ReportData, parsingRegions: TimestampRanges, instantiationRegions: TimestampRanges, displayFilename: string): void {
     function fnlog(msg: string) {
@@ -386,11 +480,22 @@ class CountDuration {
         this.duration = duration;
     }
 
+    /**
+     * Updates count and duration with the given increments.
+     *
+     * @param countIncrement - Amount to add to count
+     * @param durationIncrement - Amount to add to duration
+     */
     update(countIncrement: number, durationIncrement: number): void {
         this.count += countIncrement;
         this.duration += durationIncrement;
     }
 
+    /**
+     * Calculates the average duration per count.
+     *
+     * @returns Average duration per event
+     */
     averageDuration(): number {
         return this.duration / this.count;
     }
@@ -428,6 +533,14 @@ class ReportData {
         this.symbol_set_instantiate = {};
     }
 
+    /**
+     * Adds file data of the specified type.
+     *
+     * @param fileName - File name to add data for
+     * @param count - Count value
+     * @param duration - Duration value
+     * @param type - Type of data (compile or parse)
+     */
     addFileData(fileName: string, count: number, duration: number, type: 'compile' | 'parse' = 'compile'): void {
         const key = `file_${type}` as 'file_compile' | 'file_parse';
         if (!this[key][fileName]) {
@@ -437,14 +550,36 @@ class ReportData {
         }
     }
 
+    /**
+     * Adds file compile data.
+     *
+     * @param fileName - File name
+     * @param count - Count value
+     * @param duration - Duration value
+     */
     addFileCompileData(fileName: string, count: number, duration: number): void {
         this.addFileData(fileName, count, duration, 'compile');
     }
 
+    /**
+     * Adds file parse data.
+     *
+     * @param fileName - File name
+     * @param count - Count value
+     * @param duration - Duration value
+     */
     addFileParseData(fileName: string, count: number, duration: number): void {
         this.addFileData(fileName, count, duration, 'parse');
     }
 
+    /**
+     * Adds symbol data of the specified type.
+     *
+     * @param symbolName - Symbol name
+     * @param count - Count value
+     * @param duration - Duration value
+     * @param type - Type of data (parse, instantiate, or set_instantiate)
+     */
     addSymbolData(symbolName: string, count: number, duration: number, type: 'parse' | 'instantiate' | 'set_instantiate' = 'parse'): void {
         const key = `symbol_${type}` as 'symbol_parse' | 'symbol_instantiate' | 'symbol_set_instantiate';
         if (!this[key][symbolName]) {
@@ -459,15 +594,32 @@ class ReportData {
         }
     }
 
+    /**
+     * Adds symbol parse data.
+     *
+     * @param symbolName - Symbol name
+     * @param count - Count value
+     * @param duration - Duration value
+     */
     addSymbolParseData(symbolName: string, count: number, duration: number): void {
         this.addSymbolData(symbolName, count, duration, 'parse');
     }
 
+    /**
+     * Adds symbol instantiation data.
+     *
+     * @param symbolName - Symbol name
+     * @param count - Count value
+     * @param duration - Duration value
+     */
     addSymbolInstantiateData(symbolName: string, count: number, duration: number): void {
         this.addSymbolData(symbolName, count, duration, 'instantiate');
     }
 }
 
+/**
+ * Result of combining multiple trace files.
+ */
 interface CombineTracesResult {
     combinedTrace: Trace;
     reportData: ReportData;
@@ -578,6 +730,9 @@ async function combineTraces(sourceDir: string, buildDir: string): Promise<Combi
     return { combinedTrace, reportData: aggregateReport };
 }
 
+/**
+ * Represents a trace event with timing information.
+ */
 class Event {
     label: string;
     timestamp: number;
@@ -591,15 +746,22 @@ class Event {
         this.total_duration = dur;
     }
 
+    /**
+     * Gets the stop timestamp for this event.
+     *
+     * @returns End timestamp (start + duration)
+     */
     getStopTimestamp(): number {
         return this.timestamp + this.duration;
     }
 }
 
 /**
- * Combine two numbers into a unique number.
+ * Combines two numbers into a unique number using Cantor pairing.
  *
- * This is used to create a unique number for each thread/process pair.
+ * @param a - First number
+ * @param b - Second number
+ * @returns Unique combined value
  */
 function cantorPairing(a: number, b: number): number {
     const s = a + b;
@@ -607,7 +769,10 @@ function cantorPairing(a: number, b: number): number {
 }
 
 /**
- * Get the trace events from the combined trace object.
+ * Gets the trace events from the combined trace object.
+ *
+ * @param combinedTrace - Combined trace data
+ * @param eventsDict - Dictionary to populate with events
  */
 function getTraceEvents(combinedTrace: Trace, eventsDict: Record<string, Event[]>): void {
     function fnlog(msg: string) {
@@ -627,7 +792,10 @@ function getTraceEvents(combinedTrace: Trace, eventsDict: Record<string, Event[]
 }
 
 /**
- * Load events from the combined trace.
+ * Loads events from the combined trace.
+ *
+ * @param combinedTrace - Combined trace data
+ * @returns Dictionary mapping cantor values to event arrays
  */
 function loadEvents(combinedTrace: Trace): Record<string, Event[]> {
     function fnlog(msg: string) {
@@ -767,7 +935,10 @@ class ArrayMap {
 }
 
 /**
- * Save the stack to the stack identifiers.
+ * Saves a stack to the stack identifiers map.
+ *
+ * @param stack - Array of events representing the call stack
+ * @param stackIdentifiers - Map to store stack durations
  */
 function saveStack(stack: Event[], stackIdentifiers: ArrayMap): void {
     let event: Event | null = null;
@@ -782,7 +953,10 @@ function saveStack(stack: Event[], stackIdentifiers: ArrayMap): void {
 }
 
 /**
- * Load stack identifiers from the events.
+ * Loads stack identifiers from the events.
+ *
+ * @param events - Array of events to process
+ * @param stackIdentifiers - Map to populate with stack durations
  */
 function loadStackIdentifiers(events: Event[], stackIdentifiers: ArrayMap): void {
     const eventStack: Event[] = [];
@@ -811,7 +985,10 @@ function loadStackIdentifiers(events: Event[], stackIdentifiers: ArrayMap): void
 }
 
 /**
- * Generate a report from the report data.
+ * Generates a stack-collapsed representation from Chrome trace data.
+ *
+ * @param combinedTrace - Combined trace data to process
+ * @returns Map of call stacks to their total durations
  */
 function stackCollapseChromeTracing(combinedTrace: Trace): ArrayMap {
     // Adapted from https://github.com/brendangregg/FlameGraph/blob/master/stackcollapse-chrome-tracing.py
@@ -831,6 +1008,9 @@ function stackCollapseChromeTracing(combinedTrace: Trace): ArrayMap {
     return stackIdentifiers;
 }
 
+/**
+ * Helper class for building SVG documents.
+ */
 class SVG {
     private svg: string;
 
@@ -838,6 +1018,14 @@ class SVG {
         this.svg = '';
     }
 
+    /**
+     * Writes the SVG header.
+     *
+     * @param w - Width of the SVG
+     * @param h - Height of the SVG
+     * @param encoding - Character encoding
+     * @param notestext - Notes text to include in comments
+     */
     header(w: number, h: number, encoding?: string, notestext = ''): void {
         let encAttr = '';
         if (typeof encoding !== 'undefined') {
@@ -850,14 +1038,32 @@ class SVG {
 <!-- NOTES: ${notestext} -->`;
     }
 
+    /**
+     * Includes raw content in the SVG.
+     *
+     * @param content - Raw SVG content to include
+     */
     include(content: string): void {
         this.svg += content;
     }
 
+    /**
+     * Creates an RGB color string.
+     *
+     * @param r - Red component (0-255)
+     * @param g - Green component (0-255)
+     * @param b - Blue component (0-255)
+     * @returns RGB color string
+     */
     colorAllocate(r: number, g: number, b: number): string {
         return `rgb(${r},${g},${b})`;
     }
 
+    /**
+     * Starts a group or anchor element.
+     *
+     * @param attr - Attributes for the group or anchor
+     */
     groupStart(attr: Record<string, string>): void {
         const gAttr = Object.keys(attr).filter(key => ['id', 'class'].includes(key))
             .map(key => `${key}="${attr[key]}"`);
@@ -883,10 +1089,25 @@ class SVG {
         }
     }
 
+    /**
+     * Ends a group or anchor element.
+     *
+     * @param attr - Attributes from the corresponding groupStart
+     */
     groupEnd(attr: Record<string, string>): void {
         this.svg += attr && attr.href ? `</a>\n` : `</g>\n`;
     }
 
+    /**
+     * Draws a filled rectangle.
+     *
+     * @param x1 - Left edge X coordinate
+     * @param y1 - Top edge Y coordinate
+     * @param x2 - Right edge X coordinate
+     * @param y2 - Bottom edge Y coordinate
+     * @param fill - Fill color
+     * @param extra - Additional SVG attributes
+     */
     filledRectangle(x1: number, y1: number, x2: number, y2: number, fill: string, extra = ''): void {
         const x1Str = x1.toFixed(1);
         const w = (x2 - x1).toFixed(1);
@@ -894,6 +1115,15 @@ class SVG {
         this.svg += `<rect x='${x1Str}' y='${y1}' width='${w}' height='${h}' fill='${fill}' ${extra} />\n`;
     }
 
+    /**
+     * Draws text at the specified position.
+     *
+     * @param id - Optional element ID
+     * @param x - X coordinate
+     * @param y - Y coordinate
+     * @param str - Text content
+     * @param extra - Additional SVG attributes
+     */
     stringTTF(id: string | undefined, x: number, y: number, str: string, extra?: string): void {
         const xStr = x.toFixed(2);
         const idStr = id ? `id="${id}"` : '';
@@ -901,11 +1131,22 @@ class SVG {
         this.svg += `<text ${idStr} x='${xStr}' y='${y}' ${extraStr}>${str}</text>\n`;
     }
 
+    /**
+     * Returns the complete SVG document.
+     *
+     * @returns Complete SVG string with closing tag
+     */
     getSVG(): string {
         return `${this.svg}</svg>\n`;
     }
 }
 
+/**
+ * Generates a hash for a function name for color selection.
+ *
+ * @param name - Function name to hash
+ * @returns Numeric hash value
+ */
 function namehash(name: string): number {
     // Generate a vector hash for the name string, weighting early over
     // later characters. We want to pick the same colors for function
@@ -930,6 +1171,12 @@ function namehash(name: string): number {
     return (1 - vector / max);
 }
 
+/**
+ * Generates a basic hash for a name string.
+ *
+ * @param name - Name to hash
+ * @returns Unsigned 32-bit integer hash
+ */
 function sum_namehash(name: string): number {
     // Generate a basic hash for the name string
     let hash = 0;
@@ -941,6 +1188,12 @@ function sum_namehash(name: string): number {
     return hash >>> 0; // Return an unsigned 32-bit integer
 }
 
+/**
+ * Generates a seeded random hash for a name string.
+ *
+ * @param name - Name to hash
+ * @returns Random value between 0 and 1, consistent for the same name
+ */
 function random_namehash(name: string): number {
     // Generate a random hash for the name string.
     // This ensures that functions with the same name have the same color,
@@ -957,6 +1210,15 @@ function random_namehash(name: string): number {
     return seededRandom();
 }
 
+/**
+ * Determines the color for a flame graph element based on type and name.
+ *
+ * @param type - Color scheme type (hot, mem, io, java, perl, js, etc.)
+ * @param hash - Whether to use hash-based coloring
+ * @param name - Function name for color hashing
+ * @param rand - Whether to use random coloring
+ * @returns RGB color string
+ */
 function getColor(type: string, hash: boolean, name: string, rand: boolean): string {
     let v1: number, v2: number, v3: number;
 
@@ -1095,6 +1357,14 @@ function getColor(type: string, hash: boolean, name: string, rand: boolean): str
     return 'rgb(0,0,0)';
 }
 
+/**
+ * Generates a color on a red-blue scale based on value.
+ *
+ * @param value - Value to convert to color
+ * @param max - Maximum value for scaling
+ * @param negate - Whether to negate the value
+ * @returns RGB color string
+ */
 function color_scale(value: number, max: number, negate = false): string {
     let r = 255, g = 255, b = 255;
     if (negate) {
@@ -1108,6 +1378,16 @@ function color_scale(value: number, max: number, negate = false): string {
     return `rgb(${r},${g},${b})`;
 }
 
+/**
+ * Gets or creates a color mapping for a function.
+ *
+ * @param colors - Color scheme type
+ * @param func - Function name
+ * @param paletteMap - Map of function names to colors
+ * @param hash - Whether to use hash-based coloring
+ * @param rand - Whether to use random coloring
+ * @returns RGB color string
+ */
 function color_map(colors: string, func: string, paletteMap: Record<string, string>, hash: boolean, rand: boolean): string {
     if (paletteMap[func]) {
         return paletteMap[func];
@@ -1119,6 +1399,14 @@ function color_map(colors: string, func: string, paletteMap: Record<string, stri
 
 /**
  * Merges two stacks and stores the merged frames and value data in Node.
+ *
+ * @param last - Previous stack frames
+ * @param thisStack - Current stack frames
+ * @param v - Value/time for this frame
+ * @param d - Delta value
+ * @param Node - Node storage object
+ * @param Tmp - Temporary storage object
+ * @returns The current stack
  */
 function flow(last: string[], thisStack: string[], v: number, d: number | undefined, Node: Record<string, { stime?: number; delta?: number }>, Tmp: Record<string, { stime?: number; delta?: number }>): string[] {
     const lenA = last.length - 1;
@@ -1163,7 +1451,11 @@ function flow(last: string[], thisStack: string[], v: number, d: number | undefi
 }
 
 /**
- * Generate a flame graph from the stack identifiers.
+ * Generates a flame graph SVG from stack identifiers.
+ *
+ * @param stackIdentifiers - Map of call stacks to durations
+ * @returns SVG string for the flame graph
+ * @throws Error if there are too few samples for the flame graph
  */
 function generateFlameGraph(stackIdentifiers: ArrayMap): string {
     function fnlog(msg: string) {
@@ -1973,8 +2265,13 @@ function generateFlameGraph(stackIdentifiers: ArrayMap): string {
     return im.getSVG();
 }
 
+/**
+ * Result of generating an SVG flame graph.
+ */
 interface GenerateSVGFlameGraphResult {
+    /** Stack identifiers for the flame graph */
     stackIdentifiers: ArrayMap;
+    /** Generated SVG content */
     SVGContent: string;
 }
 
@@ -2003,10 +2300,23 @@ async function generateSVGFlameGraph(combinedTrace: Trace): Promise<GenerateSVGF
     return { stackIdentifiers, SVGContent };
 }
 
+/**
+ * Rounds a number to the specified precision.
+ *
+ * @param value - Number to round
+ * @param precision - Number of decimal places
+ * @returns Rounded number
+ */
 function round(value: number, precision: number): number {
     return parseFloat(value.toFixed(precision));
 }
 
+/**
+ * Formats a duration in microseconds to a human-readable string.
+ *
+ * @param microseconds - Duration in microseconds
+ * @returns Formatted time string with appropriate unit
+ */
 function formatTimeStr(microseconds: number): string {
     if (microseconds < 1000) {
         return `${round(microseconds, 2)} µs`;
@@ -2027,12 +2337,22 @@ function formatTimeStr(microseconds: number): string {
     return `${hours} h`;
 }
 
+/**
+ * Escapes HTML special characters in a string.
+ *
+ * @param str - String to escape
+ * @returns HTML-escaped string
+ */
 function HTMLEscape(str: string): string {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 /**
- * Generate a table for a report section
+ * Generates a markdown table for a report section.
+ *
+ * @param columnName - Name for the first column
+ * @param data - Map of item names to their count/duration data
+ * @returns Markdown table string
  */
 function sectionTable(columnName: string, data: Record<string, CountDuration>): string {
     const sortedData = Object.entries(data).sort((a, b) => b[1].duration - a[1].duration);
@@ -2079,6 +2399,12 @@ function sectionTable(columnName: string, data: Record<string, CountDuration>): 
     return content;
 }
 
+/**
+ * Converts template parameters in a string to placeholders.
+ *
+ * @param inputString - String with template parameters
+ * @returns String with template parameters replaced
+ */
 function convertTemplateString(inputString: string): string {
     let level = 0;
     let outputStr = '';
@@ -2101,6 +2427,12 @@ function convertTemplateString(inputString: string): string {
     return outputStr;
 }
 
+/**
+ * Checks if a symbol is from the standard library.
+ *
+ * @param symbolStr - Symbol name to check
+ * @returns True if the symbol is a standard library symbol
+ */
 function isStdSymbol(symbolStr: string): boolean {
     return symbolStr.startsWith('std::') ||
         symbolStr.startsWith('__gnu_cxx::') ||
@@ -2110,7 +2442,10 @@ function isStdSymbol(symbolStr: string): boolean {
 }
 
 /**
- * Filter out standard library symbols
+ * Filters out standard library symbols from a map.
+ *
+ * @param symbolsMap - Map of symbols to their count/duration data
+ * @returns Map containing only non-standard-library symbols
  */
 function filterProjectSymbols(symbolsMap: Record<string, CountDuration>): Record<string, CountDuration> {
     const projectSymbols: Record<string, CountDuration> = {};
@@ -2191,15 +2526,25 @@ function generateReport(reportData: ReportData): string {
     return content;
 }
 
+/**
+ * Inputs for artifact upload.
+ */
 interface UploadArtifactsInputs {
+    /** Path to the output file */
     output_path: string;
+    /** Path to the report file */
     report_path: string;
+    /** Build directory containing the traces */
     build_dir: string;
+    /** Number of days to retain the artifacts */
     package_retention_days?: number;
 }
 
 /**
- * Create a readme file for the time-trace artifacts
+ * Uploads time-trace artifacts to GitHub Actions.
+ *
+ * @param inputs - Upload configuration including paths
+ * @param extraFiles - Additional files to include
  */
 async function uploadArtifacts(inputs: UploadArtifactsInputs, extraFiles: string[]): Promise<void> {
     const artifact = new DefaultArtifactClient();
@@ -2212,18 +2557,33 @@ async function uploadArtifacts(inputs: UploadArtifactsInputs, extraFiles: string
     trace_commands.log(`Created artifact with id: ${id} (bytes: ${size}`);
 }
 
+/**
+ * Inputs for the main flamegraph action.
+ */
 interface MainInputs {
+    /** Source directory path */
     source_dir: string;
+    /** Build directory containing time traces */
     build_dir: string;
+    /** Output path for combined traces */
     output_path: string;
+    /** Output path for the report */
     report_path: string;
+    /** Whether to update the GitHub Actions summary */
     update_summary: boolean;
+    /** Whether to upload artifacts */
     upload_artifact: boolean;
+    /** Artifact retention period in days */
     package_retention_days?: number;
 }
 
+/**
+ * Outputs from the main flamegraph action.
+ */
 interface MainOutputs {
+    /** Path to the combined traces file */
     traces_path: string;
+    /** Path to the generated SVG file */
     svg_path: string;
 }
 
@@ -2285,8 +2645,12 @@ async function main(inputs: MainInputs): Promise<MainOutputs> {
     return { traces_path: combinedTracePath, svg_path: imagePath };
 }
 
+/** Captured inputs for error reporting context */
 let lastInputsForErrors: Record<string, unknown> | undefined = undefined;
 
+/**
+ * GitHub Actions entry point for the flamegraph action.
+ */
 async function run() {
     const inputs = {
         // Paths

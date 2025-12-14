@@ -15,31 +15,56 @@ const setup_program = require('setup-program');
 const defaultCacheDir = process.env.CPP_MATRIX_CACHE_DIR || path.join(__dirname, '..', 'var', 'cache', 'cpp-matrix');
 setup_program.setVersionsCacheDir(defaultCacheDir);
 
+/**
+ * Maps compiler names to their version range strings.
+ */
 interface CompilerVersions {
     [compiler: string]: string;
 }
 
+/**
+ * Maps compiler names to arrays of factor strings.
+ */
 interface CompilerFactors {
     [compiler: string]: string[];
 }
 
+/**
+ * A suggestion for compiler-specific configuration values.
+ */
 interface CompilerSuggestion {
+    /** Compiler name to match */
     compiler: string;
+    /** Version range to match */
     range?: string;
+    /** Factor to match */
     factor?: string;
+    /** Value to apply */
     value: string;
 }
 
+/**
+ * A key-value pair for extra matrix values.
+ */
 interface KeyValue {
+    /** The key name */
     key: string;
+    /** The value */
     value: string;
 }
 
+/**
+ * Maps compiler names to subrange policy strings.
+ */
 interface SubrangePolicyMap {
     [compiler: string]: string;
 }
 
+/**
+ * Configuration inputs for the cpp-matrix action.
+ */
 interface Inputs {
+    /** Compiler version requirements */
     compiler_versions: CompilerVersions;
     subrange_policy: SubrangePolicyMap;
     standards: string;
@@ -70,8 +95,13 @@ interface Inputs {
     trace_commands: boolean;
 }
 
+/**
+ * A single entry in the generated CI matrix.
+ */
 interface MatrixEntry {
+    /** Display name for the matrix entry */
     name: string;
+    /** Compiler name */
     compiler: string;
     version: string;
     env: Record<string, string>;
@@ -115,8 +145,13 @@ interface MatrixEntry {
     [key: string]: unknown;
 }
 
+/**
+ * Configuration for a Docker container in a matrix entry.
+ */
 interface ContainerConfig {
+    /** Docker image name */
     image: string;
+    /** Volume mounts for the container */
     volumes?: string[];
 }
 
@@ -347,6 +382,12 @@ export function findMSVCVersions(): string[] {
     return [...new Set([...windows2022, ...windows2025])];
 }
 
+/**
+ * Finds available versions for a given compiler.
+ *
+ * @param compiler - Compiler name
+ * @returns Array of available version strings
+ */
 async function findCompilerVersions(compiler: string): Promise<string[]> {
     if (compiler === 'gcc') {
         return await setup_program.findGCCVersions();
@@ -358,6 +399,12 @@ async function findCompilerVersions(compiler: string): Promise<string[]> {
     return [];
 }
 
+/**
+ * Gets the Visual Studio year from an MSVC version.
+ *
+ * @param msvc_version - MSVC version string or SemVer
+ * @returns Visual Studio year or undefined
+ */
 function getVisualCppYear(msvc_version: string | semver.SemVer): string | undefined {
     const v = semver.parse(msvc_version);
     if (!v) return undefined;
@@ -399,6 +446,13 @@ function getVisualCppYear(msvc_version: string | semver.SemVer): string | undefi
     return undefined;
 }
 
+/**
+ * Checks if two arrays have the same elements.
+ *
+ * @param arr1 - First array
+ * @param arr2 - Second array
+ * @returns True if arrays have the same elements
+ */
 function arraysHaveSameElements(arr1: unknown[], arr2: unknown[]): boolean {
     if (arr1.length !== arr2.length) {
         return false;
@@ -428,8 +482,17 @@ export const SubrangePolicies = {
     ONE_PER_MAJOR_OR_MINOR: 2
 } as const;
 
+/**
+ * A policy for handling version subranges in the matrix.
+ */
 type SubrangePolicy = typeof SubrangePolicies[keyof typeof SubrangePolicies];
 
+/**
+ * Converts a policy string to a SubrangePolicy enum value.
+ *
+ * @param policyStr - Policy string to convert
+ * @returns Corresponding SubrangePolicy value
+ */
 function getSubrangePolicy(policyStr: string): SubrangePolicy {
     if (policyStr === 'one-per-major') {
         return SubrangePolicies.ONE_PER_MAJOR;
@@ -441,6 +504,12 @@ function getSubrangePolicy(policyStr: string): SubrangePolicy {
     return SubrangePolicies.ONE_PER_MAJOR;
 }
 
+/**
+ * Converts a SubrangePolicy enum value to its string representation.
+ *
+ * @param policy - SubrangePolicy value to convert
+ * @returns String representation of the policy
+ */
 function getSubrangePolicyStr(policy: SubrangePolicy): string {
     if (policy === SubrangePolicies.ONE_PER_MAJOR) {
         return 'one-per-major';
@@ -642,6 +711,14 @@ export function splitRanges(range: string, versions: string[], policy: SubrangeP
     standard is based on the whether the compiler claims to support the standard by providing a corresponding
     `-std=c++XX` flag to enable the standard.
  */
+/**
+ * Checks if a compiler version supports a given C++ standard.
+ *
+ * @param compiler - Compiler name (gcc, clang, msvc)
+ * @param version - Compiler version
+ * @param cxxstd - C++ standard year (2011, 2014, 2017, 2020, 2023)
+ * @returns True if the compiler version supports the standard
+ */
 function compilerSupportsStd(compiler: string, version: string | semver.SemVer, cxxstd: number): boolean {
     if (compiler === 'gcc') {
         return (cxxstd <= 2023 && semver.satisfies(version, '>=11.1')) ||
@@ -672,6 +749,12 @@ function compilerSupportsStd(compiler: string, version: string | semver.SemVer, 
     return false;
 }
 
+/**
+ * Converts a compiler identifier to a human-readable name.
+ *
+ * @param compiler - Compiler identifier
+ * @returns Human-readable compiler name
+ */
 function humanizeCompilerName(compiler: string): string {
     const human_compiler_names: Record<string, string> = {
         'gcc': 'GCC',
@@ -687,6 +770,12 @@ function humanizeCompilerName(compiler: string): string {
     return compiler;
 }
 
+/**
+ * Returns an emoji representing a compiler.
+ *
+ * @param compiler - Compiler identifier
+ * @returns Emoji for the compiler
+ */
 function compilerEmoji(compiler: string): string {
     const compiler_emojis: Record<string, string> = {
         'gcc': '🐧',
@@ -702,6 +791,12 @@ function compilerEmoji(compiler: string): string {
     return '🛠️';
 }
 
+/**
+ * Converts a semver version to a string.
+ *
+ * @param version - Version to convert
+ * @returns Version string representation
+ */
 function versionToString(version: semver.SemVer | string | undefined | null): string {
     if (typeof version === 'string') {
         return version;
@@ -724,6 +819,12 @@ function versionToString(version: semver.SemVer | string | undefined | null): st
     return parts.join('.');
 }
 
+/**
+ * Formats a list of versions as a comma-separated string.
+ *
+ * @param versions - Array of version strings
+ * @returns Formatted version list
+ */
 function formatVersionList(versions: string[]): string {
     if (!versions || versions.length === 0) {
         return 'none';
@@ -731,6 +832,12 @@ function formatVersionList(versions: string[]): string {
     return Array.from(new Set(versions)).join(', ');
 }
 
+/**
+ * Formats a C++ standard number as a label.
+ *
+ * @param std - C++ standard number or string
+ * @returns Formatted label (e.g., "C++20")
+ */
 function formatStandardLabel(std: number | string): string {
     if (typeof std === 'number') {
         return `C++${std}`;
@@ -738,6 +845,15 @@ function formatStandardLabel(std: number | string): string {
     return std;
 }
 
+/**
+ * Warns when no matrix entries are generated for a compiler.
+ *
+ * @param compilerName - Compiler name
+ * @param range - Version range requested
+ * @param availableVersions - Available compiler versions
+ * @param requestedStds - Requested C++ standards
+ * @param standardsInput - Original standards input string
+ */
 function warnEmptyCompilerEntries(compilerName: string, range: string, availableVersions: string[], requestedStds: number[], standardsInput: string): void {
     // Human-readable compiler label for messaging
     const humanName = humanizeCompilerName(compilerName);
@@ -799,6 +915,17 @@ function warnEmptyCompilerEntries(compilerName: string, range: string, available
     core.warning(`${message}\n${detailLines.join('\n')}`);
 }
 
+/**
+ * Gets the C++ standards supported by a compiler version.
+ *
+ * @param entry - Matrix entry to update
+ * @param inputs - Action inputs
+ * @param allCompilerVersions - All available compiler versions
+ * @param cxxstds - Requested C++ standards
+ * @param compilerName - Compiler name
+ * @param minSubrangeVersion - Minimum version in the subrange
+ * @returns Array of supported standards or undefined if none
+ */
 function getCompilerCxxStds(entry: MatrixEntry, inputs: Inputs, allCompilerVersions: string[], cxxstds: number[], compilerName: string, minSubrangeVersion: semver.SemVer): string[] | undefined {
     // The versions of cxxstd we should test with this compiler
     let compiler_cxxs: number[] = [];
@@ -827,6 +954,13 @@ function getCompilerCxxStds(entry: MatrixEntry, inputs: Inputs, allCompilerVersi
     return compiler_cxxs.map(v => v.toString().slice(-2));
 }
 
+/**
+ * Sets the semver components (major, minor, patch) on a matrix entry.
+ *
+ * @param entry - Matrix entry to update
+ * @param minSubrangeVersion - Minimum version in the subrange
+ * @param maxSubrangeVersion - Maximum version in the subrange
+ */
 function setEntrySemverComponents(entry: MatrixEntry, minSubrangeVersion: semver.SemVer | null, maxSubrangeVersion: semver.SemVer | null): void {
     // Extract major, minor, and patch versions from the subrange
     if (minSubrangeVersion !== null && maxSubrangeVersion !== null) {
@@ -851,6 +985,13 @@ function setEntrySemverComponents(entry: MatrixEntry, minSubrangeVersion: semver
     }
 }
 
+/**
+ * Sets the compiler executable names (cc, cxx) on a matrix entry.
+ *
+ * @param entry - Matrix entry to update
+ * @param compilerName - Compiler name
+ * @param minSubrangeVersion - Minimum version in the subrange
+ */
 function setCompilerExecutableNames(entry: MatrixEntry, compilerName: string, minSubrangeVersion: semver.SemVer): void {
     // Usual cxx/cc names (no name usually needed for msvc)
     if (compilerName === 'gcc') {
@@ -881,6 +1022,12 @@ function setCompilerExecutableNames(entry: MatrixEntry, compilerName: string, mi
     }
 }
 
+/**
+ * Sets default compiler executable names when version is unknown.
+ *
+ * @param entry - Matrix entry to update
+ * @param compilerName - Compiler name
+ */
 function setCompilerExecutableNamesNoVersion(entry: MatrixEntry, compilerName: string): void {
     // Set cxx/cc names for compilers without known version information.
     // These compilers use the system-installed version.
@@ -898,6 +1045,12 @@ function setCompilerExecutableNamesNoVersion(entry: MatrixEntry, compilerName: s
     // so we don't set defaults here.
 }
 
+/**
+ * Sets default runs-on for compilers without version info.
+ *
+ * @param entry - Matrix entry to update
+ * @param compilerName - Compiler name
+ */
 function setCompilerContainerNoVersion(entry: MatrixEntry, compilerName: string): void {
     // Set runs-on for compilers without known version information.
     // These compilers use the system-installed version on the runner.
@@ -910,10 +1063,25 @@ function setCompilerContainerNoVersion(entry: MatrixEntry, compilerName: string)
     // so we don't set defaults here.
 }
 
+/**
+ * Type guard for checking if a value is an array of CompilerSuggestion.
+ *
+ * @param val - Value to check
+ * @returns True if val is CompilerSuggestion array
+ */
 function isArrayOfObjects(val: unknown): val is CompilerSuggestion[] {
     return Array.isArray(val) && val.length > 0 && typeof val[0] === 'object';
 }
 
+/**
+ * Applies a suggestion to a matrix entry based on matching criteria.
+ *
+ * @param entry - Matrix entry to update
+ * @param key - Key to set on the entry
+ * @param suggestionMap - Array of suggestions to match against
+ * @param subrange - Version subrange for matching
+ * @returns True if a suggestion was applied
+ */
 function setSuggestion(entry: MatrixEntry, key: string, suggestionMap: CompilerSuggestion[], subrange: string): boolean {
     if (isArrayOfObjects(suggestionMap)) {
         for (const userSuggestion of suggestionMap) {
@@ -937,6 +1105,14 @@ function setSuggestion(entry: MatrixEntry, key: string, suggestionMap: CompilerS
     return false;
 }
 
+/**
+ * Applies forced factors from suggestions to a matrix entry.
+ *
+ * @param entry - Matrix entry to update
+ * @param suggestionMap - Array of force factor suggestions
+ * @param subrange - Version subrange for matching
+ * @returns True if a factor was applied
+ */
 function applyForcedFactors(entry: MatrixEntry, suggestionMap: CompilerSuggestion[], subrange: string): boolean {
     if (isArrayOfObjects(suggestionMap)) {
         for (const userSuggestion of suggestionMap) {
@@ -964,6 +1140,15 @@ function applyForcedFactors(entry: MatrixEntry, suggestionMap: CompilerSuggestio
     return false;
 }
 
+/**
+ * Sets the container and runs-on configuration for a matrix entry.
+ *
+ * @param entry - Matrix entry to update
+ * @param inputs - Action inputs
+ * @param compilerName - Compiler name
+ * @param minSubrangeVersion - Minimum version in the subrange
+ * @param _subrange - Version subrange string
+ */
 function setCompilerContainer(entry: MatrixEntry, inputs: Inputs, compilerName: string, minSubrangeVersion: semver.SemVer, _subrange: string): void {
     // runs-on / container
     if (compilerName === 'gcc') {
@@ -1054,6 +1239,14 @@ function setCompilerContainer(entry: MatrixEntry, inputs: Inputs, compilerName: 
     }
 }
 
+/**
+ * Sets the B2 toolset for a matrix entry.
+ *
+ * @param entry - Matrix entry to update
+ * @param _inputs - Action inputs (unused)
+ * @param compilerName - Compiler name
+ * @param _subrange - Version subrange string (unused)
+ */
 function setCompilerB2Toolset(entry: MatrixEntry, _inputs: Inputs, compilerName: string, _subrange: string): void {
     // Recommended b2-toolset
     // The b2 toolset never includes the version number
@@ -1068,6 +1261,12 @@ function setCompilerB2Toolset(entry: MatrixEntry, _inputs: Inputs, compilerName:
     }
 }
 
+/**
+ * Gets the runs-on labels for a matrix entry as an array.
+ *
+ * @param entry - Matrix entry
+ * @returns Array of lowercase runs-on labels
+ */
 function runsOnLabels(entry: MatrixEntry): string[] {
     let runsOn = entry['runs-on'];
     if (!runsOn) {
@@ -1081,6 +1280,12 @@ function runsOnLabels(entry: MatrixEntry): string[] {
         .map((label) => label.toLowerCase());
 }
 
+/**
+ * Infers the Visual Studio generator from the runs-on labels.
+ *
+ * @param entry - Matrix entry
+ * @returns Visual Studio generator string or null
+ */
 function inferVisualStudioGeneratorFromRunsOn(entry: MatrixEntry): string | null {
     const labels = runsOnLabels(entry);
     const hasLabel = (needle: string): boolean => labels.some((label) => label.includes(needle));
@@ -1097,6 +1302,16 @@ function inferVisualStudioGeneratorFromRunsOn(entry: MatrixEntry): string | null
     return null;
 }
 
+/**
+ * Sets the CMake generator for a matrix entry.
+ *
+ * @param entry - Matrix entry to update
+ * @param _inputs - Action inputs (unused)
+ * @param compilerName - Compiler name
+ * @param minSubrangeVersion - Minimum version in the subrange
+ * @param maxSubrangeVersion - Maximum version in the subrange
+ * @param _subrange - Version subrange string (unused)
+ */
 function setCompilerCMakeGenerator(entry: MatrixEntry, _inputs: Inputs, compilerName: string, minSubrangeVersion: semver.SemVer, maxSubrangeVersion: semver.SemVer, _subrange: string): void {
     // Recommended cmake generator
     if (compilerName === 'msvc') {
@@ -1135,6 +1350,15 @@ function setCompilerCMakeGenerator(entry: MatrixEntry, _inputs: Inputs, compiler
     }
 }
 
+/**
+ * Sets version-related flags on a matrix entry.
+ *
+ * @param entry - Matrix entry to update
+ * @param i - Current index in the subranges array
+ * @param subranges - Array of version subranges
+ * @param minSubrangeVersion - Minimum version in the subrange
+ * @param maxSubrangeVersion - Maximum version in the subrange
+ */
 function setEntryVersionFlags(entry: MatrixEntry, i: number, subranges: string[], minSubrangeVersion: semver.SemVer | null, maxSubrangeVersion: semver.SemVer | null): void {
     // Latest/earliest/has-major/has-minor/has-patch/subrange-policy flags
     // subranges are ordered so the latest flag is the last entry
@@ -1163,6 +1387,14 @@ function setEntryVersionFlags(entry: MatrixEntry, i: number, subranges: string[]
     }
 }
 
+/**
+ * Sets the display name for a matrix entry.
+ *
+ * @param entry - Matrix entry to update
+ * @param compilerName - Compiler name
+ * @param subrange - Version subrange string
+ * @param compiler_cxxs - Array of supported C++ standards
+ */
 function setEntryName(entry: MatrixEntry, compilerName: string, subrange: string, compiler_cxxs: string[]): void {
     // Come up with a name for this entry
     let name = `${humanizeCompilerName(compilerName)}`;
@@ -1179,6 +1411,15 @@ function setEntryName(entry: MatrixEntry, compilerName: string, subrange: string
     entry['name'] = name;
 }
 
+/**
+ * Applies latest factors to the matrix by duplicating latest entry.
+ *
+ * @param matrix - Matrix array to update
+ * @param inputs - Action inputs
+ * @param latestIdx - Index of the latest entry
+ * @param _earliestIdx - Index of the earliest entry (unused)
+ * @param compilerName - Compiler name
+ */
 function applyLatestFactors(matrix: MatrixEntry[], inputs: Inputs, latestIdx: number, _earliestIdx: number, compilerName: string): void {
     // Apply latest factors for this compiler.
     // We duplicate the latest entry for each latest factor and set the
@@ -1209,6 +1450,15 @@ function applyLatestFactors(matrix: MatrixEntry[], inputs: Inputs, latestIdx: nu
     }
 }
 
+/**
+ * Applies variant factors to intermediary matrix entries.
+ *
+ * @param matrix - Matrix array to update
+ * @param inputs - Action inputs
+ * @param latestIdx - Index of the latest entry
+ * @param earliestIdx - Index of the earliest entry
+ * @param compilerName - Compiler name
+ */
 function applyVariantFactors(matrix: MatrixEntry[], inputs: Inputs, latestIdx: number, earliestIdx: number, compilerName: string): void {
     // Apply variant factors for this compiler
     // We skip the latest entry and apply the variant factors to the
@@ -1254,6 +1504,15 @@ function applyVariantFactors(matrix: MatrixEntry[], inputs: Inputs, latestIdx: n
     }
 }
 
+/**
+ * Applies combinatorial factors by duplicating entries with all combinations.
+ *
+ * @param matrix - Matrix array to update
+ * @param inputs - Action inputs
+ * @param latestIdx - Index of the latest entry
+ * @param earliestIdx - Index of the earliest entry
+ * @param compilerName - Compiler name
+ */
 function applyCombinatorialFactors(matrix: MatrixEntry[], inputs: Inputs, latestIdx: number, earliestIdx: number, compilerName: string): void {
     // Apply combinatorial factors for this compiler
     // For each entry, we create a copy that set that factor to true
@@ -1284,6 +1543,12 @@ function applyCombinatorialFactors(matrix: MatrixEntry[], inputs: Inputs, latest
     }
 }
 
+/**
+ * Sets recommended compiler flags for factors like sanitizers and coverage.
+ *
+ * @param entry - Matrix entry to update
+ * @param inputs - Action inputs
+ */
 async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): Promise<void> {
     entry['build-type'] = 'Release';
     entry['cxxflags'] = '';
@@ -1401,6 +1666,12 @@ async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): Promise<
     }
 }
 
+/**
+ * Sorts the matrix entries by priority order.
+ *
+ * @param matrix - Matrix array to sort
+ * @param inputs - Action inputs
+ */
 function sortMatrix(matrix: MatrixEntry[], inputs: Inputs): void {
     // Sort matrix
     // 1) Latest
@@ -1492,6 +1763,11 @@ function sortMatrix(matrix: MatrixEntry[], inputs: Inputs): void {
     });
 }
 
+/**
+ * Registers Handlebars helpers for template rendering.
+ *
+ * @throws Error if 'and' or 'or' helpers receive fewer than 2 arguments
+ */
 function registerHelpers(): void {
     // String operators
     Handlebars.registerHelper('lowercase', function (value: string) {
@@ -1568,6 +1844,12 @@ function registerHelpers(): void {
     });
 }
 
+/**
+ * Injects extra key-value pairs into all matrix entries.
+ *
+ * @param matrix - Matrix array to update
+ * @param extraValues - Extra values to inject
+ */
 function injectExtraValues(matrix: MatrixEntry[], extraValues?: KeyValue[]): void {
     if (!extraValues) {
         return;
@@ -1598,6 +1880,11 @@ function injectExtraValues(matrix: MatrixEntry[], extraValues?: KeyValue[]): voi
     }
 }
 
+/**
+ * Sets the OS field for each matrix entry based on runs-on.
+ *
+ * @param matrix - Matrix array to update
+ */
 function setOS(matrix: MatrixEntry[]): void {
     for (const entry of matrix) {
         if (entry.container) {
@@ -1831,6 +2118,12 @@ export async function generateMatrix(inputs: Inputs): Promise<MatrixEntry[]> {
     return matrix;
 }
 
+/**
+ * Returns an emoji representing a matrix factor.
+ *
+ * @param factor - Factor name
+ * @returns Emoji for the factor
+ */
 function factorEmoji(factor: string): string {
     const factor_emojis: Record<string, string> = {
         'x86': '💻',
@@ -1857,6 +2150,12 @@ function factorEmoji(factor: string): string {
     return '🔢';
 }
 
+/**
+ * Returns an emoji representing a build type.
+ *
+ * @param build_type - Build type name
+ * @returns Emoji for the build type
+ */
 function buildTypeEmoji(build_type: string): string {
     const build_type_emojis: Record<string, string> = {
         'debug': '🐞',
@@ -1871,6 +2170,12 @@ function buildTypeEmoji(build_type: string): string {
     return '🏗️';
 }
 
+/**
+ * Returns an emoji representing an operating system.
+ *
+ * @param os - Operating system name
+ * @returns Emoji for the OS
+ */
 function osEmoji(os: string): string {
     const os_emojis: Record<string, string> = {
         'windows': '🪟',
@@ -1889,6 +2194,13 @@ function osEmoji(os: string): string {
     return '🖥️';
 }
 
+/**
+ * Gets all unique factors from latest and variant factors.
+ *
+ * @param latest_factors - Latest factors by compiler
+ * @param factors - Variant factors by compiler
+ * @returns Array of all unique factor names
+ */
 function getAllFactors(latest_factors: CompilerFactors, factors: CompilerFactors): string[] {
     let allFactors: string[] = [];
     Object.values(latest_factors).forEach(factors => {
@@ -2097,6 +2409,11 @@ export function generateTable(matrix: MatrixEntry[], inputs: Inputs): Array<Arra
     return table;
 }
 
+/**
+ * Normalizes compiler names in object keys.
+ *
+ * @param obj - Object with compiler name keys to normalize
+ */
 function normalizeCompilerNameKeys(obj: Record<string, unknown>): void {
     for (const [name, value] of Object.entries(obj)) {
         const newName = normalizeCompilerName(name);
@@ -2107,6 +2424,11 @@ function normalizeCompilerNameKeys(obj: Record<string, unknown>): void {
     }
 }
 
+/**
+ * Normalizes compiler names in suggestion arrays.
+ *
+ * @param suggestionMap - Array of suggestions to normalize
+ */
 function normalizeCompilerNameSuggestions(suggestionMap: CompilerSuggestion[]): void {
     if (isArrayOfObjects(suggestionMap)) {
         suggestionMap.forEach(obj => {
@@ -2117,6 +2439,9 @@ function normalizeCompilerNameSuggestions(suggestionMap: CompilerSuggestion[]): 
 
 let lastInputsForErrors: Inputs | undefined = undefined;
 
+/**
+ * GitHub Actions entry point for the cpp-matrix action.
+ */
 async function run(): Promise<void> {
     const compilerVersions = parseCompilerRequirements(gh_inputs.getInput('compilers'));
     const compilerKeys = Object.keys(compilerVersions);

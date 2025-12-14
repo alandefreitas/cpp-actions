@@ -15,11 +15,17 @@ const setup_clang = require('setup-clang');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const setup_msvc = require('setup-msvc');
 
+/**
+ * Result of normalizing a compiler name and version.
+ */
 interface NormalizedCompiler {
     compiler: string;
     version: string;
 }
 
+/**
+ * Configuration inputs for the setup-cpp action.
+ */
 interface Inputs {
     compiler: string;
     version: string;
@@ -30,6 +36,9 @@ interface Inputs {
     arch: string;
 }
 
+/**
+ * Result of setting up a C++ compiler.
+ */
 interface SetupResult {
     output_path: string | null;
     cc: string | null;
@@ -92,6 +101,12 @@ export function normalizeCompiler(compiler: string, version: string): Normalized
     };
 }
 
+/**
+ * Normalizes an architecture string to MSVC-compatible format.
+ *
+ * @param arch - Architecture string to normalize
+ * @returns Normalized architecture: 'x86', 'x64', 'arm64', 'arm', or the original value
+ */
 function normalizeMSVCArchToken(arch: string): string {
     if (!arch) {
         return '';
@@ -137,6 +152,11 @@ export function resolveMSVCArch(requestedArch: string, envArch: string | undefin
 
 let lastInputsForErrors: Inputs | undefined = undefined;
 
+/**
+ * Main entry point for the setup-cpp GitHub Action.
+ *
+ * Parses inputs and sets up the requested C++ compiler (GCC, Clang, or MSVC).
+ */
 async function run(): Promise<void> {
     const inputs: Inputs = {
         compiler: gh_inputs.getInput('compiler', { defaultValue: '*' }),

@@ -18,6 +18,12 @@ const youchTerminal = require('youch-terminal');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const StackTracey = require('stacktracey');
 
+/**
+ * Checks if a stack frame originates from Node.js internal code.
+ *
+ * @param frame - Stack frame to check
+ * @returns True if the frame is from Node.js internals
+ */
 function isNodeFrame(frame: StackTraceyFrame): boolean {
     if (frame.native) return true;
     const filename = frame.file || '';
@@ -25,11 +31,21 @@ function isNodeFrame(frame: StackTraceyFrame): boolean {
     return false;
 }
 
+/**
+ * Options for reading source context around a stack frame.
+ */
 interface ReadContextOptions {
     pre?: number;
     post?: number;
 }
 
+/**
+ * Reads source code context around a stack frame location.
+ *
+ * @param frame - Stack frame containing file and line information
+ * @param options - Options for number of lines before and after
+ * @returns Source context or null if file cannot be read
+ */
 function readContext(
     frame: StackTraceyFrame,
     options: ReadContextOptions = {}
@@ -59,6 +75,12 @@ function readContext(
     });
 }
 
+/**
+ * Builds a Youch-compatible payload from an error for terminal rendering.
+ *
+ * @param error - The error to build a payload from
+ * @returns Payload containing error details and stack frames with source context
+ */
 async function buildYouchLikePayload(error: ExtendedError | null | undefined): Promise<YouchPayload> {
     const stack: StackTraceyInstance = new StackTracey(error?.stack || '');
     const frames: YouchFrame[] = await Promise.all(
@@ -99,6 +121,12 @@ async function buildYouchLikePayload(error: ExtendedError | null | undefined): P
     };
 }
 
+/**
+ * Renders an error to a colorized terminal-friendly string.
+ *
+ * @param error - The error to render
+ * @returns Formatted string with stack trace and source context
+ */
 async function renderTerminal(error: ExtendedError | null | undefined): Promise<string> {
     if (!error) {
         return '<no error>';

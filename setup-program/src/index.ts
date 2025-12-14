@@ -15,17 +15,26 @@ import clangDefaultTags from '../clang-tags.json';
 import cmakeDefaultTags from '../cmake-tags.json';
 import ubuntuVersionNames from '../ubuntu-versions.json';
 
+/**
+ * Result of a program search or installation operation.
+ */
 interface ProgramResult {
     output_version: string | null;
     output_path: string | null;
 }
 
+/**
+ * Output from executing a command via exec.getExecOutput.
+ */
 interface ExecOutput {
     exitCode: number;
     stdout: string;
     stderr: string;
 }
 
+/**
+ * Configuration inputs for the setup-program action.
+ */
 interface SetupProgramInputs {
     name: string[];
     version: string;
@@ -38,6 +47,15 @@ interface SetupProgramInputs {
     trace_commands: boolean;
 }
 
+/**
+ * Checks if a file at the given path is executable.
+ *
+ * On Windows, checks for .exe, .cmd, or .bat extensions.
+ * On other platforms, checks the file's executable permission bit.
+ *
+ * @param filePath - Path to the file to check
+ * @returns True if the file exists and is executable, false otherwise
+ */
 function isExecutable(filePath: string): boolean {
     if (!fs.existsSync(filePath) || fs.lstatSync(filePath).isDirectory()) {
         return false;
@@ -65,20 +83,17 @@ function isExecutable(filePath: string): boolean {
     }
 }
 
-/// Check if path program version satisfies the requirements
-///
-/// If the version does not satisfy the requirements, then return
-/// null.
-///
-/// If the path program cannot be executed with the --version flag,
-/// then the version is assumed to be 0.0.0 to indicate the version
-/// is OK.
-///
-/// In any other cases, return the version string.
-///
-/// @param execPath: Path program path
-/// @param semverRequirements: Semver requirements
-/// @return: True if path program version satisfies the requirements
+/**
+ * Checks if a program's version satisfies the specified semver requirements.
+ *
+ * Executes the program with --version flag and parses the output to extract
+ * the version. Returns null if the version doesn't satisfy requirements, or
+ * "0.0.0" if the version cannot be determined.
+ *
+ * @param execPath - Path to the executable to check
+ * @param semverRequirements - Semver range requirement (e.g., ">=10", "*")
+ * @returns The version string if satisfied, "0.0.0" if unparseable, null if not satisfied
+ */
 async function program_satisfies(execPath: string, semverRequirements: string): Promise<string | null> {
     function fnlog(msg: string): void {
         trace_commands.log('program_satisfies: ' + msg);
@@ -212,6 +227,19 @@ export async function find_program_in_path(paths: string[], version: string, che
     return { output_version, output_path };
 }
 
+/**
+ * Searches for executables in specified directory paths.
+ *
+ * Iterates through directories looking for executables matching the given names,
+ * checking each candidate against the version requirement.
+ *
+ * @param paths - Array of directory paths to search
+ * @param names - Array of executable names to search for
+ * @param version - Semver version constraint (e.g., ">=10", "*")
+ * @param check_latest - If true, prefer latest matching version; if false, prefer earliest
+ * @param stop_at_first - If true, stop searching after finding the first match
+ * @returns Object containing the found executable path and version, or nulls if not found
+ */
 async function find_program_in_paths(paths: string[], names: string[], version: string, check_latest: boolean, stop_at_first: boolean): Promise<ProgramResult> {
     function fnlog(msg: string): void {
         trace_commands.log('find_program_in_paths: ' + msg);
@@ -362,6 +390,14 @@ export async function find_program_in_system_paths(extra_paths: string[], names:
     return result;
 }
 
+/**
+ * Removes leading zeros from semver version components.
+ *
+ * Converts "01.02.03" to "1.2.3" for proper semver comparison.
+ *
+ * @param version - Version string with potentially leading zeros
+ * @returns Cleaned version string without leading zeros
+ */
 function removeSemverLeadingZeros(version: string): string {
     const components = version.split('.');
     const cleanedComponents = components.map(component => parseInt(component, 10));
@@ -400,6 +436,12 @@ export async function urlExists(url: string): Promise<boolean> {
     }
 }
 
+/**
+ * Escapes special regex characters in a string.
+ *
+ * @param string - String to escape for use in a regular expression
+ * @returns Escaped string safe for regex pattern construction
+ */
 function escapeRegExp(string: string): string {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -415,6 +457,7 @@ function escapeRegExp(string: string): string {
  * @param version - Semver version constraint (e.g., ">=10", "14.0.0", "*")
  * @param check_latest - If true, prefer latest matching version; if false, prefer earliest
  * @returns Object containing the found executable path and version, or nulls if not found
+ * @throws Error if apt-cache commands fail unexpectedly
  */
 export async function find_program_with_apt(names: string[], version: string, check_latest: boolean): Promise<ProgramResult> {
     function fnlog(msg: string): void {
@@ -602,7 +645,12 @@ export async function find_program_with_apt(names: string[], version: string, ch
     return { output_version, output_path };
 }
 
-// Recursively find all directories in a directory
+/**
+ * Recursively finds all subdirectories within a directory.
+ *
+ * @param directory - Root directory to search
+ * @returns Array of absolute paths to all nested subdirectories
+ */
 function getAllSubdirectories(directory: string): string[] {
     const subdirectories: string[] = [];
 
@@ -624,6 +672,15 @@ function getAllSubdirectories(directory: string): string[] {
     return subdirectories;
 }
 
+/**
+ * Renders a template string by replacing placeholders with data values.
+ *
+ * Placeholders use mustache-style syntax: {{key}}.
+ *
+ * @param template - Template string with {{key}} placeholders
+ * @param data - Object mapping placeholder keys to replacement values
+ * @returns Rendered string with placeholders replaced
+ */
 function renderTemplate(template: string, data: Record<string, string | number>): string {
     const tokenRegex = /{{\s*([^\s{}]+)\s*}}/g;
     return template.replaceAll(tokenRegex, (match, key) => {
@@ -632,6 +689,11 @@ function renderTemplate(template: string, data: Record<string, string | number>)
     });
 }
 
+/**
+ * Returns the GitHub Actions runner OS name based on current platform.
+ *
+ * @returns "Windows", "macOS", or "Linux" depending on process.platform
+ */
 function get_runner_os(): string {
     const platform = process.platform;
     if (platform === 'win32') {
@@ -643,6 +705,12 @@ function get_runner_os(): string {
     }
 }
 
+/**
+ * Checks if a file path is a symbolic link.
+ *
+ * @param filePath - Path to check
+ * @returns True if the path is a symlink, false otherwise
+ */
 function isSymlink(filePath: string): boolean {
     try {
         const stats = fs.lstatSync(filePath);
@@ -653,6 +721,15 @@ function isSymlink(filePath: string): boolean {
     }
 }
 
+/**
+ * Copies a symbolic link to a new location.
+ *
+ * Recreates the symlink at the destination pointing to the same target.
+ *
+ * @param sourcePath - Path to the source symlink
+ * @param destinationPath - Path where the symlink should be created
+ * @param level - Recursion depth for logging indentation
+ */
 function copySymlink(sourcePath: string, destinationPath: string, level = 0): void {
     const targetPath = fs.readlinkSync(sourcePath);
     const levelPrefix = ' '.repeat(level * 2);
@@ -692,6 +769,11 @@ export async function findGit(): Promise<string | null> {
     return git_path || null;
 }
 
+/**
+ * Pauses execution for a specified duration using busy waiting.
+ *
+ * @param ms - Duration to wait in milliseconds
+ */
 async function sleep(ms: number): Promise<void> {
     const start = new Date().getTime();
     while (new Date().getTime() < start + ms) {
@@ -699,6 +781,9 @@ async function sleep(ms: number): Promise<void> {
     }
 }
 
+/**
+ * Options for fetching Git tags from a repository.
+ */
 interface FetchGitTagsOptions {
     maxRetries?: number;
     defaultTags?: string[];
@@ -789,6 +874,11 @@ export async function fetchGitTags(repo: string, options: FetchGitTagsOptions = 
 
 let versionsCacheDir: string | null = null;
 
+/**
+ * Returns the default directory path for caching version information.
+ *
+ * @returns Absolute path to the default cache directory
+ */
 function defaultVersionsCacheDir(): string {
     // Keep caches near the action code, not the caller's CWD
     return path.join(__dirname, '..', 'var', 'cache', 'setup-program');
@@ -902,6 +992,9 @@ export async function findCMakeVersions(): Promise<string[]> {
         cmakeDefaultTags);
 }
 
+/**
+ * Options for cloning a Git repository.
+ */
 interface CloneGitRepoOptions {
     shallow?: boolean;
 }
@@ -1065,6 +1158,7 @@ export function getCurrentUbuntuName(): string | null {
  * @param copyInstead - If true, copy instead of move (used for cross-device fallback)
  * @param level - Recursion depth level for logging indentation
  * @returns True if successful, false if move/copy failed
+ * @throws Error if a nested move operation fails
  */
 export async function moveWithPermissions(source: string, destination: string, copyInstead = false, level = 0): Promise<boolean> {
     function fnlog(msg: string): void {
@@ -1176,6 +1270,17 @@ export async function ensureAddAptRepositoryIsAvailable(): Promise<void> {
     }
 }
 
+/**
+ * Moves files using sudo for elevated privileges.
+ *
+ * Used as a fallback when regular move operations fail due to permission issues.
+ *
+ * @param source - Source directory path to move from
+ * @param destination - Destination directory path to move to
+ * @param copyInstead - If true, copy instead of move
+ * @param level - Recursion depth for logging indentation
+ * @returns True if successful, false if operation failed
+ */
 async function moveWithSudo(source: string, destination: string, copyInstead = false, level: number): Promise<boolean> {
     function fnlog(msg: string): void {
         trace_commands.log('moveWithSudo: ' + msg);
@@ -1223,6 +1328,18 @@ async function moveWithSudo(source: string, destination: string, copyInstead = f
     return true;
 }
 
+/**
+ * Extracts a tar archive to a destination directory.
+ *
+ * On Windows, uses 7z for extraction. On other platforms, uses the native
+ * tar command via tc.extractTar.
+ *
+ * @param tarPath - Path to the tar archive file
+ * @param destPath - Destination directory for extraction
+ * @param flags - Optional tar flags (e.g., "-xz" for gzip)
+ * @returns Path to the extracted contents
+ * @throws Error if extraction fails
+ */
 async function extractTar(tarPath: string, destPath: string | undefined, flags: string | undefined = undefined): Promise<string> {
     function fnlog(msg: string): void {
         trace_commands.log('extractTar: ' + msg);
@@ -1554,6 +1671,12 @@ export async function install_program_from_url(
 
 let lastInputsForErrors: SetupProgramInputs | undefined = undefined;
 
+/**
+ * Main entry point for the setup-program GitHub Action.
+ *
+ * Parses inputs, searches for the program in various locations,
+ * and optionally installs it from a URL if not found.
+ */
 async function run(): Promise<void> {
     function fnlog(msg: string): void {
         trace_commands.log('setup-program: ' + msg);

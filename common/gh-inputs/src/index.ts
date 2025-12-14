@@ -381,11 +381,23 @@ export function getBool(name: string | string[], options: InputOptions = {}): bo
  */
 export const getBoolean = getBool;
 
+/**
+ * Result of extracting an environment variable identifier from a string.
+ */
 interface ExtractIdentifierResult {
     i: number;
     curArg: string;
 }
 
+/**
+ * Extracts and expands an environment variable identifier from a string position.
+ *
+ * @param i - Current position in the line
+ * @param line - The line being parsed
+ * @param char - Current character being processed
+ * @param curArg - Current argument being built
+ * @returns Updated position and argument with expanded variable
+ */
 function extractIdentifier(
     i: number,
     line: string,

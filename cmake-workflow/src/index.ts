@@ -14,18 +14,33 @@ const setup_cmake = require('setup-cmake');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const setup_program = require('setup-program');
 
+/**
+ * Represents a compiler or CMake message for annotation creation.
+ */
 interface Message {
+    /** Message title for the annotation */
     title: string;
+    /** Source file path */
     file?: string;
+    /** Line number in the file */
     line?: number;
+    /** Column number in the file */
     column?: number;
+    /** Message severity (warning, error) */
     severity: string;
+    /** The message content */
     message: string;
 }
 
+/**
+ * Configuration inputs for the CMake workflow action.
+ */
 interface Inputs {
+    /** Path to the CMake executable */
     cmake_path: string;
+    /** CMake version to use */
     cmake_version: string;
+    /** Path to the source directory */
     source_dir: string;
     url: string;
     git_repository: string;
@@ -70,23 +85,49 @@ interface Inputs {
     extra_args_key?: string;
 }
 
+/**
+ * Outputs from the setup-cmake action.
+ */
 interface SetupCMakeOutputs {
+    /** Path to the CMake executable */
     path: string;
+    /** Directory containing CMake */
     dir: string;
+    /** Maximum supported CMake preset version */
     supported_presets_version: number;
+    /** Whether CMake supports --build <path-to-build> */
     supports_path_to_build?: boolean;
+    /** Whether CMake supports multiple --target arguments */
     supports_build_multiple_targets?: boolean;
+    /** Whether CMake supports parallel builds */
     supports_parallel_build?: boolean;
+    /** Whether CMake supports cmake --install */
     supports_cmake_install?: boolean;
 }
 
+/**
+ * Parameters resolved during workflow execution.
+ */
 interface ResolvedParameters {
+    /** Primary C++ standard version being used */
     main_cxxstd: string | null;
+    /** Whether the generator supports multiple configurations */
     generator_is_multi_config: boolean;
+    /** Path to the CTest executable */
     ctest_path: string;
+    /** Path to the CPack executable */
     cpack_path: string;
 }
 
+/**
+ * Creates GitHub annotations from CMake configure output.
+ *
+ * Parses CMake warning and error messages and creates corresponding
+ * GitHub annotations with file and line information.
+ *
+ * @param output - CMake configure command output
+ * @param inputs - Workflow inputs for path resolution
+ */
 function createCMakeConfigureAnnotations(output: string, inputs: Inputs): void {
     function fnlog(msg: string): void {
         trace_commands.log('createCMakeConfigureAnnotations: ' + msg);
@@ -152,6 +193,15 @@ function createCMakeConfigureAnnotations(output: string, inputs: Inputs): void {
     createAnnotationsFromMessage(messages);
 }
 
+/**
+ * Creates GitHub annotations from CMake build output.
+ *
+ * Parses compiler warning and error messages (MSVC, GCC, Clang formats)
+ * and creates corresponding GitHub annotations.
+ *
+ * @param output - CMake build command output
+ * @param inputs - Workflow inputs for path resolution
+ */
 function createCMakeBuildAnnotations(output: string, inputs: Inputs): void {
     function fnlog(msg: string): void {
         trace_commands.log('createCMakeBuildAnnotations: ' + msg);
@@ -282,6 +332,11 @@ function createCMakeBuildAnnotations(output: string, inputs: Inputs): void {
     createAnnotationsFromMessage(messages);
 }
 
+/**
+ * Creates GitHub annotations from parsed message objects.
+ *
+ * @param messages - Array of parsed messages to create annotations from
+ */
 function createAnnotationsFromMessage(messages: Message[]): void {
     function fnlog(msg: string): void {
         trace_commands.log('createAnnotationsFromMessage: ' + msg);
@@ -306,6 +361,15 @@ function createAnnotationsFromMessage(messages: Message[]): void {
     }
 }
 
+/**
+ * Creates GitHub annotations from CTest output.
+ *
+ * Parses Boost.Test failure messages and creates corresponding
+ * GitHub annotations.
+ *
+ * @param output - CTest command output
+ * @param inputs - Workflow inputs for path resolution
+ */
 function createCMakeTestAnnotations(output: string, inputs: Inputs): void {
     function fnlog(msg: string): void {
         trace_commands.log('createCMakeTestAnnotations: ' + msg);
@@ -359,6 +423,11 @@ function createCMakeTestAnnotations(output: string, inputs: Inputs): void {
     createAnnotationsFromMessage(messages);
 }
 
+/**
+ * Returns the number of available CPU cores.
+ *
+ * @returns Number of available CPUs, minimum 1
+ */
 function numberOfCpus(): number {
     const result = typeof os.availableParallelism === 'function'
         ? os.availableParallelism()
@@ -426,6 +495,12 @@ function deriveGeneratorArchitectureFromArch(arch: string, generator: string): s
     return mapping[normalizedArch] || '';
 }
 
+/**
+ * Converts an array of arguments to a shell-safe string.
+ *
+ * @param args - Array of command arguments
+ * @returns Arguments joined as a shell-safe string
+ */
 function makeArgsString(args: string[]): string {
     const res: string[] = [];
     for (const arg of args) {
@@ -438,12 +513,25 @@ function makeArgsString(args: string[]): string {
     return res.join(' ');
 }
 
+/**
+ * Result of reading and validating a CMake preset file.
+ */
 interface PresetFileResult {
+    /** Whether the preset file exists */
     exists: boolean;
+    /** Whether the preset version is supported */
     supported: boolean;
+    /** Parsed preset JSON content */
     presetJson: Record<string, unknown>;
 }
 
+/**
+ * Reads and validates a CMake preset file.
+ *
+ * @param presetPath - Path to the preset file
+ * @param supportedPresetsVersion - Maximum supported preset version
+ * @returns Preset file result with existence, support status, and content
+ */
 function readAndValidatePresetFile(presetPath: string, supportedPresetsVersion: number): PresetFileResult {
     let exists = false;
     let supported = false;
@@ -485,6 +573,13 @@ function readAndValidatePresetFile(presetPath: string, supportedPresetsVersion: 
     return { exists, supported, presetJson };
 }
 
+/**
+ * Merges two CMake preset objects recursively.
+ *
+ * @param presetJson - Base preset JSON object
+ * @param userPresetJson - User preset JSON to merge
+ * @returns Merged preset JSON object
+ */
 function mergeCMakePresetObject(
     presetJson: Record<string, unknown>,
     userPresetJson: Record<string, unknown> | undefined
@@ -516,6 +611,13 @@ function mergeCMakePresetObject(
     return merged;
 }
 
+/**
+ * Merges a configure preset with its inherited base preset.
+ *
+ * @param presetJson - Configure preset JSON object
+ * @param basePreset - Base preset to inherit from
+ * @returns Merged configure preset object
+ */
 function mergeCMakeConfigurePresetObject(
     presetJson: Record<string, unknown>,
     basePreset: Record<string, unknown> | undefined
@@ -566,6 +668,12 @@ function mergeCMakeConfigurePresetObject(
     return merged;
 }
 
+/**
+ * Converts a CMake cache variable value to a command-line argument string.
+ *
+ * @param value - Cache variable value (boolean, string, or object with type/value)
+ * @returns String representation or undefined if invalid
+ */
 function cacheVariableValueToArgsString(value: unknown): string | undefined {
     if (typeof value === 'boolean') {
         return value ? 'TRUE' : 'FALSE';
@@ -584,6 +692,12 @@ function cacheVariableValueToArgsString(value: unknown): string | undefined {
     return undefined;
 }
 
+/**
+ * Converts cache variables to a CMake command-line arguments array.
+ *
+ * @param cacheVariables - Map of variable names to values
+ * @returns Array of -D arguments for CMake
+ */
 function makeCacheVariablesArgsArray(cacheVariables: Record<string, unknown>): string[] {
     const cacheVariablesArray: string[] = [];
     for (const [key, value] of Object.entries(cacheVariables)) {
@@ -596,6 +710,15 @@ function makeCacheVariablesArgsArray(cacheVariables: Record<string, unknown>): s
     return cacheVariablesArray;
 }
 
+/**
+ * Resolves CMake preset settings and applies them to inputs.
+ *
+ * Reads CMakePresets.json and CMakeUserPresets.json, merges them,
+ * and applies preset settings to the workflow inputs.
+ *
+ * @param inputs - Workflow inputs to update
+ * @param setupCMakeOutputs - CMake setup outputs with version info
+ */
 function resolvePreset(inputs: Inputs, setupCMakeOutputs: SetupCMakeOutputs): void {
     if (!inputs.preset) {
         return;
@@ -827,6 +950,13 @@ function resolvePreset(inputs: Inputs, setupCMakeOutputs: SetupCMakeOutputs): vo
     }
 }
 
+/**
+ * Sets up the default CMake generator if none is specified.
+ *
+ * Queries CMake for the system default generator or infers it from the OS.
+ *
+ * @param inputs - Workflow inputs to update with generator info
+ */
 async function setupDefaultGenerator(inputs: Inputs): Promise<void> {
     function fnlog(msg: string): void {
         trace_commands.log('setupDefaultGenerator: ' + msg);
@@ -1019,6 +1149,12 @@ async function resolveInputParameters(inputs: Inputs, setupCMakeOutputs: SetupCM
     };
 }
 
+/**
+ * Downloads source code from a URL.
+ *
+ * @param inputs - Workflow inputs with URL and download directory
+ * @throws Error if download fails
+ */
 async function downloadUrlSourceCode(inputs: Inputs): Promise<void> {
     if (inputs.download_dir) {
         const res = await setup_program.downloadAndExtract(inputs.url, inputs.download_dir);
@@ -1035,6 +1171,11 @@ async function downloadUrlSourceCode(inputs: Inputs): Promise<void> {
     await setup_program.stripSingleDirectoryFromPath(inputs.download_dir);
 }
 
+/**
+ * Clones a Git repository for building.
+ *
+ * @param inputs - Workflow inputs with git repository and tag info
+ */
 async function cloneGitRepository(inputs: Inputs): Promise<void> {
     if (!inputs.download_dir) {
         inputs.download_dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'source-'));
@@ -1047,6 +1188,11 @@ async function cloneGitRepository(inputs: Inputs): Promise<void> {
     }
 }
 
+/**
+ * Downloads source code from URL or Git repository.
+ *
+ * @param inputs - Workflow inputs with source download configuration
+ */
 async function downloadSourceCode(inputs: Inputs): Promise<void> {
     if (!inputs.download_dir) {
         inputs.download_dir = inputs.source_dir;
@@ -1058,6 +1204,13 @@ async function downloadSourceCode(inputs: Inputs): Promise<void> {
     }
 }
 
+/**
+ * Applies patches to the source directory.
+ *
+ * Copies patch files or directories to the source directory.
+ *
+ * @param inputs - Workflow inputs with patch file paths
+ */
 async function applyPatches(inputs: Inputs): Promise<void> {
     function fnlog(msg: string): void {
         trace_commands.log('applyPatches: ' + msg);
@@ -1102,6 +1255,7 @@ async function applyPatches(inputs: Inputs): Promise<void> {
  * workflow steps based on the provided inputs. Supports multi-configuration generators.
  *
  * @param inputs - Configuration inputs for the CMake workflow
+ * @throws Error if configure, build, test, install, or package steps fail
  */
 async function main(inputs: Inputs): Promise<void> {
     function fnlog(msg: string): void {
@@ -1724,6 +1878,14 @@ async function main(inputs: Inputs): Promise<void> {
     }
 }
 
+/**
+ * Parses extra arguments into a list or map of arguments.
+ *
+ * Supports both simple argument lists and key-value pairs for matrix builds.
+ *
+ * @param extra_args - Raw extra arguments to parse
+ * @returns Parsed arguments as array or map
+ */
 function parseExtraArgs(extra_args: string[]): string[] | Record<string, string[]> {
     function fnlog(msg: string): void {
         trace_commands.log('parseExtraArgs: ' + msg);
@@ -1807,6 +1969,16 @@ function normalizePath(inputPath: string): string {
     return inputPath;
 }
 
+/**
+ * Applies CMake preset macros to a value.
+ *
+ * Replaces macro placeholders like ${sourceDir}, ${generator}, $env{VAR}
+ * with their actual values.
+ *
+ * @param value - Value to process for macro expansion
+ * @param allInputs - All workflow inputs for macro resolution
+ * @returns Value with macros expanded
+ */
 function applyPresetMacros(value: unknown, allInputs: Inputs): unknown {
     // The action allows preset macros to be used in the input.
     // Macros are recognized in the form $<macro-namespace>{<macro-name>}
@@ -1847,6 +2019,11 @@ function applyPresetMacros(value: unknown, allInputs: Inputs): unknown {
 
 let lastInputsForErrors: Inputs | undefined = undefined;
 
+/**
+ * GitHub Actions entry point for the CMake workflow action.
+ *
+ * Parses action inputs and executes the CMake workflow.
+ */
 async function run(): Promise<void> {
     function fnlog(msg: string): void {
         trace_commands.log('cmake-workflow: ' + msg);

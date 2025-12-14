@@ -12,6 +12,9 @@ import { reportAndSetFailed } from 'pretty-errors';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const setup_program = require('setup-program');
 
+/**
+ * Configuration inputs for the setup-cmake action.
+ */
 interface Inputs {
     version: string;
     architecture: string;
@@ -24,6 +27,9 @@ interface Inputs {
     trace_commands: boolean;
 }
 
+/**
+ * Output values produced by CMake setup.
+ */
 interface Outputs {
     path: string;
     dir: string;
@@ -39,11 +45,22 @@ interface Outputs {
     supported_presets_version: number;
 }
 
+/**
+ * Result of a program search operation.
+ */
 interface ProgramResult {
     output_version: string | null;
     output_path: string | null;
 }
 
+/**
+ * Updates version requirements based on cmake_minimum_required in a CMakeLists.txt file.
+ *
+ * @param cmake_file - Path to CMakeLists.txt or directory containing it
+ * @param version - Current version requirement
+ * @param allVersions - List of all available CMake versions
+ * @returns Updated version requirement merged with CMake file requirements
+ */
 function updateCMakeVersionFromFile(cmake_file: string, version: string, allVersions: string[]): string {
     function fnlog(msg: string): void {
         trace_commands.log('updateCMakeVersionFromFile: ' + msg);
@@ -128,6 +145,15 @@ function updateCMakeVersionFromFile(cmake_file: string, version: string, allVers
     return version;
 }
 
+/**
+ * Generates the download URL for a specific CMake version.
+ *
+ * @param version - CMake version to download
+ * @param architecture - Target architecture (x86, x64, arm, arm64)
+ * @param fnlog - Logging function for trace output
+ * @returns URL to download the CMake archive
+ * @throws Error if version is invalid
+ */
 function generateCMakeURL(version: string, architecture: string, fnlog: (msg: string) => void): string {
     const versionSV = semver.parse(version);
     if (!versionSV) {
@@ -190,6 +216,12 @@ function generateCMakeURL(version: string, architecture: string, fnlog: (msg: st
     return cmake_url;
 }
 
+/**
+ * Checks if the OS is Debian-based using /etc/os-release contents.
+ *
+ * @param osReleaseContents - Contents of /etc/os-release file
+ * @returns True if the system is Debian or Ubuntu-based
+ */
 function isDebianLike(osReleaseContents: string): boolean {
     const lower = osReleaseContents.toLowerCase();
     const idLike = lower.match(/^id_like=(.+)$/m);
@@ -306,6 +338,7 @@ export async function ensureGit({ subgroups = true, fnlog = (): void => {} }: { 
  * @param inputs - Configuration inputs including version, architecture, and paths
  * @param subgroups - Whether to use GitHub Actions log groups for output organization
  * @returns Output information including CMake path, version, and binary directory
+ * @throws Error if the specified version is invalid or CMake cannot be installed
  */
 export async function main(inputs: Inputs, subgroups = true): Promise<Partial<Outputs>> {
     function fnlog(msg: string): void {
@@ -510,6 +543,11 @@ export async function main(inputs: Inputs, subgroups = true): Promise<Partial<Ou
 
 let lastInputsForErrors: Inputs | undefined = undefined;
 
+/**
+ * Main entry point for the setup-cmake GitHub Action.
+ *
+ * Parses inputs and sets up CMake on the runner.
+ */
 async function run(): Promise<void> {
     const inputs: Inputs = {
         version: gh_inputs.getInput('version', { defaultValue: '*' }),

@@ -72,8 +72,13 @@ export class GitHubUser {
     is_regular = true;
 }
 
+/**
+ * Represents a Git tag with its name and commit SHA.
+ */
 interface Tag {
+    /** Tag name (e.g., 'v1.0.0') */
     name: string;
+    /** Commit SHA the tag points to */
     sha: string;
 }
 
@@ -109,10 +114,17 @@ export function parseSortByOption(value: string): SortByOption {
     return 'most-changes-first';
 }
 
+/**
+ * Configuration inputs for the create-changelog action.
+ */
 interface Inputs {
+    /** Path to the source repository */
     source_dir: string;
+    /** Pattern to match version strings in commit messages */
     version_pattern: RegExp;
+    /** Pattern to match version tags */
     tag_pattern: RegExp;
+    /** Path where the changelog will be written */
     output_path: string;
     limit: number;
     thank_non_regular: boolean;
@@ -130,6 +142,12 @@ interface Inputs {
     repoName?: string;
 }
 
+/**
+ * Gets the current Git branch name.
+ *
+ * @param projectPath - Path to the Git repository
+ * @returns Current branch name or null if not found
+ */
 async function getCurrentBranch(projectPath: string): Promise<string | null> {
     let branch = '';
     try {
@@ -156,6 +174,12 @@ async function getCurrentBranch(projectPath: string): Promise<string | null> {
     return null;
 }
 
+/**
+ * Gets the GitHub remote URL from a Git repository.
+ *
+ * @param gitPath - Path to the Git repository
+ * @returns GitHub repository URL or null if not found
+ */
 async function getGithubRemote(gitPath: string): Promise<string | null> {
     let remoteOutput = '';
     try {
@@ -191,6 +215,12 @@ async function getGithubRemote(gitPath: string): Promise<string | null> {
     return null;
 }
 
+/**
+ * Extracts the repository owner from a GitHub URL.
+ *
+ * @param repoUrl - GitHub repository URL
+ * @returns Repository owner name or null if not found
+ */
 function getGithubRepoOwner(repoUrl: string | undefined): string | null {
     if (!repoUrl) {
         return null;
@@ -209,6 +239,12 @@ function getGithubRepoOwner(repoUrl: string | undefined): string | null {
     return null;
 }
 
+/**
+ * Extracts the repository name from a GitHub URL.
+ *
+ * @param repoUrl - GitHub repository URL
+ * @returns Repository name or null if not found
+ */
 function getGithubRepoName(repoUrl: string | undefined): string | null {
     if (!repoUrl) {
         return null;
@@ -227,6 +263,11 @@ function getGithubRepoName(repoUrl: string | undefined): string | null {
     return null;
 }
 
+/**
+ * Adjusts input parameters by filling in missing values from environment.
+ *
+ * @param inputs - Input configuration to adjust
+ */
 async function adjustParameters(inputs: Inputs): Promise<void> {
     const envKeys = ['GITHUB_BASE_REF', 'GITHUB_REF_NAME'];
     for (const envKey of envKeys) {
@@ -256,6 +297,13 @@ async function adjustParameters(inputs: Inputs): Promise<void> {
     inputs.repoName = getGithubRepoName(inputs.repoUrl) || undefined;
 }
 
+/**
+ * Gets local Git tags matching a pattern.
+ *
+ * @param projectPath - Path to the Git repository
+ * @param tagPattern - Regex pattern to filter tags
+ * @returns Array of matching tags with names and SHAs
+ */
 async function getLocalTags(projectPath: string, tagPattern: RegExp): Promise<Tag[]> {
     const tags: Tag[] = [];
     const commonExecOptions = { cwd: projectPath };
@@ -314,6 +362,14 @@ async function getLocalTags(projectPath: string, tagPattern: RegExp): Promise<Ta
     return tags;
 }
 
+/**
+ * Fetches tags from GitHub API matching a pattern.
+ *
+ * @param repoUrl - GitHub repository URL
+ * @param tagPattern - Regex pattern to filter tags
+ * @param accessToken - GitHub access token for API requests
+ * @returns Array of matching tags
+ */
 async function getGithubTags(repoUrl: string | undefined, tagPattern: RegExp, accessToken: string): Promise<Tag[]> {
     if (!repoUrl) {
         return [];
@@ -371,6 +427,13 @@ async function getGithubTags(repoUrl: string | undefined, tagPattern: RegExp, ac
     return tags;
 }
 
+/**
+ * Removes duplicate tags based on specified fields.
+ *
+ * @param tags - Array of tags to deduplicate
+ * @param comparisonFields - Fields to use for comparison
+ * @returns Array of unique tags
+ */
 function removeTagDuplicates(tags: Tag[], comparisonFields: (keyof Tag)[]): Tag[] {
     const uniqueItems: Tag[] = [];
     const seenValues = new Set<string>();
@@ -389,6 +452,18 @@ function removeTagDuplicates(tags: Tag[], comparisonFields: (keyof Tag)[]): Tag[
     return uniqueItems;
 }
 
+/**
+ * Processes tags from local and remote sources.
+ *
+ * Fetches local tags first, and if none found, fetches from GitHub.
+ * Removes duplicates based on name and SHA.
+ *
+ * @param projectPath - Path to the Git repository
+ * @param tagPattern - Regex pattern to filter tags
+ * @param repoUrl - GitHub repository URL
+ * @param accessToken - GitHub access token
+ * @returns Array of unique tags
+ */
 async function processTags(projectPath: string, tagPattern: RegExp, repoUrl: string | undefined, accessToken: string): Promise<Tag[]> {
     function fnlog(msg: string): void {
         trace_commands.log('processTags: ' + msg);
@@ -408,6 +483,14 @@ async function processTags(projectPath: string, tagPattern: RegExp, repoUrl: str
     return tags;
 }
 
+/**
+ * Gets the author username of a GitHub issue.
+ *
+ * @param repoUrl - GitHub repository URL
+ * @param issueNumber - Issue number
+ * @param accessToken - GitHub access token for API requests
+ * @returns Issue author username or null if not found
+ */
 async function getIssueAuthor(repoUrl: string, issueNumber: string, accessToken: string): Promise<string | null> {
     // Extract the owner and repository name from the URL
     const urlParts = repoUrl.replace(/\/$/, '').split('/');
@@ -438,6 +521,12 @@ async function getIssueAuthor(repoUrl: string, issueNumber: string, accessToken:
     return null;
 }
 
+/**
+ * Checks if a string is a valid conventional commit type.
+ *
+ * @param s - String to validate
+ * @returns True if the string is a valid commit type
+ */
 function isValidType(s: string): boolean {
     // A valid type according to `normalizeType`
     // Used to identify tags that can be converted to types
@@ -476,6 +565,12 @@ function isValidType(s: string): boolean {
     return recognizedTypes.includes(s);
 }
 
+/**
+ * Normalizes a commit type to a standard format.
+ *
+ * @param s - Type string to normalize
+ * @returns Normalized type string
+ */
 function normalizeType(s: string | null): string {
     if (!s) {
         return 'other';
@@ -505,6 +600,18 @@ function normalizeType(s: string | null): string {
     return categoryMapping[s.toLowerCase()] || s;
 }
 
+/**
+ * Parses conventional commit fields from a commit message.
+ *
+ * Extracts type, scope, description, body, footers, and breaking change
+ * information from the commit message. Also identifies version tags.
+ *
+ * @param commit - Commit to populate
+ * @param repoUrl - GitHub repository URL
+ * @param versionPattern - Pattern to identify release commits
+ * @param tags - Array of version tags
+ * @returns The populated commit
+ */
 async function populateConventional(commit: Commit, repoUrl: string | undefined, versionPattern: RegExp, tags: Tag[]): Promise<Commit> {
     for (const line of commit.message.split('\n')) {
         if (!line) {
@@ -630,6 +737,15 @@ async function populateConventional(commit: Commit, repoUrl: string | undefined,
     return commit;
 }
 
+/**
+ * Fetches and parses commits from the local Git repository.
+ *
+ * @param projectPath - Path to the Git repository
+ * @param repoUrl - GitHub repository URL
+ * @param versionPattern - Pattern to identify release commits
+ * @param tags - Array of version tags
+ * @returns Array of parsed commits
+ */
 async function getLocalCommits(projectPath: string, repoUrl: string | undefined, versionPattern: RegExp, tags: Tag[]): Promise<Commit[]> {
     const commits: Commit[] = [];
     let commitLogOutput = '';
@@ -734,6 +850,16 @@ async function populateDiffStats(projectPath: string, commits: Commit[]): Promis
     }
 }
 
+/**
+ * Removes duplicate commits and merges their metadata.
+ *
+ * Commits are considered duplicates if they have the same type, scope,
+ * and description. Duplicate metadata (body, footers, tags, hashes)
+ * is merged into the first occurrence.
+ *
+ * @param commits - Array of commits to deduplicate
+ * @returns Array of unique commits with merged metadata
+ */
 function removeCommitDuplicates(commits: Commit[]): Commit[] {
     const uniqueCommits: Commit[] = [];
     const visitedCommits = new Set<string>();
@@ -791,6 +917,16 @@ function removeCommitDuplicates(commits: Commit[]): Commit[] {
     return uniqueCommits;
 }
 
+/**
+ * Fetches commits from the GitHub API.
+ *
+ * @param repoUrl - GitHub repository URL
+ * @param branch - Branch name to fetch commits from
+ * @param versionPattern - Pattern to identify release commits
+ * @param tags - Array of tags to check against commits
+ * @param accessToken - GitHub access token
+ * @returns Array of commits from the GitHub API
+ */
 async function getGithubCommits(repoUrl: string | undefined, branch: string | undefined, versionPattern: RegExp, tags: Tag[], accessToken: string): Promise<Commit[]> {
     if (!repoUrl || !branch) {
         return [];
@@ -865,6 +1001,18 @@ async function getGithubCommits(repoUrl: string | undefined, branch: string | un
     return commits;
 }
 
+/**
+ * Processes commits from local and remote sources.
+ *
+ * @param projectPath - Path to the Git repository
+ * @param repoUrl - GitHub repository URL
+ * @param versionPattern - Pattern to identify release commits
+ * @param tags - Array of version tags
+ * @param repoBranch - Branch name
+ * @param accessToken - GitHub access token
+ * @param checkUnconventional - Mode for handling unconventional commits
+ * @returns Array of processed commits
+ */
 async function processCommits(projectPath: string, repoUrl: string | undefined, versionPattern: RegExp, tags: Tag[], repoBranch: string | undefined, accessToken: string, checkUnconventional: CheckUnconventionalMode): Promise<Commit[]> {
     function fnlog(msg: string): void {
         trace_commands.log('processCommits: ' + msg);
@@ -907,6 +1055,13 @@ async function processCommits(projectPath: string, repoUrl: string | undefined, 
     return commits;
 }
 
+/**
+ * Fetches a user's display name from their GitHub profile.
+ *
+ * @param username - GitHub username
+ * @param accessToken - GitHub access token
+ * @returns Profile display name or null if not found
+ */
 async function getGithubProfileName(username: string, accessToken: string): Promise<string | null> {
     const url = `https://api.github.com/users/${username}`;
     const headers: Record<string, string> = {
@@ -933,6 +1088,13 @@ async function getGithubProfileName(username: string, accessToken: string): Prom
     return null;
 }
 
+/**
+ * Finds a GitHub username by email address.
+ *
+ * @param email - Email address to search for
+ * @param accessToken - GitHub access token
+ * @returns GitHub username or null if not found
+ */
 async function getGithubUsername(email: string, accessToken: string): Promise<string | null> {
     const url = `https://api.github.com/search/users?q=${encodeURIComponent(email)}+in:email`;
     const headers: Record<string, string> = {
@@ -959,6 +1121,14 @@ async function getGithubUsername(email: string, accessToken: string): Promise<st
     return null;
 }
 
+/**
+ * Populates GitHub usernames and names for all commits.
+ *
+ * Propagates username information to commits with matching email addresses.
+ *
+ * @param commits - Array of commits to populate
+ * @param accessToken - GitHub access token
+ */
 async function populateGithubUsernames(commits: Commit[], accessToken: string): Promise<void> {
     for (const commit of commits) {
         if (!commit.gh_username) {
@@ -1005,6 +1175,14 @@ async function populateGithubUsernames(commits: Commit[], accessToken: string): 
     }
 }
 
+/**
+ * Checks if a user has admin permissions on a repository.
+ *
+ * @param repoUrl - GitHub repository URL
+ * @param username - GitHub username to check
+ * @param accessToken - GitHub access token
+ * @returns True if user has admin permissions
+ */
 async function checkGithubAdminPermissions(repoUrl: string, username: string, accessToken: string): Promise<boolean> {
     // Extract the repository owner and name from the URL
     const [, , , owner, repo] = repoUrl.replace(/\/$/, '').split('/');
@@ -1036,6 +1214,14 @@ async function checkGithubAdminPermissions(repoUrl: string, username: string, ac
     return false;
 }
 
+/**
+ * Checks if a user belongs to the repository owner's organization.
+ *
+ * @param repoUrl - GitHub repository URL
+ * @param username - GitHub username to check
+ * @param accessToken - GitHub access token
+ * @returns True if user is in the owner's organization
+ */
 async function checkUserInstitution(repoUrl: string, username: string, accessToken: string): Promise<boolean> {
     // Extract the repository owner from the URL
     const [, , , owner] = repoUrl.replace(/\/$/, '').split('/');
@@ -1089,6 +1275,18 @@ async function checkUserInstitution(repoUrl: string, username: string, accessTok
     return false;
 }
 
+/**
+ * Populates author data and issue information for commits.
+ *
+ * Creates GitHubUser entries for commit authors and issue reporters,
+ * including permission and affiliation checks.
+ *
+ * @param commits - Array of commits to process
+ * @param repoUrl - GitHub repository URL
+ * @param repoOwner - Repository owner username
+ * @param accessToken - GitHub access token
+ * @returns Map of usernames to GitHubUser objects
+ */
 async function populateIssueData(commits: Commit[], repoUrl: string | undefined, repoOwner: string | undefined, accessToken: string): Promise<Record<string, GitHubUser>> {
     const authors: Record<string, GitHubUser> = {};
 
@@ -1134,6 +1332,13 @@ async function populateIssueData(commits: Commit[], repoUrl: string | undefined,
     return authors;
 }
 
+/**
+ * Calculates a percentile value from an array of numbers.
+ *
+ * @param data - Array of numbers to calculate percentile from
+ * @param percentile - Percentile to calculate (0-100)
+ * @returns The calculated percentile value
+ */
 function calculatePercentile(data: number[], percentile: number): number {
     if (data.length === 0) {
         return 1;
@@ -1151,6 +1356,14 @@ function calculatePercentile(data: number[], percentile: number): number {
     }
 }
 
+/**
+ * Identifies non-regular contributors based on commit statistics.
+ *
+ * Contributors are marked as non-regular if they are not admin/affiliated
+ * and have fewer commits than the threshold.
+ *
+ * @param authors - Map of usernames to GitHubUser objects
+ */
 function identifyNonRegularContributors(authors: Record<string, GitHubUser>): void {
     // Create an array of commit counts
     const commitHist = Object.values(authors).map(author => author.commits);
@@ -1182,6 +1395,12 @@ function identifyNonRegularContributors(authors: Record<string, GitHubUser>): vo
     }
 }
 
+/**
+ * Returns an emoji icon for a commit type.
+ *
+ * @param s - Commit type string
+ * @returns Emoji icon representing the commit type
+ */
 function iconFor(s: string | null): string {
     // https://github.com/favoloso/conventional-changelog-emoji#available-emojis
     const m: Record<string, string> = {
@@ -1225,6 +1444,12 @@ export function featureSubjectIcon(): string {
 // Initialize the count property
 featureSubjectIcon.count = 0;
 
+/**
+ * Capitalizes the first letter of each sentence in a text.
+ *
+ * @param text - Text to capitalize
+ * @returns Text with capitalized sentences
+ */
 function capitalizeSentences(text: string): string {
     const sentences = text.split('. ');
     let result = '';
@@ -1309,11 +1534,16 @@ export function compareCommits(a: Commit, b: Commit, sortBy: SortByOption): numb
 }
 
 /**
- * Sorts commits within each scope of the changes object.
+ * Sorts commits within each type of the changes object.
+ *
+ * For each type, all commits across all scopes are collected and sorted together.
+ * The scope map is then rebuilt in sorted order, ensuring that:
+ * 1. Scopes appear in the order their first commit appears after sorting
+ * 2. Commits within each scope maintain their relative sorted order
  *
  * @param changes - The categorized changes object
  * @param sortBy - The sorting option to use
- * @returns The changes object with commits sorted within each scope
+ * @returns The changes object with commits sorted across all scopes
  */
 export function sortChanges(changes: Changes, sortBy: SortByOption): Changes {
     for (const type of Object.keys(changes)) {
@@ -1324,6 +1554,12 @@ export function sortChanges(changes: Changes, sortBy: SortByOption): Changes {
     return changes;
 }
 
+/**
+ * Categorizes commits by type and scope.
+ *
+ * @param commits - Array of commits to categorize
+ * @returns Object with changes map, type priority list, and parent release commit
+ */
 function categorizeCommits(commits: Commit[]): { changes: Changes; changeTypePriority: string[]; parentRelease: Commit | null } {
     function fnlog(msg: string): void {
         trace_commands.log('categorizeCommits: ' + msg);
@@ -1362,6 +1598,12 @@ function categorizeCommits(commits: Commit[]): { changes: Changes; changeTypePri
     return { changes, changeTypePriority, parentRelease };
 }
 
+/**
+ * Converts a commit type to a human-readable section title.
+ *
+ * @param s - Commit type string
+ * @returns Human-readable title for the commit type
+ */
 function humanize(s: string): string {
     const mapping: Record<string, string> = {
         'docs': 'Documentation',
@@ -1383,6 +1625,12 @@ function humanize(s: string): string {
     return mapping[s] || s;
 }
 
+/**
+ * Returns a description for a commit type.
+ *
+ * @param s - Commit type string
+ * @returns Description of what this commit type represents
+ */
 function commitTypeDescription(s: string): string {
     const mapping: Record<string, string> = {
         'docs': 'Documentation updates and improvements',
@@ -1554,6 +1802,12 @@ export function generateOutput(changes: Changes, changeTypePriority: string[], a
     return output;
 }
 
+/**
+ * Writes changelog content to a file.
+ *
+ * @param outputPath - Path where the changelog will be written
+ * @param output - Changelog content to write
+ */
 function writeChangelog(outputPath: string, output: string): void {
     const absolutePath = path.resolve(outputPath);
     fs.writeFileSync(absolutePath, output);
@@ -1672,8 +1926,14 @@ export async function main(inputs: Inputs): Promise<void> {
     }
 }
 
+/** Captured inputs for error reporting context */
 let lastInputsForErrors: Inputs | undefined = undefined;
 
+/**
+ * Returns a hint message for error reporting.
+ *
+ * @returns Hint about enabling trace commands or reporting bugs
+ */
 function getErrorHint(): string {
     if (lastInputsForErrors?.trace_commands) {
         return 'Trace commands already enabled; if this looks like a bug, please open an issue at github.com/alandefreitas/cpp-actions with stack and logs.';

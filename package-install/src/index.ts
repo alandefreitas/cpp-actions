@@ -15,6 +15,9 @@ import { reportAndSetFailed } from 'pretty-errors';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const setup_program = require('setup-program');
 
+/**
+ * Configuration inputs for the package-install action.
+ */
 interface Inputs {
     // packages
     vcpkg: string[];
@@ -40,11 +43,19 @@ interface Inputs {
     trace_commands: boolean;
 }
 
+/**
+ * Output values from vcpkg installation.
+ */
 interface VcpkgOutputs {
     vcpkg_executable?: string;
     vcpkg_toolchain?: string;
 }
 
+/**
+ * Generates a UUID v4 string.
+ *
+ * @returns A randomly generated UUID v4 string
+ */
 function uuidV4(): string {
     if (typeof crypto.randomUUID === 'function') {
         return crypto.randomUUID();
@@ -56,6 +67,12 @@ function uuidV4(): string {
     return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
+/**
+ * Formats a duration in milliseconds to a human-readable string.
+ *
+ * @param ms - Duration in milliseconds
+ * @returns Formatted time string (e.g., "500ms", "2.5s", "1.5m")
+ */
 function formatTime(ms: number): string {
     if (ms < 1000) {
         return `${ms}ms`;
@@ -98,7 +115,13 @@ export function semverGteLoose(version: string, threshold: string): boolean {
 }
 
 /**
- * Install apt sources, keys, and packages with retries and version-aware flags.
+ * Installs apt sources, keys, and packages with retries and version-aware flags.
+ *
+ * Handles APT source key installation, repository addition, architecture
+ * configuration, and package installation with retry logic.
+ *
+ * @param inputs - Configuration inputs for APT package installation
+ * @throws Error if package installation fails and ignore_missing is false
  */
 async function apt_get_main(inputs: Inputs): Promise<void> {
     function fnlog(msg: string): void {
@@ -249,7 +272,10 @@ async function apt_get_main(inputs: Inputs): Promise<void> {
 }
 
 /**
- * Create a temporary folder inside RUNNER_TEMP (or os tmp) with a uuid name.
+ * Creates a temporary folder inside RUNNER_TEMP (or OS temp) with a UUID name.
+ *
+ * @param dest - Optional destination path (ignored, folder is created with UUID)
+ * @returns Absolute path to the created temporary folder
  */
 async function createTempFolder(dest?: string): Promise<string> {
     dest = path.join(process.env['RUNNER_TEMP'] || os.tmpdir() || '', uuidV4());
@@ -257,12 +283,26 @@ async function createTempFolder(dest?: string): Promise<string> {
     return dest;
 }
 
+/**
+ * Computes SHA1 hash of a string.
+ *
+ * @param input - String to hash
+ * @returns Hexadecimal SHA1 hash string
+ */
 function sha1sum(input: string): string {
     const hash = crypto.createHash('sha1');
     hash.update(input);
     return hash.digest('hex');
 }
 
+/**
+ * Escapes a file path for safe use in shell commands.
+ *
+ * Adds quotes around paths containing whitespace or slashes.
+ *
+ * @param pathStr - Path string to escape
+ * @returns Escaped path string
+ */
 function escapePath(pathStr: string): string {
     // If there are no whitespaces or slashes (forwards or backwards), then
     // we don't need to quote the path.
@@ -276,6 +316,12 @@ function escapePath(pathStr: string): string {
     return pathStr;
 }
 
+/**
+ * Checks if the given path is an MSVC compiler executable (cl.exe).
+ *
+ * @param executablePath - Path to check
+ * @returns True if the path ends with cl.exe
+ */
 function isMSVCCompilerExecutable(executablePath: string): boolean {
     if (!executablePath) {
         return false;
@@ -284,6 +330,14 @@ function isMSVCCompilerExecutable(executablePath: string): boolean {
     return normalized.endsWith('/cl.exe');
 }
 
+/**
+ * Reads the version output from a compiler executable.
+ *
+ * Uses /Bv flag for MSVC, --version for other compilers.
+ *
+ * @param executablePath - Path to the compiler executable
+ * @returns Compiler version output string
+ */
 async function readCompilerVersion(executablePath: string): Promise<string> {
     if (!executablePath) {
         return '';
@@ -293,6 +347,15 @@ async function readCompilerVersion(executablePath: string): Promise<string> {
     return result.stdout.trim();
 }
 
+/**
+ * Installs and configures vcpkg with the specified packages.
+ *
+ * Handles vcpkg cloning, bootstrapping, package installation, and caching.
+ *
+ * @param inputs - Configuration inputs for vcpkg installation
+ * @returns Object containing vcpkg executable and toolchain paths
+ * @throws Error if a vcpkg package fails to install
+ */
 async function vcpkg_main(inputs: Inputs): Promise<VcpkgOutputs> {
     /*
         Infer any vcpkg parameters necessary and
@@ -519,6 +582,11 @@ export async function main(inputs: Inputs, _force_install_vcpkg?: boolean): Prom
  */
 let lastInputsForErrors: Inputs | undefined = undefined;
 
+/**
+ * Main entry point for the package-install GitHub Action.
+ *
+ * Parses inputs and orchestrates apt-get and vcpkg package installation.
+ */
 async function run(): Promise<void> {
     let inputs: Inputs = {
         // packages

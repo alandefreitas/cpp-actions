@@ -12,6 +12,9 @@ import { reportAndSetFailed } from 'pretty-errors';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const setup_program = require('setup-program');
 
+/**
+ * Configuration inputs for the setup-gcc action.
+ */
 interface Inputs {
     version: string;
     path: string[];
@@ -20,6 +23,9 @@ interface Inputs {
     trace_commands: boolean;
 }
 
+/**
+ * Output values produced by GCC setup.
+ */
 interface MainOutputs {
     output_path: string | null;
     cc: string | null;
@@ -32,11 +38,20 @@ interface MainOutputs {
     version_patch: number;
 }
 
+/**
+ * Result of a program search operation.
+ */
 interface ProgramResult {
     output_version: string | null;
     output_path: string | null;
 }
 
+/**
+ * Removes "gcc-" or "g++-" prefixes from a version string.
+ *
+ * @param version - Version string potentially prefixed with gcc- or g++-
+ * @returns Cleaned version string without the prefix
+ */
 function removeGCCPrefix(version: string): string {
     // Remove "gcc-" or "g++-" prefix
     if (version.startsWith('gcc-') || version.startsWith('g++-')) {
@@ -313,6 +328,11 @@ export async function main(
 
 let lastInputsForErrors: Inputs | undefined = undefined;
 
+/**
+ * Main entry point for the setup-gcc GitHub Action.
+ *
+ * Parses inputs and sets up the GCC compiler environment.
+ */
 async function run(): Promise<void> {
     const inputs: Inputs = {
         version: removeGCCPrefix(gh_inputs.getInput('version', { defaultValue: '*' })),

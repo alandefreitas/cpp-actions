@@ -107,10 +107,9 @@ function createIssue(
 export const rules: Rule[] = [
     {
         id: 'jsdoc/missing',
-        description: 'Exported declarations must have JSDoc comments',
+        description: 'All declarations must have JSDoc comments',
         severity: 'error',
         check: (decl, file) => {
-            if (!decl.isExported) return [];
             if (decl.jsdoc) return [];
 
             return [
@@ -119,7 +118,7 @@ export const rules: Rule[] = [
                     file,
                     'jsdoc/missing',
                     'error',
-                    `Exported ${decl.type} '${decl.name}' is missing JSDoc documentation`
+                    `${decl.type} '${decl.name}' is missing JSDoc documentation`
                 ),
             ];
         },
@@ -129,7 +128,7 @@ export const rules: Rule[] = [
         description: 'JSDoc comments must have a description',
         severity: 'error',
         check: (decl, file) => {
-            if (!decl.isExported || !decl.jsdoc) return [];
+            if (!decl.jsdoc) return [];
             if (decl.jsdoc.description && decl.jsdoc.description.trim().length > 0) return [];
 
             return [
@@ -148,7 +147,7 @@ export const rules: Rule[] = [
         description: 'JSDoc descriptions must be meaningful, not just restate the name',
         severity: 'error',
         check: (decl, file) => {
-            if (!decl.isExported || !decl.jsdoc) return [];
+            if (!decl.jsdoc) return [];
             if (!decl.jsdoc.description) return [];
 
             if (isLazyDescription(decl.name, decl.jsdoc.description)) {
@@ -171,7 +170,7 @@ export const rules: Rule[] = [
         description: 'All parameters must have @param tags',
         severity: 'error',
         check: (decl, file) => {
-            if (!decl.isExported || !decl.jsdoc) return [];
+            if (!decl.jsdoc) return [];
             if (decl.type !== 'function' && decl.type !== 'method') return [];
             if (decl.parameters.length === 0) return [];
 
@@ -204,7 +203,7 @@ export const rules: Rule[] = [
         description: '@param tags must have descriptions',
         severity: 'error',
         check: (decl, file) => {
-            if (!decl.isExported || !decl.jsdoc) return [];
+            if (!decl.jsdoc) return [];
 
             const issues: LintIssue[] = [];
             const paramTags = decl.jsdoc.tags.filter(t => t.tagName === 'param');
@@ -231,7 +230,7 @@ export const rules: Rule[] = [
         description: 'Non-void functions must have @returns tag',
         severity: 'error',
         check: (decl, file) => {
-            if (!decl.isExported || !decl.jsdoc) return [];
+            if (!decl.jsdoc) return [];
             if (decl.type !== 'function' && decl.type !== 'method') return [];
 
             // Skip if return type is void or undefined
@@ -270,7 +269,7 @@ export const rules: Rule[] = [
         description: '@returns tags must have descriptions',
         severity: 'error',
         check: (decl, file) => {
-            if (!decl.isExported || !decl.jsdoc) return [];
+            if (!decl.jsdoc) return [];
 
             const issues: LintIssue[] = [];
             const returnsTags = decl.jsdoc.tags.filter(
@@ -299,7 +298,7 @@ export const rules: Rule[] = [
         description: 'Functions with throw statements should document @throws',
         severity: 'warning',
         check: (decl, file) => {
-            if (!decl.isExported || !decl.jsdoc) return [];
+            if (!decl.jsdoc) return [];
             if (decl.type !== 'function' && decl.type !== 'method') return [];
             if (!decl.hasThrowStatements) return [];
 

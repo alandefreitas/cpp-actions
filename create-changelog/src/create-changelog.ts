@@ -11,6 +11,9 @@ import * as trace_commands from 'trace-commands';
  */
 type CheckUnconventionalMode = 'false' | 'warn' | 'error';
 
+/**
+ * CLI input options for the create-changelog tool.
+ */
 interface CliInputs {
     source_dir: string;
     version_pattern: RegExp;
@@ -28,6 +31,12 @@ interface CliInputs {
     sort_by: SortByOption;
 }
 
+/**
+ * Normalizes a file path by expanding ~ and converting backslashes.
+ *
+ * @param inputPath - Path to normalize
+ * @returns Normalized path string
+ */
 function normalizePath(inputPath: string): string {
     let p = inputPath;
     if (p.startsWith('~/') || p.startsWith('~\\')) {
@@ -42,6 +51,12 @@ function normalizePath(inputPath: string): string {
     return p;
 }
 
+/**
+ * Parses a string to an integer, returning undefined if invalid.
+ *
+ * @param value - String to parse
+ * @returns Parsed integer or undefined
+ */
 function toIntegerInput(value: string): number | undefined {
     const parsed = parseInt(value, 10);
     return isNaN(parsed) ? undefined : parsed;
@@ -68,6 +83,11 @@ function parseCheckUnconventionalMode(value: string): CheckUnconventionalMode {
     return 'warn';
 }
 
+/**
+ * Parses command line arguments into CLI input options.
+ *
+ * @returns Parsed CLI input configuration
+ */
 function parseArgs(): CliInputs {
     const args = process.argv.slice(2);
     const inputs: CliInputs = {
@@ -150,6 +170,9 @@ function parseArgs(): CliInputs {
     return inputs;
 }
 
+/**
+ * Main entry point for local CLI execution of create-changelog.
+ */
 async function runLocal(): Promise<void> {
     const inputs = parseArgs();
     trace_commands.set_trace_commands(true);

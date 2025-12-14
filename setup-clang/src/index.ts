@@ -12,7 +12,15 @@ import { reportAndSetFailed } from 'pretty-errors';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const setup_program = require('setup-program');
 
-// Load ubuntu versions JSON - path differs between compiled output (index.js) and source (src/index.ts)
+/**
+ * Loads Ubuntu version name mappings from JSON file.
+ *
+ * Searches for the JSON file in multiple locations to support both
+ * compiled and source execution contexts.
+ *
+ * @returns Record mapping Ubuntu version numbers to codenames
+ * @throws Error if ubuntu-versions.json cannot be found
+ */
 function loadUbuntuVersionNames(): Record<string, string> {
     const paths = [
         path.join(__dirname, '../setup-program/ubuntu-versions.json'),  // from compiled index.js
@@ -30,22 +38,34 @@ function loadUbuntuVersionNames(): Record<string, string> {
 }
 const ubuntuVersionNames: Record<string, string> = loadUbuntuVersionNames();
 
+/**
+ * Candidate versions and Ubuntu releases for Clang download attempts.
+ */
 interface ClangDownloadCandidates {
     version_candidates: string[];
     ubuntu_versions: string[];
 }
 
+/**
+ * LLVM project URLs for downloading Clang releases.
+ */
 interface ClangUrls {
     llvm_project_url: string;
     llvm_releases_url: string;
     old_llvm_releases_url: string;
 }
 
+/**
+ * Result of a program search operation.
+ */
 interface ProgramResult {
     output_version: string | null;
     output_path: string | null;
 }
 
+/**
+ * Output values produced by Clang setup.
+ */
 interface MainOutputs {
     output_path: string | null;
     cc: string | null;
@@ -58,6 +78,9 @@ interface MainOutputs {
     version_patch: number;
 }
 
+/**
+ * Configuration inputs for the setup-clang action.
+ */
 interface Inputs {
     version: string;
     path: string[];
@@ -66,6 +89,12 @@ interface Inputs {
     trace_commands: boolean;
 }
 
+/**
+ * Removes "clang-" or "clang++-" prefixes from a version string.
+ *
+ * @param version - Version string potentially prefixed with clang- or clang++-
+ * @returns Cleaned version string without the prefix
+ */
 function removeClangPrefix(version: string): string {
     // Remove "clang-" or "clang++-" prefix
     if (version.startsWith('clang-') || version.startsWith('clang++-')) {
@@ -80,6 +109,18 @@ function removeClangPrefix(version: string): string {
     return version;
 }
 
+/**
+ * Determines candidate Clang versions and Ubuntu releases for download.
+ *
+ * Creates ordered lists of version candidates (falling back to similar versions)
+ * and Ubuntu version candidates (sorted by proximity to current version).
+ *
+ * @param version - Semver version constraint for Clang
+ * @param allVersions - Array of all available Clang versions
+ * @param check_latest - If true, prefer latest matching version
+ * @returns Object containing version candidates and Ubuntu version candidates
+ * @throws Error if no version satisfies the requirement or version parsing fails
+ */
 function clangDownloadCandidates(
     version: string,
     allVersions: string[],
@@ -163,6 +204,13 @@ function clangDownloadCandidates(
     return { version_candidates, ubuntu_versions };
 }
 
+/**
+ * Generates download URLs for a specific Clang version and Ubuntu release.
+ *
+ * @param version_candidate - Clang version to generate URLs for
+ * @param ubuntu_version - Ubuntu version to target
+ * @returns Object containing LLVM project, releases, and old-format release URLs
+ */
 function generateClangUrlsFor(version_candidate: string, ubuntu_version: string): ClangUrls {
     trace_commands.log(`Trying to fetch Clang ${version_candidate} for Ubuntu ${ubuntu_version}`);
     const ubuntu_image = `ubuntu-${ubuntu_version}`;
@@ -182,6 +230,21 @@ function generateClangUrlsFor(version_candidate: string, ubuntu_version: string)
     return { llvm_project_url, llvm_releases_url, old_llvm_releases_url };
 }
 
+/**
+ * Attempts to install Clang from various URL candidates.
+ *
+ * Tries each combination of Ubuntu version and Clang version candidate
+ * until a successful download and installation is achieved.
+ *
+ * @param ubuntu_versions - Array of Ubuntu versions to try
+ * @param version_candidates - Array of Clang versions to try
+ * @param _version - Original version constraint (unused)
+ * @param check_latest - If true, prefer latest matching version
+ * @param update_environment - If true, update PATH environment variable
+ * @param output_version - Previously found version (if any)
+ * @param output_path - Previously found path (if any)
+ * @returns Object containing the installed version and path
+ */
 async function install_program_from_clang_urls(
     ubuntu_versions: string[],
     version_candidates: string[],
@@ -490,6 +553,11 @@ export async function main(
 
 let lastInputsForErrors: Inputs | undefined = undefined;
 
+/**
+ * Main entry point for the setup-clang GitHub Action.
+ *
+ * Parses inputs and sets up the Clang compiler environment.
+ */
 async function run(): Promise<void> {
     const inputs: Inputs = {
         version: removeClangPrefix(gh_inputs.getInput('version', { defaultValue: '*' })),

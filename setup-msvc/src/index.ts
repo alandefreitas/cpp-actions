@@ -32,6 +32,9 @@ const RELEASE_YEAR_TO_PRODUCT_VERSION: Record<string, string> = {
 
 const YEARS = Object.keys(RELEASE_YEAR_TO_PRODUCT_VERSION)
 
+/**
+ * Configuration inputs for the setup-msvc action.
+ */
 interface Inputs {
     version: string
     arch: string
@@ -43,6 +46,9 @@ interface Inputs {
     trace_commands: boolean
 }
 
+/**
+ * Output values produced by MSVC configuration.
+ */
 interface Outputs {
     cc: string
     cxx: string
@@ -58,18 +64,35 @@ interface Outputs {
     msvc_compiler_version: string
 }
 
+/**
+ * Extended output values including the version string.
+ */
 interface MainOutputs extends Outputs {
     version: string
 }
 
+/**
+ * Metadata used when building MSVC output values.
+ */
 interface BuildOutputsMetadata {
     compilerVersion?: string
 }
 
+/**
+ * Returns the default target architecture based on processor architecture.
+ *
+ * @returns The processor architecture from environment or "x64" as fallback
+ */
 function getDefaultArch(): string {
     return process.env['PROCESSOR_ARCHITECTURE'] || 'x64'
 }
 
+/**
+ * Lists all installed MSVC toolset versions from the Visual Studio installation.
+ *
+ * @param vcvarsallPath - Path to vcvarsall.bat
+ * @returns Array of installed toolset version strings
+ */
 function listInstalledToolsets(vcvarsallPath: string | null): string[] {
     if (!vcvarsallPath) {
         return []
@@ -84,6 +107,13 @@ function listInstalledToolsets(vcvarsallPath: string | null): string[] {
         .map((dirent) => dirent.name)
 }
 
+/**
+ * Selects the best matching toolset version from installed versions.
+ *
+ * @param requestedVersion - Semver range or specific version requested
+ * @param installedVersions - Array of installed toolset versions
+ * @returns Matching toolset version string or null if none found
+ */
 function selectToolsetVersion(requestedVersion: string, installedVersions: string[]): string | null {
     if (!requestedVersion || requestedVersion === '*') {
         return null
@@ -321,6 +351,7 @@ function deduplicatePathValue(path: string): string {
  * @param spectre - Whether to enable Spectre mitigated libraries ("true" to enable).
  * @param vsversion - Visual Studio version/year selector for discovery.
  * @returns Paths and version fields suitable for action outputs.
+ * @throws Error when executed outside Windows or when vcvarsall cannot be located
  *
  * @example
  * const outputs = await configureMSVCEnvironment('x64', '', '', '', '', '2022')
@@ -607,6 +638,11 @@ export function buildMSVCOutputs(compilerPath: string, env: NodeJS.ProcessEnv = 
 
 let lastInputsForErrors: Inputs | undefined = undefined
 
+/**
+ * Main entry point for the setup-msvc GitHub Action.
+ *
+ * Parses inputs and configures the MSVC developer environment.
+ */
 async function run(): Promise<void> {
     const inputs: Inputs = {
         version: gh_inputs.getInput('version', {defaultValue: '*'}),
