@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { main } from './index';
+import { main, SortByOption, parseSortByOption } from './index';
 import * as trace_commands from 'trace-commands';
 
 /**
@@ -25,6 +25,7 @@ interface CliInputs {
     trace_commands: boolean;
     include_types: Set<string>;
     exclude_types: Set<string>;
+    sort_by: SortByOption;
 }
 
 function normalizePath(inputPath: string): string {
@@ -82,7 +83,8 @@ function parseArgs(): CliInputs {
         update_summary: false,
         trace_commands: true,
         include_types: new Set<string>(),
-        exclude_types: new Set(['chore', 'style'])
+        exclude_types: new Set(['chore', 'style']),
+        sort_by: 'most-changes-first'
     };
 
     const sink: string[] = [];
@@ -127,6 +129,9 @@ function parseArgs(): CliInputs {
                 break;
             case '--exclude_types':
                 inputs.exclude_types = new Set(args[++i].split(',').map(t => t.trim()).filter(t => t));
+                break;
+            case '--sort_by':
+                inputs.sort_by = parseSortByOption(args[++i]);
                 break;
             default:
                 sink.push(args[i]);

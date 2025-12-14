@@ -47,6 +47,11 @@ export class Commit {
     // delimiter (git tag or version pattern)
     tag: string | null = null;
     is_parent_release = false;
+
+    // diff statistics (populated when sort-by is lines-based)
+    lines_added = 0;
+    lines_deleted = 0;
+    lines_changed = 0;
 }
 
 /**
@@ -81,6 +86,29 @@ interface Tag {
  */
 type CheckUnconventionalMode = 'false' | 'warn' | 'error';
 
+/**
+ * Valid sorting options for changelog commits within each scope.
+ *
+ * - 'most-changes-first': Sort by lines changed, most changes first (default)
+ * - 'latest-first': Sort by date, newest first
+ * - 'oldest-first': Sort by date, oldest first
+ */
+export type SortByOption = 'most-changes-first' | 'latest-first' | 'oldest-first';
+
+/**
+ * Parses a sort-by input value into its validated option.
+ *
+ * @param value - The input value to parse
+ * @returns The normalized SortByOption, defaulting to 'most-changes-first' for invalid values
+ */
+export function parseSortByOption(value: string): SortByOption {
+    const normalized = value.toLowerCase().trim();
+    if (['most-changes-first', 'latest-first', 'oldest-first'].includes(normalized)) {
+        return normalized as SortByOption;
+    }
+    return 'most-changes-first';
+}
+
 interface Inputs {
     source_dir: string;
     version_pattern: RegExp;
@@ -95,6 +123,7 @@ interface Inputs {
     trace_commands: boolean;
     include_types: Set<string>;
     exclude_types: Set<string>;
+    sort_by: SortByOption;
     repo_branch?: string;
     repoUrl?: string;
     repoOwner?: string;
@@ -656,6 +685,55 @@ async function getLocalCommits(projectPath: string, repoUrl: string | undefined,
     return commits;
 }
 
+/**
+ * Fetches diff statistics for a list of commits using git show --numstat.
+ *
+ * Populates the lines_added, lines_deleted, and lines_changed properties
+ * for each commit. This is only called when sort-by is 'lines-asc' or 'lines-desc'.
+ *
+ * @param projectPath - Path to the git repository
+ * @param commits - Array of commits to populate with diff stats
+ */
+async function populateDiffStats(projectPath: string, commits: Commit[]): Promise<void> {
+    for (const commit of commits) {
+        if (!commit.hash) continue;
+
+        let statOutput = '';
+        try {
+            await exec.exec('git', ['show', '--numstat', '--format=', commit.hash], {
+                cwd: projectPath,
+                listeners: {
+                    stdout: (data: Buffer) => {
+                        statOutput += data.toString();
+                    }
+                },
+                silent: true
+            });
+
+            // Parse numstat output: <added>\t<deleted>\t<filename>
+            let added = 0;
+            let deleted = 0;
+            for (const line of statOutput.split('\n')) {
+                const parts = line.split('\t');
+                if (parts.length >= 2) {
+                    const lineAdded = parseInt(parts[0], 10);
+                    const lineDeleted = parseInt(parts[1], 10);
+                    // Binary files show '-' which parseInt returns NaN for
+                    if (!isNaN(lineAdded)) added += lineAdded;
+                    if (!isNaN(lineDeleted)) deleted += lineDeleted;
+                }
+            }
+
+            commit.lines_added = added;
+            commit.lines_deleted = deleted;
+            commit.lines_changed = added + deleted;
+            trace_commands.log(`Commit ${commit.hash?.slice(0, 7)}: +${added} -${deleted} (${added + deleted} total)`);
+        } catch (error) {
+            trace_commands.log(`Error fetching diff stats for ${commit.hash}: ${(error as Error).message}`);
+        }
+    }
+}
+
 function removeCommitDuplicates(commits: Commit[]): Commit[] {
     const uniqueCommits: Commit[] = [];
     const visitedCommits = new Set<string>();
@@ -1206,6 +1284,46 @@ export function filterChangesByType(
     return filtered;
 }
 
+/**
+ * Compares two commits based on the specified sort option.
+ *
+ * @param a - First commit to compare
+ * @param b - Second commit to compare
+ * @param sortBy - The sorting option to use
+ * @returns Negative if a should come first, positive if b should come first, 0 if equal
+ */
+export function compareCommits(a: Commit, b: Commit, sortBy: SortByOption): number {
+    switch (sortBy) {
+        case 'oldest-first':
+            // Oldest first - compare dates ascending
+            return new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime();
+        case 'latest-first':
+            // Newest first - compare dates descending
+            return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+        case 'most-changes-first':
+            // Most changes first (default)
+            return b.lines_changed - a.lines_changed;
+        default:
+            return 0;
+    }
+}
+
+/**
+ * Sorts commits within each scope of the changes object.
+ *
+ * @param changes - The categorized changes object
+ * @param sortBy - The sorting option to use
+ * @returns The changes object with commits sorted within each scope
+ */
+export function sortChanges(changes: Changes, sortBy: SortByOption): Changes {
+    for (const type of Object.keys(changes)) {
+        for (const scope of Object.keys(changes[type])) {
+            changes[type][scope].sort((a, b) => compareCommits(a, b, sortBy));
+        }
+    }
+    return changes;
+}
+
 function categorizeCommits(commits: Commit[]): { changes: Changes; changeTypePriority: string[]; parentRelease: Commit | null } {
     function fnlog(msg: string): void {
         trace_commands.log('categorizeCommits: ' + msg);
@@ -1499,6 +1617,13 @@ export async function main(inputs: Inputs): Promise<void> {
     identifyNonRegularContributors(authors);
     core.endGroup();
 
+    // Populate diff stats if needed for lines-based sorting
+    if (inputs.sort_by === 'most-changes-first') {
+        core.startGroup('📊 Fetching diff statistics');
+        await populateDiffStats(inputs.source_dir, commits);
+        core.endGroup();
+    }
+
     // Categorize commits
     core.startGroup('📦 Categorizing commits');
     const { changes: rawChanges, changeTypePriority, parentRelease } = categorizeCommits(commits);
@@ -1506,14 +1631,20 @@ export async function main(inputs: Inputs): Promise<void> {
 
     // Filter changes by type
     core.startGroup('🔍 Filtering commit types');
-    const changes = filterChangesByType(rawChanges, inputs.include_types, inputs.exclude_types);
+    const filteredChanges = filterChangesByType(rawChanges, inputs.include_types, inputs.exclude_types);
     if (inputs.include_types.size > 0) {
         trace_commands.log(`Including types: ${Array.from(inputs.include_types).join(', ')}`);
     }
     if (inputs.exclude_types.size > 0) {
         trace_commands.log(`Excluding types: ${Array.from(inputs.exclude_types).join(', ')}`);
     }
-    trace_commands.log(`Filtered from ${Object.keys(rawChanges).length} to ${Object.keys(changes).length} types`);
+    trace_commands.log(`Filtered from ${Object.keys(rawChanges).length} to ${Object.keys(filteredChanges).length} types`);
+    core.endGroup();
+
+    // Sort changes within each scope
+    core.startGroup('🔀 Sorting commits');
+    const changes = sortChanges(filteredChanges, inputs.sort_by);
+    trace_commands.log(`Sorted commits by: ${inputs.sort_by}`);
     core.endGroup();
 
     // Generate output
@@ -1593,7 +1724,8 @@ export async function run(): Promise<void> {
         update_summary: gh_inputs.getBoolean('update-summary'),
         trace_commands: gh_inputs.getBoolean('trace-commands'),
         include_types: gh_inputs.getSet('include-types'),
-        exclude_types: gh_inputs.getSet('exclude-types')
+        exclude_types: gh_inputs.getSet('exclude-types'),
+        sort_by: parseSortByOption(gh_inputs.getInput('sort-by') || 'date-desc')
     };
 
     lastInputsForErrors = inputs;

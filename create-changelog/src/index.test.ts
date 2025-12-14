@@ -143,6 +143,124 @@ describe('filterChangesByType', () => {
     });
 });
 
+describe('parseSortByOption', () => {
+    it('should parse valid sort options', () => {
+        expect(main.parseSortByOption('most-changes-first')).toBe('most-changes-first');
+        expect(main.parseSortByOption('latest-first')).toBe('latest-first');
+        expect(main.parseSortByOption('oldest-first')).toBe('oldest-first');
+    });
+
+    it('should handle case insensitivity', () => {
+        expect(main.parseSortByOption('LATEST-FIRST')).toBe('latest-first');
+        expect(main.parseSortByOption('MOST-CHANGES-FIRST')).toBe('most-changes-first');
+    });
+
+    it('should default to most-changes-first for invalid values', () => {
+        expect(main.parseSortByOption('invalid')).toBe('most-changes-first');
+        expect(main.parseSortByOption('')).toBe('most-changes-first');
+        expect(main.parseSortByOption('  ')).toBe('most-changes-first');
+    });
+});
+
+describe('compareCommits', () => {
+    function createCommit(date: string, linesChanged: number): main.Commit {
+        const commit = new main.Commit();
+        commit.date = date;
+        commit.lines_changed = linesChanged;
+        return commit;
+    }
+
+    it('should sort by latest-first (newest first)', () => {
+        const older = createCommit('Mon Jan 1 10:00:00 2024 +0000', 10);
+        const newer = createCommit('Wed Jan 3 10:00:00 2024 +0000', 5);
+
+        expect(main.compareCommits(older, newer, 'latest-first')).toBeGreaterThan(0);
+        expect(main.compareCommits(newer, older, 'latest-first')).toBeLessThan(0);
+        expect(main.compareCommits(older, older, 'latest-first')).toBe(0);
+    });
+
+    it('should sort by oldest-first', () => {
+        const older = createCommit('Mon Jan 1 10:00:00 2024 +0000', 10);
+        const newer = createCommit('Wed Jan 3 10:00:00 2024 +0000', 5);
+
+        expect(main.compareCommits(older, newer, 'oldest-first')).toBeLessThan(0);
+        expect(main.compareCommits(newer, older, 'oldest-first')).toBeGreaterThan(0);
+    });
+
+    it('should sort by most-changes-first', () => {
+        const fewLines = createCommit('Mon Jan 1 10:00:00 2024 +0000', 10);
+        const manyLines = createCommit('Wed Jan 3 10:00:00 2024 +0000', 100);
+
+        expect(main.compareCommits(fewLines, manyLines, 'most-changes-first')).toBeGreaterThan(0);
+        expect(main.compareCommits(manyLines, fewLines, 'most-changes-first')).toBeLessThan(0);
+    });
+});
+
+describe('sortChanges', () => {
+    function createCommitWithDateAndLines(date: string, linesChanged: number, description: string): main.Commit {
+        const commit = new main.Commit();
+        commit.date = date;
+        commit.lines_changed = linesChanged;
+        commit.description = description;
+        commit.hash = 'abc1234000000000000000000000000000000000';
+        return commit;
+    }
+
+    it('should sort commits within each scope by latest-first', () => {
+        const commitA = createCommitWithDateAndLines('Mon Jan 1 10:00:00 2024 +0000', 10, 'Commit A');
+        const commitB = createCommitWithDateAndLines('Wed Jan 3 10:00:00 2024 +0000', 5, 'Commit B');
+        const commitC = createCommitWithDateAndLines('Tue Jan 2 10:00:00 2024 +0000', 15, 'Commit C');
+
+        const changes: main.Changes = {
+            feat: { 'null': [commitA, commitB, commitC] }
+        };
+
+        main.sortChanges(changes, 'latest-first');
+
+        expect(changes.feat['null'][0].description).toBe('Commit B'); // Jan 3 - newest
+        expect(changes.feat['null'][1].description).toBe('Commit C'); // Jan 2
+        expect(changes.feat['null'][2].description).toBe('Commit A'); // Jan 1 - oldest
+    });
+
+    it('should sort commits within each scope by most-changes-first', () => {
+        const commitA = createCommitWithDateAndLines('Mon Jan 1 10:00:00 2024 +0000', 10, 'Commit A');
+        const commitB = createCommitWithDateAndLines('Wed Jan 3 10:00:00 2024 +0000', 5, 'Commit B');
+        const commitC = createCommitWithDateAndLines('Tue Jan 2 10:00:00 2024 +0000', 100, 'Commit C');
+
+        const changes: main.Changes = {
+            feat: { 'null': [commitA, commitB, commitC] }
+        };
+
+        main.sortChanges(changes, 'most-changes-first');
+
+        expect(changes.feat['null'][0].description).toBe('Commit C'); // 100 lines
+        expect(changes.feat['null'][1].description).toBe('Commit A'); // 10 lines
+        expect(changes.feat['null'][2].description).toBe('Commit B'); // 5 lines
+    });
+
+    it('should sort commits in multiple scopes independently', () => {
+        const featCommit1 = createCommitWithDateAndLines('Mon Jan 1 10:00:00 2024 +0000', 50, 'Feat 1');
+        const featCommit2 = createCommitWithDateAndLines('Wed Jan 3 10:00:00 2024 +0000', 10, 'Feat 2');
+        const fixCommit1 = createCommitWithDateAndLines('Mon Jan 1 10:00:00 2024 +0000', 5, 'Fix 1');
+        const fixCommit2 = createCommitWithDateAndLines('Wed Jan 3 10:00:00 2024 +0000', 20, 'Fix 2');
+
+        const changes: main.Changes = {
+            feat: { 'null': [featCommit1, featCommit2] },
+            fix: { 'core': [fixCommit1, fixCommit2] }
+        };
+
+        main.sortChanges(changes, 'most-changes-first');
+
+        // feat scope should be sorted by lines
+        expect(changes.feat['null'][0].description).toBe('Feat 1'); // 50 lines
+        expect(changes.feat['null'][1].description).toBe('Feat 2'); // 10 lines
+
+        // fix scope should also be sorted by lines
+        expect(changes.fix['core'][0].description).toBe('Fix 2'); // 20 lines
+        expect(changes.fix['core'][1].description).toBe('Fix 1'); // 5 lines
+    });
+});
+
 test('generateOutput avoids duplicating scope for multiline entries', () => {
     const commitA = new main.Commit();
     commitA.type = 'docs';

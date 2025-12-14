@@ -284,6 +284,28 @@ inputs:
 
     required: false
     default: 'chore, style'
+  sort-by:
+    description: |
+      Specifies how commits should be sorted within each scope in the changelog.
+
+      Available options:
+      - `most-changes-first`: Sort by lines changed, most changes first (default)
+      - `latest-first`: Sort by date, newest commits first
+      - `oldest-first`: Sort by date, oldest commits first
+
+      Note: When using `most-changes-first`, the action will fetch diff statistics
+      for each commit, which may take additional time for repositories with
+      many commits.
+
+      Example: Sort by newest commits first:
+      ```yaml
+      - uses: alandefreitas/cpp-actions/create-changelog@v1
+        with:
+          sort-by: 'latest-first'
+      ```
+
+    required: false
+    default: 'most-changes-first'
 
 runs:
   using: 'node20'
