@@ -71,6 +71,42 @@ description: |
   npm run build
   ----
 
+  === Global Installation
+
+  To install `create-changelog` as a global command accessible from any directory:
+
+  [source,bash]
+  ----
+  # From the repository root, build dependencies first
+  npm install
+  npm run prepare
+
+  # Then link the create-changelog package globally
+  cd create-changelog
+  npm link
+  ----
+
+  After linking, you can run `create-changelog` from any git repository:
+
+  [source,bash]
+  ----
+  # Navigate to any project and generate its changelog
+  cd /path/to/any/project
+  create-changelog
+
+  # Or with options
+  create-changelog -o RELEASE_NOTES.md --limit 50
+  ----
+
+  To uninstall the global command:
+
+  [source,bash]
+  ----
+  npm unlink -g create-changelog
+  ----
+
+  TIP: Global installation is useful for testing changelog generation locally before committing workflow changes, or for generating changelogs in projects that don't use this action.
+
   === Usage
 
   [source,bash]
