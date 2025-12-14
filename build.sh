@@ -14,6 +14,7 @@ projects_with_package=()
 projects_with_action=()
 prepare_results=()
 test_results=()
+lint_results=()
 doc_results=()
 
 run_prepare() {
@@ -46,6 +47,17 @@ run_tests() {
         echo "jest failed for $project_name" >&2
         echo "Re-run locally: npx jest --selectProjects \"$display_name\"" >&2
         return 30
+    fi
+
+    return 0
+}
+
+run_jsdoc_lint() {
+    echo "==== Linting JSDoc documentation ===="
+    if ! node utils/jsdoc-linter/dist/index.js; then
+        echo "JSDoc linting failed" >&2
+        echo "Re-run locally: npm run lint:jsdoc" >&2
+        return 40
     fi
 
     return 0
@@ -100,6 +112,13 @@ print_summary() {
         done
     fi
 
+    if [ "${#lint_results[@]}" -gt 0 ]; then
+        echo "==== 📝 JSDoc Lint Summary ===="
+        for result in "${lint_results[@]}"; do
+            echo "$result"
+        done
+    fi
+
     if [ "${#doc_results[@]}" -gt 0 ]; then
         echo "==== 📄 Documentation Summary ===="
         for result in "${doc_results[@]}"; do
@@ -148,6 +167,13 @@ if [ -n "$project_to_build" ]; then
             if ! run_tests "$project_to_build"; then
                 status_code=$?
                 format_test_failure "$project_to_build" "$status_code" >&2
+                exit 1
+            fi
+
+            echo "==== Linting JSDoc for $project_to_build ===="
+            if ! node utils/jsdoc-linter/dist/index.js --workspace "$project_to_build"; then
+                echo "JSDoc linting failed for $project_to_build" >&2
+                echo "Re-run locally: npm run lint:jsdoc -- --workspace \"$project_to_build\"" >&2
                 exit 1
             fi
             break
@@ -228,6 +254,21 @@ else
 
     if [ "$test_failed" -ne 0 ]; then
         echo "One or more projects failed during tests." >&2
+        print_summary
+        exit 1
+    fi
+
+    echo "==== Linting JSDoc documentation ===="
+    lint_failed=0
+    if run_jsdoc_lint; then
+        lint_results+=("✅ JSDoc linting passed")
+    else
+        lint_results+=("❌ JSDoc linting failed (rerun: npm run lint:jsdoc)")
+        lint_failed=1
+    fi
+
+    if [ "$lint_failed" -ne 0 ]; then
+        echo "JSDoc linting failed. Fix documentation before proceeding." >&2
         print_summary
         exit 1
     fi

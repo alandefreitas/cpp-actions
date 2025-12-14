@@ -120,6 +120,15 @@ interface ContainerConfig {
     volumes?: string[];
 }
 
+/**
+ * Parses a string of compiler requirements into a structured object.
+ *
+ * Parses input in format "compiler1 version-range compiler2 version-range"
+ * where version ranges follow semver format (e.g., ">=10", "^14.0").
+ *
+ * @param inputString - Space or newline separated compiler name and version requirements
+ * @returns Object mapping compiler names to their semver version range strings
+ */
 export function parseCompilerRequirements(inputString: string): CompilerVersions {
     const tokens = inputString.split(/[\n\s]+/);
     const compilers: CompilerVersions = {};
@@ -146,6 +155,16 @@ export function parseCompilerRequirements(inputString: string): CompilerVersions
     return compilers;
 }
 
+/**
+ * Parses compiler-specific build factors from an input string.
+ *
+ * Factors are additional build configurations (like optimization levels, sanitizers)
+ * that apply to specific compilers in the test matrix.
+ *
+ * @param inputString - Space or newline separated compiler names and factors
+ * @param compilers - List of valid compiler names to recognize
+ * @returns Object mapping compiler names to their factor arrays
+ */
 export function parseCompilerFactors(inputString: string, compilers: string[]): CompilerFactors {
     const tokens = inputString.split(/[\n\s]+/);
 
@@ -172,6 +191,16 @@ export function parseCompilerFactors(inputString: string, compilers: string[]): 
     return compilerFactors;
 }
 
+/**
+ * Parses compiler suggestion lines into structured configuration objects.
+ *
+ * Suggestions define container images and other configurations for specific
+ * compiler versions or factors. Format: "compiler [range|factor]: value".
+ *
+ * @param inputLines - Array of suggestion lines to parse
+ * @param compilers - List of valid compiler names to recognize
+ * @returns Array of parsed compiler suggestions with compiler, descriptor, and value
+ */
 export function parseCompilerSuggestions(inputLines: string[], compilers: string[]): CompilerSuggestion[] {
     const containerOptions: CompilerSuggestion[] = [];
     for (let line of inputLines) {
@@ -223,6 +252,16 @@ export function parseCompilerSuggestions(inputLines: string[], compilers: string
     return containerOptions;
 }
 
+/**
+ * Normalizes C++ standard version requirements to four-digit year format.
+ *
+ * Converts two-digit C++ standard versions (like "17", "20") to their
+ * full four-digit year representation (2017, 2020) based on proximity
+ * to the current year.
+ *
+ * @param range - Version requirement string possibly containing two-digit versions
+ * @returns Normalized version string with four-digit years
+ */
 export function normalizeCppVersionRequirement(range: string): string {
     // Regular expression to match two-digit C++ versions
     const regex = /\b(\d{2})\b/g;
@@ -251,6 +290,15 @@ export function normalizeCppVersionRequirement(range: string): string {
     return replacedRange.trim();
 }
 
+/**
+ * Normalizes a compiler name to a canonical form.
+ *
+ * Maps various spellings and aliases of compiler names to their standard
+ * names used internally (gcc, clang, clang-cl, msvc, mingw).
+ *
+ * @param name - The compiler name to normalize
+ * @returns The canonical compiler name, or the original if no rule matches
+ */
 export function normalizeCompilerName(name: string): string {
     const lowerCaseName = name.toLowerCase();
 
@@ -270,6 +318,14 @@ export function normalizeCompilerName(name: string): string {
     return name;
 }
 
+/**
+ * Returns the list of available MSVC toolset versions.
+ *
+ * Since MSVC is not open source, this returns a hardcoded list of versions
+ * known to be available on GitHub Actions runners.
+ *
+ * @returns Array of available MSVC toolset version strings
+ */
 export function findMSVCVersions(): string[] {
     // MSVC is not open source, so we assume the versions available from github runner images are available
     // See:
@@ -360,6 +416,12 @@ function arraysHaveSameElements(arr1: unknown[], arr2: unknown[]): boolean {
     return true;
 }
 
+/**
+ * Policies for selecting versions from a semver range when generating matrix entries.
+ *
+ * These policies control which specific versions are selected when a version range
+ * would match multiple available versions (e.g., what to do with ">=10" when 10, 11, 12 exist).
+ */
 export const SubrangePolicies = {
     ONE_PER_MAJOR: 0,
     ONE_PER_MINOR: 1,
@@ -390,6 +452,17 @@ function getSubrangePolicyStr(policy: SubrangePolicy): string {
     return 'one-per-major';
 }
 
+/**
+ * Splits a semver range into specific version selections based on available versions and policy.
+ *
+ * Given a version range like ">=10" and available versions [10.0, 10.1, 11.0, 12.0],
+ * this function selects specific versions based on the subrange policy (e.g., one per major).
+ *
+ * @param range - Semver version range to split (e.g., ">=10", "^14.0")
+ * @param versions - Array of available version strings to select from
+ * @param policy - Selection policy determining how many versions to include
+ * @returns Array of specific version strings selected from the range
+ */
 export function splitRanges(range: string, versions: string[], policy: SubrangePolicy = SubrangePolicies.ONE_PER_MAJOR): string[] {
     function fnlog(msg: string): void {
         trace_commands.log('splitRanges: ' + msg);
@@ -1544,6 +1617,17 @@ function setOS(matrix: MatrixEntry[]): void {
     }
 }
 
+/**
+ * Generates the complete CI/CD test matrix based on input configuration.
+ *
+ * This function creates an array of matrix entries representing all combinations
+ * of compilers, versions, C++ standards, and build factors to test. It handles
+ * version resolution, container configuration, and applies filtering rules.
+ *
+ * @param inputs - Configuration inputs controlling matrix generation including
+ *                 compiler versions, standards, factors, and container suggestions
+ * @returns Array of matrix entries ready for use in GitHub Actions workflows
+ */
 export async function generateMatrix(inputs: Inputs): Promise<MatrixEntry[]> {
     function fnlog(msg: string): void {
         trace_commands.log('generateMatrix: ' + msg);
@@ -1824,6 +1908,19 @@ function getAllFactors(latest_factors: CompilerFactors, factors: CompilerFactors
     return [...new Set(allFactors)];
 }
 
+/**
+ * Generates a human-readable table representation of the test matrix.
+ *
+ * Creates a formatted table with columns for name, environment, compiler,
+ * C++ standard, build type, factors/flags/install, and generator/toolset/triplet.
+ * Each row represents one matrix entry with appropriate emojis and HTML formatting
+ * for display in markdown or GitHub Actions summaries.
+ *
+ * @param matrix - Array of matrix entries to display in the table
+ * @param inputs - Configuration inputs containing factors and latest_factors settings
+ * @returns Two-dimensional array representing the table, where each inner array is a row
+ *          and cells can be strings or header objects with data and header properties
+ */
 export function generateTable(matrix: MatrixEntry[], inputs: Inputs): Array<Array<string | { data: string; header: boolean }>> {
     function fnlog(msg: string): void {
         trace_commands.log('generateTable: ' + msg);

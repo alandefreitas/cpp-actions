@@ -42,6 +42,22 @@ interface SetupResult {
     version_patch: number | null;
 }
 
+/**
+ * Normalizes a compiler name and extracts version information.
+ *
+ * This function handles various compiler name formats and normalizes them to
+ * canonical forms. It extracts version numbers embedded in compiler strings
+ * (e.g., "gcc-10.2.0" becomes compiler="gcc", version="10.2.0").
+ *
+ * Supported compiler families:
+ * - GCC: gcc, g++ → normalized to "gcc"
+ * - Clang: clang, apple-clang, appleclang → normalized to "clang" (or "clang-cl" on Windows)
+ * - MSVC: msvc, cl → normalized to "msvc"
+ *
+ * @param compiler - The compiler name, possibly with embedded version (e.g., "gcc-10")
+ * @param version - The explicit version string, used if not embedded in compiler name
+ * @returns Object with normalized compiler name and version string
+ */
 export function normalizeCompiler(compiler: string, version: string): NormalizedCompiler {
     const parts = compiler.split(/-|\s/);
     const num_parts = parts.length;
@@ -96,6 +112,17 @@ function normalizeMSVCArchToken(arch: string): string {
     return arch;
 }
 
+/**
+ * Resolves the target architecture for MSVC compilation.
+ *
+ * Normalizes architecture tokens to canonical MSVC values (x86, x64, arm, arm64).
+ * Falls back through requested architecture, environment architecture, and finally
+ * defaults to x64.
+ *
+ * @param requestedArch - The explicitly requested architecture (highest priority)
+ * @param envArch - Architecture from environment variable PROCESSOR_ARCHITECTURE (fallback)
+ * @returns Normalized architecture string: 'x86', 'x64', 'arm', or 'arm64'
+ */
 export function resolveMSVCArch(requestedArch: string, envArch: string | undefined): string {
     const normalizedRequested = normalizeMSVCArchToken(requestedArch);
     if (normalizedRequested) {

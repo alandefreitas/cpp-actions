@@ -145,6 +145,11 @@ async function program_satisfies(execPath: string, semverRequirements: string): 
  * check_latest flag: the earliest satisfying version when false, the latest
  * when true. Returning {output_version: null, output_path: null} means no valid
  * executable met the constraint (use version="*" to opt out of filtering).
+ *
+ * @param paths - Array of paths to search for the executable
+ * @param version - Semver version constraint (e.g., ">=10", "14.0.0", "*")
+ * @param check_latest - If true, prefer latest matching version; if false, prefer earliest
+ * @returns Object containing the found executable path and version, or nulls if not found
  */
 export async function find_program_in_path(paths: string[], version: string, check_latest: boolean): Promise<ProgramResult> {
     function fnlog(msg: string): void {
@@ -294,6 +299,18 @@ async function find_program_in_paths(paths: string[], names: string[], version: 
     return { output_version, output_path };
 }
 
+/**
+ * Searches for an executable in system PATH and tool cache directories.
+ *
+ * Combines the system PATH environment variable with any extra paths provided,
+ * and also searches the GitHub Actions runner tool cache for matching executables.
+ *
+ * @param extra_paths - Additional directories to search before PATH
+ * @param names - Array of executable names to search for (e.g., ["gcc", "g++"])
+ * @param version - Semver version constraint (e.g., ">=10", "14.0.0", "*")
+ * @param check_latest - If true, prefer latest matching version; if false, prefer earliest
+ * @returns Object containing the found executable path and version, or nulls if not found
+ */
 export async function find_program_in_system_paths(extra_paths: string[], names: string[], version: string, check_latest: boolean): Promise<ProgramResult> {
     function fnlog(msg: string): void {
         trace_commands.log('find_program_in_system_paths: ' + msg);
@@ -351,6 +368,13 @@ function removeSemverLeadingZeros(version: string): string {
     return cleanedComponents.join('.');
 }
 
+/**
+ * Determines whether sudo is required for privileged operations.
+ *
+ * Returns true on Linux when the current process is not running as root.
+ *
+ * @returns True if sudo is needed, false otherwise
+ */
 export function isSudoRequired(): boolean {
     if (process.platform !== 'linux') {
         return false;
@@ -358,6 +382,12 @@ export function isSudoRequired(): boolean {
     return process.getuid?.() !== 0;
 }
 
+/**
+ * Checks if a URL exists by sending a HEAD request.
+ *
+ * @param url - The URL to check
+ * @returns True if the URL returns HTTP 200, false otherwise
+ */
 export async function urlExists(url: string): Promise<boolean> {
     const http_client = new httpm.HttpClient('setup-clang', [], {
         allowRetries: true, maxRetries: 3
@@ -374,6 +404,18 @@ function escapeRegExp(string: string): string {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/**
+ * Searches for and installs a program using APT package manager on Linux.
+ *
+ * Searches APT repositories for packages matching the specified names and version,
+ * then installs the best matching package. Falls back to alternative packages or
+ * aptitude if the initial installation fails.
+ *
+ * @param names - Array of package/executable names to search for
+ * @param version - Semver version constraint (e.g., ">=10", "14.0.0", "*")
+ * @param check_latest - If true, prefer latest matching version; if false, prefer earliest
+ * @returns Object containing the found executable path and version, or nulls if not found
+ */
 export async function find_program_with_apt(names: string[], version: string, check_latest: boolean): Promise<ProgramResult> {
     function fnlog(msg: string): void {
         trace_commands.log('find_program_with_apt: ' + msg);
@@ -619,6 +661,13 @@ function copySymlink(sourcePath: string, destinationPath: string, level = 0): vo
     trace_commands.log(`${levelPrefix}Symlink recreated from ${sourcePath} to ${destinationPath} with target ${targetPath}`);
 }
 
+/**
+ * Locates or installs Git on the system.
+ *
+ * First attempts to find Git in PATH. If not found on Linux, installs it via APT.
+ *
+ * @returns Path to the Git executable, or null if not found/installed
+ */
 export async function findGit(): Promise<string | null> {
     let git_path: string;
     try {
@@ -655,6 +704,17 @@ interface FetchGitTagsOptions {
     defaultTags?: string[];
 }
 
+/**
+ * Fetches all tags from a Git repository.
+ *
+ * Uses `git ls-remote --tags` to retrieve tags without cloning the entire repository.
+ * Implements exponential backoff retry logic for transient network failures.
+ *
+ * @param repo - Git repository URL (e.g., "https://github.com/llvm/llvm-project")
+ * @param options - Configuration options for retries and fallback tags
+ * @returns Array of tag reference strings (e.g., ["refs/tags/v1.0.0"])
+ * @throws Error if max retries reached and no default tags provided
+ */
 export async function fetchGitTags(repo: string, options: FetchGitTagsOptions = {}): Promise<string[]> {
     const { maxRetries = 10, defaultTags = [] } = options;
     try {
@@ -734,10 +794,24 @@ function defaultVersionsCacheDir(): string {
     return path.join(__dirname, '..', 'var', 'cache', 'setup-program');
 }
 
+/**
+ * Sets the directory used for caching version information files.
+ *
+ * @param dir - Absolute path to the cache directory
+ */
 export function setVersionsCacheDir(dir: string): void {
     versionsCacheDir = dir;
 }
 
+/**
+ * Resolves a filename to a full path within the versions cache directory.
+ *
+ * If the filename is already absolute, returns it unchanged. Otherwise,
+ * prepends the cache directory path.
+ *
+ * @param filename - Filename or path to resolve
+ * @returns Absolute path to the file within the cache directory
+ */
 export function resolveVersionsCachePath(filename: string): string {
     if (path.isAbsolute(filename)) {
         return filename;
@@ -746,6 +820,20 @@ export function resolveVersionsCachePath(filename: string): string {
     return path.join(baseDir, filename);
 }
 
+/**
+ * Extracts version numbers from Git repository tags.
+ *
+ * First checks for cached versions in a local file. If not found, fetches tags
+ * from the repository and extracts versions using the provided regex pattern.
+ * Results are cached to the file for future use.
+ *
+ * @param name - Human-readable name for logging (e.g., "GCC", "Clang")
+ * @param repo - Git repository URL to fetch tags from
+ * @param file - Cache filename to store/retrieve versions
+ * @param regex - Regular expression with capture group for version extraction
+ * @param defaultTags - Fallback tags if fetching fails
+ * @returns Array of version strings sorted by semver
+ */
 export async function findVersionsFromTags(name: string, repo: string, file: string, regex: RegExp, defaultTags: string[] = []): Promise<string[]> {
     const versionsFromFile = readVersionsFromFile(file);
     if (versionsFromFile !== null) {
@@ -772,6 +860,11 @@ export async function findVersionsFromTags(name: string, repo: string, file: str
     return versions;
 }
 
+/**
+ * Retrieves available GCC compiler versions from the official GCC Git repository.
+ *
+ * @returns Array of GCC version strings (e.g., ["10.3.0", "11.2.0", "12.1.0"])
+ */
 export async function findGCCVersions(): Promise<string[]> {
     return await findVersionsFromTags(
         'GCC',
@@ -781,6 +874,11 @@ export async function findGCCVersions(): Promise<string[]> {
         gccDefaultTags);
 }
 
+/**
+ * Retrieves available Clang compiler versions from the LLVM GitHub repository.
+ *
+ * @returns Array of Clang version strings (e.g., ["14.0.0", "15.0.0", "16.0.0"])
+ */
 export async function findClangVersions(): Promise<string[]> {
     return await findVersionsFromTags(
         'Clang',
@@ -790,6 +888,11 @@ export async function findClangVersions(): Promise<string[]> {
         clangDefaultTags);
 }
 
+/**
+ * Retrieves available CMake versions from the Kitware GitHub repository.
+ *
+ * @returns Array of CMake version strings (e.g., ["3.24.0", "3.25.0", "3.26.0"])
+ */
 export async function findCMakeVersions(): Promise<string[]> {
     return await findVersionsFromTags(
         'CMake',
@@ -803,6 +906,18 @@ interface CloneGitRepoOptions {
     shallow?: boolean;
 }
 
+/**
+ * Clones a Git repository to a local directory.
+ *
+ * Supports cloning by branch/tag name or by commit hash. When cloning by hash,
+ * uses init/fetch/checkout workflow instead of direct clone.
+ *
+ * @param repo - Git repository URL to clone
+ * @param destPath - Local directory path for the cloned repository
+ * @param ref - Optional branch, tag, or commit hash to checkout
+ * @param options - Clone options (shallow clone by default)
+ * @throws Error if Git is not available or cloning fails
+ */
 export async function cloneGitRepo(repo: string, destPath: string, ref: string | undefined = undefined, options: CloneGitRepoOptions = { shallow: true }): Promise<void> {
     try {
         const git_path = await findGit();
@@ -856,6 +971,12 @@ export async function cloneGitRepo(repo: string, destPath: string, ref: string |
     }
 }
 
+/**
+ * Reads cached version information from a JSON file.
+ *
+ * @param filename - Filename or path to the cache file
+ * @returns Array of version strings if file exists and is valid, null otherwise
+ */
 export function readVersionsFromFile(filename: string): string[] | null {
     const resolvedFilename = resolveVersionsCachePath(filename);
     try {
@@ -870,6 +991,14 @@ export function readVersionsFromFile(filename: string): string[] | null {
     return null;
 }
 
+/**
+ * Saves version information to a JSON cache file.
+ *
+ * Creates the parent directory if it doesn't exist.
+ *
+ * @param versions - Array of version strings to cache
+ * @param filename - Filename or path to the cache file
+ */
 export function saveVersionsToFile(versions: string[], filename: string): void {
     const resolvedFilename = resolveVersionsCachePath(filename);
     try {
@@ -882,6 +1011,11 @@ export function saveVersionsToFile(versions: string[], filename: string): void {
     }
 }
 
+/**
+ * Retrieves the current Ubuntu version from /etc/os-release.
+ *
+ * @returns Ubuntu version string (e.g., "22.04") or null if not Ubuntu/not found
+ */
 export function getCurrentUbuntuVersion(): string | null {
     try {
         const osReleaseData = fs.readFileSync('/etc/os-release', 'utf8');
@@ -898,6 +1032,13 @@ export function getCurrentUbuntuVersion(): string | null {
     }
 }
 
+/**
+ * Retrieves the Ubuntu release codename for the current version.
+ *
+ * Maps version numbers (e.g., "22.04") to codenames (e.g., "jammy").
+ *
+ * @returns Ubuntu codename or null if version not recognized
+ */
 export function getCurrentUbuntuName(): string | null {
     const version = getCurrentUbuntuVersion();
     if (version) {
@@ -912,15 +1053,19 @@ export function getCurrentUbuntuName(): string | null {
     return null;
 }
 
-/// Move files considering permissions and ownership that make the operation
-/// fail on lots of environments
-///
-/// - If the destination directory does not exist, it will be created
-/// - If the destination directory exists, it will be merged
-/// - If the destination file does not exist, it will be created
-/// - If the destination file exists, it will be overwritten
-/// - If destination is on a different device, retry as copy instead
-/// - If permissions are required, they will be moved or copied with sudo
+/**
+ * Moves files considering permissions and ownership that make the operation
+ * fail on various environments.
+ *
+ * Handles cross-device moves by falling back to copy, permission errors by
+ * using sudo, and directory merging for existing destinations.
+ *
+ * @param source - Source directory path to move from
+ * @param destination - Destination directory path to move to
+ * @param copyInstead - If true, copy instead of move (used for cross-device fallback)
+ * @param level - Recursion depth level for logging indentation
+ * @returns True if successful, false if move/copy failed
+ */
 export async function moveWithPermissions(source: string, destination: string, copyInstead = false, level = 0): Promise<boolean> {
     function fnlog(msg: string): void {
         trace_commands.log('moveWithPermissions: ' + msg);
@@ -973,6 +1118,13 @@ export async function moveWithPermissions(source: string, destination: string, c
     }
 }
 
+/**
+ * Ensures the sudo command is available on the system.
+ *
+ * Installs sudo via apt-get if not already present (requires running as root).
+ *
+ * @throws Error if sudo cannot be found or installed
+ */
 export async function ensureSudoIsAvailable(): Promise<void> {
     function fnlog(msg: string): void {
         trace_commands.log('ensureSudoIsAvailable: ' + msg);
@@ -992,6 +1144,13 @@ export async function ensureSudoIsAvailable(): Promise<void> {
     }
 }
 
+/**
+ * Ensures the add-apt-repository command is available on the system.
+ *
+ * Installs software-properties-common package if add-apt-repository is not present.
+ *
+ * @throws Error if add-apt-repository cannot be found or installed
+ */
 export async function ensureAddAptRepositoryIsAvailable(): Promise<void> {
     function fnlog(msg: string): void {
         trace_commands.log('ensureAddAptRepositoryIsAvailable: ' + msg);
@@ -1157,6 +1316,16 @@ async function extractTar(tarPath: string, destPath: string | undefined, flags: 
     }
 }
 
+/**
+ * Downloads and extracts an archive from a URL.
+ *
+ * Supports .zip, .tar, .tar.gz, .tar.xz, .tar.bz2, .7z, and .pkg (macOS) formats.
+ * Uses 7z for extraction on Windows.
+ *
+ * @param url - URL of the archive to download
+ * @param destPath - Optional destination directory for extraction
+ * @returns Path to the extracted contents, or undefined if extraction failed
+ */
 export async function downloadAndExtract(url: string, destPath: string | undefined = undefined): Promise<string | undefined> {
     function fnlog(msg: string): void {
         trace_commands.log('downloadAndExtract: ' + msg);
@@ -1229,6 +1398,15 @@ export async function downloadAndExtract(url: string, destPath: string | undefin
     return extPath;
 }
 
+/**
+ * Strips a single nested directory from an extracted archive path.
+ *
+ * When archives contain a single top-level directory (common pattern),
+ * moves its contents up one level to simplify the path structure.
+ *
+ * @param dirPath - Directory path to check and potentially flatten
+ * @returns True if a directory was stripped, false otherwise
+ */
 export async function stripSingleDirectoryFromPath(dirPath: string): Promise<boolean> {
     function fnlog(msg: string): void {
         trace_commands.log('stripSingleDirectoryFromPath: ' + msg);
@@ -1259,6 +1437,20 @@ export async function stripSingleDirectoryFromPath(dirPath: string): Promise<boo
     return false;
 }
 
+/**
+ * Downloads, extracts, and installs a program from a URL.
+ *
+ * Supports URL templates with placeholders like {{name}}, {{version}}, {{os}}, etc.
+ * After extraction, searches for the executable and optionally updates PATH.
+ *
+ * @param names - Array of executable names to search for after installation
+ * @param version - Version string used for template rendering and caching
+ * @param check_latest - If true, prefer latest matching version when searching
+ * @param url_template - URL or URL template for the archive download
+ * @param update_environment - If true, adds installation directories to PATH
+ * @param install_prefix - Optional custom installation directory (uses tool cache if null)
+ * @returns Object containing the found executable path and version, or nulls if not found
+ */
 export async function install_program_from_url(
     names: string[],
     version: string,

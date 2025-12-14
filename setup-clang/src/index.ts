@@ -220,6 +220,24 @@ async function install_program_from_clang_urls(
     return { output_version, output_path };
 }
 
+/**
+ * Sets up Clang compiler on the runner with the specified version.
+ *
+ * This function locates or installs Clang with the requested version, searching
+ * the provided paths first, then falling back to apt-get installation on Linux.
+ * On macOS, it uses the system-provided Clang. It can optionally update
+ * environment variables to make the compiler available.
+ *
+ * @param version - The Clang version to set up (e.g., "14", "14.0", ">=14"). Supports
+ *                  semver ranges for flexible version matching.
+ * @param paths - Array of paths to search for existing Clang installations before
+ *                attempting installation
+ * @param check_latest - If true, checks for the latest available version matching
+ *                       the version constraint
+ * @param update_environment - If true, updates PATH and environment variables to
+ *                             make the compiler available for subsequent steps
+ * @returns Object containing paths to clang/clang++, version info, and environment changes
+ */
 export async function main(
     version: string,
     paths: string[],

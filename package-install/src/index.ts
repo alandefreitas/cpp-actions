@@ -69,6 +69,10 @@ function formatTime(ms: number): string {
 /**
  * Compare versions that may not be valid semver (e.g., four-part or distro-suffixed).
  * Falls back to numeric component comparison when semver parsing fails.
+ *
+ * @param version - Version string to compare (can be non-standard semver)
+ * @param threshold - Minimum version threshold to compare against
+ * @returns True if version is greater than or equal to threshold
  */
 export function semverGteLoose(version: string, threshold: string): boolean {
     const normalize = (v: string): string | null => semver.valid(v) || semver.valid(semver.coerce(v));
@@ -483,6 +487,13 @@ async function vcpkg_main(inputs: Inputs): Promise<VcpkgOutputs> {
 
 /**
  * Main entry: drive apt-get and vcpkg workflows based on provided inputs.
+ *
+ * Handles package installation through apt-get on Linux and vcpkg on all platforms.
+ * Manages vcpkg bootstrap, triplet configuration, and package caching.
+ *
+ * @param inputs - Configuration inputs for package installation
+ * @param _force_install_vcpkg - Force vcpkg installation even without packages specified
+ * @returns Vcpkg-related outputs including paths and configuration
  */
 export async function main(inputs: Inputs, _force_install_vcpkg?: boolean): Promise<VcpkgOutputs> {
     // ----------------------------------------------

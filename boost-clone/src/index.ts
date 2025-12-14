@@ -273,6 +273,18 @@ function getModuleRepoUrl(module: string): string {
     return `https://github.com/boostorg/${module.replace('/', '_')}.git`;
 }
 
+/**
+ * Generates a unique cache key for the Boost installation based on configuration.
+ *
+ * Computes hashes from module versions, patches, and configuration settings to
+ * create a deterministic cache key for GitHub Actions caching.
+ *
+ * @param inputs - Boost clone inputs including branch, modules, and patches
+ * @param allModules - Complete set of modules to include (direct and transitive dependencies)
+ * @param gitFeatures - Git capabilities detected on the system
+ * @param options - Cache key generation options (logging, fragments)
+ * @returns Cache key string or object with key and fragments
+ */
 async function generateCacheKey(inputs: Inputs, allModules: Set<string>, gitFeatures: GitFeatures, options: GenerateCacheKeyOptions = {}): Promise<string | CacheKeyResult> {
     function fnlog(msg: string): void {
         trace_commands.log(`generateCacheKey: ${msg}`);
@@ -483,6 +495,15 @@ async function initializeAllSubmodules(inputs: Inputs, gitFeatures: GitFeatures)
 }
 
 
+/**
+ * Clones the Boost super-project and initializes required submodules.
+ *
+ * Manages caching of the Boost installation, resolves module dependencies,
+ * applies patches, and initializes git submodules for the specified modules.
+ *
+ * @param inputs - Configuration inputs including branch, modules, patches, and cache settings
+ * @returns Outputs including the Boost directory path
+ */
 export async function main(inputs: Inputs): Promise<Outputs> {
     function fnlog(msg: string): void {
         trace_commands.log(`main: ${msg}`);

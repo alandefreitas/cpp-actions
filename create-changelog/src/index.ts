@@ -7,6 +7,13 @@ import * as trace_commands from 'trace-commands';
 import * as gh_inputs from 'gh-inputs';
 import { reportAndSetFailed } from 'pretty-errors';
 
+/**
+ * Represents a parsed git commit with conventional commit information.
+ *
+ * This class stores all metadata about a commit including author information,
+ * conventional commit parsing results (type, scope, description, breaking changes),
+ * associated GitHub issues, and release tag information.
+ */
 export class Commit {
     hash: string | null = null;
     extra_hashes: string[] = [];
@@ -42,6 +49,13 @@ export class Commit {
     is_parent_release = false;
 }
 
+/**
+ * Represents a GitHub user with contribution statistics.
+ *
+ * This class stores information about a contributor including their
+ * GitHub username, display name, commit count, and repository role
+ * (owner, admin, affiliated, or regular contributor).
+ */
 export class GitHubUser {
     username: string | null = null;
     name: string | null = null;
@@ -1102,6 +1116,14 @@ function iconFor(s: string | null): string {
     return m.hasOwnProperty(s) ? m[s] : s;
 }
 
+/**
+ * Returns a rotating icon for feature commits in the changelog.
+ *
+ * Cycles through sparkle/star icons (✨, 💫, 🌟) to add visual variety
+ * when listing multiple feature commits in the generated changelog.
+ *
+ * @returns An emoji icon string that cycles through available feature icons
+ */
 export function featureSubjectIcon(): string {
     const icons = ['✨', '💫', '🌟'];
     const icon = icons[featureSubjectIcon.count % icons.length];
@@ -1212,6 +1234,21 @@ function commitTypeDescription(s: string): string {
     return mapping[s] || '';
 }
 
+/**
+ * Generates a formatted changelog output from parsed commit changes.
+ *
+ * This function creates a Markdown-formatted changelog with sections for each
+ * change type (features, fixes, etc.), including commit links, author attribution,
+ * and footnotes for detailed descriptions.
+ *
+ * @param changes - Object mapping change types to arrays of commits
+ * @param changeTypePriority - Ordered list of change types determining section order
+ * @param args - Input configuration controlling output format and content
+ * @param repoUrl - GitHub repository URL for generating commit and issue links
+ * @param authors - Map of author usernames to GitHubUser objects for attribution
+ * @param parentRelease - The previous release commit for version comparison, or null
+ * @returns Formatted Markdown changelog string
+ */
 export function generateOutput(changes: Changes, changeTypePriority: string[], args: Inputs, repoUrl: string | undefined, authors: Record<string, GitHubUser>, parentRelease: Commit | null): string {
     function fnlog(msg: string): void {
         trace_commands.log('generateOutput: ' + msg);
@@ -1352,6 +1389,16 @@ function writeChangelog(outputPath: string, output: string): void {
     fs.writeFileSync(absolutePath, output);
 }
 
+/**
+ * Main entry point for the create-changelog action.
+ *
+ * Parses git commits from the repository, processes them according to
+ * conventional commit format, and generates a formatted changelog. The
+ * changelog can be output to a file and/or set as GitHub Actions outputs.
+ *
+ * @param inputs - Configuration inputs controlling changelog generation behavior
+ *                 including version patterns, output paths, and formatting options
+ */
 export async function main(inputs: Inputs): Promise<void> {
     function fnlog(msg: string): void {
         trace_commands.log('create-changelog: ' + msg);
@@ -1439,6 +1486,13 @@ function getErrorHint(): string {
     return 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. ';
 }
 
+/**
+ * GitHub Actions entry point for the create-changelog action.
+ *
+ * Reads inputs from GitHub Actions context, configures trace commands,
+ * and invokes the main function with the parsed inputs. Handles errors
+ * with pretty error reporting for better debugging experience.
+ */
 export async function run(): Promise<void> {
     let inputs: Inputs = {
         // Configure options

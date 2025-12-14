@@ -461,6 +461,22 @@ async function configureMSVCEnvironment(arch: string, sdk: string, toolset: stri
     return buildMSVCOutputs(compilerPath, process.env, {compilerVersion: compilerVersion ?? undefined})
 }
 
+/**
+ * Sets up MSVC (Microsoft Visual C++) compiler on the runner.
+ *
+ * This function configures the MSVC environment by locating Visual Studio
+ * installations, setting up the appropriate toolset and SDK, and updating
+ * environment variables for compilation.
+ *
+ * @param version - The MSVC toolset version (e.g., "14.3", "14.29"). Use "*" for default.
+ * @param arch - Target architecture: 'x86', 'x64', 'arm', or 'arm64'
+ * @param sdk - Windows SDK version (e.g., "10.0.19041.0"). Empty string for default.
+ * @param toolset - Explicit toolset version. If empty, derived from version parameter.
+ * @param uwp - If true, configure for Universal Windows Platform development
+ * @param spectre - If true, use Spectre-mitigated libraries
+ * @param vsversion - Visual Studio version (e.g., "2022", "2019"). Empty for auto-detect.
+ * @returns Object containing compiler paths, version info, and environment changes
+ */
 export async function main(version: string, arch: string, sdk: string, toolset: string, uwp: boolean, spectre: boolean, vsversion: string): Promise<MainOutputs> {
     const resolvedArch = arch || getDefaultArch()
     const resolvedToolset = toolset || (version && version !== '*' ? version : '')
@@ -539,6 +555,7 @@ async function getMSVCCompilerVersion(compilerPath: string): Promise<string | nu
  * @param env - Environment variables containing Visual Studio metadata.
  * @param metadata - Additional metadata such as the parsed compilerVersion.
  * @returns Compiler and version output fields.
+ * @throws {Error} When compilerPath is empty or not provided
  *
  * @example
  * const outputs = buildMSVCOutputs('C:\\VS\\VC\\Tools\\MSVC\\14.40.33807\\bin\\Hostx64\\x64\\cl.exe', process.env)

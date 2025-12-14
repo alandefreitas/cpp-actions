@@ -1,0 +1,18 @@
+{
+  "name": "jsdoc-linter",
+  "version": "1.0.0",
+  "private": true,
+  "description": "JSDoc documentation linter for cpp-actions",
+  "main": "dist/index.js",
+  "bin": {
+    "jsdoc-linter": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "ts-morph": "^24.0.0",
+    "glob": "^11.0.0"
+  }
+}

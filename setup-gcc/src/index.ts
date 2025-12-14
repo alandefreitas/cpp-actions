@@ -51,6 +51,23 @@ function removeGCCPrefix(version: string): string {
     return version;
 }
 
+/**
+ * Sets up GCC compiler on the runner with the specified version.
+ *
+ * This function locates or installs GCC with the requested version, searching
+ * the provided paths first, then falling back to apt-get installation on Linux.
+ * It can optionally update environment variables to make the compiler available.
+ *
+ * @param version - The GCC version to set up (e.g., "10", "10.2", ">=10"). Supports
+ *                  semver ranges for flexible version matching.
+ * @param paths - Array of paths to search for existing GCC installations before
+ *                attempting installation
+ * @param check_latest - If true, checks for the latest available version matching
+ *                       the version constraint
+ * @param update_environment - If true, updates PATH and environment variables to
+ *                             make the compiler available for subsequent steps
+ * @returns Object containing paths to gcc/g++, version info, and environment changes
+ */
 export async function main(
     version: string,
     paths: string[],

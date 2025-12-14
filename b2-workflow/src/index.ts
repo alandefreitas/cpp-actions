@@ -120,6 +120,14 @@ interface Inputs {
     trace_commands: boolean;
 }
 
+/**
+ * Executes a Boost.Build (B2) workflow for building and testing C++ libraries.
+ *
+ * Configures user-config.jam with compiler settings, bootstraps B2 if needed,
+ * and runs the specified build targets with the provided options.
+ *
+ * @param inputs - Configuration inputs including toolset, flags, source directory, and build options
+ */
 export async function main(inputs: Inputs): Promise<void> {
     function fnlog(msg: string): void {
         trace_commands.log('b2-workflow: ' + msg);

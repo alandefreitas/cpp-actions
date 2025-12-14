@@ -204,6 +204,18 @@ function isDebianLike(osReleaseContents: string): boolean {
     return tokens.some((token) => token === 'debian' || token === 'ubuntu');
 }
 
+/**
+ * Ensures Git is available on the system, installing it if necessary.
+ *
+ * On Debian/Ubuntu Linux, attempts automatic installation via apt-get.
+ * Other platforms require Git to be pre-installed.
+ *
+ * @param options - Configuration options with subgroups (use log groups) and fnlog (logging function)
+ * @param options.subgroups - Whether to use GitHub Actions log groups (default: true)
+ * @param options.fnlog - Logging function for trace output (default: no-op)
+ * @returns Path to the Git executable, or null if unavailable
+ * @throws Error if Git is required but cannot be installed
+ */
 export async function ensureGit({ subgroups = true, fnlog = (): void => {} }: { subgroups?: boolean; fnlog?: (msg: string) => void } = {}): Promise<string | null> {
     const runnerOS = (process.env['RUNNER_OS'] || process.platform).toLowerCase();
     let git_path: string | null = null;
@@ -285,6 +297,16 @@ export async function ensureGit({ subgroups = true, fnlog = (): void => {} }: { 
     return gitAfterInstall;
 }
 
+/**
+ * Sets up CMake on the runner with the specified version and configuration.
+ *
+ * Searches for existing CMake installations, downloads if necessary, and
+ * configures environment variables for subsequent workflow steps.
+ *
+ * @param inputs - Configuration inputs including version, architecture, and paths
+ * @param subgroups - Whether to use GitHub Actions log groups for output organization
+ * @returns Output information including CMake path, version, and binary directory
+ */
 export async function main(inputs: Inputs, subgroups = true): Promise<Partial<Outputs>> {
     function fnlog(msg: string): void {
         trace_commands.log('setup-cmake: ' + msg);

@@ -90,6 +90,10 @@ common/*/dist
 common/trace-commands/dist
 common/gh-inputs/dist
 
+# Developer utilities (internal tools, not distributed)
+utils/**/dist
+utils/**/node_modules
+
 # Local agent notes
 AGENTS.md
 */AGENTS.md

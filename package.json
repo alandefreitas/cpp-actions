@@ -6,6 +6,7 @@
     "common/gh-inputs",
     "common/pretty-errors",
     "common/trace-commands",
+    "utils/jsdoc-linter",
     "b2-workflow",
     "boost-clone",
     "cmake-workflow",
@@ -24,7 +25,8 @@
     "test": "jest",
     "test:coverage": "jest --coverage",
     "build": "npm run build --workspaces --if-present",
-    "prepare": "npm run prepare --workspaces --if-present"
+    "prepare": "npm run prepare --workspaces --if-present",
+    "lint:jsdoc": "node utils/jsdoc-linter/dist/index.js"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",

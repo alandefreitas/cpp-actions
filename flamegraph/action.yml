@@ -82,13 +82,23 @@ inputs:
 
   generate-report:
     description: |
-      Generate a small report with ClangBuildAnalyzer
+      Generate a markdown report analyzing compilation times.
+
+      The report includes:
+      - Summary of time spent in each compilation phase (frontend, backend, parsing, instantiation)
+      - Per-file breakdown showing which files take longest to compile
+      - Symbol analysis showing which templates and functions are slowest to parse/instantiate
 
     required: false
     default: 'true'
 
   update-summary:
-    description: 'Update action summary with the SVG file.'
+    description: |
+      Update the GitHub Actions job summary with the time-trace report.
+
+      When enabled, the compilation time analysis is displayed directly in the
+      workflow run summary, making it easy to review without downloading artifacts.
+
     required: false
     default: 'true'
 
@@ -109,12 +119,25 @@ inputs:
     default: ''
 
   upload-artifact:
-    description: 'Upload combined traces as artifact.'
+    description: |
+      Upload combined traces and visualizations as a GitHub Actions artifact.
+
+      The artifact includes:
+      - combined-traces.json: Can be opened with speedscope.app or chrome://tracing
+      - combined-traces.json.svg: Interactive SVG flamegraph viewable in browser
+      - time-trace-report.md: Markdown report with compilation time analysis
+
     required: false
     default: 'true'
 
   trace-commands:
-    description: 'Trace commands executed by the workflow.'
+    description: |
+      Enable verbose logging of internal operations for debugging.
+
+      When enabled, detailed trace output is logged showing file processing,
+      trace merging, and report generation steps. Useful for troubleshooting
+      issues with time-trace file processing.
+
     required: false
     default: 'false'
 

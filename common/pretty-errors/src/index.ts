@@ -115,8 +115,16 @@ async function renderTerminal(error: ExtendedError | null | undefined): Promise<
 }
 
 /**
- * Render a human-friendly, source-aware stack and fail the action once.
- * This implementation is self-contained and avoids external templates/files.
+ * Renders a human-friendly, source-aware stack trace and marks the action as failed.
+ *
+ * This function produces a colorized, detailed error report with source context
+ * and code locations mapped through source maps. It displays the error in the
+ * GitHub Actions log and then sets the action status to failed.
+ *
+ * @param error - The error to report. Can be a standard Error or ExtendedError with
+ *                additional context like an `expose` property containing extra details.
+ * @param options - Configuration options for the error report including title, hint text,
+ *                  local variables to include, and whether to include stack in setFailed.
  */
 export async function reportAndSetFailed(
     error: Error | ExtendedError,
@@ -157,8 +165,15 @@ export async function reportAndSetFailed(
 }
 
 /**
- * withPrettyErrors is retained for backward compatibility but simply
- * delegates; actions should prefer direct try/catch with reportAndSetFailed.
+ * Wraps an async function with pretty error reporting and failure handling.
+ *
+ * Executes the provided function and catches any errors, reporting them with
+ * reportAndSetFailed. This is retained for backward compatibility; new code
+ * should prefer direct try/catch with reportAndSetFailed for more control.
+ *
+ * @param fn - The async function to execute with error handling
+ * @param options - Configuration options passed to reportAndSetFailed if an error occurs
+ * @returns The result of fn() if successful, or undefined if an error occurred
  */
 export async function withPrettyErrors<T>(
     fn: () => Promise<T>,

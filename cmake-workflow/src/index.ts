@@ -369,6 +369,15 @@ function numberOfCpus(): number {
     return result;
 }
 
+/**
+ * Normalizes architecture input strings to standard identifiers.
+ *
+ * Maps various architecture names (x86, win32, ia32, amd64, x86_64, etc.)
+ * to their canonical forms (x86, x64, arm, arm64).
+ *
+ * @param arch - Raw architecture input string
+ * @returns Normalized architecture identifier, or original if not recognized
+ */
 function normalizeArchitectureInput(arch: string): string {
     if (!arch) {
         return '';
@@ -389,6 +398,16 @@ function normalizeArchitectureInput(arch: string): string {
     return arch;
 }
 
+/**
+ * Derives the CMake generator architecture from the target architecture.
+ *
+ * Maps normalized architecture names to Visual Studio generator architecture values.
+ * Only applies when using Visual Studio generators.
+ *
+ * @param arch - Target architecture (x86, x64, arm, arm64)
+ * @param generator - CMake generator name
+ * @returns Visual Studio architecture string (Win32, x64, ARM, ARM64) or empty if not applicable
+ */
 function deriveGeneratorArchitectureFromArch(arch: string, generator: string): string {
     const normalizedArch = normalizeArchitectureInput(arch);
     if (!normalizedArch) {
@@ -867,6 +886,16 @@ async function setupDefaultGenerator(inputs: Inputs): Promise<void> {
     }
 }
 
+/**
+ * Resolves and validates CMake workflow input parameters.
+ *
+ * Applies presets, sets default values, identifies generator features,
+ * resolves compiler paths, and prepares all parameters needed for the build.
+ *
+ * @param inputs - Raw input parameters from the action
+ * @param setupCMakeOutputs - Outputs from CMake setup including paths and version info
+ * @returns Resolved parameters ready for the CMake workflow execution
+ */
 async function resolveInputParameters(inputs: Inputs, setupCMakeOutputs: SetupCMakeOutputs): Promise<ResolvedParameters> {
     function fnlog(msg: string): void {
         trace_commands.log('resolveInputParameters: ' + msg);
@@ -1066,6 +1095,14 @@ async function applyPatches(inputs: Inputs): Promise<void> {
     }
 }
 
+/**
+ * Executes a complete CMake workflow including configure, build, test, install, and package.
+ *
+ * Handles source code download, patch application, CMake setup, and runs all enabled
+ * workflow steps based on the provided inputs. Supports multi-configuration generators.
+ *
+ * @param inputs - Configuration inputs for the CMake workflow
+ */
 async function main(inputs: Inputs): Promise<void> {
     function fnlog(msg: string): void {
         trace_commands.log('cmake-workflow: ' + msg);
@@ -1757,6 +1794,12 @@ function parseExtraArgs(extra_args: string[]): string[] | Record<string, string[
     }
 }
 
+/**
+ * Normalizes file paths by converting backslashes to forward slashes on Windows.
+ *
+ * @param inputPath - File path to normalize
+ * @returns Normalized path with forward slashes
+ */
 function normalizePath(inputPath: string): string {
     if (process.platform === 'win32') {
         inputPath = inputPath.replace(/\\/g, '/');

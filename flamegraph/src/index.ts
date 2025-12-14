@@ -7,6 +7,11 @@ import * as gh_inputs from 'gh-inputs';
 import { reportAndSetFailed } from 'pretty-errors';
 import * as os from 'os';
 
+/**
+ * Creates a README file explaining the time-trace artifact contents.
+ *
+ * @param readmePath - Path where the README file should be created
+ */
 async function createReadmeFile(readmePath: string): Promise<void> {
     let content = `# Time-Trace reports\n\n`;
     content += `## time-trace-report.md\n\n`;
@@ -468,7 +473,16 @@ interface CombineTracesResult {
     reportData: ReportData;
 }
 
-/** Combine trace files into a single trace file and collect data for the report. */
+/**
+ * Combines multiple Clang time-trace files into a single unified trace.
+ *
+ * Processes trace files from the build directory, adjusts timestamps for sequential display,
+ * and collects aggregate statistics for the compile time report.
+ *
+ * @param sourceDir - Source directory path for resolving relative file references
+ * @param buildDir - Build directory containing the time-trace JSON files
+ * @returns Combined trace data and aggregate report statistics
+ */
 async function combineTraces(sourceDir: string, buildDir: string): Promise<CombineTracesResult> {
     function fnlog(msg: string) {
         trace_commands.log(`combineTraces: ${msg}`);
@@ -632,6 +646,12 @@ function loadEvents(combinedTrace: Trace): Record<string, Event[]> {
     return events;
 }
 
+/**
+ * A Map implementation that uses arrays as keys, comparing by value equality.
+ *
+ * Standard JavaScript Maps compare object keys by reference. This class provides
+ * value-based comparison for string array keys, useful for tracking call stacks.
+ */
 class ArrayMap {
     private map: Map<string[], number>;
 
@@ -639,13 +659,24 @@ class ArrayMap {
         this.map = new Map();
     }
 
-    // Helper function to compare arrays by value
+    /**
+     * Compares two string arrays for value equality.
+     *
+     * @param arr1 - First array to compare
+     * @param arr2 - Second array to compare
+     * @returns True if arrays have identical elements in the same order
+     */
     private arraysEqual(arr1: string[], arr2: string[]): boolean {
         if (arr1.length !== arr2.length) return false;
         return arr1.every((value, index) => value === arr2[index]);
     }
 
-    // Custom setter method
+    /**
+     * Sets a value for the given array key.
+     *
+     * @param keyArray - Array key to set
+     * @param value - Numeric value to associate with the key
+     */
     set(keyArray: string[], value: number): void {
         for (const [key] of this.map) {
             if (this.arraysEqual(key, keyArray)) {
@@ -656,7 +687,12 @@ class ArrayMap {
         this.map.set(keyArray, value);
     }
 
-    // Custom getter method
+    /**
+     * Gets the value associated with the given array key.
+     *
+     * @param keyArray - Array key to look up
+     * @returns The associated value, or undefined if not found
+     */
     get(keyArray: string[]): number | undefined {
         for (const [key] of this.map) {
             if (this.arraysEqual(key, keyArray)) {
@@ -666,6 +702,12 @@ class ArrayMap {
         return undefined;
     }
 
+    /**
+     * Checks if an array key exists in the map.
+     *
+     * @param keyArray - Array key to check
+     * @returns True if the key exists in the map
+     */
     has(keyArray: string[]): boolean {
         for (const key of this.map.keys()) {
             if (this.arraysEqual(key, keyArray)) {
@@ -675,27 +717,45 @@ class ArrayMap {
         return false;
     }
 
-    // Make the map iterable by implementing the [Symbol.iterator]() method
+    /**
+     * Returns an iterator over key-value pairs.
+     *
+     * @returns Iterator yielding [key, value] tuples
+     */
     [Symbol.iterator](): IterableIterator<[string[], number]> {
         return this.map[Symbol.iterator]();
     }
 
-    // Allow usage of .entries() to iterate over key-value pairs
+    /**
+     * Returns an iterator over key-value pairs.
+     *
+     * @returns Iterator yielding [key, value] tuples
+     */
     entries(): IterableIterator<[string[], number]> {
         return this.map.entries();
     }
 
-    // Allow usage of .keys() to iterate over keys
+    /**
+     * Returns an iterator over the keys.
+     *
+     * @returns Iterator yielding array keys
+     */
     keys(): IterableIterator<string[]> {
         return this.map.keys();
     }
 
-    // Allow usage of .values() to iterate over values
+    /**
+     * Returns an iterator over the values.
+     *
+     * @returns Iterator yielding numeric values
+     */
     values(): IterableIterator<number> {
         return this.map.values();
     }
 
-    // Optional: Clear the map
+    /**
+     * Removes all entries from the map.
+     */
     clear(): void {
         this.map.clear();
     }
@@ -1918,6 +1978,15 @@ interface GenerateSVGFlameGraphResult {
     SVGContent: string;
 }
 
+/**
+ * Generates an interactive SVG flame graph from the combined trace data.
+ *
+ * Processes the trace events into a collapsed stack format and renders an SVG
+ * visualization compatible with browser viewing.
+ *
+ * @param combinedTrace - Combined trace data from multiple compilation units
+ * @returns Stack identifiers for the flame graph and the SVG content string
+ */
 async function generateSVGFlameGraph(combinedTrace: Trace): Promise<GenerateSVGFlameGraphResult> {
     function fnlog(msg: string) {
         trace_commands.log(`generateSVGFlameGraph: ${msg}`);
@@ -2054,7 +2123,13 @@ function filterProjectSymbols(symbolsMap: Record<string, CountDuration>): Record
 }
 
 /**
- * Generate a report from the report data
+ * Generates a markdown report summarizing compilation time statistics.
+ *
+ * Creates tables showing time spent in each compilation phase (frontend, backend,
+ * parsing, instantiation, code generation, optimization) and per-file breakdowns.
+ *
+ * @param reportData - Aggregate statistics collected from trace processing
+ * @returns Markdown-formatted report string
  */
 function generateReport(reportData: ReportData): string {
     let content = `# Time Trace Report\n\n`;
@@ -2152,6 +2227,15 @@ interface MainOutputs {
     svg_path: string;
 }
 
+/**
+ * Main entry point for the flamegraph action.
+ *
+ * Combines time-trace files, generates reports and SVG visualizations,
+ * and optionally uploads artifacts to GitHub Actions.
+ *
+ * @param inputs - Configuration inputs including paths and output options
+ * @returns Paths to the generated trace file and SVG visualization
+ */
 async function main(inputs: MainInputs): Promise<MainOutputs> {
     function fnlog(msg: string) {
         trace_commands.log(`main: ${msg}`);
