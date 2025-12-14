@@ -58,6 +58,8 @@ interface Inputs {
     cache: boolean;
     optimistic_caching: boolean;
     trace_commands: boolean;
+    clone_strategy: 'auto' | 'git' | 'archive';
+    archive_threshold: number;
 }
 
 interface GitFeatures {
@@ -117,7 +119,9 @@ test('generateCacheKey reflects modules-exclude-paths', async () => {
         optimistic_caching: true,
         boost_dir: '',
         cache: true,
-        trace_commands: false
+        trace_commands: false,
+        clone_strategy: 'auto' as const,
+        archive_threshold: 25
     };
     const allModules = new Set<string>(['filesystem']);
 
@@ -157,7 +161,9 @@ test('main short-circuits on cache hit before downloads and saves', async () => 
         modules_exclude_paths: new Set<string>(),
         cache: true,
         optimistic_caching: false,
-        trace_commands: false
+        trace_commands: false,
+        clone_strategy: 'auto' as const,
+        archive_threshold: 25
     };
 
     await main(inputs);
@@ -206,7 +212,9 @@ test('main saves cache on miss and logs key fragments', async () => {
         modules_exclude_paths: new Set<string>(),
         cache: true,
         optimistic_caching: true,
-        trace_commands: false
+        trace_commands: false,
+        clone_strategy: 'auto' as const,
+        archive_threshold: 25
     };
 
     await main(inputs);

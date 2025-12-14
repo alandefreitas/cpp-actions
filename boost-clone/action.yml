@@ -178,6 +178,41 @@ inputs:
     description: 'Trace commands executed by the workflow.'
     required: false
     default: 'false'
+
+  clone-strategy:
+    description: |
+      Strategy for obtaining Boost source files.
+
+      - `auto`: Automatically select the best strategy based on branch type and module count.
+        For release tags with many modules (>25), downloads the CMake release archive.
+        For develop/master or few modules, uses git clone with batch initialization.
+      - `git`: Always use git clone (current behavior, with batch-init optimization).
+      - `archive`: Always download the CMake release archive (only works for release tags).
+
+      The archive strategy is faster when many modules are needed, as it avoids per-module
+      git overhead. However, it only works for release tags (e.g., boost-1.87.0), not for
+      develop/master branches.
+
+    required: false
+    default: 'auto'
+
+  archive-threshold:
+    description: |
+      Number of total modules (including transitive dependencies) above which the archive
+      strategy is preferred over git clone.
+
+      Only applies when clone-strategy is 'auto' and branch is a release tag.
+
+      The default of 25 is an approximate crossover point based on typical network
+      conditions. Archive download has a fixed overhead (~30s for the ~80MB CMake archive)
+      but no per-module cost. Git clone has lower initial cost but adds ~0.5-1s per module
+      for submodule initialization. For projects needing fewer modules, git is faster;
+      for more modules, archive becomes more efficient. Adjust based on your network and
+      typical module count.
+
+    required: false
+    default: '25'
+
 outputs:
   boost-dir:
     description: "The absolute path to the boost source files."

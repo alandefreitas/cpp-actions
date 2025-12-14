@@ -10,12 +10,44 @@ import * as os from 'os';
 import * as trace_commands from 'trace-commands';
 import * as gh_inputs from 'gh-inputs';
 import { reportAndSetFailed } from 'pretty-errors';
+import {
+    parseExceptions,
+    parseGitmodules
+} from './scanning';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const setup_program = require('setup-program');
 
+// Import precomputed dependency data
+import boostDepsData from '../boost-deps.json';
+
 const boostSuperProjectRepo = 'https://github.com/boostorg/boost.git';
 
+/**
+ * Strategy for obtaining Boost source files.
+ */
+type CloneStrategy = 'auto' | 'git' | 'archive';
+
+/**
+ * Module dependency information from precomputed data.
+ */
+interface ModuleDeps {
+    direct_deps: string[];
+    transitive_deps: string[];
+    total_count: number;
+}
+
+/**
+ * Precomputed dependency data structure.
+ */
+interface BoostDepsData {
+    generated: string;
+    releases: Record<string, { modules: Record<string, ModuleDeps> }>;
+}
+
+/**
+ * Configuration inputs for the boost-clone action.
+ */
 interface Inputs {
     boost_dir: string;
     branch: string;
@@ -28,12 +60,20 @@ interface Inputs {
     cache: boolean;
     optimistic_caching: boolean;
     trace_commands: boolean;
+    clone_strategy: CloneStrategy;
+    archive_threshold: number;
 }
 
+/**
+ * Output values from the boost-clone action.
+ */
 interface Outputs {
     boost_dir: string;
 }
 
+/**
+ * Git executable capabilities detected at runtime.
+ */
 interface GitFeatures {
     gitPath: string;
     version: semver.SemVer;
@@ -42,22 +82,37 @@ interface GitFeatures {
     supportsDepth: boolean;
 }
 
+/**
+ * Individual hash components used to build the cache key.
+ */
 interface CacheKeyFragments {
     boostHash: string;
     modulesAndPatchesHash: string;
     configHash: string;
 }
 
+/**
+ * Result from cache key generation including the key and its fragments.
+ */
 interface CacheKeyResult {
     cacheKey: string;
     fragments: CacheKeyFragments;
 }
 
+/**
+ * Options for cache key generation behavior.
+ */
 interface GenerateCacheKeyOptions {
     logInfo?: boolean;
     withFragments?: boolean;
 }
 
+/**
+ * Converts an iterable to a sorted array of strings.
+ *
+ * @param iterable - The iterable to convert, or null/undefined
+ * @returns Sorted array of strings, or empty array if input is null/undefined
+ */
 function toSortedArray(iterable: Iterable<string> | null | undefined): string[] {
     if (!iterable) {
         return [];
@@ -65,10 +120,22 @@ function toSortedArray(iterable: Iterable<string> | null | undefined): string[] 
     return Array.from(iterable).map((value) => value).sort();
 }
 
+/**
+ * Creates a SHA-1 hash of a JSON-serialized value.
+ *
+ * @param value - The value to hash
+ * @returns Hexadecimal hash string
+ */
 function hashObject(value: unknown): string {
     return crypto.createHash('sha1').update(JSON.stringify(value)).digest('hex');
 }
 
+/**
+ * Detects the git executable and its feature capabilities.
+ *
+ * @param _inputs - Action inputs (currently unused)
+ * @returns Git path, version, and supported features
+ */
 async function findGitFeatures(_inputs: Inputs): Promise<GitFeatures> {
     const gitPath = await setup_program.findGit();
     const { stdout } = await exec.getExecOutput(`"${gitPath}"`, ['--version']);
@@ -83,60 +150,58 @@ async function findGitFeatures(_inputs: Inputs): Promise<GitFeatures> {
     return { gitPath, version, supportsJobs, supportsScanScripts, supportsDepth };
 }
 
+/**
+ * Reads and parses the boostdep exceptions.txt file.
+ *
+ * @param exceptionsPath - Path to the exceptions.txt file
+ * @returns Map of header path to module name
+ * @throws Error if the file does not exist
+ */
 function readExceptions(exceptionsPath: string): Record<string, string> {
-    function fnlog(msg: string): void {
-        trace_commands.log(`readExceptions: ${msg}`);
-    }
-
-    // exceptions.txt is the output of "boostdep --list-exceptions"
-    // It includes headers that cannot be associated to a module
-    // following the usual `boost/<module>/path` rules.
-    fnlog(`Reading exceptions from ${exceptionsPath}`);
-    const exceptions: Record<string, string> = {};
-    let module: string | null = null;
+    trace_commands.log(`readExceptions: Reading exceptions from ${exceptionsPath}`);
     if (!fs.existsSync(exceptionsPath)) {
         throw new Error(`Exceptions file not found: ${exceptionsPath}`);
     }
-    const lines = fs.readFileSync(exceptionsPath, 'utf-8').split('\n');
-    for (const line of lines) {
-        const trimmedLine = line.trim();
-        const match = trimmedLine.match(/(.*):$/);
-        if (match) {
-            // Line contains a module name
-            module = match[1].replace('~', '/');
-        } else {
-            // Line contains an exception for the current module
-            if (module !== null) {
-                exceptions[trimmedLine] = module;
-            }
-        }
-    }
-    return exceptions;
+    const content = fs.readFileSync(exceptionsPath, 'utf-8');
+    return parseExceptions(content);
 }
 
+/**
+ * Reads and parses the .gitmodules file.
+ *
+ * @param gitmodulesPath - Path to the .gitmodules file
+ * @returns Set of submodule paths (e.g., "libs/algorithm")
+ * @throws Error if the file does not exist
+ */
 function readGitmodules(gitmodulesPath: string): Set<string> {
-    const submodulePaths = new Set<string>();
     if (!fs.existsSync(gitmodulesPath)) {
         throw new Error(`.gitmodules file not found: ${gitmodulesPath}`);
     }
-    const lines = fs.readFileSync(gitmodulesPath, 'utf-8').split('\n');
-    for (const line of lines) {
-        const trimmedLine = line.trim();
-        // Look for lines such as "path = libs/algorithm"
-        const match = trimmedLine.match(/path\s*=\s*(.*)$/);
-        if (match) {
-            submodulePaths.add(match[1]);
-        }
-    }
-    return submodulePaths;
+    const content = fs.readFileSync(gitmodulesPath, 'utf-8');
+    return parseGitmodules(content);
 }
 
+/**
+ * Checks if a module name corresponds to a valid Boost submodule.
+ *
+ * @param moduleName - The module name to check
+ * @param submodulePaths - Set of valid submodule paths from .gitmodules
+ * @returns True if the module exists in the submodule paths
+ */
 function isModule(moduleName: string, submodulePaths: Set<string>): boolean {
     return submodulePaths.has(`libs/${moduleName}`);
 }
 
 const loggedHeaders = new Set<string>();
 
+/**
+ * Maps a Boost header path to its corresponding module name.
+ *
+ * @param header - The header path (e.g., "boost/algorithm/string.hpp")
+ * @param exceptions - Map of header exceptions to module names
+ * @param submodulePaths - Set of valid submodule paths
+ * @returns The module name or null if not found
+ */
 function moduleForHeader(header: string, exceptions: Record<string, string>, submodulePaths: Set<string>): string | null {
     function fnlog(msg: string): void {
         trace_commands.log(`moduleForHeader: ${msg}`);
@@ -171,6 +236,14 @@ function moduleForHeader(header: string, exceptions: Record<string, string>, sub
     return null;
 }
 
+/**
+ * Scans file contents for Boost include statements and extracts module dependencies.
+ *
+ * @param fileContents - The source file contents to scan
+ * @param exceptions - Map of header exceptions to module names
+ * @param submodulePaths - Set of valid submodule paths
+ * @returns Set of Boost module names found in the file
+ */
 async function scanHeaderDependencies(fileContents: string, exceptions: Record<string, string>, submodulePaths: Set<string>): Promise<Set<string>> {
     const modules = new Set<string>();
     const lines = fileContents.split('\n');
@@ -187,6 +260,14 @@ async function scanHeaderDependencies(fileContents: string, exceptions: Record<s
     return modules;
 }
 
+/**
+ * Recursively scans a directory for Boost module dependencies.
+ *
+ * @param dir - Directory path to scan
+ * @param exceptions - Map of header exceptions to module names
+ * @param submodulePaths - Set of valid submodule paths
+ * @returns Set of Boost module names found in the directory
+ */
 async function scanSubdirectoryDependencies(dir: string, exceptions: Record<string, string>, submodulePaths: Set<string>): Promise<Set<string>> {
     function fnlog(msg: string): void {
         trace_commands.log(`scanSubdirectoryDependencies: ${msg}`);
@@ -211,6 +292,15 @@ async function scanSubdirectoryDependencies(dir: string, exceptions: Record<stri
     return modules;
 }
 
+/**
+ * Lists Boost dependencies by scanning specified subdirectories.
+ *
+ * @param dir - Base directory to scan
+ * @param subdirs - List of subdirectory names to scan within the base directory
+ * @param exceptions - Map of header exceptions to module names
+ * @param submodulePaths - Set of valid submodule paths
+ * @returns Set of Boost module names found
+ */
 async function listBoostDependencies(dir: string, subdirs: string[], exceptions: Record<string, string>, submodulePaths: Set<string>): Promise<Set<string>> {
     trace_commands.log(`listBoostDependencies: Scanning subdirs of ${dir}`);
     const modules = new Set<string>();
@@ -228,6 +318,18 @@ async function listBoostDependencies(dir: string, subdirs: string[], exceptions:
     return modules;
 }
 
+/**
+ * Scans a project directory for Boost module dependencies.
+ *
+ * Combines user-specified include/exclude paths with default directories
+ * and filters out ignored modules.
+ *
+ * @param scanDir - Directory to scan for Boost dependencies
+ * @param inputs - Action inputs containing scan configuration
+ * @param exceptions - Map of header exceptions to module names
+ * @param submodulePaths - Set of valid submodule paths
+ * @returns Set of Boost module names required by the project
+ */
 async function scanBoostDependencies(scanDir: string, inputs: Inputs, exceptions: Record<string, string>, submodulePaths: Set<string>): Promise<Set<string>> {
     const dir = scanDir;
     const ignore = inputs.scan_modules_ignore;
@@ -260,6 +362,15 @@ async function scanBoostDependencies(scanDir: string, inputs: Inputs, exceptions
     return modules;
 }
 
+/**
+ * Retrieves the git commit hash for a repository at a given branch.
+ *
+ * @param repoUrl - URL of the git repository
+ * @param branch - Branch or tag name
+ * @param gitFeatures - Git executable information
+ * @returns The commit hash string
+ * @throws Error if the remote lookup fails
+ */
 async function getGitHash(repoUrl: string, branch: string, gitFeatures: GitFeatures): Promise<string> {
     const { exitCode, stdout } = await exec.getExecOutput(`"${gitFeatures.gitPath}"`, [
         'ls-remote', repoUrl, branch]);
@@ -269,6 +380,12 @@ async function getGitHash(repoUrl: string, branch: string, gitFeatures: GitFeatu
     return stdout.trim().split('\t')[0];
 }
 
+/**
+ * Constructs the GitHub repository URL for a Boost module.
+ *
+ * @param module - Module name (e.g., "algorithm" or "numeric/conversion")
+ * @returns The GitHub repository URL
+ */
 function getModuleRepoUrl(module: string): string {
     return `https://github.com/boostorg/${module.replace('/', '_')}.git`;
 }
@@ -366,6 +483,13 @@ async function generateCacheKey(inputs: Inputs, allModules: Set<string>, gitFeat
     return options.withFragments ? result : cacheKey;
 }
 
+/**
+ * Attempts to restore Boost from the GitHub Actions cache.
+ *
+ * @param inputs - Action inputs containing the boost directory path
+ * @param cacheKey - The cache key to look up
+ * @returns True if cache was found and restored
+ */
 async function getCachedBoost(inputs: Inputs, cacheKey: string): Promise<boolean> {
     core.info(`Checking cache for key: ${cacheKey}`);
     const hit = await cache.restoreCache([inputs.boost_dir], cacheKey, []) !== undefined;
@@ -377,14 +501,31 @@ async function getCachedBoost(inputs: Inputs, cacheKey: string): Promise<boolean
     return hit;
 }
 
+/**
+ * Saves the Boost installation to the GitHub Actions cache.
+ *
+ * @param inputs - Action inputs containing the boost directory path
+ * @param cacheKey - The cache key to use for storage
+ */
 async function cacheBoost(inputs: Inputs, cacheKey: string): Promise<void> {
     await cache.saveCache([inputs.boost_dir], cacheKey, {});
 }
 
+/**
+ * Clones the Boost super-project repository to the target directory.
+ *
+ * @param inputs - Action inputs containing branch and directory settings
+ */
 async function cloneBoostSuperproject(inputs: Inputs): Promise<void> {
     await setup_program.cloneGitRepo(boostSuperProjectRepo, inputs.boost_dir, inputs.branch);
 }
 
+/**
+ * Extracts the repository name from a git URL.
+ *
+ * @param url - Git repository URL
+ * @returns The repository name without path or extension
+ */
 function getRepoName(url: string): string {
     // Strip query parameters and fragment identifiers
     const cleanUrl = url.split(/[?#]/)[0];
@@ -393,6 +534,11 @@ function getRepoName(url: string): string {
     return cleanUrl.replace(/\.git$/, '').replace(/\/$/, '').split('/').pop()!;
 }
 
+/**
+ * Applies patch repositories by cloning them into the Boost libs directory.
+ *
+ * @param inputs - Action inputs containing patches and directory settings
+ */
 async function applyPatches(inputs: Inputs): Promise<void> {
     function fnlog(msg: string): void {
         trace_commands.log(`applyPatches: ${msg}`);
@@ -409,6 +555,11 @@ async function applyPatches(inputs: Inputs): Promise<void> {
     }
 }
 
+/**
+ * Returns the number of available CPU cores for parallel operations.
+ *
+ * @returns Number of CPU cores, minimum 1
+ */
 function numberOfCpus(): number {
     const result = typeof os.availableParallelism === 'function'
         ? os.availableParallelism()
@@ -419,6 +570,215 @@ function numberOfCpus(): number {
     return result;
 }
 
+/**
+ * Checks if a branch name is a Boost release tag (e.g., boost-1.87.0).
+ *
+ * @param branch - The branch name to check
+ * @returns True if the branch is a release tag
+ */
+function isReleaseTag(branch: string): boolean {
+    return /^boost-\d+\.\d+\.\d+$/.test(branch);
+}
+
+/**
+ * Gets the latest release tag from precomputed data.
+ *
+ * @returns The latest release tag or null if no data available
+ */
+function getLatestRelease(): string | null {
+    const depsData = boostDepsData as BoostDepsData;
+    const releases = Object.keys(depsData.releases);
+    if (releases.length === 0) {
+        return null;
+    }
+    // Releases should already be sorted newest first
+    return releases[0];
+}
+
+/**
+ * Estimates the total number of modules (including transitive dependencies)
+ * for a set of requested modules using precomputed data.
+ *
+ * @param requestedModules - Set of directly requested modules
+ * @param releaseTag - Optional specific release tag to use (defaults to latest)
+ * @returns Object with estimated total count and the full set of modules
+ */
+function estimateTotalModules(requestedModules: Set<string>, releaseTag?: string): {
+    totalCount: number;
+    allModules: Set<string>;
+    fromPrecomputed: boolean;
+} {
+    const depsData = boostDepsData as BoostDepsData;
+    const release = releaseTag || getLatestRelease();
+
+    if (!release || !depsData.releases[release]) {
+        // No precomputed data available, return just the requested modules
+        return {
+            totalCount: requestedModules.size,
+            allModules: new Set(requestedModules),
+            fromPrecomputed: false
+        };
+    }
+
+    const releaseData = depsData.releases[release];
+    const allModules = new Set<string>();
+
+    for (const mod of requestedModules) {
+        allModules.add(mod);
+        const modData = releaseData.modules[mod];
+        if (modData) {
+            for (const dep of modData.transitive_deps) {
+                allModules.add(dep);
+            }
+        }
+    }
+
+    return {
+        totalCount: allModules.size,
+        allModules,
+        fromPrecomputed: true
+    };
+}
+
+/**
+ * Decides which clone strategy to use based on inputs and context.
+ *
+ * @param inputs - User inputs including strategy preference
+ * @param estimatedModules - Estimated total module count
+ * @returns The strategy to use ('git' or 'archive')
+ */
+function decideStrategy(inputs: Inputs, estimatedModules: number): 'git' | 'archive' {
+    // If user explicitly requested a strategy, use it
+    if (inputs.clone_strategy === 'git') {
+        return 'git';
+    }
+    if (inputs.clone_strategy === 'archive') {
+        if (!isReleaseTag(inputs.branch)) {
+            core.warning(`Archive strategy requested but branch '${inputs.branch}' is not a release tag. Falling back to git.`);
+            return 'git';
+        }
+        return 'archive';
+    }
+
+    // Auto mode: decide based on branch type and module count
+    if (!isReleaseTag(inputs.branch)) {
+        // develop/master: always use git (no archive available)
+        return 'git';
+    }
+
+    // Release tag: use archive if module count exceeds threshold
+    if (estimatedModules > inputs.archive_threshold) {
+        core.info(`Estimated ${estimatedModules} modules exceeds threshold (${inputs.archive_threshold}), using archive strategy`);
+        return 'archive';
+    }
+
+    return 'git';
+}
+
+/**
+ * Gets the CMake release archive URL for a Boost release tag.
+ *
+ * @param releaseTag - The release tag (e.g., boost-1.87.0)
+ * @returns The archive URL
+ */
+function getArchiveUrl(releaseTag: string): string {
+    // CMake release format: boost-1.87.0-cmake.tar.xz
+    return `https://github.com/boostorg/boost/releases/download/${releaseTag}/${releaseTag}-cmake.tar.xz`;
+}
+
+/**
+ * Downloads and extracts a Boost release archive.
+ *
+ * @param archiveUrl - URL of the archive to download
+ * @param targetDir - Directory to extract to
+ */
+async function downloadAndExtractArchive(archiveUrl: string, targetDir: string): Promise<void> {
+    core.info(`Downloading archive from ${archiveUrl}...`);
+
+    // Download the archive
+    const archivePath = await tc.downloadTool(archiveUrl);
+    core.info(`Downloaded to ${archivePath}`);
+
+    // Create target directory
+    fs.mkdirSync(targetDir, { recursive: true });
+
+    // Extract the archive (tar.xz format)
+    core.info(`Extracting to ${targetDir}...`);
+
+    // Use tar to extract, stripping the first component (the boost-X.Y.Z-cmake directory)
+    await exec.exec('tar', [
+        '-xf', archivePath,
+        '-C', targetDir,
+        '--strip-components=1'
+    ]);
+
+    core.info('Archive extracted successfully');
+}
+
+/**
+ * Batch-initializes all specified modules at once using precomputed dependency data.
+ * This is more efficient than layer-by-layer discovery.
+ *
+ * @param inputs - User inputs
+ * @param allModules - Complete set of modules to initialize (including transitive deps)
+ * @param gitFeatures - Git capabilities
+ */
+async function batchInitializeSubmodules(
+    inputs: Inputs,
+    allModules: Set<string>,
+    gitFeatures: GitFeatures
+): Promise<void> {
+    function fnlog(msg: string): void {
+        trace_commands.log(`batchInitializeSubmodules: ${msg}`);
+    }
+
+    const jobsArgs = gitFeatures.supportsJobs ? ['--jobs', `${numberOfCpus()}`] : [];
+    const depthArgs = gitFeatures.supportsDepth ? ['--depth', '1'] : [];
+    const gitArgs = jobsArgs.concat(depthArgs).concat(['-q']);
+
+    // Add essential modules
+    const essentialModules = ['config', 'headers'];
+    const essentialTools = ['tools/boost_install', 'tools/build', 'tools/cmake'];
+
+    const allModulesWithEssentials = new Set(allModules);
+    for (const mod of essentialModules) {
+        allModulesWithEssentials.add(mod);
+    }
+
+    // Build list of all submodule paths to initialize
+    const submodulePaths: string[] = [];
+    for (const mod of allModulesWithEssentials) {
+        submodulePaths.push(`libs/${mod}`);
+    }
+    for (const tool of essentialTools) {
+        submodulePaths.push(tool);
+    }
+
+    fnlog(`Batch initializing ${submodulePaths.length} submodules`);
+    core.info(`Initializing ${submodulePaths.length} submodules in batch mode`);
+
+    // Initialize all submodules in one command with multiple paths
+    // This is more efficient than individual commands
+    for (const submodulePath of submodulePaths) {
+        const args = ['submodule', 'update'].concat(gitArgs).concat(['--init', submodulePath]);
+        await exec.exec(`"${gitFeatures.gitPath}"`, args, { cwd: inputs.boost_dir });
+    }
+
+    fnlog('Batch initialization complete');
+}
+
+/**
+ * Initializes Boost submodules using layer-by-layer dependency discovery.
+ *
+ * Starts with the requested modules, then recursively discovers and initializes
+ * their dependencies by scanning header files.
+ *
+ * @param inputs - Action inputs containing directory and module settings
+ * @param allModules - Initial set of modules to initialize
+ * @param gitFeatures - Git executable capabilities
+ * @param exceptions - Map of header exceptions to module names
+ * @param submodulePaths - Set of valid submodule paths from .gitmodules
+ */
 async function initializeSubmodules(inputs: Inputs, allModules: Set<string>, gitFeatures: GitFeatures, exceptions: Record<string, string>, submodulePaths: Set<string>): Promise<void> {
     function fnlog(msg: string): void {
         trace_commands.log(`initializeSubmodules: ${msg}`);
@@ -486,6 +846,14 @@ async function initializeSubmodules(inputs: Inputs, allModules: Set<string>, git
 }
 
 
+/**
+ * Initializes all Boost submodules recursively.
+ *
+ * Used when no specific modules are requested and the entire Boost library is needed.
+ *
+ * @param inputs - Action inputs containing the boost directory
+ * @param gitFeatures - Git executable capabilities
+ */
 async function initializeAllSubmodules(inputs: Inputs, gitFeatures: GitFeatures): Promise<void> {
     const args = ['submodule', 'update']
         .concat(gitFeatures.supportsDepth ? ['--depth', '1'] : [])
@@ -500,6 +868,7 @@ async function initializeAllSubmodules(inputs: Inputs, gitFeatures: GitFeatures)
  *
  * Manages caching of the Boost installation, resolves module dependencies,
  * applies patches, and initializes git submodules for the specified modules.
+ * Supports two strategies: git (clone + submodule init) and archive (download release tarball).
  *
  * @param inputs - Configuration inputs including branch, modules, patches, and cache settings
  * @returns Outputs including the Boost directory path
@@ -517,6 +886,8 @@ export async function main(inputs: Inputs): Promise<Outputs> {
     core.info(`Cache path: ${inputs.boost_dir}`);
     core.info(`Cache enabled: ${inputs.cache}`);
     core.info(`Optimistic caching: ${inputs.optimistic_caching}`);
+    core.info(`Clone strategy: ${inputs.clone_strategy}`);
+    core.info(`Archive threshold: ${inputs.archive_threshold}`);
 
     core.startGroup('📐 Identify git features');
     const gitFeatures = await findGitFeatures(inputs);
@@ -544,16 +915,14 @@ export async function main(inputs: Inputs): Promise<Outputs> {
         core.info('Caching disabled via input; proceeding without cache');
     }
 
-    // Get gitmodules and exceptions
+    // Get gitmodules and exceptions (needed for scanning local deps)
     core.startGroup('🌍 Download .gitmodules and exceptions.txt');
-    // .gitmodules
     const gitmodulesUrl = `https://raw.githubusercontent.com/boostorg/boost/${inputs.branch}/.gitmodules`;
     const gitmodulesPath = path.resolve(await tc.downloadTool(gitmodulesUrl));
     core.info(`Downloaded ${gitmodulesUrl} to ${gitmodulesPath}`);
     const submodulePaths = readGitmodules(gitmodulesPath);
     fnlog(`Submodule Paths: ${gh_inputs.makeValueString(submodulePaths)}`);
 
-    // exceptions.txt
     const exceptionsUrl = `https://raw.githubusercontent.com/boostorg/boostdep/${inputs.branch}/depinst/exceptions.txt`;
     const exceptionsPath = path.resolve(await tc.downloadTool(exceptionsUrl));
     core.info(`Downloaded ${exceptionsUrl} to ${exceptionsPath}`);
@@ -561,40 +930,62 @@ export async function main(inputs: Inputs): Promise<Outputs> {
     fnlog(`Exceptions: ${JSON.stringify(exceptions)}`);
     core.endGroup();
 
-    const allModules = new Set(inputs.modules);
+    // Scan local directories for required modules
+    const directModules = new Set(inputs.modules);
     for (const scanDir of inputs.scan_modules_dir) {
         core.startGroup(`🔍 Scan Boost Modules Required by ${path.basename(scanDir)}`);
         const scannedModules = await scanBoostDependencies(scanDir, inputs, exceptions, submodulePaths);
         for (const module of scannedModules) {
-            allModules.add(module);
+            directModules.add(module);
         }
         core.endGroup();
     }
 
+    // Estimate total modules using precomputed data
+    core.startGroup('📊 Estimate Total Modules');
+    const releaseForEstimate = isReleaseTag(inputs.branch) ? inputs.branch : undefined;
+    const estimation = estimateTotalModules(directModules, releaseForEstimate);
+    core.info(`Direct modules requested: ${directModules.size}`);
+    core.info(`Estimated total modules (with transitive deps): ${estimation.totalCount}`);
+    core.info(`Estimation from precomputed data: ${estimation.fromPrecomputed}`);
+    core.endGroup();
+
+    // Decide on strategy
+    core.startGroup('🎯 Select Clone Strategy');
+    const strategy = decideStrategy(inputs, estimation.totalCount);
+    core.info(`Selected strategy: ${strategy}`);
+    core.endGroup();
+
+    // Recalculate cache key with full module set
     core.startGroup('🔑 Calculate Boost Cache Key');
-    cacheKey = await generateCacheKey(inputs, allModules, gitFeatures) as string;
+    const allModulesForCache = estimation.fromPrecomputed ? estimation.allModules : directModules;
+    cacheKey = await generateCacheKey(inputs, allModulesForCache, gitFeatures) as string;
     core.endGroup();
 
-    // Clone boost
-    core.startGroup('🚀 Clone Boost Super-project');
-    await cloneBoostSuperproject(inputs);
-    core.endGroup();
-
-    // Apply patches
-    if (inputs.patches.size > 0) {
-        core.startGroup('🔨 Apply Boost Patches');
-        await applyPatches(inputs);
+    // Execute the selected strategy
+    if (strategy === 'archive') {
+        // Archive strategy: download and extract the CMake release
+        core.startGroup('📦 Download Boost Archive');
+        const archiveUrl = getArchiveUrl(inputs.branch);
+        try {
+            await downloadAndExtractArchive(archiveUrl, inputs.boost_dir);
+        } catch (error) {
+            core.warning(`Archive download failed: ${error}. Falling back to git strategy.`);
+            core.endGroup();
+            // Fall through to git strategy
+            await executeGitStrategy(inputs, directModules, estimation, gitFeatures, exceptions, submodulePaths);
+        }
         core.endGroup();
-    }
 
-    if (allModules.size === 0) {
-        core.startGroup('🔧 Initialize All Boost Submodules');
-        await initializeAllSubmodules(inputs, gitFeatures);
-        core.endGroup();
+        // Apply patches (git clone into libs/)
+        if (inputs.patches.size > 0) {
+            core.startGroup('🔨 Apply Boost Patches');
+            await applyPatches(inputs);
+            core.endGroup();
+        }
     } else {
-        core.startGroup('🔧 Initialize Boost Submodules');
-        await initializeSubmodules(inputs, allModules, gitFeatures, exceptions, submodulePaths);
-        core.endGroup();
+        // Git strategy
+        await executeGitStrategy(inputs, directModules, estimation, gitFeatures, exceptions, submodulePaths);
     }
 
     // Cache boost
@@ -610,9 +1001,72 @@ export async function main(inputs: Inputs): Promise<Outputs> {
     return outputs;
 }
 
+/**
+ * Executes the git clone strategy.
+ *
+ * @param inputs - User inputs
+ * @param directModules - Directly requested modules (from user input + scanning)
+ * @param estimation - Module estimation from precomputed data
+ * @param gitFeatures - Git capabilities
+ * @param exceptions - Header exceptions map
+ * @param submodulePaths - Valid submodule paths
+ */
+async function executeGitStrategy(
+    inputs: Inputs,
+    directModules: Set<string>,
+    estimation: { totalCount: number; allModules: Set<string>; fromPrecomputed: boolean },
+    gitFeatures: GitFeatures,
+    exceptions: Record<string, string>,
+    submodulePaths: Set<string>
+): Promise<void> {
+    // Clone boost super-project
+    core.startGroup('🚀 Clone Boost Super-project');
+    await cloneBoostSuperproject(inputs);
+    core.endGroup();
+
+    // Apply patches
+    if (inputs.patches.size > 0) {
+        core.startGroup('🔨 Apply Boost Patches');
+        await applyPatches(inputs);
+        core.endGroup();
+    }
+
+    // Initialize submodules
+    if (directModules.size === 0) {
+        // No specific modules requested, initialize all
+        core.startGroup('🔧 Initialize All Boost Submodules');
+        await initializeAllSubmodules(inputs, gitFeatures);
+        core.endGroup();
+    } else if (estimation.fromPrecomputed && estimation.totalCount > 0) {
+        // We have precomputed transitive deps, use batch initialization
+        core.startGroup('🔧 Batch Initialize Boost Submodules');
+        core.info(`Using precomputed dependencies for batch initialization`);
+        await batchInitializeSubmodules(inputs, estimation.allModules, gitFeatures);
+        core.endGroup();
+    } else {
+        // No precomputed data, use layer-by-layer discovery
+        core.startGroup('🔧 Initialize Boost Submodules');
+        core.info(`Using layer-by-layer dependency discovery`);
+        await initializeSubmodules(inputs, directModules, gitFeatures, exceptions, submodulePaths);
+        core.endGroup();
+    }
+}
+
 let lastInputsForErrors: Inputs | undefined = undefined;
 
+/**
+ * Entry point for the GitHub Action.
+ *
+ * Parses action inputs, validates configuration, and orchestrates the
+ * boost-clone workflow including caching, cloning, and submodule initialization.
+ */
 async function run(): Promise<void> {
+    const cloneStrategyInput = gh_inputs.getInput('clone-strategy', { defaultValue: 'auto' }) || 'auto';
+    const validStrategies: CloneStrategy[] = ['auto', 'git', 'archive'];
+    const cloneStrategy: CloneStrategy = validStrategies.includes(cloneStrategyInput as CloneStrategy)
+        ? (cloneStrategyInput as CloneStrategy)
+        : 'auto';
+
     const inputs: Inputs = {
         boost_dir: gh_inputs.getInput('boost-dir') || '',
         branch: gh_inputs.getInput('branch', { defaultValue: 'master' }) || 'master',
@@ -627,7 +1081,10 @@ async function run(): Promise<void> {
         // Caching
         cache: gh_inputs.getBoolean('cache', { defaultValue: true }),
         optimistic_caching: gh_inputs.getBoolean('optimistic-caching', { defaultValue: false }),
-        trace_commands: gh_inputs.getBoolean('trace-commands', { defaultValue: false })
+        trace_commands: gh_inputs.getBoolean('trace-commands', { defaultValue: false }),
+        // Strategy
+        clone_strategy: cloneStrategy,
+        archive_threshold: parseInt(gh_inputs.getInput('archive-threshold', { defaultValue: '25' }) || '25', 10)
     };
 
     // Remove any empty entry from scan_modules_dir

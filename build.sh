@@ -227,6 +227,9 @@ else
         exit 1
     fi
 
+    echo "==== Generating Boost dependency data ===="
+    generate_boost_deps
+
     echo "==== Testing projects ===="
     test_pids=()
     test_project_names=()

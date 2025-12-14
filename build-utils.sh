@@ -126,3 +126,50 @@ generate_ubuntu_versions_json() {
 
     rm "$temp_file"
 }
+
+# Function: generate_boost_deps
+# -----------------------------
+# Generates precomputed Boost module dependency data for the boost-clone action.
+# This enables strategy selection (archive vs git) and batch initialization.
+#
+# Behavior:
+#   - Runs the generate-deps.ts script to create/update boost-deps.json
+#   - Uses --skip-existing to check if latest release is already present
+#   - Only fetches and processes releases that aren't already in the file
+#
+# Parameters:
+#   None
+#
+# Returns:
+#   - 0 on success.
+#   - 1 if there is an error during generation.
+#
+# Notes:
+#   - The generator clones Boost releases which can be slow on first run.
+#   - With --skip-existing, it fetches latest releases from GitHub API,
+#     compares with existing data, and only processes new ones.
+#   - Output is saved to boost-clone/boost-deps.json
+generate_boost_deps() {
+    echo "Updating boost-deps.json..."
+
+    local generator="boost-clone/scripts/generate-deps.ts"
+
+    if [ ! -f "$generator" ]; then
+        echo "Warning: generate-deps.ts not found. Skipping boost-deps generation."
+        return 0
+    fi
+
+    # Let the script handle update logic - it will:
+    # 1. Fetch latest release from GitHub
+    # 2. Check if it's already in boost-deps.json
+    # 3. Only process if not present
+    if npx ts-node "$generator" \
+        --latest 1 \
+        --output boost-clone/boost-deps.json \
+        --skip-existing; then
+        echo "boost-deps.json is up to date."
+    else
+        echo "Warning: Failed to update boost-deps.json"
+        return 1
+    fi
+}
