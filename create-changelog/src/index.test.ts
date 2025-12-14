@@ -259,6 +259,61 @@ describe('sortChanges', () => {
         expect(changes.fix['core'][0].description).toBe('Fix 2'); // 20 lines
         expect(changes.fix['core'][1].description).toBe('Fix 1'); // 5 lines
     });
+
+    it('should sort commits across different scopes within the same type', () => {
+        // This tests the fix for the bug where commits in different scopes
+        // were not sorted relative to each other
+        const scopeACommit = createCommitWithDateAndLines('Mon Jan 1 10:00:00 2024 +0000', 50, 'Scope A commit');
+        const scopeBCommit = createCommitWithDateAndLines('Wed Jan 3 10:00:00 2024 +0000', 100, 'Scope B commit');
+        const noScopeCommit = createCommitWithDateAndLines('Tue Jan 2 10:00:00 2024 +0000', 75, 'No scope commit');
+
+        // Scopes added in order: scopeA (50), scopeB (100), null (75)
+        const changes: main.Changes = {
+            refactor: {
+                'scopeA': [scopeACommit],
+                'scopeB': [scopeBCommit],
+                'null': [noScopeCommit]
+            }
+        };
+
+        main.sortChanges(changes, 'most-changes-first');
+
+        // After sorting by most-changes-first, scopes should be reordered
+        // so that scopeB (100) comes first, then null (75), then scopeA (50)
+        const scopeOrder = Object.keys(changes.refactor);
+        expect(scopeOrder[0]).toBe('scopeB'); // 100 lines - should be first
+        expect(scopeOrder[1]).toBe('null');   // 75 lines - should be second
+        expect(scopeOrder[2]).toBe('scopeA'); // 50 lines - should be third
+    });
+
+    it('should handle mixed scopes with multiple commits each', () => {
+        const scopeACommit1 = createCommitWithDateAndLines('Mon Jan 1 10:00:00 2024 +0000', 100, 'Scope A big');
+        const scopeACommit2 = createCommitWithDateAndLines('Tue Jan 2 10:00:00 2024 +0000', 20, 'Scope A small');
+        const scopeBCommit1 = createCommitWithDateAndLines('Wed Jan 3 10:00:00 2024 +0000', 50, 'Scope B medium');
+        const scopeBCommit2 = createCommitWithDateAndLines('Thu Jan 4 10:00:00 2024 +0000', 10, 'Scope B tiny');
+
+        const changes: main.Changes = {
+            feat: {
+                'scopeA': [scopeACommit1, scopeACommit2],
+                'scopeB': [scopeBCommit1, scopeBCommit2]
+            }
+        };
+
+        main.sortChanges(changes, 'most-changes-first');
+
+        // After sorting: scopeA (100) first, then scopeB (50), then scopeA (20), then scopeB (10)
+        // Since we rebuild the scope map in sorted order, scopeA appears first (has 100-line commit)
+        const scopeOrder = Object.keys(changes.feat);
+        expect(scopeOrder[0]).toBe('scopeA'); // Has the 100-line commit
+
+        // Within scopeA, commits should be sorted by lines
+        expect(changes.feat['scopeA'][0].description).toBe('Scope A big'); // 100 lines
+        expect(changes.feat['scopeA'][1].description).toBe('Scope A small'); // 20 lines
+
+        // Within scopeB, commits should be sorted by lines
+        expect(changes.feat['scopeB'][0].description).toBe('Scope B medium'); // 50 lines
+        expect(changes.feat['scopeB'][1].description).toBe('Scope B tiny'); // 10 lines
+    });
 });
 
 test('generateOutput avoids duplicating scope for multiline entries', () => {

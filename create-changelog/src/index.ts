@@ -1547,9 +1547,27 @@ export function compareCommits(a: Commit, b: Commit, sortBy: SortByOption): numb
  */
 export function sortChanges(changes: Changes, sortBy: SortByOption): Changes {
     for (const type of Object.keys(changes)) {
+        // Collect all commits for this type with their scopes
+        const allCommits: { scope: string; commit: Commit }[] = [];
         for (const scope of Object.keys(changes[type])) {
-            changes[type][scope].sort((a, b) => compareCommits(a, b, sortBy));
+            for (const commit of changes[type][scope]) {
+                allCommits.push({ scope, commit });
+            }
         }
+
+        // Sort all commits together
+        allCommits.sort((a, b) => compareCommits(a.commit, b.commit, sortBy));
+
+        // Rebuild the scope map in sorted order
+        const newScopeMap: { [scope: string]: Commit[] } = {};
+        for (const { scope, commit } of allCommits) {
+            if (!newScopeMap[scope]) {
+                newScopeMap[scope] = [];
+            }
+            newScopeMap[scope].push(commit);
+        }
+
+        changes[type] = newScopeMap;
     }
     return changes;
 }
@@ -1985,7 +2003,7 @@ export async function run(): Promise<void> {
         trace_commands: gh_inputs.getBoolean('trace-commands'),
         include_types: gh_inputs.getSet('include-types'),
         exclude_types: gh_inputs.getSet('exclude-types'),
-        sort_by: parseSortByOption(gh_inputs.getInput('sort-by') || 'date-desc')
+        sort_by: parseSortByOption(gh_inputs.getInput('sort-by') || 'most-changes-first')
     };
 
     lastInputsForErrors = inputs;
