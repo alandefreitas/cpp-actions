@@ -487,6 +487,56 @@ npm run build</code></pre>
 </div>
 </div>
 <div class="sect2">
+<h3 id="_global_installation"><a class="anchor" href="#_global_installation"></a>Global Installation</h3>
+<div class="paragraph">
+<p>To install <code>create-changelog</code> as a global command accessible from any directory:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># From the repository root, build dependencies first
+npm install
+npm run prepare
+
+# Then link the create-changelog package globally
+cd create-changelog
+npm link</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>After linking, you can run <code>create-changelog</code> from any git repository:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Navigate to any project and generate its changelog
+cd /path/to/any/project
+create-changelog
+
+# Or with options
+create-changelog -o RELEASE_NOTES.md --limit 50</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>To uninstall the global command:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">npm unlink -g create-changelog</code></pre>
+</div>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+Global installation is useful for testing changelog generation locally before committing workflow changes, or for generating changelogs in projects that don&#8217;t use this action.
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
 <h3 id="_usage"><a class="anchor" href="#_usage"></a>Usage</h3>
 <div class="listingblock">
 <div class="content">
@@ -501,66 +551,9 @@ node lib/create-changelog.js --source_dir /path/to/your/repo</code></pre>
 <div class="sect2">
 <h3 id="_cli_options"><a class="anchor" href="#_cli_options"></a>CLI Options</h3>
 <div class="paragraph">
-<p>All action inputs are available as CLI options with underscores instead of hyphens:</p>
+<p>All action inputs are available as CLI options with underscores instead of hyphens
+(e.g., <code>--source_dir</code>, <code>--version_pattern</code>). Use <code>-o</code> as shorthand for <code>--output_path</code>.</p>
 </div>
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 25%;">
-<col style="width: 75%;">
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Option</th>
-<th class="tableblock halign-left valign-top">Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>--source_dir &lt;path&gt;</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Source directory to analyze (default: current directory)</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>--output_path &lt;path&gt;</code> or <code>-o &lt;path&gt;</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Output file path (default: CHANGELOG.md)</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>--version_pattern &lt;regex&gt;</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Regex to identify version commits (default: <code>^v\d+\.\d+\.\d+$</code>)</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>--tag_pattern &lt;regex&gt;</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Regex to identify release tags (default: <code>^v\d+\.\d+\.\d+$</code>)</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>--limit &lt;number&gt;</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Maximum commits to process (default: 0 = unlimited)</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>--thank_non_regular &lt;true|false&gt;</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Thank non-regular contributors (default: true)</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>--check_unconventional &lt;true|false&gt;</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Warn about non-conventional commits (default: true)</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>--link_commits &lt;true|false&gt;</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Include commit links (default: true)</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>--github_token &lt;token&gt;</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">GitHub token for API access (default: $GITHUB_TOKEN)</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>--update_summary &lt;true|false&gt;</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Update workflow summary (default: false, CLI only)</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>--trace_commands &lt;true|false&gt;</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Enable verbose logging (default: true)</p></td>
-</tr>
-</tbody>
-</table>
 </div>
 <div class="sect2">
 <h3 id="_example"><a class="anchor" href="#_example"></a>Example</h3>
@@ -673,11 +666,16 @@ thank you message.</p></td>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>check-unconventional</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Check for commits that do not follow the conventional commit format.</p>
-<p class="tableblock">If one of the new commits in a PR does not follow the conventional commit format,
-the action will create a warning so that the user can fix the commit message.</p>
+<p class="tableblock">This input controls the behavior when unconventional commits are detected:</p>
+<p class="tableblock">- <code>false</code>: Disable checking (no warnings or errors)
+- <code>warn</code> or <code>true</code>: Emit warnings for unconventional commits (default)
+- <code>error</code>: Fail the action if unconventional commits are found</p>
+<p class="tableblock">When enabled, if one of the new commits in a PR does not follow the
+conventional commit format, the action will either warn or fail depending
+on this setting.</p>
 <p class="tableblock">This helps ensure all commit messages can be used in the changelog so
 that it&#8217;s consistent and that the release notes are clear and concise.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>warn</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>link-commits</code></p></td>
@@ -723,6 +721,44 @@ with the current changelog.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>include-types</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Comma-separated list of commit types to include in the changelog.</p>
+<p class="tableblock">When specified, only commits with these types will appear in the changelog.
+If empty (default), all commit types are included before applying exclusions.</p>
+<p class="tableblock">Common types: feat, fix, perf, refactor, docs, style, build, test, ci, chore, release, other</p>
+<p class="tableblock">Example: 'feat, fix, perf, docs'</p>
+<p class="tableblock">Note: The 'other' type represents commits that don&#8217;t follow conventional commit format.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>exclude-types</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Comma-separated list of commit types to exclude from the changelog.</p>
+<p class="tableblock">Commits with these types will be filtered out from the changelog output.
+This filter is applied after include-types (if specified).</p>
+<p class="tableblock">Common types: feat, fix, perf, refactor, docs, style, build, test, ci, chore, release, other</p>
+<p class="tableblock">Example: 'chore, style, release'</p>
+<p class="tableblock">Tip: Use this to create cleaner changelogs by excluding routine maintenance commits.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>chore, style</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>sort-by</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Specifies how commits should be sorted within each scope in the changelog.</p>
+<p class="tableblock">Available options:
+- <code>most-changes-first</code>: Sort by lines changed, most changes first (default)
+- <code>latest-first</code>: Sort by date, newest commits first
+- <code>oldest-first</code>: Sort by date, oldest commits first</p>
+<p class="tableblock">Note: When using <code>most-changes-first</code>, the action will fetch diff statistics
+for each commit, which may take additional time for repositories with
+many commits.</p>
+<p class="tableblock">Example: Sort by newest commits first:
+<code><code>yaml
+- uses: alandefreitas/cpp-actions/create-changelog@v1
+  with:
+    sort-by: 'latest-first'
+</code></code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>most-changes-first</code></p></td>
 </tr>
 </tbody>
 </table>
