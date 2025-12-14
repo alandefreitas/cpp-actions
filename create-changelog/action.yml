@@ -254,6 +254,36 @@ inputs:
     description: 'Trace commands executed by the workflow.'
     required: false
     default: 'false'
+  include-types:
+    description: |
+      Comma-separated list of commit types to include in the changelog.
+
+      When specified, only commits with these types will appear in the changelog.
+      If empty (default), all commit types are included before applying exclusions.
+
+      Common types: feat, fix, perf, refactor, docs, style, build, test, ci, chore, release, other
+
+      Example: 'feat, fix, perf, docs'
+
+      Note: The 'other' type represents commits that don't follow conventional commit format.
+
+    required: false
+    default: ''
+  exclude-types:
+    description: |
+      Comma-separated list of commit types to exclude from the changelog.
+
+      Commits with these types will be filtered out from the changelog output.
+      This filter is applied after include-types (if specified).
+
+      Common types: feat, fix, perf, refactor, docs, style, build, test, ci, chore, release, other
+
+      Example: 'chore, style, release'
+
+      Tip: Use this to create cleaner changelogs by excluding routine maintenance commits.
+
+    required: false
+    default: 'chore, style'
 
 runs:
   using: 'node20'

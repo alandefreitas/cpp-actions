@@ -93,6 +93,8 @@ interface Inputs {
     github_token: string;
     update_summary: boolean;
     trace_commands: boolean;
+    include_types: Set<string>;
+    exclude_types: Set<string>;
     repo_branch?: string;
     repoUrl?: string;
     repoOwner?: string;
@@ -1159,10 +1161,49 @@ function capitalizeSentences(text: string): string {
     return result.trim();
 }
 
-interface Changes {
+/**
+ * A mapping of commit types to scopes to commits for changelog generation.
+ *
+ * The first level key is the commit type (e.g., 'feat', 'fix', 'docs').
+ * The second level key is the scope (or 'null' for unscoped commits).
+ * The value is an array of commits with that type and scope.
+ */
+export interface Changes {
     [type: string]: {
         [scope: string]: Commit[];
     };
+}
+
+/**
+ * Filters changes object based on include/exclude type criteria.
+ *
+ * Applies type filtering to the categorized changes. If includeTypes is non-empty,
+ * only those types are kept. Then excludeTypes are removed from the result.
+ *
+ * @param changes - The categorized changes object mapping types to scopes to commits
+ * @param includeTypes - Set of types to include (empty means include all)
+ * @param excludeTypes - Set of types to exclude
+ * @returns A new Changes object with filtered types
+ */
+export function filterChangesByType(
+    changes: Changes,
+    includeTypes: Set<string>,
+    excludeTypes: Set<string>
+): Changes {
+    const filtered: Changes = {};
+    for (const [type, scopeMap] of Object.entries(changes)) {
+        // If includeTypes is specified and non-empty, check if this type is included
+        if (includeTypes.size > 0 && !includeTypes.has(type)) {
+            continue;
+        }
+        // Check if this type is excluded
+        if (excludeTypes.has(type)) {
+            continue;
+        }
+        // Type passes both filters
+        filtered[type] = scopeMap;
+    }
+    return filtered;
 }
 
 function categorizeCommits(commits: Commit[]): { changes: Changes; changeTypePriority: string[]; parentRelease: Commit | null } {
@@ -1460,7 +1501,19 @@ export async function main(inputs: Inputs): Promise<void> {
 
     // Categorize commits
     core.startGroup('📦 Categorizing commits');
-    const { changes, changeTypePriority, parentRelease } = categorizeCommits(commits);
+    const { changes: rawChanges, changeTypePriority, parentRelease } = categorizeCommits(commits);
+    core.endGroup();
+
+    // Filter changes by type
+    core.startGroup('🔍 Filtering commit types');
+    const changes = filterChangesByType(rawChanges, inputs.include_types, inputs.exclude_types);
+    if (inputs.include_types.size > 0) {
+        trace_commands.log(`Including types: ${Array.from(inputs.include_types).join(', ')}`);
+    }
+    if (inputs.exclude_types.size > 0) {
+        trace_commands.log(`Excluding types: ${Array.from(inputs.exclude_types).join(', ')}`);
+    }
+    trace_commands.log(`Filtered from ${Object.keys(rawChanges).length} to ${Object.keys(changes).length} types`);
     core.endGroup();
 
     // Generate output
@@ -1538,7 +1591,9 @@ export async function run(): Promise<void> {
         link_commits: gh_inputs.getBoolean('link-commits'),
         github_token: gh_inputs.getInput('github-token'),
         update_summary: gh_inputs.getBoolean('update-summary'),
-        trace_commands: gh_inputs.getBoolean('trace-commands')
+        trace_commands: gh_inputs.getBoolean('trace-commands'),
+        include_types: gh_inputs.getSet('include-types'),
+        exclude_types: gh_inputs.getSet('exclude-types')
     };
 
     lastInputsForErrors = inputs;

@@ -23,6 +23,8 @@ interface CliInputs {
     github_token: string;
     update_summary: boolean;
     trace_commands: boolean;
+    include_types: Set<string>;
+    exclude_types: Set<string>;
 }
 
 function normalizePath(inputPath: string): string {
@@ -78,7 +80,9 @@ function parseArgs(): CliInputs {
         link_commits: true,
         github_token: process.env.GITHUB_TOKEN || '',
         update_summary: false,
-        trace_commands: true
+        trace_commands: true,
+        include_types: new Set<string>(),
+        exclude_types: new Set(['chore', 'style'])
     };
 
     const sink: string[] = [];
@@ -117,6 +121,12 @@ function parseArgs(): CliInputs {
                 break;
             case '--trace_commands':
                 inputs.trace_commands = args[++i] === 'true';
+                break;
+            case '--include_types':
+                inputs.include_types = new Set(args[++i].split(',').map(t => t.trim()).filter(t => t));
+                break;
+            case '--exclude_types':
+                inputs.exclude_types = new Set(args[++i].split(',').map(t => t.trim()).filter(t => t));
                 break;
             default:
                 sink.push(args[i]);
