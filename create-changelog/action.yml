@@ -84,45 +84,8 @@ description: |
 
   === CLI Options
 
-  All action inputs are available as CLI options with underscores instead of hyphens:
-
-  [cols="1,3"]
-  |===
-  | Option | Description
-
-  | `--source_dir <path>`
-  | Source directory to analyze (default: current directory)
-
-  | `--output_path <path>` or `-o <path>`
-  | Output file path (default: CHANGELOG.md)
-
-  | `--version_pattern <regex>`
-  | Regex to identify version commits (default: `^v\d+\.\d+\.\d+$`)
-
-  | `--tag_pattern <regex>`
-  | Regex to identify release tags (default: `^v\d+\.\d+\.\d+$`)
-
-  | `--limit <number>`
-  | Maximum commits to process (default: 0 = unlimited)
-
-  | `--thank_non_regular <true\|false>`
-  | Thank non-regular contributors (default: true)
-
-  | `--check_unconventional <true\|false>`
-  | Warn about non-conventional commits (default: true)
-
-  | `--link_commits <true\|false>`
-  | Include commit links (default: true)
-
-  | `--github_token <token>`
-  | GitHub token for API access (default: $GITHUB_TOKEN)
-
-  | `--update_summary <true\|false>`
-  | Update workflow summary (default: false, CLI only)
-
-  | `--trace_commands <true\|false>`
-  | Enable verbose logging (default: true)
-  |===
+  All action inputs are available as CLI options with underscores instead of hyphens
+  (e.g., `--source_dir`, `--version_pattern`). Use `-o` as shorthand for `--output_path`.
 
   === Example
 
@@ -219,15 +182,22 @@ inputs:
   check-unconventional:
     description: |
       Check for commits that do not follow the conventional commit format.
-      
-      If one of the new commits in a PR does not follow the conventional commit format,
-      the action will create a warning so that the user can fix the commit message.
-      
+
+      This input controls the behavior when unconventional commits are detected:
+
+      - `false`: Disable checking (no warnings or errors)
+      - `warn` or `true`: Emit warnings for unconventional commits (default)
+      - `error`: Fail the action if unconventional commits are found
+
+      When enabled, if one of the new commits in a PR does not follow the
+      conventional commit format, the action will either warn or fail depending
+      on this setting.
+
       This helps ensure all commit messages can be used in the changelog so
       that it's consistent and that the release notes are clear and concise.
 
     required: false
-    default: 'true'
+    default: 'warn'
   link-commits:
     description: |
       Link commit ids in the changelog to the repository commit.

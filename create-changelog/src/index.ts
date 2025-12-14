@@ -72,6 +72,15 @@ interface Tag {
     sha: string;
 }
 
+/**
+ * Valid modes for the check-unconventional input.
+ *
+ * - 'false': Disable checking (no warnings or errors)
+ * - 'warn': Emit warnings for unconventional commits
+ * - 'error': Fail the action if unconventional commits are found
+ */
+type CheckUnconventionalMode = 'false' | 'warn' | 'error';
+
 interface Inputs {
     source_dir: string;
     version_pattern: RegExp;
@@ -79,7 +88,7 @@ interface Inputs {
     output_path: string;
     limit: number;
     thank_non_regular: boolean;
-    check_unconventional: boolean;
+    check_unconventional: CheckUnconventionalMode;
     link_commits: boolean;
     github_token: string;
     update_summary: boolean;
@@ -776,23 +785,25 @@ async function getGithubCommits(repoUrl: string | undefined, branch: string | un
     return commits;
 }
 
-async function processCommits(projectPath: string, repoUrl: string | undefined, versionPattern: RegExp, tags: Tag[], repoBranch: string | undefined, accessToken: string, checkUnconventional: boolean): Promise<Commit[]> {
+async function processCommits(projectPath: string, repoUrl: string | undefined, versionPattern: RegExp, tags: Tag[], repoBranch: string | undefined, accessToken: string, checkUnconventional: CheckUnconventionalMode): Promise<Commit[]> {
     function fnlog(msg: string): void {
         trace_commands.log('processCommits: ' + msg);
     }
 
     let commits = await getLocalCommits(projectPath, repoUrl, versionPattern, tags);
 
-    if (checkUnconventional) {
+    if (checkUnconventional !== 'false') {
         const unconventionalCommits = commits.filter(commit => !commit.conventional);
-        if (unconventionalCommits.length === 1) {
-            core.warning(`Commit "${unconventionalCommits[0].subject}" is not a conventional commit`, {
-                title: 'Conventional Commits'
-            });
-        } else if (unconventionalCommits.length > 1) {
-            core.warning(`${unconventionalCommits.length} unconventional commits`, {
-                title: 'Conventional Commits'
-            });
+        if (unconventionalCommits.length > 0) {
+            const message = unconventionalCommits.length === 1
+                ? `Commit "${unconventionalCommits[0].subject}" is not a conventional commit`
+                : `${unconventionalCommits.length} unconventional commits`;
+
+            if (checkUnconventional === 'error') {
+                core.setFailed(message);
+            } else {
+                core.warning(message, { title: 'Conventional Commits' });
+            }
         }
     }
 
@@ -1487,6 +1498,27 @@ function getErrorHint(): string {
 }
 
 /**
+ * Parses a check-unconventional input value into its mode.
+ *
+ * Handles backwards compatibility with boolean values ('true'/'false')
+ * and the new mode values ('warn'/'error').
+ *
+ * @param value - The input value to parse
+ * @returns The normalized CheckUnconventionalMode
+ */
+function parseCheckUnconventionalMode(value: string): CheckUnconventionalMode {
+    const normalized = value.toLowerCase().trim();
+    if (normalized === 'false') {
+        return 'false';
+    }
+    if (normalized === 'error') {
+        return 'error';
+    }
+    // 'true', 'warn', or any other value defaults to 'warn'
+    return 'warn';
+}
+
+/**
  * GitHub Actions entry point for the create-changelog action.
  *
  * Reads inputs from GitHub Actions context, configures trace commands,
@@ -1502,7 +1534,7 @@ export async function run(): Promise<void> {
         output_path: gh_inputs.getNormalizedPath('output-path'),
         limit: gh_inputs.getInt('limit') || 0,
         thank_non_regular: gh_inputs.getBoolean('thank-non-regular'),
-        check_unconventional: gh_inputs.getBoolean('check-unconventional'),
+        check_unconventional: parseCheckUnconventionalMode(gh_inputs.getInput('check-unconventional') || 'warn'),
         link_commits: gh_inputs.getBoolean('link-commits'),
         github_token: gh_inputs.getInput('github-token'),
         update_summary: gh_inputs.getBoolean('update-summary'),

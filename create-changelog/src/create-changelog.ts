@@ -2,6 +2,15 @@ import * as fs from 'fs';
 import { main } from './index';
 import * as trace_commands from 'trace-commands';
 
+/**
+ * Valid modes for the check-unconventional input.
+ *
+ * - 'false': Disable checking (no warnings or errors)
+ * - 'warn': Emit warnings for unconventional commits
+ * - 'error': Fail the action if unconventional commits are found
+ */
+type CheckUnconventionalMode = 'false' | 'warn' | 'error';
+
 interface CliInputs {
     source_dir: string;
     version_pattern: RegExp;
@@ -9,7 +18,7 @@ interface CliInputs {
     output_path: string;
     limit: number;
     thank_non_regular: boolean;
-    check_unconventional: boolean;
+    check_unconventional: CheckUnconventionalMode;
     link_commits: boolean;
     github_token: string;
     update_summary: boolean;
@@ -35,6 +44,27 @@ function toIntegerInput(value: string): number | undefined {
     return isNaN(parsed) ? undefined : parsed;
 }
 
+/**
+ * Parses a check-unconventional CLI argument value into its mode.
+ *
+ * Handles backwards compatibility with boolean values ('true'/'false')
+ * and the new mode values ('warn'/'error').
+ *
+ * @param value - The CLI argument value to parse
+ * @returns The normalized CheckUnconventionalMode
+ */
+function parseCheckUnconventionalMode(value: string): CheckUnconventionalMode {
+    const normalized = value.toLowerCase().trim();
+    if (normalized === 'false') {
+        return 'false';
+    }
+    if (normalized === 'error') {
+        return 'error';
+    }
+    // 'true', 'warn', or any other value defaults to 'warn'
+    return 'warn';
+}
+
 function parseArgs(): CliInputs {
     const args = process.argv.slice(2);
     const inputs: CliInputs = {
@@ -44,7 +74,7 @@ function parseArgs(): CliInputs {
         output_path: 'CHANGELOG.md',
         limit: 0,
         thank_non_regular: true,
-        check_unconventional: true,
+        check_unconventional: 'warn',
         link_commits: true,
         github_token: process.env.GITHUB_TOKEN || '',
         update_summary: false,
@@ -74,7 +104,7 @@ function parseArgs(): CliInputs {
                 inputs.thank_non_regular = args[++i] === 'true';
                 break;
             case '--check_unconventional':
-                inputs.check_unconventional = args[++i] === 'true';
+                inputs.check_unconventional = parseCheckUnconventionalMode(args[++i]);
                 break;
             case '--link_commits':
                 inputs.link_commits = args[++i] === 'true';
