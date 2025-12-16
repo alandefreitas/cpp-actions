@@ -133,20 +133,21 @@ inputs:
   patches:
     description: |
       List of patch files or directories to be copied to the source directory.
-      
-      The action will copy the files to the source directory before running the configure step.
-      
-      This is often useful when the source directory comes from a URL or git repository 
+
+      The action copies the files to the source directory before running the configure step.
+      This is useful when the source directory comes from a URL or git repository
       to patch the source files with CMake presets or include build scripts that are not part of the
       repository.
-      
-      The files will be copied in the order they are defined in the input.
-      
-      If a file is specified, the action will copy the file to the source directory with the 
+
+      If a file is specified, the action copies it to the source directory root with the
       same filename.
-      
-      If a directory is specified, the action will copy all files in the directory to the 
-      source directory.
+
+      If a directory is specified, the action copies all contents to the source directory,
+      preserving the internal directory structure. For example, if your patch directory contains
+      `cmake/toolchain.cmake`, it will be copied to `<source-dir>/cmake/toolchain.cmake`.
+
+      Patches are applied in the order they are defined. If a file already exists in the
+      source directory, it will be overwritten. This allows later patches to override earlier ones.
 
     required: false
     default: ''

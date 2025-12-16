@@ -1237,13 +1237,13 @@ async function applyPatches(inputs: Inputs): Promise<void> {
                 const filePath = path.resolve(patchPath, file);
                 const destPath = path.resolve(inputs.source_dir, file);
                 core.info(`Copying ${filePath} to ${destPath}`);
-                await io.cp(filePath, destPath, { recursive: true });
+                await io.cp(filePath, destPath, { recursive: true, force: true });
             }
         } else {
             const filePath = path.resolve(patch);
             const destPath = path.resolve(inputs.source_dir, path.basename(patch));
             core.info(`Copying ${filePath} to ${destPath}`);
-            await io.cp(filePath, destPath);
+            await io.cp(filePath, destPath, { force: true });
         }
     }
 }
@@ -2159,5 +2159,6 @@ export {
     resolveInputParameters as _resolveInputParameters,
     normalizePath as _normalizePathForCMake,
     deriveGeneratorArchitectureFromArch as _deriveGeneratorArchitectureFromArch,
-    normalizeArchitectureInput as _normalizeArchitectureInput
+    normalizeArchitectureInput as _normalizeArchitectureInput,
+    applyPatches as _applyPatches
 };

@@ -1,5 +1,30 @@
 import * as main from './index';
 import * as gh_inputs from 'gh-inputs';
+import * as io from '@actions/io';
+
+jest.mock('@actions/io');
+jest.mock('@actions/core', () => ({
+    info: jest.fn(),
+    debug: jest.fn(),
+    warning: jest.fn(),
+    error: jest.fn(),
+    setFailed: jest.fn(),
+    startGroup: jest.fn(),
+    endGroup: jest.fn(),
+    getInput: jest.fn(),
+    getBooleanInput: jest.fn(),
+    getMultilineInput: jest.fn(),
+    setOutput: jest.fn()
+}));
+
+jest.mock('fs', () => ({
+    ...jest.requireActual('fs'),
+    existsSync: jest.fn(),
+    statSync: jest.fn(),
+    readdirSync: jest.fn()
+}));
+
+import * as fs from 'fs';
 
 test('parseExtraArgsEntry', async () => {
     // const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
@@ -108,5 +133,148 @@ describe('pretty errors', () => {
         });
 
         await runPromise!;
+    });
+});
+
+describe('applyPatches', () => {
+    const mockIoCp = io.cp as jest.MockedFunction<typeof io.cp>;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    /**
+     * Creates a minimal Inputs object with only the fields needed for applyPatches.
+     *
+     * @param overrides - Fields to override in the default inputs
+     * @returns Inputs object for testing
+     */
+    function createInputs(overrides: { patches?: string[]; source_dir?: string }): Parameters<typeof main._applyPatches>[0] {
+        return {
+            preset: '',
+            build_type: '',
+            build_dir: 'build',
+            cmake_path: 'cmake',
+            generator: '',
+            generator_toolset: '',
+            generator_architecture: '',
+            cc: '',
+            ccflags: '',
+            cxx: '',
+            cxxflags: '',
+            cxxstd: [],
+            export_compile_commands: undefined,
+            run_tests: undefined,
+            configure_tests_flag: '',
+            shared: undefined,
+            toolchain: '',
+            source_dir: overrides.source_dir ?? '/test/source',
+            install_prefix: '',
+            package_dir: '',
+            package_name: '',
+            package_vendor: '',
+            package_generators: [],
+            extra_args: [],
+            extra_args_key: undefined,
+            cmake_version: '',
+            url: '',
+            git_repository: '',
+            git_tag: '',
+            download_dir: '',
+            patches: overrides.patches ?? [],
+            arch: '',
+            build_target: [],
+            jobs: 1,
+            test_all_cxxstd: false,
+            install: undefined,
+            install_all_cxxstd: false,
+            package: undefined,
+            package_all_cxxstd: false,
+            package_artifact: undefined,
+            package_retention_days: 10,
+            create_annotations: undefined,
+            ref_source_dir: '',
+            trace_commands: false
+        };
+    }
+
+    it('does nothing when patches array is empty', async () => {
+        const inputs = createInputs({ patches: [] });
+        await main._applyPatches(inputs);
+        expect(mockIoCp).not.toHaveBeenCalled();
+    });
+
+    it('copies a single file patch to source directory root', async () => {
+        (fs.existsSync as jest.Mock).mockReturnValue(true);
+        (fs.statSync as jest.Mock).mockReturnValue({ isDirectory: () => false });
+
+        const inputs = createInputs({
+            patches: ['/patches/CMakePresets.json'],
+            source_dir: '/project/src'
+        });
+
+        await main._applyPatches(inputs);
+
+        expect(mockIoCp).toHaveBeenCalledTimes(1);
+        expect(mockIoCp).toHaveBeenCalledWith(
+            '/patches/CMakePresets.json',
+            '/project/src/CMakePresets.json',
+            { force: true }
+        );
+    });
+
+    it('copies directory contents preserving structure with force option', async () => {
+        (fs.existsSync as jest.Mock).mockReturnValue(true);
+        (fs.statSync as jest.Mock).mockReturnValue({ isDirectory: () => true });
+        (fs.readdirSync as jest.Mock).mockReturnValue(['file.txt', 'subdir']);
+
+        const inputs = createInputs({
+            patches: ['/patches'],
+            source_dir: '/project/src'
+        });
+
+        await main._applyPatches(inputs);
+
+        expect(mockIoCp).toHaveBeenCalledTimes(2);
+        expect(mockIoCp).toHaveBeenCalledWith(
+            '/patches/file.txt',
+            '/project/src/file.txt',
+            { recursive: true, force: true }
+        );
+        expect(mockIoCp).toHaveBeenCalledWith(
+            '/patches/subdir',
+            '/project/src/subdir',
+            { recursive: true, force: true }
+        );
+    });
+
+    it('skips non-existent patch files', async () => {
+        (fs.existsSync as jest.Mock).mockReturnValue(false);
+
+        const inputs = createInputs({
+            patches: ['/patches/missing.txt'],
+            source_dir: '/project/src'
+        });
+
+        await main._applyPatches(inputs);
+
+        expect(mockIoCp).not.toHaveBeenCalled();
+    });
+
+    it('processes multiple patches in order', async () => {
+        (fs.existsSync as jest.Mock).mockReturnValue(true);
+        (fs.statSync as jest.Mock).mockReturnValue({ isDirectory: () => false });
+
+        const inputs = createInputs({
+            patches: ['/patches/first.txt', '/patches/second.txt'],
+            source_dir: '/project/src'
+        });
+
+        await main._applyPatches(inputs);
+
+        expect(mockIoCp).toHaveBeenCalledTimes(2);
+        // Verify order
+        expect(mockIoCp.mock.calls[0][0]).toBe('/patches/first.txt');
+        expect(mockIoCp.mock.calls[1][0]).toBe('/patches/second.txt');
     });
 });
