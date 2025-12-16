@@ -420,6 +420,22 @@ circumstantially provided by apt-get.</p>
 </ul>
 </div>
 <div class="paragraph">
+<p>When searching APT packages, the action prefers packages in this order:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Unversioned packages (e.g., <code>gcc</code>) - best system integration</p>
+</li>
+<li>
+<p>Raw versioned packages (e.g., <code>gcc-12</code>) - what users typically expect</p>
+</li>
+<li>
+<p>Other versioned packages - fallback only</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
 <p>The action will <strong>not</strong> attempt to install GCC from source files, which is the only
 officially supported method but impossible to run in CI because the machines would take
 hours to do that.</p>

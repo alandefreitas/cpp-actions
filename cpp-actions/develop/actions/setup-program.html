@@ -420,6 +420,25 @@ cannot be found, fallback to basic patterns to download and install it.</p>
 </ul>
 </div>
 <div class="paragraph">
+<p>When searching APT packages, the action prefers packages in this order:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Unversioned packages (e.g., <code>clang</code>) - best system integration</p>
+</li>
+<li>
+<p>Raw versioned packages (e.g., <code>clang-14</code>) - what users typically expect</p>
+</li>
+<li>
+<p>Other versioned packages (e.g., <code>clang-14-tools</code>) - fallback only</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>This preference order ensures better compatibility with system libraries and tools.</p>
+</div>
+<div class="paragraph">
 <p>In most workflows, this is used in conjunction to the <a href="setup-cpp.html" class="xref page">Setup C++</a> and
 <a href="package-install.html" class="xref page">Install Packages</a> actions to find or install extra programs necessary
 for the workflow that are not easily available from package managers or could already be

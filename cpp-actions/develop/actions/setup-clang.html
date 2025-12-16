@@ -415,7 +415,36 @@ circumstantially provided by apt-get.</p>
 <p>Any other version of Clang available from APT</p>
 </li>
 <li>
-<p>A version of Clang from our own binary releases</p>
+<p>A version of Clang from LLVM binary releases</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>When searching APT packages, the action prefers packages in this order:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Unversioned packages (e.g., <code>clang</code>) - best system integration</p>
+</li>
+<li>
+<p>Raw versioned packages (e.g., <code>clang-14</code>) - what users typically expect</p>
+</li>
+<li>
+<p>Other versioned packages - fallback only</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>After installation, the action also installs companion packages for tool parity:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>llvm</code> or <code>llvm-XX</code> for llvm-symbolizer (readable sanitizer stack traces)</p>
+</li>
+<li>
+<p><code>libclang-rt-XX-dev</code> for sanitizer runtimes (ASan, UBSan, TSan, MSan)</p>
 </li>
 </ul>
 </div>
@@ -522,6 +551,13 @@ instead.</p></td>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-patch</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The installed Clang version patch. Useful when given a version range as input.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>symbolizer-path</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to llvm-symbolizer (Linux only).</p>
+<p class="tableblock">This is also exported as ASAN_SYMBOLIZER_PATH, MSAN_SYMBOLIZER_PATH,
+TSAN_SYMBOLIZER_PATH, and UBSAN_SYMBOLIZER_PATH environment variables
+when update-environment is true.</p></td>
 </tr>
 </tbody>
 </table>
