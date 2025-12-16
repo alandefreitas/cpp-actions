@@ -1,7 +1,8 @@
 // Mock @actions/core before importing the module
 jest.mock('@actions/core', () => ({
     error: jest.fn(),
-    setFailed: jest.fn()
+    setFailed: jest.fn(),
+    getInput: jest.fn()
 }));
 
 import * as core from '@actions/core';
@@ -12,24 +13,21 @@ const mockedCore = core as jest.Mocked<typeof core>;
 describe('pretty-errors helper', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        mockedCore.getInput.mockReturnValue('');
     });
 
     describe('reportAndSetFailed', () => {
-        it('logs a Youch-rendered stack and marks the action as failed', async () => {
+        it('logs a pretty-rendered stack and marks the action as failed', async () => {
             const err = new Error('boom');
 
             await reportAndSetFailed(err, {
                 title: 'Test Failure',
-                hint: 'hint',
-                locals: { foo: 'bar' }
+                hint: 'hint'
             });
 
-            expect(mockedCore.error).toHaveBeenCalledTimes(1);
-            const payload = mockedCore.error.mock.calls[0][0] as string;
-            expect(payload).toContain('Test Failure');
-            expect(payload).toContain('boom');
-            expect(payload).toContain('Locals');
-            expect(mockedCore.setFailed).toHaveBeenCalledWith('boom');
+            const setFailedArg = mockedCore.setFailed.mock.calls[0][0] as string;
+            expect(setFailedArg).toContain('Test Failure');
+            expect(setFailedArg).toContain('boom');
         });
 
         it('omits the hint when provided null', async () => {
@@ -38,10 +36,10 @@ describe('pretty-errors helper', () => {
                 hint: null
             });
 
-            const payload = mockedCore.error.mock.calls[0][0] as string;
-            expect(payload).toContain('No Hint: no hint');
-            expect(payload).not.toContain('Tip: enable trace-commands');
-            expect(mockedCore.setFailed).toHaveBeenCalledWith('no hint');
+            const setFailedArg = mockedCore.setFailed.mock.calls[0][0] as string;
+            expect(setFailedArg).toContain('No Hint: no hint');
+            expect(setFailedArg).not.toContain('Tip: enable trace-commands');
+            expect(setFailedArg).toContain('no hint');
         });
 
         it('includes default hint when hint is undefined', async () => {
@@ -49,33 +47,33 @@ describe('pretty-errors helper', () => {
                 title: 'Default Hint'
             });
 
-            const payload = mockedCore.error.mock.calls[0][0] as string;
-            expect(payload).toContain('Tip: enable trace-commands');
+            const setFailedArg = mockedCore.setFailed.mock.calls[0][0] as string;
+            expect(setFailedArg).toContain('Tip: enable trace-commands');
         });
 
-        it('includes stack in setFailed when includeStackInSetFailed is true', async () => {
+        it('suppresses default hint when trace-commands input is true', async () => {
+            mockedCore.getInput.mockReturnValue('true');
+
+            await reportAndSetFailed(new Error('traced'), {
+                title: 'Traced'
+            });
+
+            const setFailedArg = mockedCore.setFailed.mock.calls[0][0] as string;
+            expect(setFailedArg).toContain('Traced');
+            expect(setFailedArg).not.toContain('Tip: enable trace-commands');
+        });
+
+        it('setFailed uses simple message without stack', async () => {
             const err = new Error('stack error');
 
             await reportAndSetFailed(err, {
-                title: 'Stack Error',
-                includeStackInSetFailed: true
+                title: 'Stack Error'
             });
 
             const setFailedArg = mockedCore.setFailed.mock.calls[0][0] as string;
             expect(setFailedArg).toContain('stack error');
-            expect(setFailedArg).toContain('Error:');
         });
 
-        it('handles locals as a function', async () => {
-            await reportAndSetFailed(new Error('func locals'), {
-                title: 'Func Locals',
-                locals: () => ({ computed: 'value' })
-            });
-
-            const payload = mockedCore.error.mock.calls[0][0] as string;
-            expect(payload).toContain('Locals');
-            expect(payload).toContain('computed');
-        });
     });
 
     describe('withPrettyErrors', () => {
@@ -91,10 +89,9 @@ describe('pretty-errors helper', () => {
             }, { title: 'Wrapped' });
 
             expect(result).toBeUndefined();
-            expect(mockedCore.error).toHaveBeenCalledTimes(1);
-            const payload = mockedCore.error.mock.calls[0][0] as string;
-            expect(payload).toContain('Wrapped');
-            expect(payload).toContain('wrapped error');
+            const setFailedArg = mockedCore.setFailed.mock.calls[0][0] as string;
+            expect(setFailedArg).toContain('Wrapped');
+            expect(setFailedArg).toContain('wrapped error');
         });
     });
 });

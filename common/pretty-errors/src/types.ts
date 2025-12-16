@@ -6,10 +6,6 @@ export interface ErrorReportOptions {
     title?: string;
     /** Optional hint text. Set to null to omit, undefined for default hint */
     hint?: string | null;
-    /** Local variables to include in the error report */
-    locals?: Record<string, unknown> | (() => Record<string, unknown>);
-    /** Whether to include the full stack trace in setFailed call */
-    includeStackInSetFailed?: boolean;
 }
 
 /**
@@ -22,9 +18,9 @@ export interface SourceContext {
 }
 
 /**
- * Frame information for Youch-like payload
+ * Processed stack frame with source context and metadata.
  */
-export interface YouchFrame {
+export interface ErrorFrame {
     file: string;
     filePath: string;
     line: number;
@@ -38,19 +34,19 @@ export interface YouchFrame {
 }
 
 /**
- * Youch-like error payload structure
+ * Structured error payload for rendering.
  */
-export interface YouchPayload {
+export interface ErrorPayload {
     error: {
         message: string | undefined;
         name: string | undefined;
         status?: number;
-        frames: YouchFrame[];
+        frames: ErrorFrame[];
     };
 }
 
 /**
- * StackTracey frame type (partial, as the library doesn't have types)
+ * Parsed stack frame information.
  */
 export interface StackTraceyFrame {
     file?: string;
@@ -61,13 +57,6 @@ export interface StackTraceyFrame {
     calleeShort?: string;
     native?: boolean;
     thirdParty?: boolean;
-}
-
-/**
- * StackTracey instance type (partial)
- */
-export interface StackTraceyInstance {
-    items: StackTraceyFrame[];
 }
 
 /**

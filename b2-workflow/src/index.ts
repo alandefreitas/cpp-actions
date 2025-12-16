@@ -549,9 +549,7 @@ if (require.main === module) {
                 : 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. ';
             await reportAndSetFailed(error as Error, {
                 title: 'B2 workflow failed',
-                hint,
-                locals: () => ({ inputs: capturedInputs }),
-                includeStackInSetFailed: true
+                hint
             });
         }
     })();

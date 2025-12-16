@@ -1894,9 +1894,7 @@ if (require.main === module) {
             }
             await reportAndSetFailed(error as Error, {
                 title: 'Setup program failed',
-                hint,
-                locals: () => ({ inputs: lastInputsForErrors }),
-                includeStackInSetFailed: true
+                hint
             });
         }
     })();

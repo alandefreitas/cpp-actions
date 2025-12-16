@@ -40,8 +40,9 @@ describe('pretty errors integration', () => {
             runPromise = reportAndSetFailed(new Error('clang boom'), {
                 title: 'Setup Clang failed'
             }).then(() => {
-                expect(core.error).toHaveBeenCalledTimes(1);
-                expect(core.setFailed).toHaveBeenCalledWith('clang boom');
+                const msg = core.setFailed.mock.calls[0][0] as string;
+                expect(msg).toContain('Setup Clang failed');
+                expect(msg).toContain('clang boom');
             });
         });
 

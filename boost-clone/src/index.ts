@@ -1052,8 +1052,6 @@ async function executeGitStrategy(
     }
 }
 
-let lastInputsForErrors: Inputs | undefined = undefined;
-
 /**
  * Entry point for the GitHub Action.
  *
@@ -1104,8 +1102,6 @@ async function run(): Promise<void> {
         trace_commands.set_trace_commands(true);
     }
 
-    lastInputsForErrors = inputs;
-
     core.startGroup('📥 Action Inputs');
     gh_inputs.printInputObject(inputs as unknown as Record<string, unknown>);
     core.endGroup();
@@ -1127,15 +1123,8 @@ if (require.main === module) {
         try {
             await run();
         } catch (error) {
-            const capturedInputs = lastInputsForErrors as Inputs | undefined;
-            const hint = capturedInputs?.trace_commands
-                ? 'Trace commands already enabled; if this looks like a bug, please open an issue at github.com/alandefreitas/cpp-actions with stack and logs.'
-                : 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. ';
             await reportAndSetFailed(error as Error, {
-                title: 'Boost clone failed',
-                hint,
-                locals: () => ({ inputs: capturedInputs }),
-                includeStackInSetFailed: true
+                title: 'Boost clone failed'
             });
         }
     })();

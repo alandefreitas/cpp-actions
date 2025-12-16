@@ -53,8 +53,9 @@ describe('pretty errors integration', () => {
             runPromise = reportAndSetFailed(new Error('pkg boom'), {
                 title: 'Package install failed'
             }).then(() => {
-                expect(core.error).toHaveBeenCalledTimes(1);
-                expect(core.setFailed).toHaveBeenCalledWith('pkg boom');
+                const msg = core.setFailed.mock.calls[0][0] as string;
+                expect(msg).toContain('Package install failed');
+                expect(msg).toContain('pkg boom');
             });
         });
 

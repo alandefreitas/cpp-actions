@@ -99,7 +99,7 @@ describe('pretty errors', () => {
             // eslint-disable-next-line @typescript-eslint/no-require-imports
             const prettyErrors = require('pretty-errors');
 
-            runPromise = prettyErrors.reportAndSetFailed(new Error('cmake boom'), { title: 'Setup CMake failed', includeStackInSetFailed: true }).then(() => {
+            runPromise = prettyErrors.reportAndSetFailed(new Error('cmake boom'), { title: 'Setup CMake failed' }).then(() => {
                 expect(prettyErrors.__mockCore.error).toHaveBeenCalledTimes(1);
                 const failedArg = prettyErrors.__mockCore.setFailed.mock.calls[0][0];
                 expect(failedArg).toContain('cmake boom');

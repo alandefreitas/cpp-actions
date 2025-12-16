@@ -2017,8 +2017,6 @@ function applyPresetMacros(value: unknown, allInputs: Inputs): unknown {
     }
 }
 
-let lastInputsForErrors: Inputs | undefined = undefined;
-
 /**
  * GitHub Actions entry point for the CMake workflow action.
  *
@@ -2089,8 +2087,6 @@ async function run(): Promise<void> {
         trace_commands: gh_inputs.getBoolean('trace-commands')
     };
 
-    lastInputsForErrors = inputs;
-
     if (inputs.trace_commands) {
         trace_commands.set_trace_commands(true);
     }
@@ -2141,14 +2137,8 @@ if (require.main === module) {
         try {
             await run();
         } catch (error) {
-            const capturedInputs = lastInputsForErrors as Inputs | undefined;
-            const hint = capturedInputs?.trace_commands
-                ? 'Trace commands already enabled; if this looks like a bug, please open an issue at github.com/alandefreitas/cpp-actions with stack and logs.'
-                : 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) or ACTIONS_STEP_DEBUG=true to see underlying commands. If this keeps happening, please open an issue at github.com/alandefreitas/cpp-actions with the stack below.';
             await reportAndSetFailed(error as Error, {
-                title: 'CMake workflow failed',
-                hint,
-                locals: () => ({ inputs: capturedInputs })
+            title: 'CMake workflow failed'
             });
         }
     })();

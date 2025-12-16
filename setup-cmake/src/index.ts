@@ -560,8 +560,6 @@ export async function main(inputs: Inputs, subgroups = true): Promise<Partial<Ou
     };
 }
 
-let lastInputsForErrors: Inputs | undefined = undefined;
-
 /**
  * Main entry point for the setup-cmake GitHub Action.
  *
@@ -579,8 +577,6 @@ async function run(): Promise<void> {
         update_environment: gh_inputs.getBoolean('update-environment'),
         trace_commands: gh_inputs.getBoolean('trace-commands')
     };
-
-    lastInputsForErrors = inputs;
 
     if (inputs.cmake_path) {
         inputs.path = inputs.cmake_path;
@@ -610,15 +606,8 @@ if (require.main === module) {
         try {
             await run();
         } catch (error) {
-            const capturedInputs = lastInputsForErrors as Inputs | undefined;
-            const hint = capturedInputs?.trace_commands
-                ? 'Trace commands already enabled; if this looks like a bug, please open an issue at github.com/alandefreitas/cpp-actions with stack and logs.'
-                : 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. ';
             await reportAndSetFailed(error as Error, {
-                title: 'Setup CMake failed',
-                hint,
-                locals: () => ({ inputs: capturedInputs }),
-                includeStackInSetFailed: true
+                title: 'Setup CMake failed'
             });
         }
     })();

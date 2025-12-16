@@ -308,6 +308,27 @@ export async function main(
             cxx = output_path;
         }
 
+        // If we still don't have a working cxx (cc1plus missing), try installing the matching g++ package
+        if (process.platform === 'linux' && cxx && !fs.existsSync(cxx) || cxx?.endsWith('gcc-')) {
+            try {
+                const parsed = output_version ? semver.parse(output_version, { loose: true }) : null;
+                const gccMajor = parsed?.major ?? null;
+                const pkg = gccMajor ? `g++-${gccMajor}` : 'g++';
+                trace_commands.log(`Attempting to install ${pkg} because g++ for ${output_version} was not found`);
+                const installArgs = ['install', '-y', pkg];
+                const opts = { env: { DEBIAN_FRONTEND: 'noninteractive' } };
+                await exec.exec('apt-get', ['update'], opts);
+                await exec.exec('apt-get', installArgs, opts);
+                const guessed = gccMajor ? `/usr/bin/g++-${gccMajor}` : await io.which('g++', true);
+                if (fs.existsSync(guessed)) {
+                    cxx = guessed;
+                    trace_commands.log(`Using ${cxx} as C++ compiler`);
+                }
+            } catch (err) {
+                trace_commands.log(`Unable to auto-install g++: ${(err as Error).message}`);
+            }
+        }
+
         bindir = path.dirname(output_path);
         if (update_environment) {
             core.addPath(bindir);
@@ -382,8 +403,7 @@ if (require.main === module) {
                 : 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. ';
             await reportAndSetFailed(error as Error, {
                 title: 'Setup GCC failed',
-                hint,
-                locals: () => ({ inputs: capturedInputs })
+                hint
             });
         }
     })();

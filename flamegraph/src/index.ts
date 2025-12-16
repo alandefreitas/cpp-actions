@@ -2707,9 +2707,7 @@ if (require.main === module) {
             const err = error instanceof Error ? error : new Error(String(error));
             await reportAndSetFailed(err, {
                 title: 'Flamegraph failed',
-                hint,
-                locals: () => ({ inputs: lastInputsForErrors }),
-                includeStackInSetFailed: true
+                hint
             });
         }
     })();

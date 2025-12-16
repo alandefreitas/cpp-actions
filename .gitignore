@@ -95,6 +95,9 @@ common/gh-inputs/dist
 utils/**/dist
 utils/**/node_modules
 
+# esbuild metadata (bundle analysis, not needed in repo)
+**/dist/meta.json
+
 # Local agent notes
 AGENTS.md
 */AGENTS.md

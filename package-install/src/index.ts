@@ -580,8 +580,6 @@ export async function main(inputs: Inputs, _force_install_vcpkg?: boolean): Prom
 /**
  * GitHub Action entrypoint: load inputs, normalize, and execute main.
  */
-let lastInputsForErrors: Inputs | undefined = undefined;
-
 /**
  * Main entry point for the package-install GitHub Action.
  *
@@ -612,8 +610,6 @@ async function run(): Promise<void> {
         // Annotations and tracing
         trace_commands: gh_inputs.getBoolean('trace-commands')
     };
-
-    lastInputsForErrors = inputs;
 
     // Resolve paths
     if (inputs.trace_commands) {
@@ -658,15 +654,8 @@ if (require.main === module) {
         try {
             await run();
         } catch (error) {
-            const capturedInputs = lastInputsForErrors as Inputs | undefined;
-            const hint = capturedInputs?.trace_commands
-                ? 'Trace commands already enabled; if this looks like a bug, please open an issue at github.com/alandefreitas/cpp-actions with stack and logs.'
-                : 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. ';
             await reportAndSetFailed(error as Error, {
-                title: 'Package install failed',
-                hint,
-                locals: () => ({inputs: lastInputsForErrors}),
-                includeStackInSetFailed: true
+                title: 'Package install failed'
             });
         }
     })();

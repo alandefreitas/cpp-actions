@@ -1944,21 +1944,6 @@ export async function main(inputs: Inputs): Promise<void> {
     }
 }
 
-/** Captured inputs for error reporting context */
-let lastInputsForErrors: Inputs | undefined = undefined;
-
-/**
- * Returns a hint message for error reporting.
- *
- * @returns Hint about enabling trace commands or reporting bugs
- */
-function getErrorHint(): string {
-    if (lastInputsForErrors?.trace_commands) {
-        return 'Trace commands already enabled; if this looks like a bug, please open an issue at github.com/alandefreitas/cpp-actions with stack and logs.';
-    }
-    return 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. ';
-}
-
 /**
  * Parses a check-unconventional input value into its mode.
  *
@@ -2006,8 +1991,6 @@ export async function run(): Promise<void> {
         sort_by: parseSortByOption(gh_inputs.getInput('sort-by') || 'most-changes-first')
     };
 
-    lastInputsForErrors = inputs;
-
     // Resolve paths
     inputs.source_dir = path.resolve(inputs.source_dir);
     // output path, if relative, is relative to the source directory
@@ -2034,10 +2017,7 @@ if (require.main === module) {
             await run();
         } catch (error) {
             await reportAndSetFailed(error as Error, {
-                title: 'Create changelog failed',
-                hint: getErrorHint(),
-                locals: () => ({ inputs: lastInputsForErrors }),
-                includeStackInSetFailed: true
+                title: 'Create changelog failed'
             });
         }
     })();

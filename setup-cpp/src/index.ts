@@ -349,8 +349,7 @@ if (require.main === module) {
                 : 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. ';
             await reportAndSetFailed(error as Error, {
                 title: 'Setup C++ failed',
-                hint,
-                locals: () => ({ inputs: capturedInputs })
+                hint
             });
         }
     })();

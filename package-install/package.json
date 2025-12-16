@@ -5,7 +5,7 @@
   "main": "lib/index.js",
   "scripts": {
     "build": "tsc -p .config/tsconfig.json",
-    "prepare": "npm run build && ncc build lib/index.js -o dist --source-map --license licenses.txt --minify",
+    "prepare": "npm run build && node ../utils/esbuild/dist/index.js .",
     "typecheck": "tsc -p .config/tsconfig.json --noEmit",
     "test": "jest --config ../jest.config.js --selectProjects package-install",
     "all": "npm run prepare && npm run test"
@@ -23,9 +23,11 @@
     "trace-commands": "*",
     "gh-inputs": "*",
     "setup-program": "*",
-    "pretty-errors": "*"
+    "pretty-errors": "*",
+    "source-map-support": "^0.5.21"
   },
   "devDependencies": {
-    "@types/semver": "^7.5.0"
+    "@types/semver": "^7.5.0",
+    "esbuild": "^0.27.1"
   }
 }

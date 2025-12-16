@@ -51,10 +51,9 @@ describe('pretty errors', () => {
             const core = require('@actions/core');
             const { reportAndSetFailed } = require('../../common/pretty-errors');
 
-            runPromise = reportAndSetFailed(new Error('flamegraph boom'), { title: 'Flamegraph failed', includeStackInSetFailed: true }).then(() => {
-                expect(core.error).toHaveBeenCalledTimes(1);
+            runPromise = reportAndSetFailed(new Error('flamegraph boom'), { title: 'Flamegraph failed' }).then(() => {
                 const failedArg = core.setFailed.mock.calls[0][0];
-                expect(failedArg).toContain('flamegraph boom');
+                expect(failedArg).toContain('Flamegraph failed: flamegraph boom');
             });
         });
 

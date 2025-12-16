@@ -198,7 +198,7 @@ describe('pretty errors', () => {
             // eslint-disable-next-line @typescript-eslint/no-require-imports
             const prettyErrors = require('pretty-errors');
 
-            runPromise = prettyErrors.reportAndSetFailed(new Error('b2 boom'), { title: 'B2 workflow failed', includeStackInSetFailed: true }).then(() => {
+            runPromise = prettyErrors.reportAndSetFailed(new Error('b2 boom'), { title: 'B2 workflow failed' }).then(() => {
                 expect(prettyErrors.__mockCore.error).toHaveBeenCalledTimes(1);
                 expect(prettyErrors.__mockCore.setFailed).toHaveBeenCalledWith('b2 boom');
             });

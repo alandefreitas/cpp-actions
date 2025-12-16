@@ -1,14 +1,15 @@
 {
   "name": "pretty-errors",
   "version": "1.0.0",
-  "description": "Small helper to render source-mapped, Youch-formatted errors for GitHub Actions",
+  "description": "Small helper to render source-mapped, pretty-formatted errors for GitHub Actions",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
     "build": "tsc -p .config/tsconfig.json",
-    "prepare": "npm run build && ncc build lib/index.js -o dist --source-map --license licenses.txt --minify",
+    "prepare": "npm run build && node ../../utils/esbuild/dist/index.js .",
     "typecheck": "tsc -p .config/tsconfig.json --noEmit",
     "test": "jest --config ../../jest.config.js --selectProjects pretty-errors",
+    "example": "tsc -p .config/tsconfig.json && node lib/example.js",
     "all": "npm run prepare && npm run test"
   },
   "keywords": [],
@@ -16,7 +17,10 @@
   "license": "Boost Software License 1.0",
   "dependencies": {
     "@actions/core": "^1.11.1",
-    "stacktracey": "^2.1.8",
-    "youch-terminal": "^2.2.3"
+    "source-map": "^0.7.4",
+    "source-map-support": "^0.5.21"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.1"
   }
 }

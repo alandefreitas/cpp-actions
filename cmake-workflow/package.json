@@ -5,7 +5,7 @@
   "main": "lib/index.js",
   "scripts": {
     "build": "tsc -p .config/tsconfig.json",
-    "prepare": "npm run build && ncc build lib/index.js -o dist --source-map --license licenses.txt --minify",
+    "prepare": "npm run build && node ../utils/esbuild/dist/index.js .",
     "typecheck": "tsc -p .config/tsconfig.json --noEmit",
     "test": "jest --config ../jest.config.js --selectProjects cmake-workflow",
     "all": "npm run prepare && npm run test"
@@ -18,10 +18,14 @@
     "@actions/core": "^1.11.1",
     "@actions/exec": "^1.1.1",
     "@actions/io": "^2.0.0",
+    "gh-inputs": "*",
+    "pretty-errors": "*",
     "setup-cmake": "*",
     "setup-program": "*",
-    "trace-commands": "*",
-    "gh-inputs": "*",
-    "pretty-errors": "*"
+    "source-map-support": "^0.5.13",
+    "trace-commands": "*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.1"
   }
 }

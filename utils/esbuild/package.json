@@ -1,0 +1,17 @@
+{
+  "name": "esbuild-cli",
+  "version": "1.0.0",
+  "private": true,
+  "description": "esbuild bundler for GitHub Actions with proper source maps",
+  "main": "dist/index.js",
+  "bin": {
+    "esbuild-cli": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "esbuild": "^0.27.1"
+  }
+}
