@@ -83,6 +83,13 @@ outputs:
     description: "The installed Clang version minor. Useful when given a version range as input."
   version-patch:
     description: "The installed Clang version patch. Useful when given a version range as input."
+  symbolizer-path:
+    description: |
+      The absolute path to llvm-symbolizer (Linux only).
+
+      This is also exported as ASAN_SYMBOLIZER_PATH, MSAN_SYMBOLIZER_PATH,
+      TSAN_SYMBOLIZER_PATH, and UBSAN_SYMBOLIZER_PATH environment variables
+      when update-environment is true.
 
 runs:
   using: 'node20'

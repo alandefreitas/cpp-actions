@@ -76,6 +76,7 @@ interface MainOutputs {
     version_major: number;
     version_minor: number;
     version_patch: number;
+    symbolizer_path: string | null;
 }
 
 /**
@@ -284,39 +285,39 @@ async function install_program_from_clang_urls(
 }
 
 /**
- * Checks if llvm-symbolizer is available in the system.
+ * Finds llvm-symbolizer in the system and returns its path.
  *
  * @param majorVersion - The major version of Clang installed
- * @returns True if llvm-symbolizer is found
+ * @returns Path to llvm-symbolizer if found, null otherwise
  */
-async function hasLlvmSymbolizer(majorVersion: number): Promise<boolean> {
+async function findLlvmSymbolizer(majorVersion: number): Promise<string | null> {
     // Check common absolute paths for llvm-symbolizer
     const absolutePaths = [
-        '/usr/bin/llvm-symbolizer',
+        `/usr/lib/llvm-${majorVersion}/bin/llvm-symbolizer`,
         `/usr/bin/llvm-symbolizer-${majorVersion}`,
-        `/usr/lib/llvm-${majorVersion}/bin/llvm-symbolizer`
+        '/usr/bin/llvm-symbolizer'
     ];
 
     for (const p of absolutePaths) {
         if (fs.existsSync(p)) {
-            return true;
+            return p;
         }
     }
 
     // Check if llvm-symbolizer is in PATH using io.which
-    const pathNames = ['llvm-symbolizer', `llvm-symbolizer-${majorVersion}`];
+    const pathNames = [`llvm-symbolizer-${majorVersion}`, 'llvm-symbolizer'];
     for (const name of pathNames) {
         try {
             const found = await io.which(name, false);
             if (found) {
-                return true;
+                return found;
             }
         } catch {
             // Continue checking other candidates
         }
     }
 
-    return false;
+    return null;
 }
 
 /**
@@ -396,6 +397,14 @@ function hasSanitizerRuntimes(majorVersion: number): boolean {
 }
 
 /**
+ * Result of companion package installation.
+ */
+interface CompanionPackageResult {
+    /** Path to llvm-symbolizer if found, null otherwise */
+    symbolizerPath: string | null;
+}
+
+/**
  * Installs companion packages for Clang to ensure tool parity.
  *
  * Different Clang installation sources provide different tools. This function
@@ -406,16 +415,19 @@ function hasSanitizerRuntimes(majorVersion: number): boolean {
  * @param installedVersion - The version of Clang that was installed (e.g., "14.0.0")
  * @param installedAptPackage - The APT package name that was installed (e.g., "clang" or "clang-14"), or null if not from APT
  * @param installedFromUrl - True if Clang was installed from URL download
+ * @returns Object containing the symbolizer path if found
  */
-async function installCompanionPackages(installedVersion: string, installedAptPackage: string | null, installedFromUrl: boolean): Promise<void> {
+async function installCompanionPackages(installedVersion: string, installedAptPackage: string | null, installedFromUrl: boolean): Promise<CompanionPackageResult> {
     function fnlog(msg: string): void {
         trace_commands.log('installCompanionPackages: ' + msg);
     }
 
+    let symbolizerPath: string | null = null;
+
     // Only install companion packages on Linux with APT
     if (process.platform !== 'linux') {
         fnlog('Skipping companion packages: not on Linux');
-        return;
+        return { symbolizerPath };
     }
 
     // Check if APT is available
@@ -423,17 +435,17 @@ async function installCompanionPackages(installedVersion: string, installedAptPa
         const exitCode = await exec.exec('apt', ['--version'], { silent: true });
         if (exitCode !== 0) {
             fnlog('APT not available');
-            return;
+            return { symbolizerPath };
         }
     } catch {
         fnlog('APT not available');
-        return;
+        return { symbolizerPath };
     }
 
     const version = semver.coerce(installedVersion);
     if (!version) {
         fnlog(`Could not parse version: ${installedVersion}`);
-        return;
+        return { symbolizerPath };
     }
     const majorVersion = version.major;
 
@@ -465,9 +477,10 @@ async function installCompanionPackages(installedVersion: string, installedAptPa
     }
 
     // Check if llvm-symbolizer is already available
-    if (await hasLlvmSymbolizer(majorVersion)) {
-        fnlog('llvm-symbolizer already available, skipping installation');
-        core.info('✅ llvm-symbolizer already available');
+    symbolizerPath = await findLlvmSymbolizer(majorVersion);
+    if (symbolizerPath) {
+        fnlog(`llvm-symbolizer already available at ${symbolizerPath}`);
+        core.info(`✅ llvm-symbolizer already available at ${symbolizerPath}`);
     } else {
         fnlog('llvm-symbolizer not found, attempting to install');
         // For unversioned clang, prefer unversioned llvm; for versioned, prefer versioned llvm
@@ -479,6 +492,11 @@ async function installCompanionPackages(installedVersion: string, installedAptPa
             const exitCode = await exec.exec(`${sudoPrefix}apt-get install -y ${pkg}`, [], opts);
             if (exitCode === 0) {
                 core.info(`✅ Installed ${pkg} for llvm-symbolizer`);
+                // Find the symbolizer path after installation
+                symbolizerPath = await findLlvmSymbolizer(majorVersion);
+                if (symbolizerPath) {
+                    fnlog(`llvm-symbolizer found at ${symbolizerPath}`);
+                }
                 break;
             }
         }
@@ -503,6 +521,8 @@ async function installCompanionPackages(installedVersion: string, installedAptPa
             }
         }
     }
+
+    return { symbolizerPath };
 }
 
 /**
@@ -689,10 +709,21 @@ export async function main(
     }
 
     // Install companion packages for tool parity (llvm-symbolizer, sanitizer runtimes)
+    let symbolizer_path: string | null = null;
     if (output_version) {
         core.startGroup('📦 Install companion packages');
-        await installCompanionPackages(output_version, installed_apt_package, will_install_from_url);
+        const companionResult = await installCompanionPackages(output_version, installed_apt_package, will_install_from_url);
+        symbolizer_path = companionResult.symbolizerPath;
         core.endGroup();
+
+        // Set sanitizer symbolizer environment variables if symbolizer was found
+        if (symbolizer_path && update_environment) {
+            core.info(`Setting sanitizer symbolizer path to ${symbolizer_path}`);
+            core.exportVariable('ASAN_SYMBOLIZER_PATH', symbolizer_path);
+            core.exportVariable('MSAN_SYMBOLIZER_PATH', symbolizer_path);
+            core.exportVariable('TSAN_SYMBOLIZER_PATH', symbolizer_path);
+            core.exportVariable('UBSAN_SYMBOLIZER_PATH', symbolizer_path);
+        }
     }
 
     // Create outputs
@@ -778,7 +809,8 @@ export async function main(
         version: release,
         version_major,
         version_minor,
-        version_patch
+        version_patch,
+        symbolizer_path
     };
 }
 
