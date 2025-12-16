@@ -58,6 +58,7 @@ jobs:
           extra-values: |
             vcpkg-packages: {{#if (not fetch-content)}}fmt{{/if}}
             address-model: {{#if (eq arch 'x86')}}32{{else}}64{{/if}}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   build:
     needs: cpp-matrix

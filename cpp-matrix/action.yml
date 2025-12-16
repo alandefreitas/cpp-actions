@@ -707,6 +707,44 @@ inputs:
     required: false
     default: 'true'
 
+  # -----------------------------------------------------------------
+  # Failure rate sorting
+  # -----------------------------------------------------------------
+  sort-by-failure-rate:
+    description: |
+      Sort matrix entries by historical failure rate.
+
+      The action fetches recent workflow run history and calculates the failure rate
+      for each matrix entry based on job name matching. Entries with higher failure rates are
+      sorted first (stable sort preserving existing order for equal rates).
+
+      This is useful when combined with `max-parallel` or limited runners, as it ensures jobs
+      most likely to fail run first, providing faster feedback.
+
+      When enabled, the summary table includes a "Failure Rate" column.
+
+      Requires `github-token` to be set for API access. If failure rates cannot be calculated
+      (no token, no history, API errors), the action continues gracefully without error.
+    required: false
+    default: 'true'
+
+  failure-rate-runs:
+    description: |
+      Number of recent workflow runs to analyze when calculating failure rates.
+
+      Only used when `sort-by-failure-rate` is enabled.
+    required: false
+    default: '20'
+
+  github-token:
+    description: |
+      GitHub token for API access when fetching workflow run history for failure rate calculation.
+
+      Required when `sort-by-failure-rate` is enabled. Pass `secrets.GITHUB_TOKEN` or
+      `github.token`. Alternatively, set the `GITHUB_TOKEN` environment variable in your
+      workflow step.
+    required: false
+    default: ''
 
 outputs:
   matrix:

@@ -188,7 +188,10 @@ describe('generateMatrix', () => {
             output_file: undefined,
             log_matrix: false,
             generate_summary: false,
-            trace_commands: false
+            trace_commands: false,
+            sort_by_failure_rate: false,
+            failure_rate_runs: 20,
+            github_token: ''
         };
         const matrix = await generateMatrix(inputs);
         expect(matrix.length === 0).toBe(false);
@@ -225,7 +228,10 @@ describe('generateMatrix', () => {
             output_file: undefined,
             log_matrix: false,
             generate_summary: false,
-            trace_commands: false
+            trace_commands: false,
+            sort_by_failure_rate: false,
+            failure_rate_runs: 20,
+            github_token: ''
         };
         try {
             await generateMatrix(inputs);
@@ -268,7 +274,10 @@ test('msvc x86 entries prefer arch metadata over /m32 flags', async () => {
         output_file: undefined,
         log_matrix: false,
         generate_summary: false,
-        trace_commands: false
+        trace_commands: false,
+        sort_by_failure_rate: false,
+        failure_rate_runs: 20,
+        github_token: ''
     };
     const matrix = await generateMatrix(inputs);
     const msvcX86Entry = matrix.find(entry => entry.compiler === 'msvc' && entry.x86 === true);
@@ -310,7 +319,10 @@ test('non-x86 entries default arch to x64 unless overridden', async () => {
         output_file: undefined,
         log_matrix: false,
         generate_summary: false,
-        trace_commands: false
+        trace_commands: false,
+        sort_by_failure_rate: false,
+        failure_rate_runs: 20,
+        github_token: ''
     };
     const matrix = await generateMatrix(inputs);
     const gccEntry = matrix.find(entry => entry.compiler === 'gcc');
@@ -353,7 +365,10 @@ test('generates entries for compilers with no known versions', async () => {
         output_file: undefined,
         log_matrix: false,
         generate_summary: false,
-        trace_commands: false
+        trace_commands: false,
+        sort_by_failure_rate: false,
+        failure_rate_runs: 20,
+        github_token: ''
     };
     const warnSpy = jest.spyOn(core, 'warning').mockImplementation(() => { });
     try {

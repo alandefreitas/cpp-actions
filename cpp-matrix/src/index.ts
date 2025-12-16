@@ -8,6 +8,7 @@ import * as path from 'path';
 import * as trace_commands from 'trace-commands';
 import * as gh_inputs from 'gh-inputs';
 import { reportAndSetFailed } from 'pretty-errors';
+import * as httpClient from '@actions/http-client';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const setup_program = require('setup-program');
@@ -93,6 +94,12 @@ interface Inputs {
     log_matrix: boolean;
     generate_summary: boolean;
     trace_commands: boolean;
+    /** Enable sorting by historical failure rate */
+    sort_by_failure_rate: boolean;
+    /** Number of recent workflow runs to analyze for failure rates */
+    failure_rate_runs: number;
+    /** GitHub token for API access */
+    github_token: string;
 }
 
 /**
@@ -1667,6 +1674,211 @@ async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): Promise<
 }
 
 /**
+ * Maps job names to their failure rates.
+ */
+interface FailureRates {
+    [jobName: string]: number;
+}
+
+/**
+ * Represents a job from GitHub's workflow run API.
+ */
+interface WorkflowJob {
+    name: string;
+    conclusion: string | null;
+}
+
+/**
+ * Represents a workflow run from GitHub's API.
+ */
+interface WorkflowRun {
+    id: number;
+    status: string;
+    conclusion: string | null;
+}
+
+/**
+ * Fetches historical failure rates for workflow jobs.
+ *
+ * Uses the GitHub API to fetch recent workflow runs and calculate failure rates
+ * for each job name.
+ *
+ * @param numRuns - Number of recent workflow runs to analyze
+ * @param token - GitHub token for API access
+ * @returns Map of job names to failure rates (0.0 to 1.0), or null if unavailable
+ */
+async function fetchFailureRates(numRuns: number, token: string): Promise<FailureRates | null> {
+    function fnlog(msg: string): void {
+        trace_commands.log('fetchFailureRates: ' + msg);
+    }
+
+    const effectiveToken = token || process.env.GITHUB_TOKEN;
+    if (!effectiveToken) {
+        fnlog('github-token not provided and GITHUB_TOKEN env var not set, skipping failure rate calculation');
+        return null;
+    }
+
+    const repository = process.env.GITHUB_REPOSITORY;
+    if (!repository) {
+        fnlog('GITHUB_REPOSITORY not available, skipping failure rate calculation');
+        return null;
+    }
+
+    const workflowRef = process.env.GITHUB_WORKFLOW_REF;
+    if (!workflowRef) {
+        fnlog('GITHUB_WORKFLOW_REF not available, skipping failure rate calculation');
+        return null;
+    }
+
+    // Extract workflow file name from GITHUB_WORKFLOW_REF
+    // Format: {owner}/{repo}/.github/workflows/{workflow}.yml@{ref}
+    const workflowMatch = workflowRef.match(/\.github\/workflows\/([^@]+)@/);
+    if (!workflowMatch) {
+        fnlog(`Could not parse workflow file from GITHUB_WORKFLOW_REF: ${workflowRef}`);
+        return null;
+    }
+    const workflowFile = workflowMatch[1];
+    fnlog(`Workflow file: ${workflowFile}`);
+
+    try {
+        const client = new httpClient.HttpClient('cpp-matrix', [], {
+            headers: {
+                'Authorization': `token ${effectiveToken}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'X-GitHub-Api-Version': '2022-11-28'
+            }
+        });
+
+        // Fetch recent workflow runs
+        const runsUrl = `https://api.github.com/repos/${repository}/actions/workflows/${workflowFile}/runs?per_page=${numRuns}&status=completed`;
+        fnlog(`Fetching workflow runs from: ${runsUrl}`);
+
+        const runsResponse = await client.get(runsUrl);
+        if (runsResponse.message.statusCode !== 200) {
+            fnlog(`Failed to fetch workflow runs: ${runsResponse.message.statusCode}`);
+            return null;
+        }
+
+        const runsBody = await runsResponse.readBody();
+        const runsData = JSON.parse(runsBody);
+        const runs: WorkflowRun[] = runsData.workflow_runs || [];
+
+        if (runs.length === 0) {
+            fnlog('No completed workflow runs found');
+            return null;
+        }
+
+        fnlog(`Found ${runs.length} completed workflow runs`);
+
+        // Collect job outcomes from all runs
+        const jobOutcomes: { [name: string]: { failures: number; total: number } } = {};
+
+        for (const run of runs) {
+            // Fetch jobs for this run
+            const jobsUrl = `https://api.github.com/repos/${repository}/actions/runs/${run.id}/jobs?per_page=100`;
+            const jobsResponse = await client.get(jobsUrl);
+
+            if (jobsResponse.message.statusCode !== 200) {
+                fnlog(`Failed to fetch jobs for run ${run.id}: ${jobsResponse.message.statusCode}`);
+                continue;
+            }
+
+            const jobsBody = await jobsResponse.readBody();
+            const jobsData = JSON.parse(jobsBody);
+            const jobs: WorkflowJob[] = jobsData.jobs || [];
+
+            for (const job of jobs) {
+                if (!job.name || job.conclusion === null) {
+                    continue;
+                }
+
+                if (!(job.name in jobOutcomes)) {
+                    jobOutcomes[job.name] = { failures: 0, total: 0 };
+                }
+
+                jobOutcomes[job.name].total++;
+                if (job.conclusion === 'failure') {
+                    jobOutcomes[job.name].failures++;
+                }
+            }
+        }
+
+        // Calculate failure rates
+        const failureRates: FailureRates = {};
+        for (const [name, outcomes] of Object.entries(jobOutcomes)) {
+            if (outcomes.total > 0) {
+                failureRates[name] = outcomes.failures / outcomes.total;
+                fnlog(`Job "${name}": ${outcomes.failures}/${outcomes.total} = ${(failureRates[name] * 100).toFixed(1)}% failure rate`);
+            }
+        }
+
+        return failureRates;
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        fnlog(`Error fetching failure rates: ${errorMessage}`);
+        return null;
+    }
+}
+
+/**
+ * Applies failure rates to matrix entries and performs stable sort.
+ *
+ * Entries with higher failure rates are sorted first. Entries without historical
+ * data are assigned the mean failure rate. Uses stable sort to preserve existing
+ * order for entries with equal failure rates.
+ *
+ * @param matrix - Matrix array to sort (modified in place)
+ * @param failureRates - Map of job names to failure rates
+ */
+function sortByFailureRate(matrix: MatrixEntry[], failureRates: FailureRates): void {
+    function fnlog(msg: string): void {
+        trace_commands.log('sortByFailureRate: ' + msg);
+    }
+
+    if (Object.keys(failureRates).length === 0) {
+        fnlog('No failure rate data available, skipping sort');
+        return;
+    }
+
+    // Calculate mean failure rate for entries without history
+    const rates = Object.values(failureRates);
+    const meanRate = rates.length > 0 ? rates.reduce((a, b) => a + b, 0) / rates.length : 0;
+    fnlog(`Mean failure rate: ${(meanRate * 100).toFixed(1)}%`);
+
+    // Assign failure rates to matrix entries
+    for (const entry of matrix) {
+        const name = entry['name'] as string;
+        if (name in failureRates) {
+            entry['failure-rate'] = failureRates[name];
+        } else {
+            // Use mean rate for entries without history
+            entry['failure-rate'] = meanRate;
+            fnlog(`No history for "${name}", using mean rate ${(meanRate * 100).toFixed(1)}%`);
+        }
+    }
+
+    // Stable sort by failure rate (descending)
+    // JavaScript's sort is not guaranteed to be stable, so we add index tracking
+    const indexed = matrix.map((entry, index) => ({ entry, index }));
+    indexed.sort((a, b) => {
+        const rateA = (a.entry['failure-rate'] as number) || 0;
+        const rateB = (b.entry['failure-rate'] as number) || 0;
+        if (rateB !== rateA) {
+            return rateB - rateA; // Higher failure rate first
+        }
+        // Preserve original order for equal rates (stable sort)
+        return a.index - b.index;
+    });
+
+    // Copy sorted entries back to matrix
+    for (let i = 0; i < matrix.length; i++) {
+        matrix[i] = indexed[i].entry;
+    }
+
+    fnlog('Matrix sorted by failure rate');
+}
+
+/**
  * Sorts the matrix entries by priority order.
  *
  * @param matrix - Matrix array to sort
@@ -2083,6 +2295,21 @@ export async function generateMatrix(inputs: Inputs): Promise<MatrixEntry[]> {
     printMatrix();
     core.endGroup();
 
+    // Apply failure rate sorting if enabled
+    if (inputs.sort_by_failure_rate) {
+        core.startGroup('📊 Sort by failure rate');
+        core.info(`Fetching failure rates from last ${inputs.failure_rate_runs} workflow runs...`);
+        const failureRates = await fetchFailureRates(inputs.failure_rate_runs, inputs.github_token);
+        if (failureRates) {
+            sortByFailureRate(matrix, failureRates);
+            core.info('Matrix sorted by failure rate (high to low)');
+            printMatrix();
+        } else {
+            core.info('Could not fetch failure rates, keeping existing order');
+        }
+        core.endGroup();
+    }
+
     core.startGroup('🏁 Final matrix');
     if (inputs.log_matrix) {
         core.info(`Matrix (${matrix.length} entries):`);
@@ -2246,6 +2473,9 @@ export function generateTable(matrix: MatrixEntry[], inputs: Inputs): Array<Arra
     let allFactors = getAllFactors(latest_factors, factors);
     const allFactorKeys = allFactors.map(v => v.toLowerCase());
 
+    // Check if any entry has failure rate data
+    const hasFailureRates = matrix.some(entry => 'failure-rate' in entry);
+
     const headerValues = [
         '📋 Name',
         '🖥️ Environment',
@@ -2254,6 +2484,9 @@ export function generateTable(matrix: MatrixEntry[], inputs: Inputs): Array<Arra
         '🏗️ Build Type',
         '🔢 Factors<br/>🚩 Flags<br/>🔧 Install',
         '🔨 Generator<br/>🛠️ Toolset<br/>💻 Triplet'];
+    if (hasFailureRates) {
+        headerValues.push('📊 Failure<br/>Rate');
+    }
     let table: Array<Array<string | { data: string; header: boolean }>> = [headerValues.map(key => ({ data: key, header: true }))];
 
     function transformStdString(inputString: string | undefined): string {
@@ -2398,6 +2631,17 @@ export function generateTable(matrix: MatrixEntry[], inputs: Inputs): Array<Arra
         }
         row.push(generator_str);
 
+        // Failure rate (if available)
+        if (hasFailureRates) {
+            if ('failure-rate' in entry && typeof entry['failure-rate'] === 'number') {
+                const rate = entry['failure-rate'] as number;
+                const pct = (rate * 100).toFixed(1);
+                row.push(`${pct}%`);
+            } else {
+                row.push('N/A');
+            }
+        }
+
         // Apply emojis to name
         row[0] = `${nameEmojis.join('')} ${row[0]}`;
 
@@ -2484,7 +2728,12 @@ async function run(): Promise<void> {
         // Annotations and tracing
         log_matrix: gh_inputs.getBoolean('log-matrix'),
         generate_summary: gh_inputs.getBoolean('generate-summary'),
-        trace_commands: gh_inputs.getBoolean('trace-commands')
+        trace_commands: gh_inputs.getBoolean('trace-commands'),
+
+        // Failure rate sorting
+        sort_by_failure_rate: gh_inputs.getBoolean('sort-by-failure-rate'),
+        failure_rate_runs: gh_inputs.getInt('failure-rate-runs') ?? 20,
+        github_token: gh_inputs.getInput('github-token')
     };
 
     if (inputs.trace_commands) {
