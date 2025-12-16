@@ -11,6 +11,7 @@ cmake-build-debug-*
 cmake-build-release-*
 build*/
 build/
+!utils/build/
 out
 venv
 

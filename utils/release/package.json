@@ -1,0 +1,15 @@
+{
+  "name": "release-cli",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Release orchestration CLI for cpp-actions monorepo",
+  "main": "dist/index.js",
+  "bin": {
+    "release-cli": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepare": "npm run build"
+  },
+  "dependencies": {}
+}

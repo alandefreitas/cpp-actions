@@ -48,6 +48,13 @@ const commonPackages = [
     'common/trace-commands'
 ];
 
+// Utils packages (no moduleNameMapper needed)
+const utilsPackages = [
+    'utils/build',
+    'utils/jsdoc-linter',
+    'utils/release'
+];
+
 // Generate project configs for actions
 const actionProjects = actionPackages.map(pkg => ({
     ...baseConfig,
@@ -75,7 +82,20 @@ const commonProjects = commonPackages.map(pkg => ({
     }
 }));
 
+// Generate project configs for utils modules
+const utilsProjects = utilsPackages.map(pkg => ({
+    ...baseConfig,
+    displayName: pkg.split('/')[1],
+    rootDir: path.join(rootDir, pkg),
+    roots: ['<rootDir>/src'],
+    transform: {
+        '^.+\\.tsx?$': ['ts-jest', {
+            tsconfig: path.join(rootDir, 'tsconfig.test.json')
+        }]
+    }
+}));
+
 module.exports = {
-    projects: [...actionProjects, ...commonProjects],
+    projects: [...actionProjects, ...commonProjects, ...utilsProjects],
     coverageDirectory: path.join(rootDir, 'coverage')
 };

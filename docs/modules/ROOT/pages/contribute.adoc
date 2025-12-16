@@ -6,10 +6,10 @@ If there's a platform where one of the actions does not work, feel free to submi
 
 * **Ground yourself in the design rationale:** Remember that every action stays independent and overrideable—nothing is hard-coded for a single project, and contributors are expected to compose the pieces that fit their workflows rather than baking in assumptions.
 * **Review the action metadata:** Read `<action-name>/action.yml` before changing behavior so your updates match the documented inputs and outputs.
-* **Understand the layout:** Each GitHub Action lives in its own top-level directory (for example `setup-cmake/`, `cmake-workflow/`, or `cpp-matrix/`). Make your edits inside the action you are targeting so changes stay scoped.
+* **Understand the project layout:** Each GitHub Action lives in its own top-level directory (for example `setup-cmake/`, `cmake-workflow/`, or `cpp-matrix/`). Make your edits inside the action you are targeting so changes stay scoped.
 * **Edit source files:** Update TypeScript code under `<action-name>/src/` and leave generated assets alone until you rebuild with the provided scripts (see below).
 * **Run focused checks:** Execute `npm run prepare -w <action-name>` to rebuild the bundle, then `npx jest --selectProjects <action-name>` to run tests for that action.
-* **Validate the full suite:** Finish by running `./build.sh` at the repository root to regenerate every action bundle and rerun all tests.
+* **Validate the full suite:** Finish by running `npm run build` at the repository root to regenerate every action bundle and rerun all tests.
 * **Commit regenerated artifacts:** Include the refreshed `<action-name>/dist` output in the same commit as your source changes so the published action matches the repository.
 
 [.text-center]
@@ -21,7 +21,7 @@ flowchart TD
   edit[Update TypeScript in src/]
   localBuild["npm run prepare -w &lt;action-name&gt;"]
   localTest["npx jest --selectProjects &lt;action-name&gt;"]
-  repoTest["./build.sh"]
+  repoTest["npm run build"]
   commit["Commit source + &lt;action-name&gt;/dist"]
   decide --> scope --> edit --> localBuild --> localTest --> repoTest --> commit
 ....
@@ -40,7 +40,7 @@ This is a requirement of how GitHub Actions work.
 
 The repository uses https://docs.npmjs.com/cli/v10/using-npm/workspaces[npm workspaces] to manage dependencies across all packages.
 A single `npm install` at the root installs dependencies for all actions.
-The `build.sh` script in the root directory iterates all actions, builds them, and runs the tests.
+The `npm run build` command builds all actions, runs tests, lints documentation, and generates docs.
 
 So far, we've accepted nearly all contributions — except those that break composability or introduce hard-coded values tied to a specific library.
 
@@ -52,7 +52,6 @@ cpp-actions/
 ├── package.json           # Root workspace config
 ├── jest.config.js         # Centralized test config
 ├── tsconfig.base.json     # Shared TypeScript settings
-├── build.sh               # Build all actions
 ├── setup-cmake/           # Example action
 │   ├── action.yml         # Action metadata
 │   ├── src/
@@ -79,3 +78,77 @@ It's impossible to replicate the environment perfectly in these tests, so the ul
 As a result, it's common to test the entire repository by pushing changes to a branch and observing the results in CI.
 If needed, we iterate via force-pushes until the branch is ready for a PR.
 In theory, we could use https://github.com/nektos/act[nektos/act] for that, but, at best, it won't cover all environments.
+
+== npm Scripts Reference
+
+The root `package.json` provides the following scripts for development and maintenance.
+
+NOTE: The naming follows npm conventions where `prepare` is a lifecycle hook that runs automatically after `npm install`.
+In this repo, `prepare` compiles and bundles code (what you might normally call "build"), while `build` runs the full validation suite (compile + test + lint + docs) that you should run before committing changes.
+
+=== Build and Test
+
+[cols="1,2,2"]
+|===
+|Script |Description |Usage
+
+|`build`
+|Full build orchestration: compiles all workspaces, runs tests, lints JSDoc, and generates documentation.
+|`npm run build` +
+`npm run build -- -w <workspace>`
+
+|`prepare`
+|Compiles TypeScript and bundles with ncc across all workspaces. Runs automatically after `npm install`.
+|`npm run prepare` +
+`npm run prepare -w <workspace>`
+
+|`test`
+|Runs Jest tests across all workspaces.
+|`npm test` +
+`npx jest --selectProjects <name>`
+
+|`test:coverage`
+|Runs tests with coverage reporting.
+|`npm run test:coverage`
+
+|`docs`
+|Generates documentation only (Antora + action reference pages).
+|`npm run docs`
+
+|`lint:jsdoc`
+|Lints JSDoc comments across all workspaces.
+|`npm run lint:jsdoc`
+|===
+
+=== Dependency Management
+
+[cols="1,2,2"]
+|===
+|Script |Description |Usage
+
+|`depcheck`
+|Checks for unused or missing dependencies in all workspaces.
+|`npm run depcheck`
+
+|`update-deps`
+|Updates all dependencies to their latest versions using npm-check-updates.
+|`npm run update-deps`
+|===
+
+=== Version and Release
+
+[cols="1,2,2"]
+|===
+|Script |Description |Usage
+
+|`version:set`
+|Sets the version across the root package and all workspaces.
+|`npm run version:set -- <version>` +
+Example: `npm run version:set -- 1.9.0`
+
+|`release`
+|Interactive release workflow. Prompts for version (patch/minor/custom based on commits since last tag), updates versions, rebuilds, runs checks, then pushes to master and creates a git tag.
+|`npm run release` +
+`npm run release -- --dry-run` +
+`npm run release -- --version <ver>`
+|===

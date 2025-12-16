@@ -1,5 +1,6 @@
 {
   "name": "cpp-actions-monorepo",
+  "version": "1.9.0",
   "private": true,
   "description": "GitHub Actions for C++ projects",
   "workspaces": [
@@ -7,6 +8,8 @@
     "common/pretty-errors",
     "common/trace-commands",
     "utils/jsdoc-linter",
+    "utils/build",
+    "utils/release",
     "b2-workflow",
     "boost-clone",
     "cmake-workflow",
@@ -22,11 +25,16 @@
     "setup-program"
   ],
   "scripts": {
+    "build": "node utils/build/dist/index.js",
     "test": "jest",
     "test:coverage": "jest --coverage",
-    "build": "npm run build --workspaces --if-present",
     "prepare": "npm run prepare --workspaces --if-present",
-    "lint:jsdoc": "node utils/jsdoc-linter/dist/index.js"
+    "lint:jsdoc": "node utils/jsdoc-linter/dist/index.js",
+    "depcheck": "npm exec --workspaces -- depcheck",
+    "update-deps": "npm exec --workspaces -- npm-check-updates -u && npm install",
+    "version:set": "npm version --workspaces --include-workspace-root --no-git-tag-version --allow-same-version",
+    "docs": "node utils/build/dist/index.js --docs",
+    "release": "node utils/release/dist/index.js"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",
