@@ -409,7 +409,7 @@
 <p><strong>Review the action metadata:</strong> Read <code>&lt;action-name&gt;/action.yml</code> before changing behavior so your updates match the documented inputs and outputs.</p>
 </li>
 <li>
-<p><strong>Understand the layout:</strong> Each GitHub Action lives in its own top-level directory (for example <code>setup-cmake/</code>, <code>cmake-workflow/</code>, or <code>cpp-matrix/</code>). Make your edits inside the action you are targeting so changes stay scoped.</p>
+<p><strong>Understand the project layout:</strong> Each GitHub Action lives in its own top-level directory (for example <code>setup-cmake/</code>, <code>cmake-workflow/</code>, or <code>cpp-matrix/</code>). Make your edits inside the action you are targeting so changes stay scoped.</p>
 </li>
 <li>
 <p><strong>Edit source files:</strong> Update TypeScript code under <code>&lt;action-name&gt;/src/</code> and leave generated assets alone until you rebuild with the provided scripts (see below).</p>
@@ -418,7 +418,7 @@
 <p><strong>Run focused checks:</strong> Execute <code>npm run prepare -w &lt;action-name&gt;</code> to rebuild the bundle, then <code>npx jest --selectProjects &lt;action-name&gt;</code> to run tests for that action.</p>
 </li>
 <li>
-<p><strong>Validate the full suite:</strong> Finish by running <code>./build.sh</code> at the repository root to regenerate every action bundle and rerun all tests.</p>
+<p><strong>Validate the full suite:</strong> Finish by running <code>npm run build</code> at the repository root to regenerate every action bundle and rerun all tests.</p>
 </li>
 <li>
 <p><strong>Commit regenerated artifacts:</strong> Include the refreshed <code>&lt;action-name&gt;/dist</code> output in the same commit as your source changes so the published action matches the repository.</p>
@@ -431,7 +431,7 @@
   edit[Update TypeScript in src/]
   localBuild["npm run prepare -w &lt;action-name&gt;"]
   localTest["npx jest --selectProjects &lt;action-name&gt;"]
-  repoTest["./build.sh"]
+  repoTest["npm run build"]
   commit["Commit source + &lt;action-name&gt;/dist"]
   decide --> scope --> edit --> localBuild --> localTest --> repoTest --> commit</div></div>
 </div>
@@ -463,7 +463,7 @@ This is a requirement of how GitHub Actions work.</p>
 <div class="paragraph">
 <p>The repository uses <a href="https://docs.npmjs.com/cli/v10/using-npm/workspaces">npm workspaces</a> to manage dependencies across all packages.
 A single <code>npm install</code> at the root installs dependencies for all actions.
-The <code>build.sh</code> script in the root directory iterates all actions, builds them, and runs the tests.</p>
+The <code>npm run build</code> command builds all actions, runs tests, lints documentation, and generates docs.</p>
 </div>
 <div class="paragraph">
 <p>So far, we&#8217;ve accepted nearly all contributions — except those that break composability or introduce hard-coded values tied to a specific library.</p>
@@ -479,7 +479,6 @@ The <code>build.sh</code> script in the root directory iterates all actions, bui
 ├── package.json           # Root workspace config
 ├── jest.config.js         # Centralized test config
 ├── tsconfig.base.json     # Shared TypeScript settings
-├── build.sh               # Build all actions
 ├── setup-cmake/           # Example action
 │   ├── action.yml         # Action metadata
 │   ├── src/
@@ -512,6 +511,140 @@ It&#8217;s impossible to replicate the environment perfectly in these tests, so 
 <p>As a result, it&#8217;s common to test the entire repository by pushing changes to a branch and observing the results in CI.
 If needed, we iterate via force-pushes until the branch is ready for a PR.
 In theory, we could use <a href="https://github.com/nektos/act">nektos/act</a> for that, but, at best, it won&#8217;t cover all environments.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_npm_scripts_reference"><a class="anchor" href="#_npm_scripts_reference"></a>npm Scripts Reference</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The root <code>package.json</code> provides the following scripts for development and maintenance.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+The naming follows npm conventions where <code>prepare</code> is a lifecycle hook that runs automatically after <code>npm install</code>.
+In this repo, <code>prepare</code> compiles and bundles code (what you might normally call "build"), while <code>build</code> runs the full validation suite (compile + test + lint + docs) that you should run before committing changes.
+</td>
+</tr>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_build_and_test"><a class="anchor" href="#_build_and_test"></a>Build and Test</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 40%;">
+<col style="width: 40%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Script</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Full build orchestration: compiles all workspaces, runs tests, lints JSDoc, and generates documentation.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>npm run build</code><br>
+<code>npm run build&#8201;&#8212;&#8201;-w &lt;workspace&gt;</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>prepare</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Compiles TypeScript and bundles with ncc across all workspaces. Runs automatically after <code>npm install</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>npm run prepare</code><br>
+<code>npm run prepare -w &lt;workspace&gt;</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>test</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Runs Jest tests across all workspaces.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>npm test</code><br>
+<code>npx jest --selectProjects &lt;name&gt;</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>test:coverage</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Runs tests with coverage reporting.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>npm run test:coverage</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>docs</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Generates documentation only (Antora + action reference pages).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>npm run docs</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>lint:jsdoc</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Lints JSDoc comments across all workspaces.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>npm run lint:jsdoc</code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_dependency_management"><a class="anchor" href="#_dependency_management"></a>Dependency Management</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 40%;">
+<col style="width: 40%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Script</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>depcheck</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Checks for unused or missing dependencies in all workspaces.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>npm run depcheck</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>update-deps</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Updates all dependencies to their latest versions using npm-check-updates.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>npm run update-deps</code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_version_and_release"><a class="anchor" href="#_version_and_release"></a>Version and Release</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 40%;">
+<col style="width: 40%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Script</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version:set</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Sets the version across the root package and all workspaces.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>npm run version:set&#8201;&#8212;&#8201;&lt;version&gt;</code><br>
+Example: <code>npm run version:set&#8201;&#8212;&#8201;1.9.0</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>release</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Interactive release workflow. Prompts for version (patch/minor/custom based on commits since last tag), updates versions, rebuilds, runs checks, then pushes to master and creates a git tag.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>npm run release</code><br>
+<code>npm run release&#8201;&#8212;&#8201;--dry-run</code><br>
+<code>npm run release&#8201;&#8212;&#8201;--version &lt;ver&gt;</code></p></td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 </div>
