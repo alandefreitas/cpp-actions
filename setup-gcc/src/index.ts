@@ -118,7 +118,9 @@ export async function main(
     core.endGroup();
 
     // Setup system program
-    const names = ['g++'];
+    // Include both gcc and g++ to enable proper preference tier detection
+    // (unversioned 'gcc' preferred over versioned 'gcc-12')
+    const names = ['gcc', 'g++'];
     if (output_path === null) {
         core.startGroup('Find GCC in system paths');
         core.info(`Searching for GCC ${version} in PATH`);

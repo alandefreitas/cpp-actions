@@ -7,11 +7,19 @@ description: |
   cannot be found, fallback to basic patterns to download and install it.
   
   This action uses a number of alternatives to find or install a program:
-  
+
   - The program path hints provided to 'path'
   - Any other version of the program it can find in the system
   - Any other version of the program available from APT
   - A version of the program from a link to binary releases
+
+  When searching APT packages, the action prefers packages in this order:
+
+  1. Unversioned packages (e.g., `clang`) - best system integration
+  2. Raw versioned packages (e.g., `clang-14`) - what users typically expect
+  3. Other versioned packages (e.g., `clang-14-tools`) - fallback only
+
+  This preference order ensures better compatibility with system libraries and tools.
   
   In most workflows, this is used in conjunction to the xref:actions/setup-cpp.adoc[] and
   xref:actions/package-install.adoc[] actions to find or install extra programs necessary

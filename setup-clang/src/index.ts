@@ -284,6 +284,228 @@ async function install_program_from_clang_urls(
 }
 
 /**
+ * Checks if llvm-symbolizer is available in the system.
+ *
+ * @param majorVersion - The major version of Clang installed
+ * @returns True if llvm-symbolizer is found
+ */
+async function hasLlvmSymbolizer(majorVersion: number): Promise<boolean> {
+    // Check common absolute paths for llvm-symbolizer
+    const absolutePaths = [
+        '/usr/bin/llvm-symbolizer',
+        `/usr/bin/llvm-symbolizer-${majorVersion}`,
+        `/usr/lib/llvm-${majorVersion}/bin/llvm-symbolizer`
+    ];
+
+    for (const p of absolutePaths) {
+        if (fs.existsSync(p)) {
+            return true;
+        }
+    }
+
+    // Check if llvm-symbolizer is in PATH using io.which
+    const pathNames = ['llvm-symbolizer', `llvm-symbolizer-${majorVersion}`];
+    for (const name of pathNames) {
+        try {
+            const found = await io.which(name, false);
+            if (found) {
+                return true;
+            }
+        } catch {
+            // Continue checking other candidates
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Recursively searches for a file matching the given name in a directory.
+ *
+ * @param dir - Directory to search in
+ * @param filename - Filename to search for
+ * @param maxDepth - Maximum recursion depth
+ * @returns True if file is found
+ */
+function findFileRecursive(dir: string, filename: string, maxDepth: number): boolean {
+    if (maxDepth <= 0 || !fs.existsSync(dir)) {
+        return false;
+    }
+
+    try {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            if (entry.isFile() && entry.name === filename) {
+                return true;
+            }
+            if (entry.isDirectory()) {
+                if (findFileRecursive(fullPath, filename, maxDepth - 1)) {
+                    return true;
+                }
+            }
+        }
+    } catch {
+        // Permission denied or other error, skip this directory
+    }
+
+    return false;
+}
+
+/**
+ * Checks if sanitizer runtime libraries are available.
+ *
+ * @param majorVersion - The major version of Clang installed
+ * @returns True if ASan runtime library is found (used as proxy for all sanitizer runtimes)
+ */
+function hasSanitizerRuntimes(majorVersion: number): boolean {
+    // Check common locations for sanitizer runtime libraries
+    // We check for ASan as a proxy for all sanitizer runtimes
+    const arch = process.arch === 'x64' ? 'x86_64' : process.arch === 'arm64' ? 'aarch64' : process.arch;
+    const asanFilename = `libclang_rt.asan-${arch}.a`;
+
+    // Direct paths to check first (most common locations)
+    const directPaths = [
+        `/usr/lib/llvm-${majorVersion}/lib/clang/${majorVersion}/lib/linux/${asanFilename}`,
+        `/usr/lib/llvm-${majorVersion}/lib/clang/${majorVersion}.0.0/lib/linux/${asanFilename}`,
+        `/usr/lib/llvm-${majorVersion}/lib/clang/${majorVersion}.0.1/lib/linux/${asanFilename}`,
+        `/usr/lib/clang/${majorVersion}/lib/linux/${asanFilename}`,
+        `/usr/lib/clang/${majorVersion}.0.0/lib/linux/${asanFilename}`,
+        `/usr/lib/clang/${majorVersion}.0.1/lib/linux/${asanFilename}`
+    ];
+
+    for (const p of directPaths) {
+        if (fs.existsSync(p)) {
+            return true;
+        }
+    }
+
+    // Search in base directories with limited recursion depth
+    const baseDirs = [
+        `/usr/lib/llvm-${majorVersion}/lib/clang`,
+        '/usr/lib/clang'
+    ];
+
+    for (const baseDir of baseDirs) {
+        if (findFileRecursive(baseDir, asanFilename, 5)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Installs companion packages for Clang to ensure tool parity.
+ *
+ * Different Clang installation sources provide different tools. This function
+ * checks if required tools are present and installs them if missing:
+ * - llvm-symbolizer: Required for readable sanitizer stack traces
+ * - Sanitizer runtimes: Required for ASan, UBSan, TSan, MSan
+ *
+ * @param installedVersion - The version of Clang that was installed (e.g., "14.0.0")
+ * @param installedAptPackage - The APT package name that was installed (e.g., "clang" or "clang-14"), or null if not from APT
+ * @param installedFromUrl - True if Clang was installed from URL download
+ */
+async function installCompanionPackages(installedVersion: string, installedAptPackage: string | null, installedFromUrl: boolean): Promise<void> {
+    function fnlog(msg: string): void {
+        trace_commands.log('installCompanionPackages: ' + msg);
+    }
+
+    // Only install companion packages on Linux with APT
+    if (process.platform !== 'linux') {
+        fnlog('Skipping companion packages: not on Linux');
+        return;
+    }
+
+    // Check if APT is available
+    try {
+        const exitCode = await exec.exec('apt', ['--version'], { silent: true });
+        if (exitCode !== 0) {
+            fnlog('APT not available');
+            return;
+        }
+    } catch {
+        fnlog('APT not available');
+        return;
+    }
+
+    const version = semver.coerce(installedVersion);
+    if (!version) {
+        fnlog(`Could not parse version: ${installedVersion}`);
+        return;
+    }
+    const majorVersion = version.major;
+
+    // Determine if the installed package is unversioned (e.g., "clang" vs "clang-14")
+    const isUnversionedPackage = installedAptPackage !== null &&
+        setup_program.getPackagePreferenceTier(installedAptPackage, ['clang']) === setup_program.PackagePreferenceTier.UNVERSIONED;
+
+    fnlog(`Installed APT package: ${installedAptPackage ?? 'none'}, isUnversioned: ${isUnversionedPackage}, fromUrl: ${installedFromUrl}`);
+
+    const opts = {
+        env: {
+            DEBIAN_FRONTEND: 'noninteractive',
+            TZ: 'Etc/UTC',
+            PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+        },
+        ignoreReturnCode: true,
+        silent: true
+    };
+
+    // Determine sudo prefix
+    let sudoPrefix = '';
+    try {
+        const { exitCode } = await exec.getExecOutput('sudo', ['-n', 'true'], { silent: true, ignoreReturnCode: true });
+        if (exitCode === 0) {
+            sudoPrefix = 'sudo -n ';
+        }
+    } catch {
+        // sudo not available
+    }
+
+    // Check if llvm-symbolizer is already available
+    if (await hasLlvmSymbolizer(majorVersion)) {
+        fnlog('llvm-symbolizer already available, skipping installation');
+        core.info('✅ llvm-symbolizer already available');
+    } else {
+        fnlog('llvm-symbolizer not found, attempting to install');
+        // For unversioned clang, prefer unversioned llvm; for versioned, prefer versioned llvm
+        const llvmPackages = isUnversionedPackage
+            ? ['llvm', `llvm-${majorVersion}`]
+            : [`llvm-${majorVersion}`, 'llvm'];
+        for (const pkg of llvmPackages) {
+            fnlog(`Trying to install ${pkg}`);
+            const exitCode = await exec.exec(`${sudoPrefix}apt-get install -y ${pkg}`, [], opts);
+            if (exitCode === 0) {
+                core.info(`✅ Installed ${pkg} for llvm-symbolizer`);
+                break;
+            }
+        }
+    }
+
+    // Check if sanitizer runtimes are already available
+    if (hasSanitizerRuntimes(majorVersion)) {
+        fnlog('Sanitizer runtimes already available, skipping installation');
+        core.info('✅ Sanitizer runtimes already available');
+    } else {
+        fnlog('Sanitizer runtimes not found, attempting to install');
+        const rtPackages = [
+            `libclang-rt-${majorVersion}-dev`,
+            `libclang-common-${majorVersion}-dev`
+        ];
+        for (const pkg of rtPackages) {
+            fnlog(`Trying to install ${pkg}`);
+            const exitCode = await exec.exec(`${sudoPrefix}apt-get install -y ${pkg}`, [], opts);
+            if (exitCode === 0) {
+                core.info(`✅ Installed ${pkg} for sanitizer runtimes`);
+                break;
+            }
+        }
+    }
+}
+
+/**
  * Sets up Clang compiler on the runner with the specified version.
  *
  * This function locates or installs Clang with the requested version, searching
@@ -325,6 +547,7 @@ export async function main(
     // Path program version
     let output_path: string | null = null;
     let output_version: string | null = null;
+    let installed_apt_package: string | null = null;
 
     // Setup path program
     if (paths.length > 0) {
@@ -426,6 +649,7 @@ export async function main(
         const result = await setup_program.find_program_with_apt(['clang'], version, check_latest);
         output_version = result.output_version;
         output_path = result.output_path;
+        installed_apt_package = result.installed_package ?? null;
         core.endGroup();
     } else {
         if (output_version !== null) {
@@ -438,7 +662,7 @@ export async function main(
     }
 
     // If output_version === null, and it gets installed at all, it will be installed from a URL
-    const installed_from_url = output_version === null;
+    const will_install_from_url = output_version === null;
     if (output_version === null) {
         core.startGroup('⬇️ Download clang');
         const { version_candidates, ubuntu_versions } = clangDownloadCandidates(
@@ -462,6 +686,13 @@ export async function main(
         trace_commands.log(
             `Skipping download step because Clang ${output_version} was already found in ${output_path}`
         );
+    }
+
+    // Install companion packages for tool parity (llvm-symbolizer, sanitizer runtimes)
+    if (output_version) {
+        core.startGroup('📦 Install companion packages');
+        await installCompanionPackages(output_version, installed_apt_package, will_install_from_url);
+        core.endGroup();
     }
 
     // Create outputs
@@ -510,7 +741,7 @@ export async function main(
         }
         dir = path.dirname(bindir);
 
-        if (installed_from_url) {
+        if (will_install_from_url) {
             // If it's installed from the url, we need to add the lib dirs to LD_LIBRARY_PATH,
             // or it won't be able to find the default shared libraries
             let LD_LIBRARY_PATH = process.env.LD_LIBRARY_PATH;

@@ -1,9 +1,22 @@
 name: "Setup CMake"
 description: |
-  Set up a specific version of a CMake compiler and add it to the PATH.
-  
+  Set up a specific version of CMake and add it to the PATH.
+
   This action will also set-up any dependencies required by CMake.
-  
+
+  This action uses a number of alternatives to find or install CMake:
+
+  - The CMake path provided to 'path'
+  - Any other version of CMake it can find in the system PATH
+  - Any other version of CMake available from APT (Linux only)
+  - A version of CMake downloaded from cmake.org
+
+  When searching APT packages, the action prefers packages in this order:
+
+  1. Unversioned packages (e.g., `cmake`) - best system integration
+  2. Raw versioned packages (e.g., `cmake-3.24`) - if available
+  3. Other versioned packages - fallback only
+
   In most workflows, this is used as an auxiliary action for the xref:actions/cmake-workflow.adoc[] action,
   which already calls this action if necessary.
 

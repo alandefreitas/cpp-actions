@@ -21,6 +21,8 @@ import ubuntuVersionNames from '../ubuntu-versions.json';
 interface ProgramResult {
     output_version: string | null;
     output_path: string | null;
+    /** The APT package name that was installed (only set when installed via APT) */
+    installed_package?: string | null;
 }
 
 /**
@@ -45,6 +47,51 @@ interface SetupProgramInputs {
     install_prefix: string | null;
     fail_on_error: boolean;
     trace_commands: boolean;
+}
+
+/**
+ * Package preference tier for APT package selection.
+ *
+ * Lower tier number means higher preference:
+ * - Tier 1: Unversioned packages (e.g., "clang", "gcc") - best system integration
+ * - Tier 2: Raw versioned packages (e.g., "clang-14", "gcc-12") - what users expect
+ * - Tier 3: Other versioned packages (e.g., "clang-14-tools") - fallback only
+ */
+export enum PackagePreferenceTier {
+    UNVERSIONED = 1,
+    RAW_VERSIONED = 2,
+    OTHER_VERSIONED = 3
+}
+
+/**
+ * Determines the preference tier for an APT package based on its name.
+ *
+ * Packages are categorized into tiers to prefer system-integrated packages
+ * over standalone versioned packages when both satisfy version requirements.
+ *
+ * @param packageName - The APT package name (e.g., "clang", "clang-14", "clang-14-tools")
+ * @param baseNames - The base program names being searched for (e.g., ["clang", "clang++"])
+ * @returns The preference tier for the package
+ */
+export function getPackagePreferenceTier(packageName: string, baseNames: string[]): PackagePreferenceTier {
+    // Check if package name exactly matches any base name (unversioned)
+    for (const baseName of baseNames) {
+        if (packageName === baseName) {
+            return PackagePreferenceTier.UNVERSIONED;
+        }
+    }
+
+    // Check if package name is base name followed by version only (raw versioned)
+    // e.g., "clang-14", "gcc-12", "cmake-3.24"
+    for (const baseName of baseNames) {
+        const rawVersionedRegex = new RegExp(`^${escapeRegExp(baseName)}-[0-9.]+$`);
+        if (rawVersionedRegex.test(packageName)) {
+            return PackagePreferenceTier.RAW_VERSIONED;
+        }
+    }
+
+    // Everything else is other versioned (e.g., "clang-14-tools", "clang-format-14")
+    return PackagePreferenceTier.OTHER_VERSIONED;
 }
 
 /**
@@ -466,17 +513,18 @@ export async function find_program_with_apt(names: string[], version: string, ch
 
     let output_version: string | null = null;
     let output_path: string | null = null;
+    let installed_package: string | null = null;
 
     fnlog('Checking if APT is available');
     try {
         const exitCode = await exec.exec('apt', ['--version']);
         if (exitCode !== 0) {
             fnlog(`apt --version returned ${exitCode}`);
-            return { output_version, output_path };
+            return { output_version, output_path, installed_package };
         }
     } catch (error) {
         fnlog('APT is not available');
-        return { output_version, output_path };
+        return { output_version, output_path, installed_package };
     }
 
     // Find program "name" with APT
@@ -513,6 +561,7 @@ export async function find_program_with_apt(names: string[], version: string, ch
         fnlog(`Listing all versions of packages [${package_names.join(', ')}]`);
         let package_match: string | null = null;
         let package_version_match: string | null = null;
+        let package_match_tier: PackagePreferenceTier = PackagePreferenceTier.OTHER_VERSIONED;
         const install_matches: string[] = [];
         for (const package_name of package_names) {
             const output: ExecOutput = await exec.getExecOutput('apt-cache', ['showpkg', package_name], { silent: true });
@@ -535,6 +584,10 @@ export async function find_program_with_apt(names: string[], version: string, ch
             const package_versions = dependencies_lines.map((line) => line.split(' ')[0]);
             fnlog(`Package ${package_name} has APT versions [${package_versions.join(', ')}]`);
 
+            // Get preference tier for this package
+            const pkg_tier = getPackagePreferenceTier(package_name, names);
+            fnlog(`Package ${package_name} has preference tier ${pkg_tier}`);
+
             // Filter the versions that install the required program version
             for (const package_version of package_versions) {
                 // a limited list of common formats to express versions in apt package names
@@ -550,10 +603,21 @@ export async function find_program_with_apt(names: string[], version: string, ch
                             fnlog(`Package ${package_name}=${package_version} version ${pkg_version} does NOT satisfy ${names.join(', ')} version ${version}`);
                         } else {
                             install_matches.push(`${package_name}=${package_version}`);
-                            if (pkg_version !== null && (output_version === null || (check_latest && semver.gt(pkg_version, output_version)) || (!check_latest && semver.lt(pkg_version, output_version)))) {
-                                fnlog(`Package ${package_name}=${package_version} version ${pkg_version} satisfies ${names.join(', ')} version ${version}`);
+                            // Selection priority:
+                            // 1. Better tier (lower number) always wins
+                            // 2. Same tier: use check_latest to pick best version
+                            const isBetterTier = pkg_tier < package_match_tier;
+                            const isSameTier = pkg_tier === package_match_tier;
+                            const isBetterVersion = pkg_version !== null && output_version !== null &&
+                                ((check_latest && semver.gt(pkg_version, output_version)) ||
+                                 (!check_latest && semver.lt(pkg_version, output_version)));
+                            const isFirstMatch = output_version === null;
+
+                            if (pkg_version !== null && (isFirstMatch || isBetterTier || (isSameTier && isBetterVersion))) {
+                                fnlog(`Package ${package_name}=${package_version} version ${pkg_version} (tier ${pkg_tier}) selected as best match for ${names.join(', ')} version ${version}`);
                                 package_match = package_name;
                                 package_version_match = package_version;
+                                package_match_tier = pkg_tier;
                                 output_version = pkg_version.toString();
                             }
                         }
@@ -588,7 +652,9 @@ export async function find_program_with_apt(names: string[], version: string, ch
                 apt_get_exit_code = await exec.exec(`apt-get install -f -y --allow-downgrades ${install_pkg}`, [], opts);
             }
 
-            if (apt_get_exit_code !== 0) {
+            if (apt_get_exit_code === 0) {
+                installed_package = package_match;
+            } else {
                 fnlog(`Failed to install ${install_pkg}. Trying aptitude and alternatives packages [${install_matches.join(', ')}]`);
                 // Check if aptitude is available
                 let aptitude_path: string | null;
@@ -603,6 +669,9 @@ export async function find_program_with_apt(names: string[], version: string, ch
                         apt_get_exit_code = await exec.exec(`sudo -n aptitude install -f -y ${install_pkg}`, [], opts);
                     } else {
                         apt_get_exit_code = await exec.exec(`aptitude install -f -y ${install_pkg}`, [], opts);
+                    }
+                    if (apt_get_exit_code === 0) {
+                        installed_package = package_match;
                     }
                 } else {
                     fnlog(`aptitude unavailable.`);
@@ -619,6 +688,8 @@ export async function find_program_with_apt(names: string[], version: string, ch
                         apt_get_exit_code = await exec.exec(`apt-get install -f -y --allow-downgrades ${install_match}`, [], opts);
                     }
                     if (apt_get_exit_code === 0) {
+                        // Extract package name from "package=version" format
+                        installed_package = install_match.split('=')[0];
                         break;
                     }
                 }
@@ -642,7 +713,10 @@ export async function find_program_with_apt(names: string[], version: string, ch
     } else {
         fnlog(`Failed to find ${names[0]} packages with APT`);
     }
-    return { output_version, output_path };
+    if (installed_package !== null) {
+        fnlog(`Installed package: ${installed_package}`);
+    }
+    return { output_version, output_path, installed_package };
 }
 
 /**

@@ -7,11 +7,22 @@ description: |
   circumstantially provided by apt-get.
   
   This action uses a number of alternatives to find or install Clang:
-  
+
   - The Clang path provided to 'path'
   - Any other version of Clang it can find in the system
   - Any other version of Clang available from APT
-  - A version of Clang from our own binary releases
+  - A version of Clang from LLVM binary releases
+
+  When searching APT packages, the action prefers packages in this order:
+
+  1. Unversioned packages (e.g., `clang`) - best system integration
+  2. Raw versioned packages (e.g., `clang-14`) - what users typically expect
+  3. Other versioned packages - fallback only
+
+  After installation, the action also installs companion packages for tool parity:
+
+  - `llvm` or `llvm-XX` for llvm-symbolizer (readable sanitizer stack traces)
+  - `libclang-rt-XX-dev` for sanitizer runtimes (ASan, UBSan, TSan, MSan)
 
   In most workflows, this is used as an auxiliary action for the xref:actions/setup-cpp.adoc[] action,
   which already calls this action if necessary.

@@ -463,6 +463,25 @@ export async function main(inputs: Inputs, subgroups = true): Promise<Partial<Ou
     }
 
     // ----------------------------------------------
+    // Look for CMake in APT (Linux only)
+    // ----------------------------------------------
+    if (!output_version && process.platform === 'linux') {
+        if (subgroups) {
+            core.startGroup('📦 Look for CMake in APT');
+        }
+        core.info(`Searching for CMake ${version} in APT repositories`);
+        const __ret: ProgramResult = await setup_program.find_program_with_apt(['cmake'], version, check_latest);
+        if (__ret.output_version && __ret.output_path) {
+            core.info(`✅ Found CMake ${__ret.output_version} via APT at ${__ret.output_path}`);
+        }
+        output_version = __ret.output_version;
+        output_path = __ret.output_path;
+        if (subgroups) {
+            core.endGroup();
+        }
+    }
+
+    // ----------------------------------------------
     // Download CMake
     // ----------------------------------------------
     if (!output_version) {
