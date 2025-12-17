@@ -34,6 +34,10 @@ interface Message {
 
 /**
  * Configuration inputs for the CMake workflow action.
+ *
+ * This interface represents the raw inputs from the action, where some fields
+ * are arrays/maps representing combinatorial factors. These are expanded into
+ * individual `ResolvedInputs` entries by the `expandInputs()` function.
  */
 interface Inputs {
     /** Path to the CMake executable */
@@ -47,12 +51,14 @@ interface Inputs {
     git_tag: string;
     download_dir: string;
     patches: string[];
+    /** Base build directory (suffixes added for non-main factor combinations) */
     build_dir: string;
     preset: string;
     cc: string;
     ccflags: string;
     cxx: string;
     cxxflags: string;
+    /** C++ standard versions to build (combinatorial factor) */
     cxxstd: (string | null)[];
     shared: boolean | undefined;
     toolchain: string;
@@ -62,6 +68,7 @@ interface Inputs {
     arch: string;
     build_type: string;
     build_target: (string | null)[];
+    /** Extra CMake arguments - array for single config, map for combinatorial factor */
     extra_args: string[] | Record<string, string[]>;
     export_compile_commands: boolean | undefined;
     jobs: number;
@@ -70,10 +77,12 @@ interface Inputs {
     test_all_cxxstd: boolean;
     install: boolean | undefined;
     install_all_cxxstd: boolean | undefined;
+    /** Base install prefix (suffixes added for non-main factor combinations) */
     install_prefix: string;
     package: boolean | undefined;
     package_all_cxxstd: boolean;
     package_name: string;
+    /** Base package directory (suffixes added for non-main factor combinations) */
     package_dir: string;
     package_vendor: string;
     package_generators: string[];
@@ -82,7 +91,76 @@ interface Inputs {
     create_annotations: boolean | undefined;
     ref_source_dir: string;
     trace_commands: boolean;
+}
+
+/**
+ * Resolved inputs for a single workflow entry after expanding combinatorial factors.
+ *
+ * This interface represents a single configuration to execute, where all
+ * combinatorial factors have been resolved to single values. The `expandInputs()`
+ * function generates a list of these from the raw `Inputs`.
+ */
+interface ResolvedInputs {
+    /** Path to the CMake executable */
+    cmake_path: string;
+    /** CMake version to use */
+    cmake_version: string;
+    /** Path to the source directory */
+    source_dir: string;
+    url: string;
+    git_repository: string;
+    git_tag: string;
+    download_dir: string;
+    patches: string[];
+    /** Resolved build directory for this entry (includes factor suffix if needed) */
+    build_dir: string;
+    preset: string;
+    cc: string;
+    ccflags: string;
+    cxx: string;
+    cxxflags: string;
+    /** Single C++ standard version for this entry */
+    cxxstd: string | null;
+    shared: boolean | undefined;
+    toolchain: string;
+    generator: string;
+    generator_toolset: string;
+    generator_architecture: string;
+    arch: string;
+    build_type: string;
+    /** Build targets to compile (internal loop, not a combinatorial factor) */
+    build_target: (string | null)[];
+    /** Resolved extra CMake arguments (always an array) */
+    extra_args: string[];
+    export_compile_commands: boolean | undefined;
+    jobs: number;
+    run_tests: boolean | undefined;
+    configure_tests_flag: string;
+    install: boolean | undefined;
+    /** Resolved install prefix for this entry (includes factor suffix if needed) */
+    install_prefix: string;
+    package: boolean | undefined;
+    package_name: string;
+    /** Resolved package directory for this entry (includes factor suffix if needed) */
+    package_dir: string;
+    package_vendor: string;
+    /** Package generators to use (internal loop, not a combinatorial factor) */
+    package_generators: string[];
+    package_artifact: boolean | undefined;
+    package_retention_days: number;
+    create_annotations: boolean | undefined;
+    ref_source_dir: string;
+    trace_commands: boolean;
+    /** Key identifying the extra_args configuration (undefined if extra_args was an array) */
     extra_args_key?: string;
+    /** Whether this is the main/default entry (gets exact user paths without suffixes) */
+    is_main_entry: boolean;
+    /** Run tests for all cxxstd values (true) or only main entry (false) */
+    test_all_cxxstd: boolean;
+    /** Install for all cxxstd values (true) or only main entry (false) */
+    install_all_cxxstd: boolean | undefined;
+    /** Package for all cxxstd values (true) or only main entry (false) */
+    package_all_cxxstd: boolean;
 }
 
 /**
@@ -128,7 +206,7 @@ interface ResolvedParameters {
  * @param output - CMake configure command output
  * @param inputs - Workflow inputs for path resolution
  */
-function createCMakeConfigureAnnotations(output: string, inputs: Inputs): void {
+function createCMakeConfigureAnnotations(output: string, inputs: ResolvedInputs): void {
     function fnlog(msg: string): void {
         trace_commands.log('createCMakeConfigureAnnotations: ' + msg);
     }
@@ -202,7 +280,7 @@ function createCMakeConfigureAnnotations(output: string, inputs: Inputs): void {
  * @param output - CMake build command output
  * @param inputs - Workflow inputs for path resolution
  */
-function createCMakeBuildAnnotations(output: string, inputs: Inputs): void {
+function createCMakeBuildAnnotations(output: string, inputs: ResolvedInputs): void {
     function fnlog(msg: string): void {
         trace_commands.log('createCMakeBuildAnnotations: ' + msg);
     }
@@ -370,7 +448,7 @@ function createAnnotationsFromMessage(messages: Message[]): void {
  * @param output - CTest command output
  * @param inputs - Workflow inputs for path resolution
  */
-function createCMakeTestAnnotations(output: string, inputs: Inputs): void {
+function createCMakeTestAnnotations(output: string, inputs: ResolvedInputs): void {
     function fnlog(msg: string): void {
         trace_commands.log('createCMakeTestAnnotations: ' + msg);
     }
@@ -1249,100 +1327,61 @@ async function applyPatches(inputs: Inputs): Promise<void> {
 }
 
 /**
- * Executes a complete CMake workflow including configure, build, test, install, and package.
+ * Generates a human-readable description of the current factor combination.
  *
- * Handles source code download, patch application, CMake setup, and runs all enabled
- * workflow steps based on the provided inputs. Supports multi-configuration generators.
- *
- * @param inputs - Configuration inputs for the CMake workflow
- * @throws Error if configure, build, test, install, or package steps fail
+ * @param entry - The resolved inputs for this entry
+ * @returns Description string for logging
  */
-async function main(inputs: Inputs): Promise<void> {
+function makeFactorDescription(entry: ResolvedInputs): string {
+    let description = '';
+    if (entry.extra_args_key) {
+        description = `${entry.extra_args_key}: `;
+    }
+    if (entry.cxxstd) {
+        description += `C++${entry.cxxstd}`;
+    } else {
+        description += `Default C++ standard`;
+    }
+    return description;
+}
+
+/**
+ * Processes a single resolved entry through the CMake workflow.
+ *
+ * Runs configure, build, test, install, and package steps for a single
+ * combination of factors (cxxstd, extra_args).
+ *
+ * @param entry - Resolved inputs for this factor combination
+ * @param setupCMakeOutputs - CMake setup results (paths, capabilities)
+ * @param resolvedParams - Resolved parameters (generator info, tool paths)
+ * @throws Error if any step fails
+ */
+async function processEntry(
+    entry: ResolvedInputs,
+    setupCMakeOutputs: SetupCMakeOutputs,
+    resolvedParams: ResolvedParameters
+): Promise<void> {
     function fnlog(msg: string): void {
-        trace_commands.log('cmake-workflow: ' + msg);
+        trace_commands.log('processEntry: ' + msg);
     }
 
-    // ----------------------------------------------
-    // Download the source code
-    // ----------------------------------------------
-    if (inputs.url || inputs.git_repository) {
-        core.startGroup(`🌎 Download source code`);
-        await downloadSourceCode(inputs);
-        core.endGroup();
-    }
+    const { generator_is_multi_config, ctest_path, cpack_path } = resolvedParams;
+    const factorDesc = makeFactorDescription(entry);
 
-    // ----------------------------------------------
-    // Apply patches
-    // ----------------------------------------------
-    if (inputs.patches.length > 0) {
-        core.startGroup(`🩹 Apply patches`);
-        await applyPatches(inputs);
-        core.endGroup();
-    }
+    fnlog(`Processing entry: ${factorDesc}, build_dir=${entry.build_dir}`);
 
-    // ----------------------------------------------
-    // Look for CMake versions
-    // ----------------------------------------------
-    core.startGroup(`🔎 Setup CMake`);
-    const setupCMakeOutputs: SetupCMakeOutputs = await setup_cmake.main({
-        trace_commands: trace_commands,
-        version: inputs.cmake_version,
-        cmake_file: path.resolve(inputs.source_dir, 'CMakeLists.txt'),
-        path: inputs.cmake_path,
-        cmake_path: 'cmake',
-        cache: false,
-        check_latest: false,
-        update_environment: false
-    }, false);
-    if (!setupCMakeOutputs.path) {
-        throw new Error('❌ CMake not found');
-    }
-    inputs.cmake_path = setupCMakeOutputs.path;
-    core.endGroup();
-
-    core.startGroup(`🎛️ CMake parameters`);
-    const {
-        main_cxxstd,
-        generator_is_multi_config,
-        ctest_path,
-        cpack_path
-    } = await resolveInputParameters(inputs, setupCMakeOutputs);
-    core.endGroup();
-
-    // ----------------------------------------------
-    // Configure steps
-    // ----------------------------------------------
-    function make_build_dir(cur_cxxstd: string | null): string {
-        return (!cur_cxxstd || cur_cxxstd === main_cxxstd) ? inputs.build_dir : (inputs.build_dir + '-' + cur_cxxstd);
-    }
-
-    function make_install_prefix(cur_cxxstd: string | null): string {
-        return (!cur_cxxstd || cur_cxxstd === main_cxxstd) ? inputs.install_prefix : (inputs.install_prefix + '-' + cur_cxxstd);
-    }
-
-    function make_package_dir(cur_cxxstd: string | null): string {
-        return (!cur_cxxstd || cur_cxxstd === main_cxxstd) ? inputs.package_dir : (inputs.package_dir + '-' + cur_cxxstd);
-    }
-
-    function make_factor_description(cur_cxxstd: string | null): string {
-        let description = '';
-        if (inputs.extra_args_key) {
-            description = `${inputs.extra_args_key}: `;
-        }
-        if (cur_cxxstd) {
-            description += `C++${cur_cxxstd}`;
-        } else {
-            description += `Default C++ standard`;
-        }
-        return description;
-    }
-
-    core.startGroup(`⚙️ Configure`);
-    for (const cur_cxxstd of inputs.cxxstd) {
-        core.info(`⚙️ Configure (${make_factor_description(cur_cxxstd)})`);
-        const std_build_dir = make_build_dir(cur_cxxstd);
+    // ==============================================
+    // Configure step
+    // ==============================================
+    core.startGroup(`⚙️ Configure (${factorDesc})`);
+    {
+        const std_build_dir = entry.build_dir;
 
         const configure_args: string[] = [];
+        // Copy entry fields that may be modified
+        let cxxflags = entry.cxxflags;
+        let ccflags = entry.ccflags;
+
         /*
             Build parameters
          */
@@ -1350,86 +1389,86 @@ async function main(inputs: Inputs): Promise<void> {
             // If this can't be set directly, then we need to change the
             // working directory when running the command
             configure_args.push('-S');
-            configure_args.push(inputs.source_dir);
+            configure_args.push(entry.source_dir);
             configure_args.push('-B');
             configure_args.push(std_build_dir);
         }
-        if (inputs.preset) {
-            configure_args.push(`--preset=${inputs.preset}`);
+        if (entry.preset) {
+            configure_args.push(`--preset=${entry.preset}`);
         }
-        if (inputs.generator) {
+        if (entry.generator) {
             configure_args.push('-G');
-            configure_args.push(inputs.generator);
+            configure_args.push(entry.generator);
         }
-        if (inputs.generator_toolset) {
+        if (entry.generator_toolset) {
             configure_args.push('-T');
-            configure_args.push(inputs.generator_toolset);
+            configure_args.push(entry.generator_toolset);
         }
-        if (inputs.generator_architecture) {
+        if (entry.generator_architecture) {
             configure_args.push('-A');
-            configure_args.push(inputs.generator_architecture);
+            configure_args.push(entry.generator_architecture);
         }
-        if (inputs.cxxflags.includes('/m32') && inputs.generator.startsWith('Visual Studio')) {
+        if (cxxflags.includes('/m32') && entry.generator.startsWith('Visual Studio')) {
             // In Visual Studio, the -A option is used to specify the architecture,
             // and it needs to be set explicitly
             configure_args.push('-A', 'Win32');
             // Remove /m32 from cxxflags
-            inputs.cxxflags = inputs.cxxflags
+            cxxflags = cxxflags
                 .split(' ').filter((input) => input !== '')
                 .filter((input) => input !== '/m32')
                 .join(' ');
-            inputs.ccflags = inputs.ccflags
+            ccflags = ccflags
                 .split(' ').filter((input) => input !== '')
                 .filter((input) => input !== '/m32')
                 .join(' ');
         }
-        if (inputs.build_type && !generator_is_multi_config) {
+        if (entry.build_type && !generator_is_multi_config) {
             // When the generator is multi-config, the build type is set
             // when building the target. `CMAKE_CONFIGURATION_TYPES`
             // should not be set in this case.
             configure_args.push('-D');
-            configure_args.push(`CMAKE_BUILD_TYPE=${inputs.build_type}`);
+            configure_args.push(`CMAKE_BUILD_TYPE=${entry.build_type}`);
         }
-        if (inputs.toolchain) {
+        if (entry.toolchain) {
             configure_args.push('-D');
-            configure_args.push(`CMAKE_TOOLCHAIN_FILE=${inputs.toolchain}`);
+            configure_args.push(`CMAKE_TOOLCHAIN_FILE=${entry.toolchain}`);
         }
-        if (inputs.run_tests !== undefined && inputs.configure_tests_flag) {
+        if (entry.run_tests !== undefined && entry.configure_tests_flag) {
             configure_args.push('-D');
-            if (inputs.configure_tests_flag.includes('=')) {
-                configure_args.push(inputs.configure_tests_flag);
+            if (entry.configure_tests_flag.includes('=')) {
+                configure_args.push(entry.configure_tests_flag);
             } else {
-                configure_args.push(`${inputs.configure_tests_flag}=${inputs.run_tests ? 'ON' : 'OFF'}`);
+                configure_args.push(`${entry.configure_tests_flag}=${entry.run_tests ? 'ON' : 'OFF'}`);
             }
         }
-        if (inputs.shared) {
+        if (entry.shared) {
             configure_args.push('-D');
             configure_args.push('BUILD_SHARED_LIBS=ON');
         }
-        if (inputs.cc) {
+        if (entry.cc) {
             configure_args.push('-D');
-            configure_args.push(`CMAKE_C_COMPILER=${inputs.cc}`);
+            configure_args.push(`CMAKE_C_COMPILER=${entry.cc}`);
         }
-        if (inputs.ccflags) {
+        if (ccflags) {
             configure_args.push('-D');
-            configure_args.push(`CMAKE_C_FLAGS=${inputs.ccflags}`);
+            configure_args.push(`CMAKE_C_FLAGS=${ccflags}`);
         }
-        if (inputs.cxx) {
+        if (entry.cxx) {
             configure_args.push('-D');
-            configure_args.push(`CMAKE_CXX_COMPILER=${inputs.cxx}`);
+            configure_args.push(`CMAKE_CXX_COMPILER=${entry.cxx}`);
         }
-        if (inputs.cxxflags) {
+        if (cxxflags) {
             configure_args.push('-D');
-            configure_args.push(`CMAKE_CXX_FLAGS=${inputs.cxxflags}`);
+            configure_args.push(`CMAKE_CXX_FLAGS=${cxxflags}`);
         }
-        if (cur_cxxstd) {
+        if (entry.cxxstd) {
             configure_args.push('-D');
-            configure_args.push(`CMAKE_CXX_STANDARD=${cur_cxxstd}`);
+            configure_args.push(`CMAKE_CXX_STANDARD=${entry.cxxstd}`);
         }
-        if (inputs.export_compile_commands === true) {
+        if (entry.export_compile_commands === true) {
             configure_args.push('-D');
             configure_args.push('CMAKE_EXPORT_COMPILE_COMMANDS=ON');
-        } else if (inputs.export_compile_commands === false) {
+        } else if (entry.export_compile_commands === false) {
             configure_args.push('-D');
             configure_args.push('CMAKE_EXPORT_COMPILE_COMMANDS=OFF');
         }
@@ -1438,56 +1477,56 @@ async function main(inputs: Inputs): Promise<void> {
         /*
             Install and package parameters
          */
-        if (inputs.install_prefix) {
+        if (entry.install_prefix) {
             configure_args.push('-D');
-            configure_args.push(`CMAKE_INSTALL_PREFIX=${make_install_prefix(cur_cxxstd)}`);
+            configure_args.push(`CMAKE_INSTALL_PREFIX=${entry.install_prefix}`);
         }
-        if (inputs.package_name.length > 0) {
+        if (entry.package_name.length > 0) {
             configure_args.push('-D');
-            configure_args.push(`CPACK_GENERATOR=${inputs.package_generators.join(';')}`);
+            configure_args.push(`CPACK_GENERATOR=${entry.package_generators.join(';')}`);
         }
-        if (inputs.package_name) {
+        if (entry.package_name) {
             configure_args.push('-D');
-            configure_args.push(`CPACK_PACKAGE_NAME=${inputs.package_name}`);
+            configure_args.push(`CPACK_PACKAGE_NAME=${entry.package_name}`);
         }
-        if (inputs.package_dir) {
+        if (entry.package_dir) {
             configure_args.push('-D');
-            configure_args.push(`CPACK_PACKAGE_DIRECTORY=${inputs.package_dir}`);
+            configure_args.push(`CPACK_PACKAGE_DIRECTORY=${entry.package_dir}`);
         }
-        if (inputs.package_vendor) {
+        if (entry.package_vendor) {
             configure_args.push('-D');
-            configure_args.push(`CPACK_PACKAGE_VENDOR=${inputs.package_vendor}`);
+            configure_args.push(`CPACK_PACKAGE_VENDOR=${entry.package_vendor}`);
         }
 
         /*
             Extra arguments
          */
-        fnlog(`Extra arguments: ${JSON.stringify(inputs.extra_args)}`);
-        for (const extra_arg of (inputs.extra_args as string[])) {
+        fnlog(`Extra arguments: ${JSON.stringify(entry.extra_args)}`);
+        for (const extra_arg of entry.extra_args) {
             configure_args.push(extra_arg);
         }
         if (!setupCMakeOutputs.supports_path_to_build) {
             // If CMake doesn't support the -S and -B options, then we will
             // need to change the working directory when running the command
             // and set the source directory as the last argument
-            configure_args.push(`${inputs.source_dir}`);
+            configure_args.push(`${entry.source_dir}`);
         }
 
         /*
             Prepare build directory
          */
         // Ensure build_dir exists
-        const cmd_dir = setupCMakeOutputs.supports_path_to_build ? inputs.source_dir : std_build_dir;
+        const cmd_dir = setupCMakeOutputs.supports_path_to_build ? entry.source_dir : std_build_dir;
         if (!setupCMakeOutputs.supports_path_to_build) {
             await io.mkdirP(std_build_dir);
         }
-        core.info(`💻 ${std_build_dir}> ${inputs.cmake_path} ${makeArgsString(configure_args)}`);
-        const { exitCode: exitCode, stdout } = await exec.getExecOutput(`"${inputs.cmake_path}"`, configure_args, {
+        core.info(`💻 ${std_build_dir}> ${entry.cmake_path} ${makeArgsString(configure_args)}`);
+        const { exitCode: exitCode, stdout } = await exec.getExecOutput(`"${entry.cmake_path}"`, configure_args, {
             cwd: cmd_dir,
             ignoreReturnCode: true
         });
-        if (inputs.create_annotations) {
-            createCMakeConfigureAnnotations(stdout, inputs);
+        if (entry.create_annotations) {
+            createCMakeConfigureAnnotations(stdout, entry);
         }
         if (exitCode !== 0) {
             throw new Error(`CMake configure failed with exit code ${exitCode}`);
@@ -1496,35 +1535,37 @@ async function main(inputs: Inputs): Promise<void> {
     core.endGroup();
 
     // ==============================================
-    // Build steps
+    // Build step
     // ==============================================
-    core.startGroup(`🛠️ Build`);
-    if (inputs.build_target.length === 0) {
-        // null represents the default target
-        inputs.build_target = [null];
-    } else if (setupCMakeOutputs.supports_build_multiple_targets && inputs.build_target.length > 1) {
-        // If multiple targets are specified, then we can only build them
-        // all at once if the generator supports it. The targets
-        // need to be space separated.
-        inputs.build_target = [inputs.build_target.join(' ')];
-    }
-    for (const cur_cxxstd of inputs.cxxstd) {
-        core.info(`🛠️ Build (${make_factor_description(cur_cxxstd)})`);
-        const std_build_dir = make_build_dir(cur_cxxstd);
+    core.startGroup(`🛠️ Build (${factorDesc})`);
+    {
+        const std_build_dir = entry.build_dir;
+
+        // Normalize build targets
+        let build_targets = entry.build_target;
+        if (build_targets.length === 0) {
+            // null represents the default target
+            build_targets = [null];
+        } else if (setupCMakeOutputs.supports_build_multiple_targets && build_targets.length > 1) {
+            // If multiple targets are specified, then we can only build them
+            // all at once if the generator supports it. The targets
+            // need to be space separated.
+            build_targets = [build_targets.join(' ')];
+        }
 
         /*
             Build parameters
          */
-        for (const cur_build_target of inputs.build_target) {
+        for (const cur_build_target of build_targets) {
             const build_args: string[] = ['--build'];
             build_args.push(std_build_dir);
             if (setupCMakeOutputs.supports_parallel_build) {
                 build_args.push('--parallel');
-                build_args.push(`${inputs.jobs}`);
+                build_args.push(`${entry.jobs}`);
             }
-            if (inputs.build_type && generator_is_multi_config) {
+            if (entry.build_type && generator_is_multi_config) {
                 build_args.push('--config');
-                build_args.push(inputs.build_type || 'Release');
+                build_args.push(entry.build_type || 'Release');
             }
             if (cur_build_target) {
                 build_args.push('--target');
@@ -1532,13 +1573,13 @@ async function main(inputs: Inputs): Promise<void> {
                     build_args.push(split_build_target);
                 }
             }
-            core.info(`💻 ${inputs.source_dir}> ${inputs.cmake_path} ${makeArgsString(build_args)}`);
-            const { exitCode: exitCode, stdout } = await exec.getExecOutput(`"${inputs.cmake_path}"`, build_args, {
-                cwd: inputs.source_dir,
+            core.info(`💻 ${entry.source_dir}> ${entry.cmake_path} ${makeArgsString(build_args)}`);
+            const { exitCode: exitCode, stdout } = await exec.getExecOutput(`"${entry.cmake_path}"`, build_args, {
+                cwd: entry.source_dir,
                 ignoreReturnCode: true
             });
-            if (inputs.create_annotations) {
-                createCMakeBuildAnnotations(stdout, inputs);
+            if (entry.create_annotations) {
+                createCMakeBuildAnnotations(stdout, entry);
             }
             if (exitCode !== 0) {
                 throw new Error(`CMake build failed with exit code ${exitCode}`);
@@ -1550,12 +1591,12 @@ async function main(inputs: Inputs): Promise<void> {
     // ==============================================
     // Test step
     // ==============================================
-    if (inputs.run_tests !== false) {
-        core.startGroup(`🧪 Test`);
-        const tests_cxxstd = inputs.test_all_cxxstd ? inputs.cxxstd : [main_cxxstd];
-        for (const cur_cxxstd of tests_cxxstd) {
-            core.info(`🧪 Tests (${make_factor_description(cur_cxxstd)})`);
-            const std_build_dir = make_build_dir(cur_cxxstd);
+    // Run tests if: tests are enabled AND (test_all_cxxstd OR this is the main entry)
+    const shouldRunTests = entry.run_tests !== false && (entry.test_all_cxxstd || entry.is_main_entry);
+    if (shouldRunTests) {
+        core.startGroup(`🧪 Test (${factorDesc})`);
+        {
+            const std_build_dir = entry.build_dir;
 
             /*
                 Test parameters
@@ -1563,13 +1604,13 @@ async function main(inputs: Inputs): Promise<void> {
             const test_args: string[] = ['--test-dir', std_build_dir];
             if (setupCMakeOutputs.supports_parallel_build) {
                 test_args.push('--parallel');
-                test_args.push(`${inputs.jobs}`);
+                test_args.push(`${entry.jobs}`);
             }
-            if (inputs.build_type && generator_is_multi_config) {
+            if (entry.build_type && generator_is_multi_config) {
                 test_args.push('--build-config');
-                test_args.push(inputs.build_type || 'Release');
+                test_args.push(entry.build_type || 'Release');
             }
-            if (inputs.run_tests === true) {
+            if (entry.run_tests === true) {
                 test_args.push('--no-tests=error');
             } else {
                 test_args.push('--no-tests=ignore');
@@ -1580,15 +1621,15 @@ async function main(inputs: Inputs): Promise<void> {
             /*
                 Run
              */
-            core.info(`💻 ${inputs.source_dir}> ${ctest_path} ${makeArgsString(test_args)}`);
+            core.info(`💻 ${entry.source_dir}> ${ctest_path} ${makeArgsString(test_args)}`);
             const { exitCode: exitCode, stdout } = await exec.getExecOutput(`"${ctest_path}"`, test_args, {
-                cwd: inputs.source_dir,
+                cwd: entry.source_dir,
                 ignoreReturnCode: true
             });
-            if (inputs.create_annotations) {
-                createCMakeTestAnnotations(stdout, inputs);
+            if (entry.create_annotations) {
+                createCMakeTestAnnotations(stdout, entry);
             }
-            if (exitCode !== 0 && inputs.run_tests === true) {
+            if (exitCode !== 0 && entry.run_tests === true) {
                 throw new Error(`CMake tests failed with exit code ${exitCode}`);
             }
         }
@@ -1598,13 +1639,13 @@ async function main(inputs: Inputs): Promise<void> {
     // ==============================================
     // Install step
     // ==============================================
-    if (inputs.install !== false) {
-        core.startGroup(`🚚 Install`);
-        const install_cxxstd = inputs.install_all_cxxstd ? inputs.cxxstd : [main_cxxstd];
-        for (const cur_cxxstd of install_cxxstd) {
-            core.info(`🚚 Install (${make_factor_description(cur_cxxstd)})`);
-            const std_build_dir = make_build_dir(cur_cxxstd);
-            const std_install_dir = make_install_prefix(cur_cxxstd);
+    // Run install if: install is enabled AND (install_all_cxxstd OR this is the main entry)
+    const shouldInstall = entry.install !== false && (entry.install_all_cxxstd || entry.is_main_entry);
+    if (shouldInstall) {
+        core.startGroup(`🚚 Install (${factorDesc})`);
+        {
+            const std_build_dir = entry.build_dir;
+            const std_install_dir = entry.install_prefix;
 
             // Ensure install_dir exists
             await io.mkdirP(std_install_dir);
@@ -1619,12 +1660,12 @@ async function main(inputs: Inputs): Promise<void> {
                 install_args.push('--build');
             }
             install_args.push(std_build_dir);
-            if (inputs.build_type && generator_is_multi_config) {
+            if (entry.build_type && generator_is_multi_config) {
                 install_args.push('--config');
-                install_args.push(inputs.build_type || 'Release');
+                install_args.push(entry.build_type || 'Release');
             }
             if (setupCMakeOutputs.supports_cmake_install) {
-                if (inputs.install_prefix) {
+                if (entry.install_prefix) {
                     install_args.push('--prefix');
                     install_args.push(std_install_dir);
                 }
@@ -1636,12 +1677,12 @@ async function main(inputs: Inputs): Promise<void> {
             /*
                 Run
              */
-            core.info(`💻 ${inputs.source_dir}> ${inputs.cmake_path} ${makeArgsString(install_args)}`);
-            const { exitCode: exitCode } = await exec.getExecOutput(`"${inputs.cmake_path}"`, install_args, {
-                cwd: inputs.source_dir,
+            core.info(`💻 ${entry.source_dir}> ${entry.cmake_path} ${makeArgsString(install_args)}`);
+            const { exitCode: exitCode } = await exec.getExecOutput(`"${entry.cmake_path}"`, install_args, {
+                cwd: entry.source_dir,
                 ignoreReturnCode: true
             });
-            if (exitCode !== 0 && inputs.install === true) {
+            if (exitCode !== 0 && entry.install === true) {
                 throw new Error(`CMake install failed with exit code ${exitCode}`);
             }
         }
@@ -1651,14 +1692,17 @@ async function main(inputs: Inputs): Promise<void> {
     // ==============================================
     // Package step
     // ==============================================
-    if (inputs.package) {
-        core.startGroup(`📦 Package`);
+    // Run package if: package is enabled AND (package_all_cxxstd OR this is the main entry)
+    const shouldPackage = entry.package && (entry.package_all_cxxstd || entry.is_main_entry);
+    if (shouldPackage) {
+        core.startGroup(`📦 Package (${factorDesc})`);
 
         /*
             Determine cpack generators
          */
         let use_default_generators = false;
-        if (inputs.package_generators.length === 0) {
+        let package_generators = entry.package_generators;
+        if (package_generators.length === 0) {
             fnlog(`No package generators specified. Using available generators.`);
             // Run something equivalent to
             // generators=$("${{ steps.params.outputs.cpack_path }}" --help | awk '/Generators/ {flag=1; next} flag && NF {print $1}' ORS=';' | sed 's/;$//')
@@ -1687,89 +1731,85 @@ async function main(inputs: Inputs): Promise<void> {
                 }
             }
             core.info(`🔄 Available CPack generators: ${available_generators.join(';')}`);
-            inputs.package_generators = available_generators;
+            package_generators = available_generators;
             use_default_generators = true;
         } else {
-            fnlog(`Using specified package generators: ${inputs.package_generators.join(';')}`);
+            fnlog(`Using specified package generators: ${package_generators.join(';')}`);
         }
 
-        const package_cxxstd = inputs.package_all_cxxstd ? inputs.cxxstd : [main_cxxstd];
+        const std_build_dir = entry.build_dir;
         const package_files: string[] = [];
-        for (const cur_cxxstd of package_cxxstd) {
-            core.info(`📦 Package (${make_factor_description(cur_cxxstd)})`);
-            const std_build_dir = make_build_dir(cur_cxxstd);
-            // const std_install_dir = make_install_prefix(cur_cxxstd)
 
-            for (const package_generator of inputs.package_generators) {
-                core.info(`⚙️ Generating package with generator "${package_generator}"`);
-                const cpack_args: string[] = ['-G', package_generator];
-                if (inputs.build_type && generator_is_multi_config) {
-                    cpack_args.push('-C');
-                    cpack_args.push(inputs.build_type || 'Release');
+        // Internal loop over package generators (not a combinatorial factor)
+        for (const package_generator of package_generators) {
+            core.info(`⚙️ Generating package with generator "${package_generator}"`);
+            const cpack_args: string[] = ['-G', package_generator];
+            if (entry.build_type && generator_is_multi_config) {
+                cpack_args.push('-C');
+                cpack_args.push(entry.build_type || 'Release');
+            }
+            if (trace_commands.enabled()) {
+                cpack_args.push('--verbose');
+            }
+            if (entry.package_name) {
+                cpack_args.push('-P');
+                cpack_args.push(entry.package_name);
+            }
+            if (entry.package_dir) {
+                cpack_args.push('-B');
+                cpack_args.push(entry.package_dir);
+            }
+            if (entry.package_vendor) {
+                cpack_args.push('--vendor');
+                cpack_args.push(entry.package_vendor);
+            }
+            /*
+                Run
+             */
+            core.info(`💻 ${std_build_dir}> ${cpack_path} ${makeArgsString(cpack_args)}`);
+            const { exitCode: exitCode, stdout } = await exec.getExecOutput(`"${cpack_path}"`, cpack_args, {
+                cwd: std_build_dir,
+                ignoreReturnCode: true
+            });
+            if (exitCode !== 0) {
+                fnlog(`package: ${entry.package}`);
+                fnlog(`use_default_generators: ${use_default_generators}`);
+                const msg = `CPack (generator: ${package_generator}) failed with exit code ${exitCode}`;
+                if (!use_default_generators) {
+                    throw new Error(msg);
+                } else {
+                    // If we are using the default generators, then we
+                    // can ignore the failure and continue with the
+                    // next generator because the generator hasn't been
+                    // explicitly specified by the user.
+                    fnlog(msg);
+                    continue;
                 }
-                if (trace_commands.enabled()) {
-                    cpack_args.push('--verbose');
-                }
-                if (inputs.package_name) {
-                    cpack_args.push('-P');
-                    cpack_args.push(inputs.package_name);
-                }
-                if (inputs.package_dir) {
-                    cpack_args.push('-B');
-                    cpack_args.push(make_package_dir(cur_cxxstd));
-                }
-                if (inputs.package_vendor) {
-                    cpack_args.push('--vendor');
-                    cpack_args.push(inputs.package_vendor);
-                }
-                /*
-                    Run
-                 */
-                core.info(`💻 ${std_build_dir}> ${cpack_path} ${makeArgsString(cpack_args)}`);
-                const { exitCode: exitCode, stdout } = await exec.getExecOutput(`"${cpack_path}"`, cpack_args, {
-                    cwd: std_build_dir,
-                    ignoreReturnCode: true
-                });
-                if (exitCode !== 0) {
-                    fnlog(`package: ${inputs.package}`);
-                    fnlog(`use_default_generators: ${use_default_generators}`);
-                    const msg = `CPack (generator: ${package_generator}) failed with exit code ${exitCode}`;
-                    if (!use_default_generators) {
-                        throw new Error(msg);
-                    } else {
-                        // If we are using the default generators, then we
-                        // can ignore the failure and continue with the
-                        // next generator because the generator hasn't been
-                        // explicitly specified by the user.
-                        fnlog(msg);
-                        continue;
-                    }
-                }
+            }
 
-                // Find package file from the command output
-                const lines = stdout.split(/\r?\n/);
-                const regex = /^\s*CPack: - package: (.*) generated\.$/;
-                for (const line of lines) {
-                    const match = line.match(regex);
-                    if (match) {
-                        const packagePath = match[1];
-                        core.info(`✅ Generated package: ${packagePath}`);
-                        package_files.push(packagePath);
-                        break;
-                    }
+            // Find package file from the command output
+            const lines = stdout.split(/\r?\n/);
+            const regex = /^\s*CPack: - package: (.*) generated\.$/;
+            for (const line of lines) {
+                const match = line.match(regex);
+                if (match) {
+                    const packagePath = match[1];
+                    core.info(`✅ Generated package: ${packagePath}`);
+                    package_files.push(packagePath);
+                    break;
                 }
             }
         }
         core.endGroup();
 
-        if (package_files.length !== 0 && inputs.package_artifact) {
+        if (package_files.length !== 0 && entry.package_artifact) {
             core.startGroup(`⬆️ Upload package artifacts`);
             /*
                 Generate artifacts
              */
             core.info(`📦 Package files: ${package_files.join(',')}`);
 
-            // Determine the common prefix of the basenamse of these files
+            // Determine the common prefix of the basenames of these files
             // to use as the artifact
             let common_prefix = '';
             for (const package_file of package_files) {
@@ -1840,10 +1880,10 @@ async function main(inputs: Inputs): Promise<void> {
             }
 
             // Add compiler to artifact name
-            if (!inputs.cxx && artifact_name === 'windows') {
+            if (!entry.cxx && artifact_name === 'windows') {
                 artifact_name += '-msvc';
-            } else if (inputs.cxx) {
-                const cxx_basename = path.basename(inputs.cxx);
+            } else if (entry.cxx) {
+                const cxx_basename = path.basename(entry.cxx);
                 if (cxx_basename.startsWith('clang')) {
                     if (artifact_name !== 'windows') {
                         artifact_name += '-clang';
@@ -1862,7 +1902,7 @@ async function main(inputs: Inputs): Promise<void> {
             }
             artifact_name += '-packages';
             fnlog(`Artifact name: ${artifact_name}`);
-            fnlog(`Retention days: ${inputs.package_retention_days}`);
+            fnlog(`Retention days: ${entry.package_retention_days}`);
             const packages_dir = path.dirname(common_prefix);
             fnlog(`Packages directory: ${packages_dir}`);
             const artifact = new DefaultArtifactClient();
@@ -1870,7 +1910,7 @@ async function main(inputs: Inputs): Promise<void> {
                 artifact_name,
                 package_files,
                 packages_dir,
-                { retentionDays: inputs.package_retention_days }
+                { retentionDays: entry.package_retention_days }
             );
             trace_commands.log(`Created artifact with id: ${id} (bytes: ${size}`);
             core.endGroup();
@@ -1957,6 +1997,201 @@ function parseExtraArgs(extra_args: string[]): string[] | Record<string, string[
 }
 
 /**
+ * Sanitizes a key string for use in directory names.
+ *
+ * Replaces invalid filesystem characters with underscores and collapses
+ * consecutive underscores.
+ *
+ * @param key - Key string to sanitize
+ * @returns Sanitized string safe for filesystem use
+ */
+function sanitizeKey(key: string): string {
+    return key
+        .replace(/[^a-zA-Z0-9_-]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '');
+}
+
+/**
+ * Generates a directory suffix from combinatorial factor values.
+ *
+ * Creates a suffix string that uniquely identifies this combination of factors.
+ * Returns empty string for the main/default entry (first extra_args key + main cxxstd).
+ *
+ * @param extraArgsKey - The extra_args configuration key (undefined if not using map)
+ * @param cxxstd - The C++ standard version for this entry
+ * @param mainCxxstd - The main/default C++ standard version
+ * @param isFirstExtraArgsKey - Whether this is the first (default) extra_args key
+ * @returns Suffix string (empty for main entry, e.g., "-asan-cxx20" otherwise)
+ */
+function generateFactorSuffix(
+    extraArgsKey: string | undefined,
+    cxxstd: string | null,
+    mainCxxstd: string | null,
+    isFirstExtraArgsKey: boolean
+): string {
+    const parts: string[] = [];
+
+    // Add extra_args key if not the first/default
+    if (extraArgsKey && !isFirstExtraArgsKey) {
+        parts.push(sanitizeKey(extraArgsKey));
+    }
+
+    // Add cxxstd if not the main standard
+    if (cxxstd && cxxstd !== mainCxxstd) {
+        parts.push(`cxx${cxxstd}`);
+    }
+
+    return parts.length > 0 ? `-${parts.join('-')}` : '';
+}
+
+/**
+ * Combines a base path with a factor suffix.
+ *
+ * @param basePath - Base directory path
+ * @param suffix - Factor suffix (may be empty)
+ * @returns Combined path
+ */
+function makeFactorPath(basePath: string, suffix: string): string {
+    return suffix ? `${basePath}${suffix}` : basePath;
+}
+
+/**
+ * Expands combinatorial factors in Inputs to a list of ResolvedInputs.
+ *
+ * Creates the Cartesian product of:
+ * - extra_args keys (if extra_args is a map)
+ * - cxxstd values
+ *
+ * The first combination (first extra_args key + first cxxstd) is marked as the
+ * main entry and receives the exact user-specified paths without suffixes.
+ *
+ * @param inputs - Raw inputs with combinatorial factors
+ * @returns Array of resolved inputs, one per factor combination
+ */
+function expandInputs(inputs: Inputs): ResolvedInputs[] {
+    function fnlog(msg: string): void {
+        trace_commands.log('expandInputs: ' + msg);
+    }
+
+    const results: ResolvedInputs[] = [];
+
+    // Determine extra_args structure
+    const isExtraArgsMap = !Array.isArray(inputs.extra_args);
+    const extraArgsKeys: (string | undefined)[] = isExtraArgsMap
+        ? Object.keys(inputs.extra_args as Record<string, string[]>)
+        : [undefined];
+    const firstExtraArgsKey = extraArgsKeys[0];
+
+    // Main cxxstd is the first in the list
+    const mainCxxstd = inputs.cxxstd[0];
+
+    fnlog(`Expanding inputs: ${extraArgsKeys.length} extra_args keys × ${inputs.cxxstd.length} cxxstd values`);
+
+    for (const extraArgsKey of extraArgsKeys) {
+        const isFirstExtraArgsKey = extraArgsKey === firstExtraArgsKey;
+
+        // Get the extra_args array for this key
+        const extraArgsArray: string[] = isExtraArgsMap
+            ? (inputs.extra_args as Record<string, string[]>)[extraArgsKey as string]
+            : (inputs.extra_args as string[]);
+
+        for (const cxxstd of inputs.cxxstd) {
+            const isMainEntry = isFirstExtraArgsKey && cxxstd === mainCxxstd;
+            const suffix = generateFactorSuffix(extraArgsKey, cxxstd, mainCxxstd, isFirstExtraArgsKey);
+
+            fnlog(`Entry: extra_args_key=${extraArgsKey ?? '(none)'}, cxxstd=${cxxstd ?? '(default)'}, suffix="${suffix}", is_main=${isMainEntry}`);
+
+            const entry: ResolvedInputs = {
+                // Copy non-factor fields
+                cmake_path: inputs.cmake_path,
+                cmake_version: inputs.cmake_version,
+                source_dir: inputs.source_dir,
+                url: inputs.url,
+                git_repository: inputs.git_repository,
+                git_tag: inputs.git_tag,
+                download_dir: inputs.download_dir,
+                patches: inputs.patches,
+                preset: inputs.preset,
+                cc: inputs.cc,
+                ccflags: inputs.ccflags,
+                cxx: inputs.cxx,
+                cxxflags: inputs.cxxflags,
+                shared: inputs.shared,
+                toolchain: inputs.toolchain,
+                generator: inputs.generator,
+                generator_toolset: inputs.generator_toolset,
+                generator_architecture: inputs.generator_architecture,
+                arch: inputs.arch,
+                build_type: inputs.build_type,
+                build_target: inputs.build_target,
+                export_compile_commands: inputs.export_compile_commands,
+                jobs: inputs.jobs,
+                run_tests: inputs.run_tests,
+                configure_tests_flag: inputs.configure_tests_flag,
+                install: inputs.install,
+                package: inputs.package,
+                package_name: inputs.package_name,
+                package_vendor: inputs.package_vendor,
+                package_generators: inputs.package_generators,
+                package_artifact: inputs.package_artifact,
+                package_retention_days: inputs.package_retention_days,
+                create_annotations: inputs.create_annotations,
+                ref_source_dir: inputs.ref_source_dir,
+                trace_commands: inputs.trace_commands,
+
+                // Resolved factor fields
+                cxxstd: cxxstd,
+                extra_args: extraArgsArray,
+                extra_args_key: extraArgsKey,
+                is_main_entry: isMainEntry,
+
+                // Flags controlling which steps run for non-main entries
+                test_all_cxxstd: inputs.test_all_cxxstd,
+                install_all_cxxstd: inputs.install_all_cxxstd,
+                package_all_cxxstd: inputs.package_all_cxxstd,
+
+                // Paths with factor suffixes
+                build_dir: makeFactorPath(inputs.build_dir || 'build', suffix),
+                install_prefix: makeFactorPath(inputs.install_prefix || 'install', suffix),
+                package_dir: makeFactorPath(inputs.package_dir || 'package', suffix),
+            };
+
+            results.push(entry);
+        }
+    }
+
+    fnlog(`Expanded to ${results.length} entries`);
+    return results;
+}
+
+/**
+ * Validates that all expanded entries have unique output paths.
+ *
+ * Throws an error if duplicate path suffixes are detected, which would cause
+ * entries to overwrite each other's outputs.
+ *
+ * @param entries - Array of resolved inputs to validate
+ * @throws Error if duplicate output paths are detected
+ */
+function validateUniquePaths(entries: ResolvedInputs[]): void {
+    const buildDirs = new Set<string>();
+
+    for (const entry of entries) {
+        if (buildDirs.has(entry.build_dir)) {
+            const factorDesc = entry.extra_args_key
+                ? `extra_args_key="${entry.extra_args_key}", cxxstd=${entry.cxxstd ?? 'default'}`
+                : `cxxstd=${entry.cxxstd ?? 'default'}`;
+            throw new Error(
+                `Duplicate build directory "${entry.build_dir}" detected for entry (${factorDesc}). ` +
+                `Ensure factor combinations produce unique identifiers.`
+            );
+        }
+        buildDirs.add(entry.build_dir);
+    }
+}
+
+/**
  * Normalizes file paths by converting backslashes to forward slashes on Windows.
  *
  * @param inputPath - File path to normalize
@@ -2020,13 +2255,13 @@ function applyPresetMacros(value: unknown, allInputs: Inputs): unknown {
 /**
  * GitHub Actions entry point for the CMake workflow action.
  *
- * Parses action inputs and executes the CMake workflow.
+ * Parses action inputs, expands combinatorial factors, and executes
+ * the CMake workflow for each factor combination.
  */
 async function run(): Promise<void> {
-    function fnlog(msg: string): void {
-        trace_commands.log('cmake-workflow: ' + msg);
-    }
-
+    // ==============================================
+    // Parse inputs
+    // ==============================================
     const inputs: Inputs = {
         // CMake
         cmake_path: gh_inputs.getInput('cmake-path'),
@@ -2096,39 +2331,72 @@ async function run(): Promise<void> {
     gh_inputs.printInputObject(inputs as unknown as Record<string, unknown>);
     core.endGroup();
 
-    const singleExtraArgs = Array.isArray(inputs.extra_args);
-    if (singleExtraArgs) {
-        await main(inputs);
-    } else {
-        // Run a workflow for each key-value pair in the extra_args map
-        let isFirst = true;
-        for (const key in inputs.extra_args) {
-            core.startGroup(`🧩 Running workflow "${key}"`);
-            const value = (inputs.extra_args as Record<string, string[]>)[key];
-            const new_inputs = Object.assign({}, inputs);
-            new_inputs.extra_args = value;
-            fnlog(`Running workflow for key "${key}" with args "${value}"`);
-            if (!isFirst) {
-                // Create custom build/install/package dirs for each
-                // extra key-value pair in the extra_args map
-                const safeKey = key
-                    .replace(/[^a-zA-Z0-9_-]/g, '_')
-                    .replace(/_+/g, '_');
-                const old_build_dir = new_inputs.build_dir || 'build';
-                new_inputs.build_dir = path.join(old_build_dir, safeKey);
-                fnlog(`build_dir: ${old_build_dir} -> ${new_inputs.build_dir}`);
-                const old_install_prefix = new_inputs.install_prefix || 'install';
-                new_inputs.install_prefix = path.join(old_install_prefix, safeKey);
-                fnlog(`install_prefix: ${old_install_prefix} -> ${new_inputs.install_prefix}`);
-                const old_package_dir = new_inputs.package_dir || 'package';
-                new_inputs.package_dir = path.join(old_package_dir, safeKey);
-                fnlog(`package_dir: ${old_package_dir} -> ${new_inputs.package_dir}`);
-            }
-            new_inputs.extra_args_key = key;
-            await main(new_inputs);
-            isFirst = false;
-            core.endGroup();
-        }
+    // ==============================================
+    // Download source code (once)
+    // ==============================================
+    if (inputs.url || inputs.git_repository) {
+        core.startGroup(`🌎 Download source code`);
+        await downloadSourceCode(inputs);
+        core.endGroup();
+    }
+
+    // ==============================================
+    // Apply patches (once)
+    // ==============================================
+    if (inputs.patches.length > 0) {
+        core.startGroup(`🩹 Apply patches`);
+        await applyPatches(inputs);
+        core.endGroup();
+    }
+
+    // ==============================================
+    // Setup CMake (once)
+    // ==============================================
+    core.startGroup(`🔎 Setup CMake`);
+    const setupCMakeOutputs: SetupCMakeOutputs = await setup_cmake.main({
+        trace_commands: trace_commands,
+        version: inputs.cmake_version,
+        cmake_file: path.resolve(inputs.source_dir, 'CMakeLists.txt'),
+        path: inputs.cmake_path,
+        cmake_path: 'cmake',
+        cache: false,
+        check_latest: false,
+        update_environment: false
+    }, false);
+    if (!setupCMakeOutputs.path) {
+        throw new Error('❌ CMake not found');
+    }
+    inputs.cmake_path = setupCMakeOutputs.path;
+    core.endGroup();
+
+    // ==============================================
+    // Resolve parameters (once)
+    // ==============================================
+    core.startGroup(`🎛️ CMake parameters`);
+    const resolvedParams = await resolveInputParameters(inputs, setupCMakeOutputs);
+    core.endGroup();
+
+    // ==============================================
+    // Expand combinatorial factors
+    // ==============================================
+    core.startGroup(`🔢 Expand factor combinations`);
+    const entries = expandInputs(inputs);
+    validateUniquePaths(entries);
+    core.info(`📊 Expanded to ${entries.length} factor combination(s)`);
+    for (const entry of entries) {
+        const desc = makeFactorDescription(entry);
+        core.info(`  • ${desc}: build_dir=${entry.build_dir}`);
+    }
+    core.endGroup();
+
+    // ==============================================
+    // Process each entry
+    // ==============================================
+    for (const entry of entries) {
+        const desc = makeFactorDescription(entry);
+        core.startGroup(`🧩 Processing: ${desc}`);
+        await processEntry(entry, setupCMakeOutputs, resolvedParams);
+        core.endGroup();
     }
 }
 
@@ -2145,7 +2413,9 @@ if (require.main === module) {
 }
 
 export {
-    main,
+    processEntry,
+    expandInputs as _expandInputs,
+    validateUniquePaths as _validateUniquePaths,
     resolveInputParameters as _resolveInputParameters,
     normalizePath as _normalizePathForCMake,
     deriveGeneratorArchitectureFromArch as _deriveGeneratorArchitectureFromArch,

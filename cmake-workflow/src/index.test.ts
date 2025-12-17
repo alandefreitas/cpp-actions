@@ -175,7 +175,6 @@ describe('applyPatches', () => {
             package_vendor: '',
             package_generators: [],
             extra_args: [],
-            extra_args_key: undefined,
             cmake_version: '',
             url: '',
             git_repository: '',
