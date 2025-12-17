@@ -181,22 +181,135 @@ description: |
   built-in https://handlebarsjs.com/guide/builtin-helpers.html[helpers] provided by Handlebars and the
   predefined helpers defined by the action:
   
+  === String Helpers for Extra Values
+
   [cols="1,3"]
   |===
   | Helper | Description
   | `lowercase` | Converts the value to lowercase
   | `uppercase` | Converts the value to uppercase
-  | `contains` | Checks if the value contains a substring
+  | `contains` | Checks if the value contains a substring (case-sensitive)
   | `startsWith` / `starts-with` | Checks if the value starts with a substring
   | `endsWith` / `ends-with` | Checks if the value ends with a substring
-  | `substring` | Extracts a substring from the value
-  | `and` | Logical AND operator
-  | `or` | Logical OR operator
-  | `not` | Logical NOT operator
-  | `eq` | Equality operator
-  | `ieq` | Case-insensitive equality operator
-  | `ne` | Inequality operator
-  | `ine` | Case-insensitive inequality operator
+  | `substr` | Extracts a substring: `substr str start end`
+  | `replace` | Replaces all occurrences: `replace str search replacement`
+  | `replaceFirst` | Replaces first occurrence only
+  | `indexOf` | Returns index of substring, or -1 if not found
+  | `lastIndexOf` | Returns last index of substring, or -1 if not found
+  | `split` | Splits string into array: `split str delimiter`
+  | `trim` | Removes leading/trailing whitespace
+  | `trimLeft` | Removes leading whitespace
+  | `trimRight` | Removes trailing whitespace
+  | `capitalize` | Capitalizes first character
+  | `titlecase` | Capitalizes first letter of each word
+  | `camelcase` | Converts to camelCase
+  | `pascalcase` | Converts to PascalCase
+  | `snakecase` | Converts to snake_case
+  | `kebabcase` | Converts to kebab-case
+  | `reverse` | Reverses a string (or array)
+  |===
+
+  === Case-Insensitive String Helpers
+
+  These helpers match GitHub Actions expression behavior (case-insensitive):
+
+  [cols="1,3"]
+  |===
+  | Helper | Description
+  | `icontains` | Case-insensitive substring check
+  | `istartsWith` / `istarts-with` | Case-insensitive prefix check
+  | `iendsWith` / `iends-with` | Case-insensitive suffix check
+  |===
+
+  === Logical Helpers
+
+  [cols="1,3"]
+  |===
+  | Helper | Description
+  | `and` | Logical AND (supports multiple arguments)
+  | `or` | Logical OR (supports multiple arguments)
+  | `not` | Logical NOT
+  | `select` | Ternary operator: `select condition trueValue falseValue`
+  |===
+
+  === Comparison Helpers
+
+  [cols="1,3"]
+  |===
+  | Helper | Description
+  | `eq` | Strict equality (`===`)
+  | `ieq` | Case-insensitive equality
+  | `ne` | Inequality (`!==`)
+  | `ine` | Case-insensitive inequality
+  | `lt` | Less than (`<`)
+  | `le` | Less than or equal (`\<=`)
+  | `gt` | Greater than (`>`)
+  | `ge` | Greater than or equal (`>=`)
+  |===
+
+  === Math Helpers
+
+  [cols="1,3"]
+  |===
+  | Helper | Description
+  | `add` | Addition: `add a b`
+  | `sub` | Subtraction: `sub a b`
+  | `mul` | Multiplication: `mul a b`
+  | `div` | Division: `div a b`
+  | `mod` | Modulo: `mod a b`
+  | `abs` | Absolute value
+  | `floor` | Round down
+  | `ceil` | Round up
+  | `round` | Round to nearest integer
+  | `min` | Minimum of values: `min a b c ...`
+  | `max` | Maximum of values: `max a b c ...`
+  | `pow` | Power: `pow base exponent`
+  |===
+
+  === Array Helpers
+
+  [cols="1,3"]
+  |===
+  | Helper | Description
+  | `join` | Joins array elements: `join array delimiter`
+  | `first` | Returns first element
+  | `last` | Returns last element
+  | `nth` | Returns nth element (0-indexed): `nth array index`
+  | `length` | Returns length of array or string
+  | `slice` | Extracts portion: `slice array start end`
+  | `sort` | Sorts array alphabetically
+  | `includes` | Checks if array contains value
+  |===
+
+  === Type Checking Helpers
+
+  [cols="1,3"]
+  |===
+  | Helper | Description
+  | `isString` | Returns true if value is a string
+  | `isNumber` | Returns true if value is a number
+  | `isArray` | Returns true if value is an array
+  | `isEmpty` | Returns true if value is empty string, null, undefined, or empty array
+  |===
+
+  === Conversion Helpers
+
+  [cols="1,3"]
+  |===
+  | Helper | Description
+  | `toNumber` | Converts string to number
+  | `toJSON` | Converts value to JSON string (GitHub Actions compatible)
+  | `fromJSON` | Parses JSON string to value (GitHub Actions compatible)
+  |===
+
+  === Utility Helpers
+
+  [cols="1,3"]
+  |===
+  | Helper | Description
+  | `default` | Returns default if value is falsy: `default value fallback`
+  | `coalesce` | Returns first non-null/undefined value: `coalesce a b c`
+  | `format` | Template substitution: `format "Hello {0}" name` (GitHub Actions compatible)
   |===
   
   == Ordering entries
@@ -254,13 +367,13 @@ description: |
   A https://github.com/actions/runner/issues/2906#issuecomment-2109514798[workaround] is to set
   the `volumes` key of the container object so that the user can provide its own Node installation.
   
-  This action will provide theses suggestions in the `container` key of the matrix entries.
+  This action will provide these suggestions in the `container` key of the matrix entries.
   However, the user should still include a step in the workflow to install the required Node version
   in the `/__e/node20` directory.
   
   == Next steps
   
-  After setting creating the test matrix, the next step in your workflow should usually be
+  After creating the test matrix, the next step in your workflow should usually be
   xref:actions/setup-cpp.adoc[].
 
 inputs:
