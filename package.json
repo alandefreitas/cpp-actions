@@ -1,5 +1,5 @@
 {
-  "name": "cpp-actions-monorepo",
+  "name": "cpp-actions",
   "version": "1.9.1",
   "private": true,
   "description": "GitHub Actions for C++ projects",
