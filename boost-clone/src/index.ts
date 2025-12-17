@@ -1032,19 +1032,26 @@ async function executeGitStrategy(
     }
 
     // Initialize submodules
+    // Check if we have precomputed dependencies for this exact release tag
+    const depsData = boostDepsData as BoostDepsData;
+    const hasPrecomputedDepsForBranch = isReleaseTag(inputs.branch) && inputs.branch in depsData.releases;
+
     if (directModules.size === 0) {
         // No specific modules requested, initialize all
         core.startGroup('🔧 Initialize All Boost Submodules');
         await initializeAllSubmodules(inputs, gitFeatures);
         core.endGroup();
-    } else if (estimation.fromPrecomputed && estimation.totalCount > 0) {
-        // We have precomputed transitive deps, use batch initialization
+    } else if (hasPrecomputedDepsForBranch && estimation.totalCount > 0) {
+        // We have precomputed transitive deps for this exact release tag, use batch initialization.
+        // Only use batch init for exact release tags (e.g., boost-1.87.0) where we have
+        // precomputed dependencies in boost-deps.json. For branches like 'develop' or 'master',
+        // or release tags not in our precomputed data, we must use layer-by-layer discovery.
         core.startGroup('🔧 Batch Initialize Boost Submodules');
         core.info(`Using precomputed dependencies for batch initialization`);
         await batchInitializeSubmodules(inputs, estimation.allModules, gitFeatures);
         core.endGroup();
     } else {
-        // No precomputed data, use layer-by-layer discovery
+        // No precomputed data for this branch, use layer-by-layer discovery
         core.startGroup('🔧 Initialize Boost Submodules');
         core.info(`Using layer-by-layer dependency discovery`);
         await initializeSubmodules(inputs, directModules, gitFeatures, exceptions, submodulePaths);
