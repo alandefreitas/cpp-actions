@@ -252,6 +252,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.9.1/index.html">v1.9.1</a>
+        </li>
+        <li class="version">
           <a href="../v1.9.0/index.html">v1.9.0</a>
         </li>
         <li class="version">
@@ -352,6 +355,7 @@
   <div class="version-menu">
     <a class="version is-current" href="boost-clone.html">master</a>
     <a class="version" href="../develop/actions/boost-clone.html">develop</a>
+    <a class="version" href="../v1.9.1/actions/boost-clone.html">v1.9.1</a>
     <a class="version" href="../v1.9.0/actions/boost-clone.html">v1.9.0</a>
     <a class="version" href="../v1.8.12/actions/boost-clone.html">v1.8.12</a>
     <a class="version" href="../v1.8.11/actions/boost-clone.html">v1.8.11</a>
@@ -580,6 +584,32 @@ most users should consider the possibility of setting this option to <code>true<
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>clone-strategy</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Strategy for obtaining Boost source files.</p>
+<p class="tableblock">- <code>auto</code>: Automatically select the best strategy based on branch type and module count.
+  For release tags with many modules (&gt;25), downloads the CMake release archive.
+  For develop/master or few modules, uses git clone with batch initialization.
+- <code>git</code>: Always use git clone (current behavior, with batch-init optimization).
+- <code>archive</code>: Always download the CMake release archive (only works for release tags).</p>
+<p class="tableblock">The archive strategy is faster when many modules are needed, as it avoids per-module
+git overhead. However, it only works for release tags (e.g., boost-1.87.0), not for
+develop/master branches.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>auto</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>archive-threshold</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Number of total modules (including transitive dependencies) above which the archive
+strategy is preferred over git clone.</p>
+<p class="tableblock">Only applies when clone-strategy is 'auto' and branch is a release tag.</p>
+<p class="tableblock">The default of 25 is an approximate crossover point based on typical network
+conditions. Archive download has a fixed overhead (~30s for the ~80MB CMake archive)
+but no per-module cost. Git clone has lower initial cost but adds ~0.5-1s per module
+for submodule initialization. For projects needing fewer modules, git is faster;
+for more modules, archive becomes more efficient. Adjust based on your network and
+typical module count.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>25</code></p></td>
 </tr>
 </tbody>
 </table>

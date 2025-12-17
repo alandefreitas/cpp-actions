@@ -252,6 +252,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.9.1/index.html">v1.9.1</a>
+        </li>
+        <li class="version">
           <a href="../v1.9.0/index.html">v1.9.0</a>
         </li>
         <li class="version">
@@ -352,6 +355,7 @@
   <div class="version-menu">
     <a class="version is-current" href="create-changelog.html">master</a>
     <a class="version" href="../develop/actions/create-changelog.html">develop</a>
+    <a class="version" href="../v1.9.1/actions/create-changelog.html">v1.9.1</a>
     <a class="version" href="../v1.9.0/actions/create-changelog.html">v1.9.0</a>
     <a class="version" href="../v1.8.12/actions/create-changelog.html">v1.8.12</a>
     <a class="version" href="../v1.8.11/actions/create-changelog.html">v1.8.11</a>
@@ -450,7 +454,127 @@ perform a shallow clone and the Changelog will only include the latest commit.</
 </div>
 </div>
 <div class="sect1">
-<h2 id="_example"><a class="anchor" href="#_example"></a>Example</h2>
+<h2 id="_standalone_cli"><a class="anchor" href="#_standalone_cli"></a>Standalone CLI</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This action can also be used as a standalone command-line tool to generate changelogs locally,
+outside of GitHub Actions workflows. This is useful for:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Previewing changelog output before creating a release</p>
+</li>
+<li>
+<p>Generating changelogs for local development</p>
+</li>
+<li>
+<p>Integrating changelog generation into custom scripts</p>
+</li>
+</ul>
+</div>
+<div class="sect2">
+<h3 id="_installation"><a class="anchor" href="#_installation"></a>Installation</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Clone the repository
+git clone https://github.com/alandefreitas/cpp-actions.git
+cd cpp-actions/create-changelog
+
+# Install dependencies and build
+npm install
+npm run build</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_global_installation"><a class="anchor" href="#_global_installation"></a>Global Installation</h3>
+<div class="paragraph">
+<p>To install <code>create-changelog</code> as a global command accessible from any directory:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># From the repository root, build dependencies first
+npm install
+npm run prepare
+
+# Then link the create-changelog package globally
+cd create-changelog
+npm link</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>After linking, you can run <code>create-changelog</code> from any git repository:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Navigate to any project and generate its changelog
+cd /path/to/any/project
+create-changelog
+
+# Or with options
+create-changelog -o RELEASE_NOTES.md --limit 50</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>To uninstall the global command:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">npm unlink -g create-changelog</code></pre>
+</div>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+Global installation is useful for testing changelog generation locally before committing workflow changes, or for generating changelogs in projects that don&#8217;t use this action.
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_usage"><a class="anchor" href="#_usage"></a>Usage</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Run from the create-changelog directory
+npm run create-changelog -- --source_dir /path/to/your/repo
+
+# Or run the compiled script directly
+node lib/create-changelog.js --source_dir /path/to/your/repo</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_cli_options"><a class="anchor" href="#_cli_options"></a>CLI Options</h3>
+<div class="paragraph">
+<p>All action inputs are available as CLI options with underscores instead of hyphens
+(e.g., <code>--source_dir</code>, <code>--version_pattern</code>). Use <code>-o</code> as shorthand for <code>--output_path</code>.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_example"><a class="anchor" href="#_example"></a>Example</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Generate changelog for current directory
+node lib/create-changelog.js
+
+# Generate changelog with custom output path
+node lib/create-changelog.js -o RELEASE_NOTES.md
+
+# Generate changelog for a specific repository
+node lib/create-changelog.js --source_dir ~/projects/my-repo --limit 50</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_example_2"><a class="anchor" href="#_example_2"></a>Example</h2>
 <div class="sectionbody">
 <div class="listingblock">
 <div class="content">
@@ -543,11 +667,16 @@ thank you message.</p></td>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>check-unconventional</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Check for commits that do not follow the conventional commit format.</p>
-<p class="tableblock">If one of the new commits in a PR does not follow the conventional commit format,
-the action will create a warning so that the user can fix the commit message.</p>
+<p class="tableblock">This input controls the behavior when unconventional commits are detected:</p>
+<p class="tableblock">- <code>false</code>: Disable checking (no warnings or errors)
+- <code>warn</code> or <code>true</code>: Emit warnings for unconventional commits (default)
+- <code>error</code>: Fail the action if unconventional commits are found</p>
+<p class="tableblock">When enabled, if one of the new commits in a PR does not follow the
+conventional commit format, the action will either warn or fail depending
+on this setting.</p>
 <p class="tableblock">This helps ensure all commit messages can be used in the changelog so
 that it&#8217;s consistent and that the release notes are clear and concise.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>warn</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>link-commits</code></p></td>
@@ -593,6 +722,44 @@ with the current changelog.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>include-types</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Comma-separated list of commit types to include in the changelog.</p>
+<p class="tableblock">When specified, only commits with these types will appear in the changelog.
+If empty (default), all commit types are included before applying exclusions.</p>
+<p class="tableblock">Common types: feat, fix, perf, refactor, docs, style, build, test, ci, chore, release, other</p>
+<p class="tableblock">Example: 'feat, fix, perf, docs'</p>
+<p class="tableblock">Note: The 'other' type represents commits that don&#8217;t follow conventional commit format.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>exclude-types</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Comma-separated list of commit types to exclude from the changelog.</p>
+<p class="tableblock">Commits with these types will be filtered out from the changelog output.
+This filter is applied after include-types (if specified).</p>
+<p class="tableblock">Common types: feat, fix, perf, refactor, docs, style, build, test, ci, chore, release, other</p>
+<p class="tableblock">Example: 'chore, style, release'</p>
+<p class="tableblock">Tip: Use this to create cleaner changelogs by excluding routine maintenance commits.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>chore, style</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>sort-by</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Specifies how commits should be sorted within each scope in the changelog.</p>
+<p class="tableblock">Available options:
+- <code>most-changes-first</code>: Sort by lines changed, most changes first (default)
+- <code>latest-first</code>: Sort by date, newest commits first
+- <code>oldest-first</code>: Sort by date, oldest commits first</p>
+<p class="tableblock">Note: When using <code>most-changes-first</code>, the action will fetch diff statistics
+for each commit, which may take additional time for repositories with
+many commits.</p>
+<p class="tableblock">Example: Sort by newest commits first:
+<code><code>yaml
+- uses: alandefreitas/cpp-actions/create-changelog@v1
+  with:
+    sort-by: 'latest-first'
+</code></code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>most-changes-first</code></p></td>
 </tr>
 </tbody>
 </table>

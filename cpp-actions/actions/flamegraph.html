@@ -252,6 +252,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.9.1/index.html">v1.9.1</a>
+        </li>
+        <li class="version">
           <a href="../v1.9.0/index.html">v1.9.0</a>
         </li>
         <li class="version">
@@ -352,6 +355,7 @@
   <div class="version-menu">
     <a class="version is-current" href="flamegraph.html">master</a>
     <a class="version" href="../develop/actions/flamegraph.html">develop</a>
+    <a class="version" href="../v1.9.1/actions/flamegraph.html">v1.9.1</a>
     <a class="version" href="../v1.9.0/actions/flamegraph.html">v1.9.0</a>
     <a class="version" href="../v1.8.12/actions/flamegraph.html">v1.8.12</a>
     <a class="version" href="../v1.8.11/actions/flamegraph.html">v1.8.11</a>
@@ -491,12 +495,18 @@ be scanned in all subdirectories of the source-dir.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>generate-report</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Generate a small report with ClangBuildAnalyzer.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Generate a markdown report analyzing compilation times.</p>
+<p class="tableblock">The report includes:
+- Summary of time spent in each compilation phase (frontend, backend, parsing, instantiation)
+- Per-file breakdown showing which files take longest to compile
+- Symbol analysis showing which templates and functions are slowest to parse/instantiate.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>update-summary</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Update action summary with the SVG file.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Update the GitHub Actions job summary with the time-trace report.</p>
+<p class="tableblock">When enabled, the compilation time analysis is displayed directly in the
+workflow run summary, making it easy to review without downloading artifacts.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
@@ -512,12 +522,19 @@ be scanned in all subdirectories of the source-dir.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>upload-artifact</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Upload combined traces as artifact.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Upload combined traces and visualizations as a GitHub Actions artifact.</p>
+<p class="tableblock">The artifact includes:
+- combined-traces.json: Can be opened with speedscope.app or chrome://tracing
+- combined-traces.json.svg: Interactive SVG flamegraph viewable in browser
+- time-trace-report.md: Markdown report with compilation time analysis.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enable verbose logging of internal operations for debugging.</p>
+<p class="tableblock">When enabled, detailed trace output is logged showing file processing,
+trace merging, and report generation steps. Useful for troubleshooting
+issues with time-trace file processing.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 </tbody>

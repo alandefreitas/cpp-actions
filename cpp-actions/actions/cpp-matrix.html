@@ -252,6 +252,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.9.1/index.html">v1.9.1</a>
+        </li>
+        <li class="version">
           <a href="../v1.9.0/index.html">v1.9.0</a>
         </li>
         <li class="version">
@@ -351,6 +354,7 @@
   <div class="version-menu">
     <a class="version is-current" href="cpp-matrix.html">master</a>
     <a class="version" href="../develop/actions/cpp-matrix.html">develop</a>
+    <a class="version" href="../v1.9.1/actions/cpp-matrix.html">v1.9.1</a>
     <a class="version" href="../v1.9.0/actions/cpp-matrix.html">v1.9.0</a>
     <a class="version" href="../v1.8.12/actions/cpp-matrix.html">v1.8.12</a>
     <a class="version" href="../v1.8.11/actions/cpp-matrix.html">v1.8.11</a>
@@ -832,7 +836,8 @@ in the <code>/__e/node20</code> directory.</p>
 
       address-model: \{{#if (eq arch ''x86'')}}32\{{else}}64\{{/if\}}
 
-      '</code></pre>
+      '
+    github-token: ${{ secrets.GITHUB_TOKEN }}</code></pre>
 </div>
 </div>
 </div>
@@ -1162,6 +1167,33 @@ no known versions can satisfy the requested version range and C++ standard requi
 Leave this enabled to catch unintended gaps; set it to <code>false</code> if you deliberately provide
 unsatisfiable requirements and do not want the additional annotation.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>sort-by-failure-rate</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Sort matrix entries by historical failure rate.</p>
+<p class="tableblock">The action fetches recent workflow run history and calculates the failure rate
+for each matrix entry based on job name matching. Entries with higher failure rates are
+sorted first (stable sort preserving existing order for equal rates).</p>
+<p class="tableblock">This is useful when combined with <code>max-parallel</code> or limited runners, as it ensures jobs
+most likely to fail run first, providing faster feedback.</p>
+<p class="tableblock">When enabled, the summary table includes a "Failure Rate" column.</p>
+<p class="tableblock">Requires <code>github-token</code> to be set for API access. If failure rates cannot be calculated
+(no token, no history, API errors), the action continues gracefully without error.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>failure-rate-runs</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Number of recent workflow runs to analyze when calculating failure rates.</p>
+<p class="tableblock">Only used when <code>sort-by-failure-rate</code> is enabled.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>20</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>github-token</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">GitHub token for API access when fetching workflow run history for failure rate calculation.</p>
+<p class="tableblock">Required when <code>sort-by-failure-rate</code> is enabled. Pass <code>secrets.GITHUB_TOKEN</code> or
+<code>github.token</code>. Alternatively, set the <code>GITHUB_TOKEN</code> environment variable in your
+workflow step.</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 </tbody>
 </table>

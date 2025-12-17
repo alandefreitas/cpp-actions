@@ -252,6 +252,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.9.1/index.html">v1.9.1</a>
+        </li>
+        <li class="version">
           <a href="../v1.9.0/index.html">v1.9.0</a>
         </li>
         <li class="version">
@@ -352,6 +355,7 @@
   <div class="version-menu">
     <a class="version is-current" href="cmake-workflow.html">master</a>
     <a class="version" href="../develop/actions/cmake-workflow.html">develop</a>
+    <a class="version" href="../v1.9.1/actions/cmake-workflow.html">v1.9.1</a>
     <a class="version" href="../v1.9.0/actions/cmake-workflow.html">v1.9.0</a>
     <a class="version" href="../v1.8.12/actions/cmake-workflow.html">v1.8.12</a>
     <a class="version" href="../v1.8.11/actions/cmake-workflow.html">v1.8.11</a>
@@ -596,15 +600,17 @@ source directory.</p></td>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>patches</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">List of patch files or directories to be copied to the source directory.</p>
-<p class="tableblock">The action will copy the files to the source directory before running the configure step.</p>
-<p class="tableblock">This is often useful when the source directory comes from a URL or git repository
+<p class="tableblock">The action copies the files to the source directory before running the configure step.
+This is useful when the source directory comes from a URL or git repository
 to patch the source files with CMake presets or include build scripts that are not part of the
 repository.</p>
-<p class="tableblock">The files will be copied in the order they are defined in the input.</p>
-<p class="tableblock">If a file is specified, the action will copy the file to the source directory with the
+<p class="tableblock">If a file is specified, the action copies it to the source directory root with the
 same filename.</p>
-<p class="tableblock">If a directory is specified, the action will copy all files in the directory to the
-source directory.</p></td>
+<p class="tableblock">If a directory is specified, the action copies all contents to the source directory,
+preserving the internal directory structure. For example, if your patch directory contains
+<code>cmake/toolchain.cmake</code>, it will be copied to <code>&lt;source-dir&gt;/cmake/toolchain.cmake</code>.</p>
+<p class="tableblock">Patches are applied in the order they are defined. If a file already exists in the
+source directory, it will be overwritten. This allows later patches to override earlier ones.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
