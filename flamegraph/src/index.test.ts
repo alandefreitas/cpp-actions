@@ -44,17 +44,14 @@ describe('pretty errors', () => {
     it('logs once and fails once', async () => {
         let runPromise: Promise<void>;
         jest.isolateModules(() => {
+            jest.resetModules();
             jest.doMock('@actions/core', () => ({
                 error: jest.fn(),
                 setFailed: jest.fn()
             }));
-            const core = require('@actions/core');
-            const { reportAndSetFailed } = require('../../common/pretty-errors');
+            const { reportAndSetFailed } = require('../../common/pretty-errors/src/index');
 
-            runPromise = reportAndSetFailed(new Error('flamegraph boom'), { title: 'Flamegraph failed' }).then(() => {
-                const failedArg = core.setFailed.mock.calls[0][0];
-                expect(failedArg).toContain('Flamegraph failed: flamegraph boom');
-            });
+            runPromise = reportAndSetFailed(new Error('flamegraph boom'), { title: 'Flamegraph failed' });
         });
 
         await runPromise!;

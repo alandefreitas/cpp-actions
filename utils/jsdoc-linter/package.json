@@ -12,7 +12,7 @@
     "prepare": "npm run build"
   },
   "dependencies": {
-    "ts-morph": "^24.0.0",
-    "glob": "^11.0.0"
+    "ts-morph": "^27.0.2",
+    "glob": "^13.0.0"
   }
 }

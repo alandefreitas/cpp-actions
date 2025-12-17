@@ -14,8 +14,8 @@
   "author": "",
   "license": "Boost Software License 1.0",
   "dependencies": {
-    "@actions/core": "^1.11.1",
-    "@actions/exec": "^1.1.1",
+    "@actions/core": "^2.0.1",
+    "@actions/exec": "^2.0.0",
     "@actions/io": "^2.0.0",
     "gh-inputs": "*",
     "semver": "^7.7.3",
@@ -24,7 +24,7 @@
     "source-map-support": "^0.5.21"
   },
   "devDependencies": {
-    "@types/semver": "^7.5.8",
-    "esbuild": "^0.27.1"
+    "@types/semver": "^7.7.1",
+    "esbuild": "^0.27.2"
   }
 }

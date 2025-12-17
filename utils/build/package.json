@@ -12,6 +12,6 @@
     "prepare": "npm run build"
   },
   "dependencies": {
-    "glob": "^11.0.0"
+    "glob": "^13.0.0"
   }
 }

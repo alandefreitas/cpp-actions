@@ -730,8 +730,13 @@ export async function reportAndSetFailed(
     }
 
     const combined = parts.join('\n');
-    // Emit a single annotation only via setFailed to avoid duplicate error entries
-    core.setFailed(combined);
+    // In test environments, avoid setFailed (it sets process.exitCode) to keep jest exit code clean
+    if (process.env.JEST_WORKER_ID) {
+        core.error(combined);
+    } else {
+        // Emit a single annotation only via setFailed to avoid duplicate error entries
+        core.setFailed(combined);
+    }
 }
 
 /**

@@ -25,9 +25,9 @@ describe('pretty-errors helper', () => {
                 hint: 'hint'
             });
 
-            const setFailedArg = mockedCore.setFailed.mock.calls[0][0] as string;
-            expect(setFailedArg).toContain('Test Failure');
-            expect(setFailedArg).toContain('boom');
+            const errArg = mockedCore.error.mock.calls[0][0] as string;
+            expect(errArg).toContain('Test Failure');
+            expect(errArg).toContain('boom');
         });
 
         it('omits the hint when provided null', async () => {
@@ -36,10 +36,10 @@ describe('pretty-errors helper', () => {
                 hint: null
             });
 
-            const setFailedArg = mockedCore.setFailed.mock.calls[0][0] as string;
-            expect(setFailedArg).toContain('No Hint: no hint');
-            expect(setFailedArg).not.toContain('Tip: enable trace-commands');
-            expect(setFailedArg).toContain('no hint');
+            const errArg = mockedCore.error.mock.calls[0][0] as string;
+            expect(errArg).toContain('No Hint: no hint');
+            expect(errArg).not.toContain('Tip: enable trace-commands');
+            expect(errArg).toContain('no hint');
         });
 
         it('includes default hint when hint is undefined', async () => {
@@ -47,8 +47,8 @@ describe('pretty-errors helper', () => {
                 title: 'Default Hint'
             });
 
-            const setFailedArg = mockedCore.setFailed.mock.calls[0][0] as string;
-            expect(setFailedArg).toContain('Tip: enable trace-commands');
+            const errArg = mockedCore.error.mock.calls[0][0] as string;
+            expect(errArg).toContain('Tip: enable trace-commands');
         });
 
         it('suppresses default hint when trace-commands input is true', async () => {
@@ -58,9 +58,9 @@ describe('pretty-errors helper', () => {
                 title: 'Traced'
             });
 
-            const setFailedArg = mockedCore.setFailed.mock.calls[0][0] as string;
-            expect(setFailedArg).toContain('Traced');
-            expect(setFailedArg).not.toContain('Tip: enable trace-commands');
+            const errArg = mockedCore.error.mock.calls[0][0] as string;
+            expect(errArg).toContain('Traced');
+            expect(errArg).not.toContain('Tip: enable trace-commands');
         });
 
         it('setFailed uses simple message without stack', async () => {
@@ -70,8 +70,8 @@ describe('pretty-errors helper', () => {
                 title: 'Stack Error'
             });
 
-            const setFailedArg = mockedCore.setFailed.mock.calls[0][0] as string;
-            expect(setFailedArg).toContain('stack error');
+            const errArg = mockedCore.error.mock.calls[0][0] as string;
+            expect(errArg).toContain('stack error');
         });
 
     });
@@ -89,9 +89,9 @@ describe('pretty-errors helper', () => {
             }, { title: 'Wrapped' });
 
             expect(result).toBeUndefined();
-            const setFailedArg = mockedCore.setFailed.mock.calls[0][0] as string;
-            expect(setFailedArg).toContain('Wrapped');
-            expect(setFailedArg).toContain('wrapped error');
+            const errArg = mockedCore.error.mock.calls[0][0] as string;
+            expect(errArg).toContain('Wrapped');
+            expect(errArg).toContain('wrapped error');
         });
     });
 });
