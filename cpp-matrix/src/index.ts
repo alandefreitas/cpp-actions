@@ -1698,6 +1698,27 @@ interface WorkflowRun {
 }
 
 /**
+ * API Design Note (Dec 2025):
+ *
+ * We use parallel REST requests instead of GraphQL/batch for these reasons:
+ *
+ * 1. GitHub REST API doesn't support batch job requests - no endpoint exists
+ *    to fetch jobs for multiple workflow runs in a single request.
+ *
+ * 2. GitHub GraphQL API doesn't directly expose workflow runs/jobs - the
+ *    workflowRun and workflow objects are only accessible through CheckSuite,
+ *    not queryable from Repository (see github.com/orgs/community/discussions/56300).
+ *
+ * 3. GraphQL CheckSuites approach is unsuitable - CheckSuites are accessed via
+ *    commit history, which excludes failed runs from PRs that were never merged.
+ *    We need failure data from ALL runs, including rejected PRs, which only
+ *    the REST workflow runs API provides.
+ *
+ * Parallel REST requests complete in roughly the same time as a single request,
+ * making this approach performant despite the multiple API calls.
+ */
+
+/**
  * Fetches historical failure rates for workflow jobs.
  *
  * Uses the GitHub API to fetch recent workflow runs and calculate failure rates
@@ -1773,20 +1794,28 @@ async function fetchFailureRates(numRuns: number, token: string): Promise<Failur
         // Collect job outcomes from all runs
         const jobOutcomes: { [name: string]: { failures: number; total: number } } = {};
 
-        for (const run of runs) {
-            // Fetch jobs for this run
+        // Fetch jobs for all runs in parallel
+        const jobPromises = runs.map(async (run) => {
             const jobsUrl = `https://api.github.com/repos/${repository}/actions/runs/${run.id}/jobs?per_page=100`;
-            const jobsResponse = await client.get(jobsUrl);
-
-            if (jobsResponse.message.statusCode !== 200) {
-                fnlog(`Failed to fetch jobs for run ${run.id}: ${jobsResponse.message.statusCode}`);
-                continue;
+            try {
+                const jobsResponse = await client.get(jobsUrl);
+                if (jobsResponse.message.statusCode !== 200) {
+                    fnlog(`Failed to fetch jobs for run ${run.id}: ${jobsResponse.message.statusCode}`);
+                    return [];
+                }
+                const jobsBody = await jobsResponse.readBody();
+                const jobsData = JSON.parse(jobsBody);
+                return (jobsData.jobs || []) as WorkflowJob[];
+            } catch (error) {
+                fnlog(`Error fetching jobs for run ${run.id}`);
+                return [];
             }
+        });
 
-            const jobsBody = await jobsResponse.readBody();
-            const jobsData = JSON.parse(jobsBody);
-            const jobs: WorkflowJob[] = jobsData.jobs || [];
+        const allJobsArrays = await Promise.all(jobPromises);
 
+        // Process all jobs from all runs
+        for (const jobs of allJobsArrays) {
             for (const job of jobs) {
                 if (!job.name || job.conclusion === null) {
                     continue;

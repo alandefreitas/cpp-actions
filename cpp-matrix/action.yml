@@ -732,9 +732,12 @@ inputs:
     description: |
       Number of recent workflow runs to analyze when calculating failure rates.
 
+      Jobs for each run are fetched in parallel, so increasing this value has
+      minimal impact on execution time.
+
       Only used when `sort-by-failure-rate` is enabled.
     required: false
-    default: '20'
+    default: '100'
 
   github-token:
     description: |
