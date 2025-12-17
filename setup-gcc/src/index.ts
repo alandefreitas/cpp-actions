@@ -118,9 +118,9 @@ export async function main(
     core.endGroup();
 
     // Setup system program
-    // Include both gcc and g++ to enable proper preference tier detection
-    // (unversioned 'gcc' preferred over versioned 'gcc-12')
-    const names = ['gcc', 'g++'];
+    // Prefer g++ packages so libstdc++ headers come along, but keep gcc in the
+    // search list so we still pick up preinstalled C-only toolchains.
+    const names = ['g++', 'gcc'];
     if (output_path === null) {
         core.startGroup('Find GCC in system paths');
         core.info(`Searching for GCC ${version} in PATH`);
@@ -309,18 +309,25 @@ export async function main(
         }
 
         // If we still don't have a working cxx (cc1plus missing), try installing the matching g++ package
-        if (process.platform === 'linux' && cxx && !fs.existsSync(cxx) || cxx?.endsWith('gcc-')) {
+        const cxxMissing = !cxx || !fs.existsSync(cxx);
+        const cxxLooksLikeGcc = cxx ? /(?:^|\/|\b)gcc(?:-\d+)?$/.test(cxx) : false;
+        if (process.platform === 'linux' && (cxxMissing || cxxLooksLikeGcc)) {
             try {
                 const parsed = output_version ? semver.parse(output_version, { loose: true }) : null;
                 const gccMajor = parsed?.major ?? null;
                 const pkg = gccMajor ? `g++-${gccMajor}` : 'g++';
                 trace_commands.log(`Attempting to install ${pkg} because g++ for ${output_version} was not found`);
                 const installArgs = ['install', '-y', pkg];
-                const opts = { env: { DEBIAN_FRONTEND: 'noninteractive' } };
-                await exec.exec('apt-get', ['update'], opts);
-                await exec.exec('apt-get', installArgs, opts);
-                const guessed = gccMajor ? `/usr/bin/g++-${gccMajor}` : await io.which('g++', true);
-                if (fs.existsSync(guessed)) {
+                const opts = { env: { DEBIAN_FRONTEND: 'noninteractive', TZ: 'Etc/UTC' }, ignoreReturnCode: true };
+                if (setup_program.isSudoRequired()) {
+                    await exec.exec('sudo', ['-n', 'apt-get', 'update'], opts);
+                    await exec.exec('sudo', ['-n', 'apt-get', ...installArgs], opts);
+                } else {
+                    await exec.exec('apt-get', ['update'], opts);
+                    await exec.exec('apt-get', installArgs, opts);
+                }
+                const guessed = gccMajor ? `/usr/bin/g++-${gccMajor}` : await io.which('g++', false).catch(() => null);
+                if (guessed && fs.existsSync(guessed)) {
                     cxx = guessed;
                     trace_commands.log(`Using ${cxx} as C++ compiler`);
                 }
