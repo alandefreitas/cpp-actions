@@ -14,11 +14,14 @@ import {
     pushToOrigin,
     rebase,
     getLog,
+    gitSafe,
     GitOptions
 } from './git';
 import { WorktreeContext } from './worktree';
 import { askConsent } from './prompt';
 import { isValidSemver, normalizeTag, extractVersion } from './version';
+import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * Runs an npm script in the repository root.
@@ -30,6 +33,32 @@ function runNpmScript(script: string, cwd: string): void {
         cwd,
         stdio: 'inherit'
     });
+}
+
+/**
+ * Checks whether all workspaces (including root) already have the target version.
+ * If any package.json is missing or has a different version, returns false.
+ * @param cwd - Repo root
+ * @param targetVersion - Version string without 'v' prefix
+ */
+function packagesAlreadyOnVersion(cwd: string, targetVersion: string): boolean {
+    try {
+        const rootPkgPath = path.join(cwd, 'package.json');
+        const rootPkg = JSON.parse(fs.readFileSync(rootPkgPath, 'utf-8'));
+        const workspaces: string[] = rootPkg.workspaces ?? [];
+        const packageFiles = [rootPkgPath, ...workspaces.map(w => path.join(cwd, w, 'package.json'))];
+
+        for (const pkgPath of packageFiles) {
+            const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+            if (pkg.version !== targetVersion) {
+                return false;
+            }
+        }
+        return true;
+    } catch {
+        // Fall back to running version:set if anything goes wrong
+        return false;
+    }
 }
 
 /**
@@ -83,9 +112,11 @@ async function executeStep(
     description: string,
     command: string,
     options: ReleaseOptions,
-    action: () => void
+    action: () => void,
+    defaultYes = true,
+    continueOnFailure = false
 ): Promise<StepResult> {
-    const consent = await askConsent(description, command, options.skipPrompts, options.dryRun);
+    const consent = await askConsent(description, command, options.skipPrompts, options.dryRun, defaultYes);
 
     if (!consent) {
         if (options.dryRun) {
@@ -99,6 +130,10 @@ async function executeStep(
         return { success: true, message: description };
     } catch (err) {
         const errorMessage = err instanceof Error ? err.message : String(err);
+        if (continueOnFailure) {
+            console.warn(`Non-blocking failure: ${description} - ${errorMessage}`);
+            return { success: true, message: `Non-blocking failure: ${description}` };
+        }
         return { success: false, message: `Failed: ${description} - ${errorMessage}` };
     }
 }
@@ -132,18 +167,23 @@ export async function executeRelease(options: ReleaseOptions): Promise<boolean> 
 
     // Pre-release Step 1: Update package versions
     console.log('\n==== Pre-release: Update package versions ====');
-    const versionResult = await executeStep(
-        `Update package.json versions to ${version}`,
-        `npm run version:set -- ${version}`,
-        options,
-        () => runNpmScript(`version:set -- ${version}`, rootDir)
-    );
-    if (!versionResult.success && !dryRun) {
-        console.error(versionResult.message);
-        return false;
-    }
-    if (!dryRun && !requireCleanWorktree(gitOpts, 'Version update')) {
-        return false;
+    const versionsAligned = packagesAlreadyOnVersion(rootDir, version);
+    if (versionsAligned) {
+        console.log(`All packages already at ${version}; skipping version:set.`);
+    } else {
+        const versionResult = await executeStep(
+            `Update package.json versions to ${version}`,
+            `npm run version:set -- ${version}`,
+            options,
+            () => runNpmScript(`version:set -- ${version}`, rootDir)
+        );
+        if (!versionResult.success && !dryRun) {
+            console.error(versionResult.message);
+            return false;
+        }
+        if (!dryRun && !requireCleanWorktree(gitOpts, 'Version update')) {
+            return false;
+        }
     }
 
     // Pre-release Step 2: Rebuild all bundles
@@ -152,7 +192,8 @@ export async function executeRelease(options: ReleaseOptions): Promise<boolean> 
         'Regenerate dist outputs for fresh builds',
         'npm run build',
         options,
-        () => runNpmScript('build', rootDir)
+        () => runNpmScript('build', rootDir),
+        true // default Yes; rebuilding should generally proceed
     );
     if (!buildResult.success && !dryRun) {
         console.error(buildResult.message);
@@ -168,7 +209,9 @@ export async function executeRelease(options: ReleaseOptions): Promise<boolean> 
         'Run depcheck to verify dependency health',
         'npm run depcheck',
         options,
-        () => runNpmScript('depcheck', rootDir)
+        () => runNpmScript('depcheck', rootDir),
+        true, // default Yes
+        true  // continue even if depcheck reports unused deps
     );
     if (!depcheckResult.success && !dryRun) {
         console.error(depcheckResult.message);
@@ -219,15 +262,45 @@ export async function executeRelease(options: ReleaseOptions): Promise<boolean> 
         const remoteDevelop = getCommitSha('origin/develop', gitOpts);
 
         if (localDevelop !== remoteDevelop) {
-            console.error('Local develop branch is not up to date with remote.');
-            console.error(`Local develop:  ${localDevelop}`);
-            console.error(`  ${getCommitMessage('refs/heads/develop', gitOpts)}`);
-            console.error(`Remote develop: ${remoteDevelop}`);
-            console.error(`  ${getCommitMessage('origin/develop', gitOpts)}`);
-            console.error('\nPlease update your local develop branch first.');
-            return false;
+            const remoteIsAncestor = gitSafe(
+                ['merge-base', '--is-ancestor', 'origin/develop', 'refs/heads/develop'],
+                gitOpts
+            );
+            const localIsAncestor = gitSafe(
+                ['merge-base', '--is-ancestor', 'refs/heads/develop', 'origin/develop'],
+                gitOpts
+            );
+
+            if (remoteIsAncestor && !localIsAncestor) {
+                console.log('Local develop is ahead of origin/develop.');
+                console.log(`Local develop:  ${localDevelop}  ${getCommitMessage('refs/heads/develop', gitOpts)}`);
+                console.log(`Remote develop: ${remoteDevelop}  ${getCommitMessage('origin/develop', gitOpts)}`);
+                const pushDevelop = await executeStep(
+                    'Push develop to origin',
+                    'git push origin develop',
+                    options,
+                    () => pushToOrigin('develop', gitOpts),
+                    true // default yes
+                );
+                if (!pushDevelop.success) {
+                    console.error(pushDevelop.message);
+                    return false;
+                }
+            } else if (localIsAncestor && !remoteIsAncestor) {
+                console.error('Local develop is behind origin/develop.');
+                console.error(`Local develop:  ${localDevelop}  ${getCommitMessage('refs/heads/develop', gitOpts)}`);
+                console.error(`Remote develop: ${remoteDevelop}  ${getCommitMessage('origin/develop', gitOpts)}`);
+                console.error('\nPlease pull or rebase develop before releasing.');
+                return false;
+            } else {
+                console.error('Local and origin develop have diverged. Please reconcile before releasing.');
+                console.error(`Local develop:  ${localDevelop}  ${getCommitMessage('refs/heads/develop', gitOpts)}`);
+                console.error(`Remote develop: ${remoteDevelop}  ${getCommitMessage('origin/develop', gitOpts)}`);
+                return false;
+            }
+        } else {
+            console.log(`\u2705 develop branch is up to date (${localDevelop.substring(0, 8)})`);
         }
-        console.log(`\u2705 develop branch is up to date (${localDevelop.substring(0, 8)})`);
     } else {
         console.log('[DRY RUN] Would verify develop matches origin/develop');
     }
@@ -255,6 +328,10 @@ export async function executeRelease(options: ReleaseOptions): Promise<boolean> 
         if (!dryRun && worktreeOpts) {
             const masterSha = getCommitSha('HEAD', worktreeOpts);
             const remoteDevelop = getCommitSha('origin/develop', gitOpts);
+            const worktreePath = worktreeContext.getPath();
+            const rebaseCmd = worktreePath
+                ? `git -C ${worktreePath} rebase origin/develop`
+                : 'git rebase origin/develop';
 
             if (masterSha !== remoteDevelop) {
                 console.log('master is not up to date with origin/develop');
@@ -268,8 +345,8 @@ export async function executeRelease(options: ReleaseOptions): Promise<boolean> 
                 }
 
                 const rebaseResult = await executeStep(
-                    'Rebase master onto origin/develop',
-                    'git rebase origin/develop',
+                    'Rebase master worktree onto origin/develop (does not touch your local develop)',
+                    rebaseCmd,
                     options,
                     () => rebase('origin/develop', worktreeOpts!)
                 );

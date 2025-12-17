@@ -108,7 +108,8 @@ export async function askConsent(
     description: string,
     command: string,
     skipPrompt: boolean,
-    dryRun: boolean
+    dryRun: boolean,
+    defaultYes = false
 ): Promise<boolean> {
     console.log(`\nAbout to: ${description}`);
     console.log(`Command: ${command}`);
@@ -123,5 +124,5 @@ export async function askConsent(
         return true;
     }
 
-    return askYesNo('Proceed?');
+    return askYesNo('Proceed?', defaultYes);
 }

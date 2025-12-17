@@ -3,6 +3,8 @@
  */
 
 import { execSync } from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
 import { askChoice, askInput } from './prompt';
 
 /**
@@ -62,6 +64,43 @@ export function parseSemver(version: string): SemverVersion {
 export function formatSemver(version: SemverVersion, includeV = true): string {
     const str = `${version.major}.${version.minor}.${version.patch}`;
     return includeV ? `v${str}` : str;
+}
+
+/**
+ * Compares two semver strings.
+ * @param a - First version (with or without 'v')
+ * @param b - Second version (with or without 'v')
+ * @returns 1 if a>b, -1 if a<b, 0 if equal
+ */
+export function compareSemver(a: string, b: string): number {
+    const va = parseSemver(a);
+    const vb = parseSemver(b);
+
+    if (va.major !== vb.major) return Math.sign(va.major - vb.major);
+    if (va.minor !== vb.minor) return Math.sign(va.minor - vb.minor);
+    return Math.sign(va.patch - vb.patch);
+}
+
+/**
+ * Reads the root package.json version if available.
+ * @param cwd - Working directory
+ * @returns Version with 'v' prefix or null if unavailable/invalid
+ */
+export function getPackageVersion(cwd: string): string | null {
+    try {
+        const pkgPath = path.join(cwd, 'package.json');
+        const contents = fs.readFileSync(pkgPath, 'utf-8');
+        const pkg = JSON.parse(contents);
+        const version = typeof pkg.version === 'string' ? pkg.version : null;
+
+        if (version && isValidSemver(version)) {
+            return normalizeTag(version);
+        }
+    } catch {
+        // Ignore read/parse errors and fall back to git tags
+    }
+
+    return null;
 }
 
 /**
@@ -134,6 +173,16 @@ export function getFeatureCommitsSince(tag: string, cwd: string): string[] {
  */
 export async function determineVersion(cwd: string): Promise<string> {
     const latestTag = getLatestTag(cwd);
+    const packageVersion = getPackageVersion(cwd);
+
+    if (packageVersion) {
+        if (!latestTag || compareSemver(packageVersion, latestTag) >= 1) {
+            const latestLabel = latestTag ?? 'no remote tag';
+            console.log(`Detected local version ${packageVersion} (latest tag: ${latestLabel}).`);
+            console.log('Using package.json version without suggesting an additional bump.');
+            return packageVersion;
+        }
+    }
 
     if (!latestTag) {
         console.log('No existing tags found on origin. Defaulting to initial release tag v0.1.0.');

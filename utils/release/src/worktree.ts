@@ -40,6 +40,23 @@ export function getWorktreePath(branch: string): string {
 export function createWorktree(branch: string, worktreePath: string, options: GitOptions): WorktreeInfo {
     console.log(`Creating worktree for ${branch} at ${worktreePath}...`);
 
+    // Clean up stale entries and conflicting worktrees for this branch
+    pruneWorktrees(options);
+
+    // If the branch is already checked out in another worktree, try to remove a stale temp worktree
+    const existing = listWorktrees(options).find((wt) => wt.branch === `refs/heads/${branch}`);
+    if (existing) {
+        if (existing.path.includes(`cpp-actions-release-${branch}`)) {
+            console.log(`Found stale ${branch} worktree at ${existing.path}, removing...`);
+            removeWorktree(existing.path, options, true);
+        } else {
+            throw new Error(
+                `Branch ${branch} is already checked out at ${existing.path}. ` +
+                'Please remove or switch that worktree before releasing.'
+            );
+        }
+    }
+
     // Ensure the parent directory exists
     const parentDir = path.dirname(worktreePath);
     if (!fs.existsSync(parentDir)) {
@@ -101,21 +118,31 @@ export function removeWorktree(worktreePath: string, options: GitOptions, force 
 }
 
 /**
- * Lists all worktrees.
+ * Lists all worktrees with branch information (if present).
  * @param options - Git options
- * @returns Array of worktree paths
+ * @returns Array of worktree info objects
  */
-export function listWorktrees(options: GitOptions): string[] {
+export function listWorktrees(options: GitOptions): Array<{ path: string; branch: string | null }> {
     const output = git(['worktree', 'list', '--porcelain'], { ...options, silent: true });
-    const paths: string[] = [];
+    const infos: Array<{ path: string; branch: string | null }> = [];
+    let currentPath: string | null = null;
 
     for (const line of output.split('\n')) {
         if (line.startsWith('worktree ')) {
-            paths.push(line.substring(9));
+            currentPath = line.substring(9).trim();
+            infos.push({ path: currentPath, branch: null });
+        } else if (line.startsWith('branch ')) {
+            const branch = line.substring(7).trim();
+            if (currentPath) {
+                const idx = infos.findIndex((w) => w.path === currentPath);
+                if (idx !== -1) {
+                    infos[idx] = { ...infos[idx], branch };
+                }
+            }
         }
     }
 
-    return paths;
+    return infos;
 }
 
 /**
