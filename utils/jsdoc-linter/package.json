@@ -1,6 +1,6 @@
 {
   "name": "jsdoc-linter",
-  "version": "1.0.0",
+  "version": "1.9.1",
   "private": true,
   "description": "JSDoc documentation linter for cpp-actions",
   "main": "dist/index.js",

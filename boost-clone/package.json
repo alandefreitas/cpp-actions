@@ -1,6 +1,6 @@
 {
   "name": "boost-clone",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "description": "",
   "main": "lib/index.js",
   "scripts": {

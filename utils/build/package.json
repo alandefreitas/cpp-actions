@@ -1,6 +1,6 @@
 {
   "name": "build-cli",
-  "version": "1.0.0",
+  "version": "1.9.1",
   "private": true,
   "description": "Build orchestration CLI for cpp-actions monorepo",
   "main": "dist/index.js",
