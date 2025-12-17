@@ -294,7 +294,7 @@ async function find_program_in_paths(paths: string[], names: string[], version: 
 
     let output_version: string | null = null;
     let output_path: string | null = null;
-    let path_log_view: (string | string)[] = paths;
+    let path_log_view: string[] = paths;
     if (paths.length > 10) {
         path_log_view = paths.slice(0, 10).concat(['...']);
     }
@@ -466,6 +466,44 @@ export function isSudoRequired(): boolean {
 }
 
 /**
+ * Executes a command, prepending sudo if required on Linux.
+ *
+ * @param command - The command to execute
+ * @param args - Command arguments
+ * @param options - Execution options passed to exec.exec
+ * @returns The exit code from the command
+ */
+export async function execWithSudo(
+    command: string,
+    args: string[] = [],
+    options: exec.ExecOptions = {}
+): Promise<number> {
+    if (isSudoRequired()) {
+        return await exec.exec('sudo', ['-n', command, ...args], options);
+    }
+    return await exec.exec(command, args, options);
+}
+
+/**
+ * Executes a command with output capture, prepending sudo if required on Linux.
+ *
+ * @param command - The command to execute
+ * @param args - Command arguments
+ * @param options - Execution options passed to exec.getExecOutput
+ * @returns The execution output including exit code, stdout, and stderr
+ */
+export async function getExecOutputWithSudo(
+    command: string,
+    args: string[] = [],
+    options: exec.ExecOptions = {}
+): Promise<ExecOutput> {
+    if (isSudoRequired()) {
+        return await exec.getExecOutput('sudo', ['-n', command, ...args], options);
+    }
+    return await exec.getExecOutput(command, args, options);
+}
+
+/**
  * Checks if a URL exists by sending a HEAD request.
  *
  * @param url - The URL to check
@@ -494,17 +532,272 @@ function escapeRegExp(string: string): string {
 }
 
 /**
+ * Result of searching APT repositories for a package.
+ */
+export interface AptPackageMatch {
+    /** The best matching package name (e.g., "clang-14") */
+    packageName: string;
+    /** The specific APT version string for installation (e.g., "1:14.0.0-1ubuntu1") */
+    packageVersion: string | null;
+    /** The parsed semver version (e.g., "14.0.0") */
+    semverVersion: string;
+    /** The preference tier of this package */
+    tier: PackagePreferenceTier;
+    /** Alternative packages that also satisfy requirements, in "package=version" format */
+    alternatives: string[];
+}
+
+/**
+ * Searches APT repositories for packages matching the specified names and version.
+ *
+ * Queries apt-cache to find available packages and their versions, then filters
+ * and ranks results based on version requirements and package naming preferences.
+ *
+ * @param names - Array of package/executable names to search for (e.g., ["clang", "clang++"])
+ * @param version - Semver version constraint (e.g., ">=10", "14.0.0", "*")
+ * @param check_latest - If true, prefer latest matching version; if false, prefer earliest
+ * @returns The best matching package info, or null if no match found
+ */
+export async function search_apt_packages(
+    names: string[],
+    version: string,
+    check_latest: boolean
+): Promise<AptPackageMatch | null> {
+    function fnlog(msg: string): void {
+        trace_commands.log('search_apt_packages: ' + msg);
+    }
+
+    // Search for matching package names
+    const package_names: string[] = [];
+    for (const name of names) {
+        const search_expression = `${escapeRegExp(name)}(-[0-9\\.]+)?`;
+        fnlog(`Searching for packages matching ${search_expression}`);
+        const output: ExecOutput = await exec.getExecOutput('apt-cache', ['search', `^${search_expression}$`]);
+        if (output.exitCode !== 0) {
+            throw new Error(`Failed to run apt-cache search. Exit code ${output.exitCode}`);
+        }
+        fnlog(`apt-cache search. Exit code ${output.exitCode}`);
+        const apt_output = output.stdout.trim();
+        const apt_lines = apt_output.split('\n');
+        for (const apt_line of apt_lines) {
+            const apt_line_regex = new RegExp(`^(${search_expression}) `);
+            const apt_line_matches = apt_line.match(apt_line_regex);
+            if (apt_line_matches !== null) {
+                package_names.push(apt_line_matches[1]);
+            }
+        }
+    }
+    fnlog(`Found packages [${package_names.join(', ')}]`);
+
+    // Find the best matching package and version
+    fnlog(`Listing all versions of packages [${package_names.join(', ')}]`);
+    let best_match: AptPackageMatch | null = null;
+    const install_matches: string[] = [];
+
+    for (const package_name of package_names) {
+        const output: ExecOutput = await exec.getExecOutput('apt-cache', ['showpkg', package_name], { silent: true });
+        if (output.exitCode !== 0) {
+            throw new Error(`Failed to run "apt-cache showpkg '${package_name}'"`);
+        }
+        if (output.stdout.trim() === '') {
+            fnlog('No output from apt-cache showpkg ' + package_name);
+            continue;
+        }
+
+        const showpkg_lines = output.stdout.trim().split('\n');
+        const dependencies_index = showpkg_lines.findIndex((line) => line.startsWith('Dependencies:'));
+        if (dependencies_index === -1) {
+            continue;
+        }
+        let provides_index = showpkg_lines.findIndex((line) => line.startsWith('Provides:'));
+        if (provides_index === -1) {
+            provides_index = showpkg_lines.length;
+        }
+        const dependencies_lines = showpkg_lines.slice(dependencies_index + 1, provides_index);
+        const package_versions = dependencies_lines.map((line) => line.split(' ')[0]);
+        fnlog(`Package ${package_name} has APT versions [${package_versions.join(', ')}]`);
+
+        const pkg_tier = getPackagePreferenceTier(package_name, names);
+        fnlog(`Package ${package_name} has preference tier ${pkg_tier}`);
+
+        // Check each version against requirements
+        for (const package_version of package_versions) {
+            const version_regexes = [/\d+:(\d+.\d+)-\d+/, /\d+:(\d+)-\d+/, /(\d+\.\d+\.\d+)/, /(\d+\.\d+)/, /(\d+)/];
+            for (const version_regex of version_regexes) {
+                const version_matches = package_version.match(version_regex);
+                if (version_matches !== null) {
+                    const pkg_version_str = removeSemverLeadingZeros(version_matches[1]);
+                    const pkg_version = semver.coerce(pkg_version_str);
+                    const satisfies = pkg_version !== null ? semver.satisfies(pkg_version, version) : true;
+
+                    if (!satisfies) {
+                        fnlog(`Package ${package_name}=${package_version} version ${pkg_version} does NOT satisfy ${names.join(', ')} version ${version}`);
+                    } else if (pkg_version !== null) {
+                        install_matches.push(`${package_name}=${package_version}`);
+
+                        const isBetterTier = best_match === null || pkg_tier < best_match.tier;
+                        const isSameTier = best_match !== null && pkg_tier === best_match.tier;
+                        const isBetterVersion = best_match !== null &&
+                            ((check_latest && semver.gt(pkg_version, best_match.semverVersion)) ||
+                             (!check_latest && semver.lt(pkg_version, best_match.semverVersion)));
+                        const isFirstMatch = best_match === null;
+
+                        if (isFirstMatch || isBetterTier || (isSameTier && isBetterVersion)) {
+                            fnlog(`Package ${package_name}=${package_version} version ${pkg_version} (tier ${pkg_tier}) selected as best match for ${names.join(', ')} version ${version}`);
+                            best_match = {
+                                packageName: package_name,
+                                packageVersion: package_version,
+                                semverVersion: pkg_version.toString(),
+                                tier: pkg_tier,
+                                alternatives: install_matches
+                            };
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    // Update alternatives in the final result
+    if (best_match !== null) {
+        best_match.alternatives = install_matches;
+    }
+
+    return best_match;
+}
+
+/**
+ * Options for APT package installation.
+ */
+export interface AptInstallOptions {
+    /** Try aptitude as fallback if apt-get fails */
+    tryAptitude?: boolean;
+    /** Try alternative packages if primary install fails */
+    tryAlternatives?: boolean;
+}
+
+/**
+ * Installs a package using the APT package manager.
+ *
+ * Attempts installation with apt-get, optionally falling back to aptitude
+ * for better dependency resolution, and can try alternative package versions.
+ *
+ * @param packageName - The package name to install
+ * @param packageVersion - Optional specific version string (e.g., "1:14.0.0-1ubuntu1")
+ * @param alternatives - Alternative "package=version" strings to try if primary fails
+ * @param options - Installation options
+ * @returns The name of the successfully installed package, or null if installation failed
+ */
+export async function install_program_with_apt(
+    packageName: string,
+    packageVersion: string | null = null,
+    alternatives: string[] = [],
+    options: AptInstallOptions = {}
+): Promise<string | null> {
+    function fnlog(msg: string): void {
+        trace_commands.log('install_program_with_apt: ' + msg);
+    }
+
+    const { tryAptitude = true, tryAlternatives = true } = options;
+
+    const install_pkg = packageVersion !== null
+        ? `${packageName}=${packageVersion}`
+        : packageName;
+
+    fnlog(`Installing ${install_pkg}`);
+    const execOpts: exec.ExecOptions = {
+        env: {
+            DEBIAN_FRONTEND: 'noninteractive',
+            TZ: 'Etc/UTC',
+            PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+        },
+        ignoreReturnCode: true
+    };
+
+    // Try apt-get install
+    let exit_code = await execWithSudo('apt-get', ['install', '-f', '-y', '--allow-downgrades', install_pkg], execOpts);
+    if (exit_code === 0) {
+        return packageName;
+    }
+
+    fnlog(`Failed to install ${install_pkg}. Exit code: ${exit_code}`);
+
+    // Try aptitude as fallback
+    if (tryAptitude) {
+        let aptitude_path: string | null;
+        try {
+            aptitude_path = await io.which('aptitude');
+        } catch {
+            aptitude_path = null;
+        }
+
+        if (aptitude_path) {
+            fnlog('Retrying with aptitude for better dependency resolution');
+            exit_code = await execWithSudo('aptitude', ['install', '-f', '-y', install_pkg], execOpts);
+            if (exit_code === 0) {
+                return packageName;
+            }
+            fnlog(`aptitude also failed. Exit code: ${exit_code}`);
+        } else {
+            fnlog('aptitude unavailable');
+        }
+    }
+
+    // Try alternative packages
+    if (tryAlternatives && alternatives.length > 0) {
+        fnlog(`Trying alternative packages [${alternatives.join(', ')}]`);
+        for (const alt_pkg of alternatives) {
+            exit_code = await execWithSudo('apt-get', ['install', '-f', '-y', '--allow-downgrades', alt_pkg], execOpts);
+            if (exit_code === 0) {
+                // Extract package name from "package=version" format
+                return alt_pkg.split('=')[0];
+            }
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Checks if APT package manager is available on the system.
+ *
+ * @returns True if APT is available and working, false otherwise
+ */
+export async function isAptAvailable(): Promise<boolean> {
+    try {
+        const exitCode = await exec.exec('apt', ['--version'], { silent: true });
+        return exitCode === 0;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Updates APT package lists.
+ *
+ * Runs apt-get update with appropriate sudo privileges if needed.
+ */
+export async function updateAptPackageLists(): Promise<void> {
+    await execWithSudo('apt-get', ['update'], { ignoreReturnCode: true });
+}
+
+/**
  * Searches for and installs a program using APT package manager on Linux.
  *
- * Searches APT repositories for packages matching the specified names and version,
- * then installs the best matching package. Falls back to alternative packages or
- * aptitude if the initial installation fails.
+ * This is the high-level orchestration function that:
+ * 1. Checks if APT is available
+ * 2. Updates package lists
+ * 3. Searches for matching packages via {@link search_apt_packages}
+ * 4. Installs the best match via {@link install_program_with_apt}
+ * 5. Locates the installed executable
+ *
+ * For direct package installation without searching, use {@link install_program_with_apt} directly.
  *
  * @param names - Array of package/executable names to search for
  * @param version - Semver version constraint (e.g., ">=10", "14.0.0", "*")
  * @param check_latest - If true, prefer latest matching version; if false, prefer earliest
  * @returns Object containing the found executable path and version, or nulls if not found
- * @throws Error if apt-cache commands fail unexpectedly
  */
 export async function find_program_with_apt(names: string[], version: string, check_latest: boolean): Promise<ProgramResult> {
     function fnlog(msg: string): void {
@@ -515,186 +808,36 @@ export async function find_program_with_apt(names: string[], version: string, ch
     let output_path: string | null = null;
     let installed_package: string | null = null;
 
+    // Check APT availability
     fnlog('Checking if APT is available');
-    try {
-        const exitCode = await exec.exec('apt', ['--version']);
-        if (exitCode !== 0) {
-            fnlog(`apt --version returned ${exitCode}`);
-            return { output_version, output_path, installed_package };
-        }
-    } catch (error) {
+    if (!await isAptAvailable()) {
         fnlog('APT is not available');
         return { output_version, output_path, installed_package };
     }
 
-    // Find program "name" with APT
     try {
+        // Update package lists
         fnlog(`Searching for ${names.join(', ')} with APT`);
-        if (isSudoRequired()) {
-            await exec.exec(`sudo -n apt-get update`, [], { ignoreReturnCode: true });
-        } else {
-            await exec.exec(`apt-get update`, [], { ignoreReturnCode: true });
-        }
-        const package_names: string[] = [];
-        for (const name of names) {
-            const search_expression = `${escapeRegExp(name)}(-[0-9\\.]+)?`;
-            fnlog(`Searching for packages matching ${search_expression}`);
-            const output: ExecOutput = await exec.getExecOutput('apt-cache', ['search', `^${search_expression}$`]);
-            const apt_output = output.stdout.trim();
-            if (output.exitCode === 0) {
-                fnlog(`apt-cache search. Exit code ${output.exitCode}`);
-            } else {
-                throw new Error(`Failed to run apt-cache search. Exit code ${output.exitCode}`);
-            }
-            const apt_lines = apt_output.split('\n');
-            for (const apt_line of apt_lines) {
-                const apt_line_regex = new RegExp(`^(${search_expression}) `);
-                const apt_line_matches = apt_line.match(apt_line_regex);
-                if (apt_line_matches !== null) {
-                    const apt_version = apt_line_matches[1];
-                    package_names.push(apt_version);
-                }
-            }
-        }
-        fnlog(`Found packages [${package_names.join(', ')}]`);
+        await updateAptPackageLists();
 
-        fnlog(`Listing all versions of packages [${package_names.join(', ')}]`);
-        let package_match: string | null = null;
-        let package_version_match: string | null = null;
-        let package_match_tier: PackagePreferenceTier = PackagePreferenceTier.OTHER_VERSIONED;
-        const install_matches: string[] = [];
-        for (const package_name of package_names) {
-            const output: ExecOutput = await exec.getExecOutput('apt-cache', ['showpkg', package_name], { silent: true });
-            const showpkg_output = output.stdout.trim();
-            if (output.exitCode !== 0) {
-                throw new Error(`Failed to run "apt-cache showpkg '${package_name}'"`);
-            } else if (output.stdout.trim() === '') {
-                fnlog('No output from apt-cache showpkg ' + package_name);
-            }
-            const showpkg_lines = showpkg_output.split('\n');
-            const dependencies_index = showpkg_lines.findIndex((line) => line.startsWith('Dependencies:'));
-            if (dependencies_index === -1) {
-                continue;
-            }
-            let provides_index = showpkg_lines.findIndex((line) => line.startsWith('Provides:'));
-            if (provides_index === -1) {
-                provides_index = showpkg_lines.length;
-            }
-            const dependencies_lines = showpkg_lines.slice(dependencies_index + 1, provides_index);
-            const package_versions = dependencies_lines.map((line) => line.split(' ')[0]);
-            fnlog(`Package ${package_name} has APT versions [${package_versions.join(', ')}]`);
-
-            // Get preference tier for this package
-            const pkg_tier = getPackagePreferenceTier(package_name, names);
-            fnlog(`Package ${package_name} has preference tier ${pkg_tier}`);
-
-            // Filter the versions that install the required program version
-            for (const package_version of package_versions) {
-                // a limited list of common formats to express versions in apt package names
-                const version_regexes = [/\d+:(\d+.\d+)-\d+/, /\d+:(\d+)-\d+/, /(\d+\.\d+\.\d+)/, /(\d+\.\d+)/, /(\d+)/];
-                let pkg_version_str: string | null = null;
-                for (const version_regex of version_regexes) {
-                    const version_matches = package_version.match(version_regex);
-                    if (version_matches !== null) {
-                        pkg_version_str = removeSemverLeadingZeros(version_matches[1]);
-                        const pkg_version = semver.coerce(pkg_version_str);
-                        const satisfies = pkg_version !== null ? semver.satisfies(pkg_version, version) : true;
-                        if (!satisfies) {
-                            fnlog(`Package ${package_name}=${package_version} version ${pkg_version} does NOT satisfy ${names.join(', ')} version ${version}`);
-                        } else {
-                            install_matches.push(`${package_name}=${package_version}`);
-                            // Selection priority:
-                            // 1. Better tier (lower number) always wins
-                            // 2. Same tier: use check_latest to pick best version
-                            const isBetterTier = pkg_tier < package_match_tier;
-                            const isSameTier = pkg_tier === package_match_tier;
-                            const isBetterVersion = pkg_version !== null && output_version !== null &&
-                                ((check_latest && semver.gt(pkg_version, output_version)) ||
-                                 (!check_latest && semver.lt(pkg_version, output_version)));
-                            const isFirstMatch = output_version === null;
-
-                            if (pkg_version !== null && (isFirstMatch || isBetterTier || (isSameTier && isBetterVersion))) {
-                                fnlog(`Package ${package_name}=${package_version} version ${pkg_version} (tier ${pkg_tier}) selected as best match for ${names.join(', ')} version ${version}`);
-                                package_match = package_name;
-                                package_version_match = package_version;
-                                package_match_tier = pkg_tier;
-                                output_version = pkg_version.toString();
-                            }
-                        }
-                        break;
-                    }
-                }
-            }
+        // Search for matching packages
+        const match = await search_apt_packages(names, version, check_latest);
+        if (match === null) {
+            fnlog(`No matching package found for ${names.join(', ')} version ${version}`);
+            return { output_version, output_path, installed_package };
         }
 
-        // Install the package name and version that match the requirements
-        if (package_match !== null) {
-            let install_pkg = package_match;
-            if (package_version_match !== null) {
-                install_pkg = `${package_match}=${package_version_match}`;
-            }
+        fnlog(`Best match: ${match.packageName}=${match.packageVersion} (version ${match.semverVersion}, tier ${match.tier})`);
 
-            fnlog(`Installing ${install_pkg}`);
-            const opts = {
-                env: {
-                    DEBIAN_FRONTEND: 'noninteractive',
-                    TZ: 'Etc/UTC',
-                    PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
-                },
-                ignoreReturnCode: true
-            };
+        // Install the package
+        installed_package = await install_program_with_apt(
+            match.packageName,
+            match.packageVersion,
+            match.alternatives
+        );
 
-            // Install the package with the best match for the requirements
-            let apt_get_exit_code: number;
-            if (isSudoRequired()) {
-                apt_get_exit_code = await exec.exec(`sudo -n apt-get install -f -y --allow-downgrades ${install_pkg}`, [], opts);
-            } else {
-                apt_get_exit_code = await exec.exec(`apt-get install -f -y --allow-downgrades ${install_pkg}`, [], opts);
-            }
-
-            if (apt_get_exit_code === 0) {
-                installed_package = package_match;
-            } else {
-                fnlog(`Failed to install ${install_pkg}. Trying aptitude and alternatives packages [${install_matches.join(', ')}]`);
-                // Check if aptitude is available
-                let aptitude_path: string | null;
-                try {
-                    aptitude_path = await io.which('aptitude');
-                } catch (error) {
-                    aptitude_path = null;
-                }
-                if (aptitude_path !== null && aptitude_path !== '') {
-                    // retry with aptitude, which can solve unmet dependencies
-                    if (isSudoRequired()) {
-                        apt_get_exit_code = await exec.exec(`sudo -n aptitude install -f -y ${install_pkg}`, [], opts);
-                    } else {
-                        apt_get_exit_code = await exec.exec(`aptitude install -f -y ${install_pkg}`, [], opts);
-                    }
-                    if (apt_get_exit_code === 0) {
-                        installed_package = package_match;
-                    }
-                } else {
-                    fnlog(`aptitude unavailable.`);
-                }
-            }
-
-            // If the installation failed, try other versions that also satisfy the requirements
-            if (apt_get_exit_code !== 0) {
-                fnlog(`Trying alternatives packages [${install_matches.join(', ')}]`);
-                for (const install_match of install_matches) {
-                    if (isSudoRequired()) {
-                        apt_get_exit_code = await exec.exec(`sudo -n apt-get install -f -y --allow-downgrades ${install_match}`, [], opts);
-                    } else {
-                        apt_get_exit_code = await exec.exec(`apt-get install -f -y --allow-downgrades ${install_match}`, [], opts);
-                    }
-                    if (apt_get_exit_code === 0) {
-                        // Extract package name from "package=version" format
-                        installed_package = install_match.split('=')[0];
-                        break;
-                    }
-                }
-            }
-
+        if (installed_package !== null) {
+            // Locate the installed executable
             const result = await find_program_in_system_paths([], names, version, check_latest);
             output_version = result.output_version;
             output_path = result.output_path;
@@ -703,6 +846,8 @@ export async function find_program_with_apt(names: string[], version: string, ch
         const errorMessage = error instanceof Error ? error.message : String(error);
         fnlog(errorMessage);
     }
+
+    // Log results
     if (output_path !== null) {
         fnlog(`Program found: ${output_path}`);
     } else {
@@ -716,6 +861,7 @@ export async function find_program_with_apt(names: string[], version: string, ch
     if (installed_package !== null) {
         fnlog(`Installed package: ${installed_package}`);
     }
+
     return { output_version, output_path, installed_package };
 }
 
@@ -823,20 +969,16 @@ export async function findGit(): Promise<string | null> {
     let git_path: string;
     try {
         git_path = await io.which('git');
-    } catch (error) {
+    } catch {
         git_path = '';
     }
     if (git_path === '') {
-        if (isSudoRequired()) {
-            await exec.exec(`sudo -n apt-get update`, [], { ignoreReturnCode: true });
-            await exec.exec(`sudo -n apt-get install -y git`, [], { ignoreReturnCode: true });
-        } else {
-            await exec.exec(`apt-get update`, [], { ignoreReturnCode: true });
-            await exec.exec(`apt-get install -y git`, [], { ignoreReturnCode: true });
-        }
+        // Try to install git via APT
+        await updateAptPackageLists();
+        await install_program_with_apt('git', null, [], { tryAptitude: false, tryAlternatives: false });
         try {
             git_path = await io.which('git');
-        } catch (error) {
+        } catch {
             return null;
         }
     }
@@ -844,15 +986,13 @@ export async function findGit(): Promise<string | null> {
 }
 
 /**
- * Pauses execution for a specified duration using busy waiting.
+ * Pauses execution for a specified duration.
  *
  * @param ms - Duration to wait in milliseconds
+ * @returns Promise that resolves after the specified duration
  */
-async function sleep(ms: number): Promise<void> {
-    const start = new Date().getTime();
-    while (new Date().getTime() < start + ms) {
-        // busy wait
-    }
+function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**
@@ -1328,18 +1468,15 @@ export async function ensureAddAptRepositoryIsAvailable(): Promise<void> {
     try {
         add_apt_repository_path = await io.which('add-apt-repository');
         fnlog(`add-apt-repository found at ${add_apt_repository_path}`);
-    } catch (error) {
+    } catch {
         add_apt_repository_path = null;
     }
     if (add_apt_repository_path === null || add_apt_repository_path === '') {
         if (isSudoRequired()) {
             await ensureSudoIsAvailable();
-            await exec.exec(`sudo -n apt-get update`, [], { ignoreReturnCode: true });
-            await exec.exec(`sudo -n apt-get install -y software-properties-common`, [], { ignoreReturnCode: true });
-        } else {
-            await exec.exec(`apt-get update`, [], { ignoreReturnCode: true });
-            await exec.exec(`apt-get install -y software-properties-common`, [], { ignoreReturnCode: true });
         }
+        await updateAptPackageLists();
+        await install_program_with_apt('software-properties-common', null, [], { tryAptitude: false, tryAlternatives: false });
         await io.which('add-apt-repository');
     }
 }
