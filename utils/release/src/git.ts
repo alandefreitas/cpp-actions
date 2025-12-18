@@ -2,7 +2,7 @@
  * Git operations for the release workflow.
  */
 
-import { execSync, ExecSyncOptions } from 'child_process';
+import { execFileSync, ExecSyncOptions } from 'child_process';
 
 /**
  * Options for git command execution.
@@ -16,6 +16,7 @@ export interface GitOptions {
 
 /**
  * Executes a git command and returns the output.
+ * Uses execFileSync to properly handle arguments with spaces.
  * @param args - Git command arguments
  * @param options - Execution options
  * @returns Command output as string
@@ -28,8 +29,7 @@ export function git(args: string[], options: GitOptions): string {
         stdio: options.silent ? ['pipe', 'pipe', 'pipe'] : 'inherit'
     };
 
-    const command = `git ${args.join(' ')}`;
-    return execSync(command, execOptions) as string;
+    return execFileSync('git', args, execOptions) as string;
 }
 
 /**
@@ -120,13 +120,45 @@ export function createTag(tag: string, options: GitOptions): void {
 }
 
 /**
- * Pushes a ref to origin.
- * @param ref - The ref to push
+ * Creates or updates a tag (force mode).
+ * Used for rolling tags like v1 or v1.2 that move with each release.
+ * @param tag - The tag name
  * @param options - Execution options
  */
-export function pushToOrigin(ref: string, options: GitOptions): void {
-    console.log(`Pushing ${ref} to origin...`);
-    git(['push', 'origin', ref], options);
+export function createTagForce(tag: string, options: GitOptions): void {
+    console.log(`Creating/updating tag ${tag}...`);
+    git(['tag', '-f', tag], options);
+}
+
+/**
+ * Force-pushes a tag to origin using explicit refspec.
+ * Used for rolling tags that need to be updated on remote.
+ * @param tag - The tag to push
+ * @param options - Execution options
+ */
+export function pushTagForce(tag: string, options: GitOptions): void {
+    console.log(`Force-pushing tag ${tag} to origin...`);
+    git(['push', '--force', 'origin', `refs/tags/${tag}:refs/tags/${tag}`], options);
+}
+
+/**
+ * Pushes a branch to origin using explicit refspec to avoid ambiguity.
+ * @param branch - The branch name to push
+ * @param options - Execution options
+ */
+export function pushBranchToOrigin(branch: string, options: GitOptions): void {
+    console.log(`Pushing branch ${branch} to origin...`);
+    git(['push', 'origin', `refs/heads/${branch}:refs/heads/${branch}`], options);
+}
+
+/**
+ * Pushes a tag to origin.
+ * @param tag - The tag to push
+ * @param options - Execution options
+ */
+export function pushTagToOrigin(tag: string, options: GitOptions): void {
+    console.log(`Pushing tag ${tag} to origin...`);
+    git(['push', 'origin', `refs/tags/${tag}:refs/tags/${tag}`], options);
 }
 
 /**
@@ -148,4 +180,25 @@ export function rebase(target: string, options: GitOptions): void {
  */
 export function getLog(from: string, to: string, options: GitOptions): string {
     return git(['log', `${from}..${to}`, '--oneline'], { ...options, silent: true });
+}
+
+/**
+ * Stages all changes and creates a commit.
+ * @param message - The commit message
+ * @param options - Execution options
+ */
+export function commitAll(message: string, options: GitOptions): void {
+    console.log('Staging all changes...');
+    git(['add', '-A'], options);
+    console.log(`Creating commit: ${message}`);
+    git(['commit', '-m', message], options);
+}
+
+/**
+ * Gets a summary of uncommitted changes.
+ * @param options - Execution options
+ * @returns Short status output
+ */
+export function getChangeSummary(options: GitOptions): string {
+    return git(['status', '--short'], { ...options, silent: true });
 }

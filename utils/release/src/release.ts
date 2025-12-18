@@ -11,15 +11,20 @@ import {
     refExists,
     isWorkingTreeClean,
     createTag,
-    pushToOrigin,
+    createTagForce,
+    pushBranchToOrigin,
+    pushTagToOrigin,
+    pushTagForce,
     rebase,
     getLog,
     gitSafe,
+    commitAll,
+    getChangeSummary,
     GitOptions
 } from './git';
 import { WorktreeContext } from './worktree';
 import { askConsent } from './prompt';
-import { isValidSemver, normalizeTag, extractVersion } from './version';
+import { isValidSemver, normalizeTag, extractVersion, parseSemver } from './version';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -62,20 +67,48 @@ function packagesAlreadyOnVersion(cwd: string, targetVersion: string): boolean {
 }
 
 /**
- * Checks if working tree is clean and prompts user to handle changes.
+ * Checks if working tree is clean and offers to commit changes if not.
  * @param gitOpts - Git options
  * @param stepName - Name of the step that may have introduced changes
- * @returns True if can proceed, false if user wants to abort
+ * @param commitMessage - Message to use if committing changes
+ * @param options - Release options for consent prompts
+ * @returns True if can proceed (clean or committed), false if user wants to abort
  */
-function requireCleanWorktree(gitOpts: GitOptions, stepName: string): boolean {
+async function requireCleanWorktree(
+    gitOpts: GitOptions,
+    stepName: string,
+    commitMessage: string,
+    options: ReleaseOptions
+): Promise<boolean> {
     if (isWorkingTreeClean(gitOpts)) {
         return true;
     }
 
     console.log(`\n⚠️  ${stepName} introduced changes to the working tree.`);
-    console.log('Please review, commit, or stash these changes before continuing.');
-    console.log('Run the release script again after handling the changes.\n');
-    return false;
+    const changes = getChangeSummary(gitOpts);
+    console.log('Changed files:');
+    console.log(changes);
+
+    const consent = await askConsent(
+        `Commit these changes`,
+        `git add -A && git commit -m "${commitMessage}"`,
+        options.skipPrompts,
+        options.dryRun,
+        true // default yes
+    );
+
+    if (!consent) {
+        if (options.dryRun) {
+            console.log(`[DRY RUN] Would commit: ${commitMessage}`);
+            return true;
+        }
+        console.log('Please review, commit, or stash these changes before continuing.');
+        console.log('Run the release script again after handling the changes.\n');
+        return false;
+    }
+
+    commitAll(commitMessage, gitOpts);
+    return true;
 }
 
 /**
@@ -181,7 +214,12 @@ export async function executeRelease(options: ReleaseOptions): Promise<boolean> 
             console.error(versionResult.message);
             return false;
         }
-        if (!dryRun && !requireCleanWorktree(gitOpts, 'Version update')) {
+        if (!dryRun && !await requireCleanWorktree(
+            gitOpts,
+            'Version update',
+            `chore: bump version to ${version}`,
+            options
+        )) {
             return false;
         }
     }
@@ -199,7 +237,12 @@ export async function executeRelease(options: ReleaseOptions): Promise<boolean> 
         console.error(buildResult.message);
         return false;
     }
-    if (!dryRun && !requireCleanWorktree(gitOpts, 'Build')) {
+    if (!dryRun && !await requireCleanWorktree(
+        gitOpts,
+        'Build',
+        `chore: rebuild dist bundles for ${normalizedTag}`,
+        options
+    )) {
         return false;
     }
 
@@ -217,7 +260,12 @@ export async function executeRelease(options: ReleaseOptions): Promise<boolean> 
         console.error(depcheckResult.message);
         return false;
     }
-    if (!dryRun && !requireCleanWorktree(gitOpts, 'Depcheck')) {
+    if (!dryRun && !await requireCleanWorktree(
+        gitOpts,
+        'Depcheck',
+        `chore: depcheck fixes for ${normalizedTag}`,
+        options
+    )) {
         return false;
     }
 
@@ -233,7 +281,12 @@ export async function executeRelease(options: ReleaseOptions): Promise<boolean> 
         console.error(updateDepsResult.message);
         return false;
     }
-    if (!dryRun && !requireCleanWorktree(gitOpts, 'Dependency updates')) {
+    if (!dryRun && !await requireCleanWorktree(
+        gitOpts,
+        'Dependency updates',
+        `chore: update dependencies for ${normalizedTag}`,
+        options
+    )) {
         return false;
     }
 
@@ -277,9 +330,9 @@ export async function executeRelease(options: ReleaseOptions): Promise<boolean> 
                 console.log(`Remote develop: ${remoteDevelop}  ${getCommitMessage('origin/develop', gitOpts)}`);
                 const pushDevelop = await executeStep(
                     'Push develop to origin',
-                    'git push origin develop',
+                    'git push origin refs/heads/develop:refs/heads/develop',
                     options,
-                    () => pushToOrigin('develop', gitOpts),
+                    () => pushBranchToOrigin('develop', gitOpts),
                     true // default yes
                 );
                 if (!pushDevelop.success) {
@@ -365,11 +418,11 @@ export async function executeRelease(options: ReleaseOptions): Promise<boolean> 
         console.log('\n==== Step 5: Push master to origin ====');
         const pushMasterResult = await executeStep(
             'Push master to origin',
-            'git push origin master',
+            'git push origin refs/heads/master:refs/heads/master',
             options,
             () => {
                 if (worktreeOpts) {
-                    pushToOrigin('master', worktreeOpts);
+                    pushBranchToOrigin('master', worktreeOpts);
                 }
             }
         );
@@ -399,11 +452,11 @@ export async function executeRelease(options: ReleaseOptions): Promise<boolean> 
         console.log('\n==== Step 7: Push tag to origin ====');
         const pushTagResult = await executeStep(
             `Push tag ${normalizedTag} to origin`,
-            `git push origin ${normalizedTag}`,
+            `git push origin refs/tags/${normalizedTag}:refs/tags/${normalizedTag}`,
             options,
             () => {
                 if (worktreeOpts) {
-                    pushToOrigin(normalizedTag, worktreeOpts);
+                    pushTagToOrigin(normalizedTag, worktreeOpts);
                 }
             }
         );
@@ -412,9 +465,49 @@ export async function executeRelease(options: ReleaseOptions): Promise<boolean> 
             return false;
         }
 
+        // Step 8: Create rolling major/minor tags
+        console.log('\n==== Step 8: Create rolling tags ====');
+        const semver = parseSemver(normalizedTag);
+        const majorTag = `v${semver.major}`;
+        const minorTag = `v${semver.major}.${semver.minor}`;
+
+        const createRollingTagsResult = await executeStep(
+            `Create rolling tags ${majorTag} and ${minorTag}`,
+            `git tag -f ${majorTag} && git tag -f ${minorTag}`,
+            options,
+            () => {
+                if (worktreeOpts) {
+                    createTagForce(majorTag, worktreeOpts);
+                    createTagForce(minorTag, worktreeOpts);
+                }
+            }
+        );
+        if (!createRollingTagsResult.success && !dryRun) {
+            console.error(createRollingTagsResult.message);
+            return false;
+        }
+
+        // Step 9: Push rolling tags to origin
+        console.log('\n==== Step 9: Push rolling tags to origin ====');
+        const pushRollingTagsResult = await executeStep(
+            `Force-push rolling tags ${majorTag} and ${minorTag} to origin`,
+            `git push --force origin refs/tags/${majorTag} refs/tags/${minorTag}`,
+            options,
+            () => {
+                if (worktreeOpts) {
+                    pushTagForce(majorTag, worktreeOpts);
+                    pushTagForce(minorTag, worktreeOpts);
+                }
+            }
+        );
+        if (!pushRollingTagsResult.success && !dryRun) {
+            console.error(pushRollingTagsResult.message);
+            return false;
+        }
+
     } finally {
-        // Step 8: Cleanup worktree
-        console.log('\n==== Step 8: Cleanup ====');
+        // Step 10: Cleanup worktree
+        console.log('\n==== Step 10: Cleanup ====');
         if (!dryRun) {
             worktreeContext.cleanup();
         } else {
@@ -423,12 +516,20 @@ export async function executeRelease(options: ReleaseOptions): Promise<boolean> 
     }
 
     // Success!
+    const semverFinal = parseSemver(normalizedTag);
+    const majorTagFinal = `v${semverFinal.major}`;
+    const minorTagFinal = `v${semverFinal.major}.${semverFinal.minor}`;
+
     console.log('\n========================================');
     if (dryRun) {
         console.log(`  [DRY RUN] Release ${normalizedTag} would be created`);
+        console.log(`  Rolling tags ${majorTagFinal} and ${minorTagFinal} would be updated`);
     } else {
         console.log(`  \u2705 Release ${normalizedTag} completed successfully!`);
-        console.log(`\n  Tag ${normalizedTag} has been created and pushed to origin.`);
+        console.log(`\n  Tags pushed to origin:`);
+        console.log(`    - ${normalizedTag} (full version)`);
+        console.log(`    - ${minorTagFinal} (rolling minor)`);
+        console.log(`    - ${majorTagFinal} (rolling major)`);
     }
     console.log('========================================\n');
 
