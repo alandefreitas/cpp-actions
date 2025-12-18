@@ -75,6 +75,7 @@ interface Inputs {
     run_tests: boolean | undefined;
     configure_tests_flag: string;
     test_all_cxxstd: boolean;
+    ctest_timeout: number | undefined;
     install: boolean | undefined;
     install_all_cxxstd: boolean | undefined;
     /** Base install prefix (suffixes added for non-main factor combinations) */
@@ -136,6 +137,7 @@ interface ResolvedInputs {
     jobs: number;
     run_tests: boolean | undefined;
     configure_tests_flag: string;
+    ctest_timeout: number | undefined;
     install: boolean | undefined;
     /** Resolved install prefix for this entry (includes factor suffix if needed) */
     install_prefix: string;
@@ -1617,6 +1619,10 @@ async function processEntry(
             }
             test_args.push('--progress');
             test_args.push('--output-on-failure');
+            if (entry.ctest_timeout !== undefined) {
+                test_args.push('--timeout');
+                test_args.push(`${entry.ctest_timeout}`);
+            }
 
             /*
                 Run
@@ -2129,6 +2135,7 @@ function expandInputs(inputs: Inputs): ResolvedInputs[] {
                 jobs: inputs.jobs,
                 run_tests: inputs.run_tests,
                 configure_tests_flag: inputs.configure_tests_flag,
+                ctest_timeout: inputs.ctest_timeout,
                 install: inputs.install,
                 package: inputs.package,
                 package_name: inputs.package_name,
@@ -2297,6 +2304,7 @@ async function run(): Promise<void> {
         run_tests: gh_inputs.getTribool('run-tests', { fallbackEnv: 'CMAKE_RUN_TESTS' }),
         configure_tests_flag: gh_inputs.getInput('configure-tests-flag'),
         test_all_cxxstd: gh_inputs.getBoolean('test-all-cxxstd'),
+        ctest_timeout: gh_inputs.getInt('ctest-timeout', { fallbackEnv: 'CTEST_TEST_TIMEOUT' }),
         // Install
         install: gh_inputs.getTribool('install', { fallbackEnv: 'CMAKE_INSTALL' }),
         install_all_cxxstd: gh_inputs.getTribool('install-all-cxxstd'),

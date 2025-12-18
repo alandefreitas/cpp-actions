@@ -398,11 +398,24 @@ inputs:
   test-all-cxxstd:
     description: |
       Whether we should run tests for all C++ standards defined by `cxxstd`.
-      
+
       If the input is not specified, the action will only run the tests with the last value defined in `cxxstd`.
 
     required: false
     default: 'false'
+
+  ctest-timeout:
+    description: |
+      Maximum time in seconds allowed for each test to run.
+
+      If a test runs longer than this value, it will be killed and marked as failed.
+
+      If the input is not specified, the action will use the value defined by the environment variable `CTEST_TEST_TIMEOUT`.
+
+      If the environment variable is also not specified, ctest will use its default behavior (no timeout).
+
+    required: false
+    default: ''
 
   # ======================================
   # Install options
