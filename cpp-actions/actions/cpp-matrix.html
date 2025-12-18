@@ -252,7 +252,13 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.9.2/index.html">v1.9.2</a>
+        </li>
+        <li class="version">
           <a href="../v1.9.1/index.html">v1.9.1</a>
+        </li>
+        <li class="version">
+          <a href="../v1.9/index.html">v1.9</a>
         </li>
         <li class="version">
           <a href="../v1.9.0/index.html">v1.9.0</a>
@@ -330,6 +336,9 @@
           <a href="../v1.1.0/index.html">v1.1.0</a>
         </li>
         <li class="version">
+          <a href="../v1/index.html">v1</a>
+        </li>
+        <li class="version">
           <a href="../v1.0.0/index.html">v1.0.0</a>
         </li>
       </ul>
@@ -354,7 +363,9 @@
   <div class="version-menu">
     <a class="version is-current" href="cpp-matrix.html">master</a>
     <a class="version" href="../develop/actions/cpp-matrix.html">develop</a>
+    <a class="version" href="../v1.9.2/actions/cpp-matrix.html">v1.9.2</a>
     <a class="version" href="../v1.9.1/actions/cpp-matrix.html">v1.9.1</a>
+    <a class="version" href="../v1.9/actions/cpp-matrix.html">v1.9</a>
     <a class="version" href="../v1.9.0/actions/cpp-matrix.html">v1.9.0</a>
     <a class="version" href="../v1.8.12/actions/cpp-matrix.html">v1.8.12</a>
     <a class="version" href="../v1.8.11/actions/cpp-matrix.html">v1.8.11</a>
@@ -380,6 +391,7 @@
     <a class="version is-missing" href="../v1.2.1/index.html">v1.2.1</a>
     <a class="version is-missing" href="../v1.2.0/index.html">v1.2.0</a>
     <a class="version is-missing" href="../v1.1.0/index.html">v1.1.0</a>
+    <a class="version" href="../v1/actions/cpp-matrix.html">v1</a>
     <a class="version is-missing" href="../v1.0.0/index.html">v1.0.0</a>
   </div>
 </div>
@@ -621,6 +633,8 @@ other extra values.</p>
 built-in <a href="https://handlebarsjs.com/guide/builtin-helpers.html">helpers</a> provided by Handlebars and the
 predefined helpers defined by the action:</p>
 </div>
+<div class="sect2">
+<h3 id="_string_helpers_for_extra_values"><a class="anchor" href="#_string_helpers_for_extra_values"></a>String Helpers for Extra Values</h3>
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
 <col style="width: 25%;">
@@ -641,7 +655,7 @@ predefined helpers defined by the action:</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>contains</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Checks if the value contains a substring</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Checks if the value contains a substring (case-sensitive)</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>startsWith</code> / <code>starts-with</code></p></td>
@@ -652,39 +666,375 @@ predefined helpers defined by the action:</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Checks if the value ends with a substring</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>substring</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Extracts a substring from the value</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>substr</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extracts a substring: <code>substr str start end</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>and</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Logical AND operator</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>replace</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Replaces all occurrences: <code>replace str search replacement</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>or</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Logical OR operator</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>replaceFirst</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Replaces first occurrence only</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>not</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Logical NOT operator</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>indexOf</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Returns index of substring, or -1 if not found</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>eq</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Equality operator</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>lastIndexOf</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Returns last index of substring, or -1 if not found</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ieq</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Case-insensitive equality operator</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>split</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Splits string into array: <code>split str delimiter</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ne</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Inequality operator</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trim</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Removes leading/trailing whitespace</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ine</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Case-insensitive inequality operator</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trimLeft</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Removes leading whitespace</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trimRight</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Removes trailing whitespace</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>capitalize</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Capitalizes first character</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>titlecase</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Capitalizes first letter of each word</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>camelcase</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Converts to camelCase</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>pascalcase</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Converts to PascalCase</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>snakecase</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Converts to snake_case</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>kebabcase</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Converts to kebab-case</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>reverse</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Reverses a string (or array)</p></td>
 </tr>
 </tbody>
 </table>
+</div>
+<div class="sect2">
+<h3 id="_case_insensitive_string_helpers"><a class="anchor" href="#_case_insensitive_string_helpers"></a>Case-Insensitive String Helpers</h3>
+<div class="paragraph">
+<p>These helpers match GitHub Actions expression behavior (case-insensitive):</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Helper</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>icontains</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Case-insensitive substring check</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>istartsWith</code> / <code>istarts-with</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Case-insensitive prefix check</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>iendsWith</code> / <code>iends-with</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Case-insensitive suffix check</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_logical_helpers"><a class="anchor" href="#_logical_helpers"></a>Logical Helpers</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Helper</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>and</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Logical AND (supports multiple arguments)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>or</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Logical OR (supports multiple arguments)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>not</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Logical NOT</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>select</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Ternary operator: <code>select condition trueValue falseValue</code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_comparison_helpers"><a class="anchor" href="#_comparison_helpers"></a>Comparison Helpers</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Helper</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>eq</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Strict equality (<code>===</code>)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ieq</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Case-insensitive equality</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ne</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Inequality (<code>!==</code>)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ine</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Case-insensitive inequality</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>lt</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Less than (<code>&lt;</code>)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>le</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Less than or equal (<code>&lt;=</code>)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>gt</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Greater than (<code>&gt;</code>)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ge</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Greater than or equal (<code>&gt;=</code>)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_math_helpers"><a class="anchor" href="#_math_helpers"></a>Math Helpers</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Helper</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>add</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Addition: <code>add a b</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>sub</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Subtraction: <code>sub a b</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>mul</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Multiplication: <code>mul a b</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>div</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Division: <code>div a b</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>mod</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Modulo: <code>mod a b</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>abs</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Absolute value</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>floor</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Round down</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ceil</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Round up</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>round</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Round to nearest integer</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>min</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Minimum of values: <code>min a b c &#8230;&#8203;</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>max</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Maximum of values: <code>max a b c &#8230;&#8203;</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>pow</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Power: <code>pow base exponent</code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_array_helpers"><a class="anchor" href="#_array_helpers"></a>Array Helpers</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Helper</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>join</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Joins array elements: <code>join array delimiter</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>first</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Returns first element</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>last</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Returns last element</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>nth</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Returns nth element (0-indexed): <code>nth array index</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>length</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Returns length of array or string</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>slice</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extracts portion: <code>slice array start end</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>sort</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Sorts array alphabetically</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>includes</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Checks if array contains value</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_type_checking_helpers"><a class="anchor" href="#_type_checking_helpers"></a>Type Checking Helpers</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Helper</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>isString</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Returns true if value is a string</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>isNumber</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Returns true if value is a number</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>isArray</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Returns true if value is an array</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>isEmpty</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Returns true if value is empty string, null, undefined, or empty array</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_conversion_helpers"><a class="anchor" href="#_conversion_helpers"></a>Conversion Helpers</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Helper</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>toNumber</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Converts string to number</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>toJSON</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Converts value to JSON string (GitHub Actions compatible)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>fromJSON</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Parses JSON string to value (GitHub Actions compatible)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_utility_helpers"><a class="anchor" href="#_utility_helpers"></a>Utility Helpers</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Helper</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>default</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Returns default if value is falsy: <code>default value fallback</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>coalesce</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Returns first non-null/undefined value: <code>coalesce a b c</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>format</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Template substitution: <code>format "Hello {0}" name</code> (GitHub Actions compatible)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -773,7 +1123,7 @@ GitHub Actions stopped supporting many old containers since it moved to Node 20.
 the <code>volumes</code> key of the container object so that the user can provide its own Node installation.</p>
 </div>
 <div class="paragraph">
-<p>This action will provide theses suggestions in the <code>container</code> key of the matrix entries.
+<p>This action will provide these suggestions in the <code>container</code> key of the matrix entries.
 However, the user should still include a step in the workflow to install the required Node version
 in the <code>/__e/node20</code> directory.</p>
 </div>
@@ -783,7 +1133,7 @@ in the <code>/__e/node20</code> directory.</p>
 <h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next steps</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>After setting creating the test matrix, the next step in your workflow should usually be
+<p>After creating the test matrix, the next step in your workflow should usually be
 <a href="setup-cpp.html" class="xref page">Setup C++</a>.</p>
 </div>
 </div>
@@ -1184,8 +1534,10 @@ most likely to fail run first, providing faster feedback.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>failure-rate-runs</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Number of recent workflow runs to analyze when calculating failure rates.</p>
+<p class="tableblock">Jobs for each run are fetched in parallel, so increasing this value has
+minimal impact on execution time.</p>
 <p class="tableblock">Only used when <code>sort-by-failure-rate</code> is enabled.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>20</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>100</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>github-token</code></p></td>

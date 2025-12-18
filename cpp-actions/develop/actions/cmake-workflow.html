@@ -255,7 +255,13 @@
           <a href="../index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../../v1.9.2/index.html">v1.9.2</a>
+        </li>
+        <li class="version">
           <a href="../../v1.9.1/index.html">v1.9.1</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.9/index.html">v1.9</a>
         </li>
         <li class="version">
           <a href="../../v1.9.0/index.html">v1.9.0</a>
@@ -333,6 +339,9 @@
           <a href="../../v1.1.0/index.html">v1.1.0</a>
         </li>
         <li class="version">
+          <a href="../../v1/index.html">v1</a>
+        </li>
+        <li class="version">
           <a href="../../v1.0.0/index.html">v1.0.0</a>
         </li>
       </ul>
@@ -358,7 +367,9 @@
   <div class="version-menu">
     <a class="version" href="../../actions/cmake-workflow.html">master</a>
     <a class="version is-current" href="cmake-workflow.html">develop</a>
+    <a class="version" href="../../v1.9.2/actions/cmake-workflow.html">v1.9.2</a>
     <a class="version" href="../../v1.9.1/actions/cmake-workflow.html">v1.9.1</a>
+    <a class="version" href="../../v1.9/actions/cmake-workflow.html">v1.9</a>
     <a class="version" href="../../v1.9.0/actions/cmake-workflow.html">v1.9.0</a>
     <a class="version" href="../../v1.8.12/actions/cmake-workflow.html">v1.8.12</a>
     <a class="version" href="../../v1.8.11/actions/cmake-workflow.html">v1.8.11</a>
@@ -384,6 +395,7 @@
     <a class="version" href="../../v1.2.1/actions/cmake-workflow.html">v1.2.1</a>
     <a class="version" href="../../v1.2.0/actions/cmake-workflow.html">v1.2.0</a>
     <a class="version" href="../../v1.1.0/actions/cmake-workflow.html">v1.1.0</a>
+    <a class="version" href="../../v1/actions/cmake-workflow.html">v1</a>
     <a class="version" href="../../v1.0.0/actions/cmake-workflow.html">v1.0.0</a>
   </div>
 </div>
@@ -786,6 +798,14 @@ When the value is undefined, the <code>configure-tests-flag</code> is ignored.</
 <td class="tableblock halign-left valign-top"><p class="tableblock">Whether we should run tests for all C++ standards defined by <code>cxxstd</code>.</p>
 <p class="tableblock">If the input is not specified, the action will only run the tests with the last value defined in <code>cxxstd</code>.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ctest-timeout</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Maximum time in seconds allowed for each test to run.</p>
+<p class="tableblock">If a test runs longer than this value, it will be killed and marked as failed.</p>
+<p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>CTEST_TEST_TIMEOUT</code>.</p>
+<p class="tableblock">If the environment variable is also not specified, ctest will use its default behavior (no timeout).</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>install</code></p></td>

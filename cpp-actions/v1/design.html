@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+        <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Design Rationale :: C++ Actions</title>
+    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/design.html">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../_/css/site.css">
+    <link rel="stylesheet" href="../../_/css/vendor/tabs.css">
+    <script>var uiRootPath = '../../_'</script>
+<link rel="icon" href="../../_/img/favicon.svg" type="image/svg">
+    <style>
+      .algolia-autocomplete .ds-dropdown-menu:before {
+          display: block;
+          position: absolute;
+          content: "";
+          width: 14px;
+          height: 14px;
+          background: #fff;
+          z-index: 2;
+          top: 9px;
+          left: -7px !important;
+          border-top: 1px solid #d9d9d9;
+          border-right: 1px solid #d9d9d9;
+          -webkit-transform: rotate(-136deg);
+          transform: rotate(-136deg);
+          border-radius: 2px;
+      }
+      .search-result-dropdown-menu:before {
+          display: block;
+          position: absolute;
+          content: "";
+          width: 14px;
+          height: 14px;
+          background: #fff !important;
+          z-index: 2;
+          top: 9px;
+          border-top: 1px solid #d9d9d9;
+          border-right: 1px solid #d9d9d9;
+          -webkit-transform: rotate(-136deg);
+          transform: rotate(-136deg);
+          border-radius: 2px;
+          left: -7px;
+      }
+      .nav-container .search-result-dropdown-menu {
+        position: fixed;
+        top: 65px;
+        left: 13.5rem;
+        width: 50%;
+        overflow: visible;
+        max-height: calc(100vh - 5.25rem);
+        line-height: 1.5;
+        z-index: 9999;
+      }
+      .nav-container .button {
+        padding: 0px 14px;
+        background-color: #FF9F00;
+        color: #fff;
+      }
+      .algolia-autocomplete.algolia-autocomplete-left .ds-dropdown-menu {
+          position: fixed !important;
+          top: 65px !important;
+          left: 13.5rem !important;
+          z-index: 99 !important;
+      }
+      .search-selector {
+        margin-right: 133px;
+        text-transform: none;
+      }
+      @media screen and (max-width: 1024px) {
+        .nav-container .search-result-dropdown-menu {
+          top: 103px;
+          left: 14.5rem;
+        }
+      }
+      @media screen and (max-width: 768px) {
+        .search-result-dropdown-menu:before {
+            top: -6px;
+            -webkit-transform: rotate(-45deg);
+            transform: rotate(-45deg);
+            left: 35px;
+        }
+        .nav-container .search-result-dropdown-menu {
+            top: 100%;
+            left: 0;
+            width: 90vw;
+            position: absolute !important;
+        }
+        .algolia-autocomplete.algolia-autocomplete-left .ds-dropdown-menu {
+          position: absolute !important;
+          top: 100% !important;
+          left: 0px !important;
+          z-index: 99 !important;
+        }
+        .algolia-autocomplete .ds-dropdown-menu:before{
+            top: -6px;
+            -webkit-transform: rotate(-45deg);
+            transform: rotate(-45deg);
+            left: 35px !important;
+        }
+      }
+    </style>
+  </head>
+  <body class="article">
+    <script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs'; mermaid.initialize({"startOnLoad":true});</script><header class="header">
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <a class="navbar-item" href="https://alandefreitas.github.io/cpp-actions/doc/cpp-actions/">
+                <img src="../../_/img/banner.svg" alt="" width="130">
+                    <div class="navbar-item-nonProduction">
+                        <p>v1</p>
+                    </div>
+            </a>
+            <button class="navbar-burger" data-target="topbar-nav">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+
+
+        <div id="topbar-nav" class="navbar-menu">
+                <div class="navbar-item is-hoverable">
+                        <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions
+                            : Design Rationale</a>
+                </div>
+                    <div class="navbar-item is-hoverable">
+                        <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions" target="_blank">GitHub</a>
+                    </div>
+                    <div class="navbar-item is-hoverable">
+                        <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions/releases" target="_blank">Releases</a>
+                    </div>
+
+            <div class="navbar-end">
+                <div class="navbar-item">
+                      <span class="control">
+                        <a class="button is-primary" target="blank_"
+                           href="https://github.com/alandefreitas/cpp-actions/issues/new/choose">Report an Issue</a>
+                      </span>
+                </div>
+            </div>
+        </div>
+    </nav>
+</header>
+    <div class="body">
+<div class="nav-container" data-component="cpp-actions" data-version="v1">
+  <aside class="nav">
+    <div class="panels">
+    <div class="nav-panel-menu is-active" data-panel="menu">
+        <div class="navbar-item search hide-for-print">
+            <div id="search-field" class="field has-filter">
+                <div style="display: flex; flex-direction: column;">
+                    <div style="display: flex; margin-bottom: 10px; position: relative;">
+                        <input id="search-input" type="text" placeholder="Search the docs" style="flex: 1; padding: 0 0.25em" onkeyup="onSearch()">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <nav class="nav-menu">
+                <h3 class="title"><a href="index.html">C++ Actions</a></h3>
+            <ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="actions/cpp-matrix.html">C++ Matrix Action</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Compilers</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/setup-cpp.html">Setup C++ Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/setup-gcc.html">Setup GCC Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/setup-clang.html">Setup Clang Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/setup-msvc.html">Setup MSVC Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Tools</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/package-install.html">Install Packages Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/boost-clone.html">Boost Clone Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/setup-cmake.html">Setup CMake Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/setup-program.html">Setup Program Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Workflows</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/cmake-workflow.html">CMake Workflow Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/b2-workflow.html">B2 Workflow Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">Reports</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/flamegraph.html">Create Flamegraph Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="actions/create-changelog.html">Create Changelog Action</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="contribute.html">Contributor Guide</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="design.html">Design Rationale</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="license.html">License</a>
+  </li>
+</ul>
+  </li>
+</ul>
+        </nav>
+    </div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">C++ Actions</span>
+    <span class="version">v1</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../index.html">C++ Actions</a>
+      <ul class="versions">
+        <li class="version is-latest">
+          <a href="../index.html">master</a>
+        </li>
+        <li class="version">
+          <a href="../develop/index.html">develop</a>
+        </li>
+        <li class="version">
+          <a href="../v1.9.2/index.html">v1.9.2</a>
+        </li>
+        <li class="version">
+          <a href="../v1.9.1/index.html">v1.9.1</a>
+        </li>
+        <li class="version">
+          <a href="../v1.9/index.html">v1.9</a>
+        </li>
+        <li class="version">
+          <a href="../v1.9.0/index.html">v1.9.0</a>
+        </li>
+        <li class="version">
+          <a href="../v1.8.12/index.html">v1.8.12</a>
+        </li>
+        <li class="version">
+          <a href="../v1.8.11/index.html">v1.8.11</a>
+        </li>
+        <li class="version">
+          <a href="../v1.8.10/index.html">v1.8.10</a>
+        </li>
+        <li class="version">
+          <a href="../v1.8.9/index.html">v1.8.9</a>
+        </li>
+        <li class="version">
+          <a href="../v1.8.8/index.html">v1.8.8</a>
+        </li>
+        <li class="version">
+          <a href="../v1.8.7/index.html">v1.8.7</a>
+        </li>
+        <li class="version">
+          <a href="../v1.8.6/index.html">v1.8.6</a>
+        </li>
+        <li class="version">
+          <a href="../v1.8.5/index.html">v1.8.5</a>
+        </li>
+        <li class="version">
+          <a href="../v1.8.4/index.html">v1.8.4</a>
+        </li>
+        <li class="version">
+          <a href="../v1.8.3/index.html">v1.8.3</a>
+        </li>
+        <li class="version">
+          <a href="../v1.8.2/index.html">v1.8.2</a>
+        </li>
+        <li class="version">
+          <a href="../v1.8.1/index.html">v1.8.1</a>
+        </li>
+        <li class="version">
+          <a href="../v1.8.0/index.html">v1.8.0</a>
+        </li>
+        <li class="version">
+          <a href="../v1.7.0/index.html">v1.7.0</a>
+        </li>
+        <li class="version">
+          <a href="../v1.6.2/index.html">v1.6.2</a>
+        </li>
+        <li class="version">
+          <a href="../v1.6.1/index.html">v1.6.1</a>
+        </li>
+        <li class="version">
+          <a href="../v1.6.0/index.html">v1.6.0</a>
+        </li>
+        <li class="version">
+          <a href="../v1.5.0/index.html">v1.5.0</a>
+        </li>
+        <li class="version">
+          <a href="../v1.4.1/index.html">v1.4.1</a>
+        </li>
+        <li class="version">
+          <a href="../v1.4.0/index.html">v1.4.0</a>
+        </li>
+        <li class="version">
+          <a href="../v1.3.0/index.html">v1.3.0</a>
+        </li>
+        <li class="version">
+          <a href="../v1.2.1/index.html">v1.2.1</a>
+        </li>
+        <li class="version">
+          <a href="../v1.2.0/index.html">v1.2.0</a>
+        </li>
+        <li class="version">
+          <a href="../v1.1.0/index.html">v1.1.0</a>
+        </li>
+        <li class="version is-current">
+          <a href="index.html">v1</a>
+        </li>
+        <li class="version">
+          <a href="../v1.0.0/index.html">v1.0.0</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+    <button class="nav-toggle"></button>
+        <a href="../index.html" class="home-link"></a>
+    <nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="index.html">C++ Actions</a></li>
+    <li><a href="design.html">Design Rationale</a></li>
+  </ul>
+</nav>
+    <div class="page-versions">
+  <button class="version-menu-toggle" title="Show other versions of page">v1</button>
+  <div class="version-menu">
+    <a class="version" href="../design.html">master</a>
+    <a class="version" href="../develop/design.html">develop</a>
+    <a class="version" href="../v1.9.2/design.html">v1.9.2</a>
+    <a class="version" href="../v1.9.1/design.html">v1.9.1</a>
+    <a class="version" href="../v1.9/design.html">v1.9</a>
+    <a class="version" href="../v1.9.0/design.html">v1.9.0</a>
+    <a class="version" href="../v1.8.12/design.html">v1.8.12</a>
+    <a class="version" href="../v1.8.11/design.html">v1.8.11</a>
+    <a class="version" href="../v1.8.10/design.html">v1.8.10</a>
+    <a class="version" href="../v1.8.9/design.html">v1.8.9</a>
+    <a class="version" href="../v1.8.8/design.html">v1.8.8</a>
+    <a class="version" href="../v1.8.7/design.html">v1.8.7</a>
+    <a class="version" href="../v1.8.6/design.html">v1.8.6</a>
+    <a class="version" href="../v1.8.5/design.html">v1.8.5</a>
+    <a class="version" href="../v1.8.4/design.html">v1.8.4</a>
+    <a class="version" href="../v1.8.3/design.html">v1.8.3</a>
+    <a class="version" href="../v1.8.2/design.html">v1.8.2</a>
+    <a class="version" href="../v1.8.1/design.html">v1.8.1</a>
+    <a class="version" href="../v1.8.0/design.html">v1.8.0</a>
+    <a class="version is-missing" href="../v1.7.0/index.html">v1.7.0</a>
+    <a class="version is-missing" href="../v1.6.2/index.html">v1.6.2</a>
+    <a class="version is-missing" href="../v1.6.1/index.html">v1.6.1</a>
+    <a class="version is-missing" href="../v1.6.0/index.html">v1.6.0</a>
+    <a class="version is-missing" href="../v1.5.0/index.html">v1.5.0</a>
+    <a class="version is-missing" href="../v1.4.1/index.html">v1.4.1</a>
+    <a class="version is-missing" href="../v1.4.0/index.html">v1.4.0</a>
+    <a class="version is-missing" href="../v1.3.0/index.html">v1.3.0</a>
+    <a class="version is-missing" href="../v1.2.1/index.html">v1.2.1</a>
+    <a class="version is-missing" href="../v1.2.0/index.html">v1.2.0</a>
+    <a class="version is-missing" href="../v1.1.0/index.html">v1.1.0</a>
+    <a class="version is-current" href="design.html">v1</a>
+    <a class="version is-missing" href="../v1.0.0/index.html">v1.0.0</a>
+  </div>
+</div>
+        <div class="edit-this-page"><a href="https://github.com/alandefreitas/cpp-actions/edit/v1/docs/modules/ROOT/pages/design.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Design Rationale</h1>
+<div class="sect1">
+<h2 id="continuous-integration"><a class="anchor" href="#continuous-integration"></a>CI Challenges</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Modern Continuous Integration (CI) keeps contributions flowing, but C&#43;&#43; projects face unique friction. The goal of this section is to restate the problem space—continuous integration requirements and the realities of testing C&#43;&#43; libraries—so that the design choices in the rest of the document remain grounded.</p>
+</div>
+<div class="sect2">
+<h3 id="_ci_basics"><a class="anchor" href="#_ci_basics"></a>CI Basics</h3>
+<div class="paragraph">
+<p>Continuous Integration automatically builds, tests, and integrates code multiple times a day so teams can detect defects early, keep the main branch deployable, and coordinate contributions across time zones.</p>
+</div>
+<div id="ci-pipeline-diagram" class="imageblock"><div class="mermaid content" style=" ">graph TD
+  A[Code Changes] -->|Commit| B[CI Server]
+  B -->|Automated Build| C[Run Tests]
+  C -->|Test Results| D[Deploy/Integrate]
+  D -->|Deployment Status| E[Notify Team]
+  E -->|Feedback| A</div><div class="title">Figure 1. Continuous Integration Pipeline</div></div>
+<div class="paragraph">
+<p>Key takeaways for open source maintainers:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Shared velocity</strong>: automated checks keep the main branch releasable even with high contributor churn.</p>
+</li>
+<li>
+<p><strong>Fast review loops</strong>: maintainers receive immediate pass/fail feedback, reducing manual triage.</p>
+</li>
+<li>
+<p><strong>Trustworthy releases</strong>: consistently tested artifacts are more likely to ship without regressions.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_c_pain_points"><a class="anchor" href="#_c_pain_points"></a>C++ Pain Points</h3>
+<div class="paragraph">
+<p>Testing C&#43;&#43; code spans multiple compilers, standard libraries, language versions, operating systems, and architectures. Long compile times and hardware-specific behavior increase the testing burden compared to higher-level languages such as JavaScript or Python, where narrower CI matrices often suffice with one Linux and one Windows job.</p>
+</div>
+<div id="js-python-ci-diagram" class="imageblock"><div class="mermaid content" style="width: 100%; ">graph LR
+  A[Matrix] -->|Windows| C1[Tests]
+  A[Matrix] -->|Linux| C2[Tests]
+  C1 --> D[Results]
+  C2 --> D[Results]
+  D --> F[Deploy/Integrate]
+  D --> G[Notify Team]</div><div class="title">Figure 2. A typical CI workflow for a JavaScript or Python project</div></div>
+<div class="paragraph">
+<p>For C&#43;&#43;, the environment is guilty until proven innocent: a workflow that succeeds on one compiler version can break on the next minor release. Developers cannot practically reproduce every environment locally, so CI must stand in for platform coverage.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_key_factors"><a class="anchor" href="#_key_factors"></a>Key Factors</h3>
+<div class="paragraph">
+<p>The C&#43;&#43; testing space is a factorial experiment across many dimensions:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 66.6667%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Factor</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Typical Values</strong></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Compiler</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">GCC, Clang, MSVC, MinGW, clang-cl, Apple Clang</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Compiler Version</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">GCC 4–13, Clang 4–17, MSVC 2017–2022</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Standard Library</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">libstdc++, libc++, MSVC STL</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">C&#43;&#43; Standard</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">C++11, C++14, C++17, C++20, C++23</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Platform</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Ubuntu, Windows, macOS, cross-compilation targets</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Feature Flags</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Sanitizers, coverage, time-trace, architecture toggles</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>These factors reveal why naive CI matrices explode combinatorially and why we must deliberately sample environments without losing coverage guarantees.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_combinatorial_risk"><a class="anchor" href="#_combinatorial_risk"></a>Combinatorial Risk</h3>
+<div class="paragraph">
+<p>Not all factor combinations are valid or even meaningful:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>A compiler factor only pairs with versions of the same compiler.</p>
+</li>
+<li>
+<p>Most compilers—aside from Clang—should only be verified against their native standard library.</p>
+</li>
+<li>
+<p>Each compiler targets a narrow set of supported operating systems and architectures.</p>
+</li>
+<li>
+<p>Feature flags such as sanitizers or time-trace apply only when the underlying toolchain supports them.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Even after applying those filters, the illustrative matrix in the design above still demands <strong>866,304</strong> CI jobs. That volume is a classic combinatorial explosion—throwing more hardware, time, or budget at the problem is unsustainable. Pruning a few extra cases is equally insufficient; without a systematic design, important interactions remain untested. The solution must shrink the matrix so coverage grows roughly linearly with test count, redundancy drops, and critical combinations stay on the radar.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_ecosystem_impact"><a class="anchor" href="#_ecosystem_impact"></a>Ecosystem Impact</h3>
+<div class="paragraph">
+<p>When C&#43;&#43; projects skip coverage for specific platforms or toolchains, downstream consumers shoulder the risk through broken integrations, delayed releases, or forced forks. Community ecosystems (package managers, conan/vcpkg registries, distro maintainers) require reproducible CI signals to trust updates, so gaps in testing ripple outward and slow the adoption of modern standards.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_workflow_reuse"><a class="anchor" href="#_workflow_reuse"></a>Workflow Reuse</h3>
+<div class="paragraph">
+<p>Maintainers often inherit legacy scripts, copy complex workflows between repositories, and spend hours adapting them to new requirements. Without reusable building blocks, every project re-implements cache priming, dependency setup, and reporting logic, leading to fragmented practices and inconsistent diagnostics across the ecosystem.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cpp-actions-overview"><a class="anchor" href="#cpp-actions-overview"></a>Action Toolkit</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The repository solves the coverage challenge by packaging reusable GitHub Actions that compose into a tailored CI pipeline. Instead of one monolithic action, the project offers specialized building blocks so teams can mix only what they need while inheriting best practices.</p>
+</div>
+<div class="sect2">
+<h3 id="_matrix_flow"><a class="anchor" href="#_matrix_flow"></a>Matrix Flow</h3>
+<div class="paragraph">
+<p>The <a href="actions/cpp-matrix.html" class="xref page">C&#43;&#43; Matrix Action</a> converts stated library requirements into an actionable matrix. It automates fractional factorial designs, ensuring representative coverage while keeping workflows tractable.</p>
+</div>
+<div id="cpp-ci-diagram" class="text-center imageblock"><div class="mermaid content" style="width: 100%; ">graph LR
+  R[Requirements] -->|Contract| A[Matrix]
+  A[Matrix] -->|Environment 1| B1[Install Dependencies]
+  A[Matrix] -->|Environment 2| B2[Install Dependencies]
+  A[Matrix] -->|...| B3[Install Dependencies]
+  B1 --> C1[Tests]
+  B2 --> C2[Tests]
+  B3 --> C3[Tests]
+  C1 --> D[Reports]
+  C2 --> D[Reports]
+  C3 --> D[Reports]
+  D --> F[Deploy/Integrate]
+  D --> G[Notify Team]
+
+  style A fill:#cccccc,stroke:#000000,stroke-width:2px</div><div class="title">Figure 3. A typical C++ Actions workflow</div></div>
+<div class="paragraph">
+<p>Highlights of the matrix action:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Contract-first</strong>: you declare supported compilers, standards, and platforms as the contract your library upholds.</p>
+</li>
+<li>
+<p><strong>Factor awareness</strong>: requirement factors drive fractional factorial sampling so every critical interaction is exercised.</p>
+</li>
+<li>
+<p><strong>Action-aware outputs</strong>: each matrix entry exposes flags like <code>is-latest</code>, <code>is-main</code>, and factor booleans that steer conditional steps.</p>
+</li>
+<li>
+<p><strong>Action suggestions</strong>: generated fields such as <code>runs-on</code>, <code>container</code>, <code>cxxflags</code>, and <code>install</code> provide opinionated defaults that teams can adopt or override.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Each generated matrix entry captures the compiler identity, version components, applicable C&#43;&#43; standards, and optional hints for sanitizer runs, coverage, or architecture-specific tweaks. Auxiliary flags expose factor membership, latest/earliest status, and positional hints, while supplemental fields surface recommended runners, containers, and toolchain flags. Users can copy the full YAML matrix for deeper customization when necessary.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_action_building_blocks"><a class="anchor" href="#_action_building_blocks"></a>Action Building Blocks</h3>
+<div class="paragraph">
+<p>Independent actions implement the stages implied by the matrix:</p>
+</div>
+<div id="ci-actions-workflow-diagram" class="text-center imageblock"><div class="mermaid content" style="width: 100%; ">graph TD
+  subgraph For Each Entry
+    B
+    C
+    D
+    E
+  end
+
+  R[Requirements] --> A[Matrix]
+  A[Matrix] --> B
+  B[Setup C++] --> C
+  C[Install Dependencies] --> D
+  D[Workflows] --> E
+  E[Reports] -->|success| F[Deploy/Integrate]
+  E -->|failure| H[Notify Team]
+
+  style A fill:#cccccc,stroke:#000000,stroke-width:2px</div><div class="title">Figure 4. CI workflow using the C++ Actions</div></div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Compiler setup actions</strong> (<code>setup-cpp</code> and compiler-specific variants) locate or install the requested toolchain via native package managers before falling back to direct downloads, returning canonical compiler paths and versions.</p>
+</li>
+<li>
+<p><strong>Package setup actions</strong> (<code>setup-apt</code>, <code>setup-vcpkg</code>, Boost helpers, and generic installers) standardize dependency acquisition across environments with the same find-install-download sequence.</p>
+</li>
+<li>
+<p><strong>Workflow actions</strong> such as <a href="actions/cmake-workflow.html" class="xref page">CMake Workflow</a> and <a href="actions/b2-workflow.html" class="xref page">B2 Workflow</a> encapsulate configure/build/test/install loops, adapt to declared <code>cmake_minimum_required</code>, and surface knobs for integration runs or Boost-specific flows.</p>
+</li>
+<li>
+<p><strong>Analysis actions</strong> capture metrics like compile time, coverage, or flamegraphs, typically toggled by matrix factors (e.g., enabling <code>time-trace</code> with extra compiler flags and the <a href="actions/flamegraph.html" class="xref page">flamegraph</a> step).</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_origins"><a class="anchor" href="#_origins"></a>Origins</h3>
+<div class="paragraph">
+<p>The project evolved from a GitHub Actions port of <a href="https://github.com/boostorg/boost-ci">boost-ci</a>. Growth milestones include:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Adding caching, parallelism, and cross-compilation features that are fragile in ad-hoc bash.</p>
+</li>
+<li>
+<p>Surfacing frequently requested toggles (advanced CMake options, specialized Boost settings).</p>
+</li>
+<li>
+<p>Promoting erstwhile bespoke scripts—coverage reporting, changelog generation—into maintained actions.</p>
+</li>
+<li>
+<p>On-boarding new compilers and platforms early so the ecosystem can experiment safely.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>This history explains why <code>cmake-workflow</code> stays general-purpose while <code>b2-workflow</code> remains tailored to Boost libraries.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="design-principles"><a class="anchor" href="#design-principles"></a>Design Principles</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The design rationale connects the challenges from the first section with the modular toolkit from the second. Independent actions remain the central promise: every setup, build, or report step ships as its own action so maintainers can compose only the stages they need, replace long bespoke scripts with a few YAML lines, or drop a single action into an existing workflow without dragging in the rest of the stack. Each action exposes inputs for every assumption—toolchain discovery, package ordering, workflow arguments, report toggles—so nothing is hard-coded and teams can override defaults on a per-job basis.</p>
+</div>
+<div class="paragraph">
+<p>This independence carries through all categories introduced earlier. Compiler setup actions search the host, fall back to system package managers, and only then download binaries, ensuring matrix jobs mirror real user environments while still letting you pin a specific version and capture the resolved path as output. Package installers reuse the same discovery/install pattern across APT, vcpkg, Boost modules, or arbitrary archives, keeping dependency steps reusable yet customizable. Workflow actions such as CMake and B2 encapsulate configure-build-test-install loops, expose knobs to extract <code>cmake_minimum_required</code>, flip integration test gates, or provide Boost-specific tooling, and allow conditional execution per matrix entry. Analysis actions—coverage, flamegraphs, time-trace—stay optional, typically guarded by matrix factors so specialists can enable them without burdening every job.</p>
+</div>
+<div id="design-mindmap" class="imageblock"><div class="mermaid content" style="width: 100%; ">mindmap
+  root((cpp-actions))
+    Compose Actions
+      combine independent steps
+      align pipelines to contracts
+    Reuse Templates
+      start from shared blueprints
+      adapt workflows together
+    Scale Coverage
+      curb matrix growth
+      focus on critical factors
+    Share Practices
+      encode best defaults
+      onboard new toolchains</div><div class="title">Figure 5. Composable Architecture</div></div>
+<div class="paragraph">
+<p>Core principles:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Compose independent actions</strong> so maintainers assemble only the steps their contracts require, turning long bash workflows into modular YAML while keeping every assumption overrideable.</p>
+</li>
+<li>
+<p><strong>Reuse curated templates</strong> by cloning common action stacks, keeping workflows consistent yet easy to tailor across compilers, packages, build systems, and reporting steps.</p>
+</li>
+<li>
+<p><strong>Scale coverage deliberately</strong> with matrix guidance that reins in the 866,304-case explosion while still exercising the combinations that matter.</p>
+</li>
+<li>
+<p><strong>Share proven practices</strong> through inputs, hints, and the “find → package manager → download” install flow so CI mirrors real user environments without imposing a single configuration.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+    <footer class="footer">
+  <p>This page was built using the Antora UI adapted by <a href="https://github.com/cppalliance/site-docs" target="_blank">cppalliance/site-docs</a>.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+  <p>
+    <a href="https://github.com/alandefreitas/cpp-actions" target="_blank">alandefreitas/cpp-actions</a>
+  </p>
+</footer>
+<script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
+<script async src="../../_/js/vendor/highlight.js"></script>
+<script src="../../_/js/vendor/lunr.js"></script>
+<script src="../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../.." data-snippet-length="100" data-stylesheet="../../_/css/search.css"></script>
+<script async src="../../search-index.js"></script>
+<script async src="../../_/js/vendor/tabs.js" data-sync-storage-key="preferred-tab"></script>
+    <script>
+      var element = document.querySelector('.search-result-dropdown-menu');
+      if (element) {
+        // Apply styles and additional class to element
+        element.style.display = 'none';
+        var element = document.querySelector('.search-result-dropdown-menu');
+        var arrow = document.createElement('div');
+        arrow.classList.add('search-result-dropdown-menu');
+        element.appendChild(arrow);
+      }
+
+      function onSearch() {
+        var searchInput = document.getElementById('search-input');
+        if (searchInput.value) {
+          element.style.display = 'block';
+        } else {
+          element.style.display = 'none';
+        }
+      }
+
+      function onSearchChange(search_active) {
+        var searchInputAlgolia = document.getElementById('search-input-algolia');
+        var searchInput = document.getElementById('search-input');
+        if (search_active === "algolia") {
+          searchInputAlgolia.style.display = 'block';
+          // searchInputAlgolia.style.lineHeight = '2.001';
+          searchInput.style.display = 'none';
+          setupAlgoliaDocsearch();
+        } else {
+          searchInputAlgolia.style.display = 'none';
+          searchInput.style.display = 'block';
+        }
+      }
+
+      // Add an event listener to the document
+      document.addEventListener("click", function(event) {
+        var searchInput = document.getElementById('search-input');
+        // Check if the click was outside of the modal
+        if (event.target !== element && event.target !== searchInput) {
+
+          // Hide the modal
+          searchInput.value = "";
+          onSearch();
+        }
+      });
+    </script>
+  </body>
+</html>
