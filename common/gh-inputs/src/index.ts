@@ -8,7 +8,10 @@ const defaultOptions: InputOptions = {
     required: false,
     trimWhitespace: true,
     fallbackEnv: undefined,
-    defaultValue: ''
+    defaultValue: '',
+    filterComments: true,
+    commentPrefix: '#',
+    filterBlankLines: true
 };
 
 const defaultSplitRegex = /[,; ]/;
@@ -79,14 +82,39 @@ export function getRegex(name: string | string[], options: InputOptions = {}): R
 }
 
 /**
+ * Filters an array of lines based on comment and blank line options.
+ *
+ * Only full-line comments are filtered (lines where the first non-whitespace
+ * character is the comment prefix). Inline comments are intentionally not
+ * supported to avoid the complexity of escape sequences and quoted strings.
+ *
+ * @param lines - Array of lines to filter
+ * @param opts - Options containing filterComments, commentPrefix, and filterBlankLines
+ * @returns Filtered array of lines
+ */
+function filterLines(lines: string[], opts: InputOptions): string[] {
+    return lines.filter(line => {
+        const trimmed = line.trim();
+        if (opts.filterBlankLines && trimmed === '') {
+            return false;
+        }
+        if (opts.filterComments && opts.commentPrefix && trimmed.startsWith(opts.commentPrefix)) {
+            return false;
+        }
+        return true;
+    });
+}
+
+/**
  * Retrieves a multiline GitHub Actions input as an array of strings.
  *
  * Each line of the input becomes a separate element in the returned array.
  * Supports multiple input name aliases and environment variable fallbacks.
+ * By default, filters out comment lines (starting with '#') and blank lines.
  *
  * @param name - The input name or array of name aliases to retrieve
  * @param options - Configuration options including required flag, trimWhitespace,
- *                  fallbackEnv, and defaultValue (can be string or string[])
+ *                  fallbackEnv, defaultValue, filterComments, commentPrefix, and filterBlankLines
  * @returns Array of strings, one per line of input, or defaultValue if not found
  * @throws {Error} When input is marked as required but no value is available
  */
@@ -96,9 +124,12 @@ export function getMultilineInput(name: string | string[], options: InputOptions
 
     for (const n of nameArr) {
         const coreOptions = { ...opts, required: false };
-        const str = core.getMultilineInput(n, coreOptions);
-        if (str && str.length > 0) {
-            return str;
+        const lines = core.getMultilineInput(n, coreOptions);
+        if (lines && lines.length > 0) {
+            const filtered = filterLines(lines, opts);
+            if (filtered.length > 0) {
+                return filtered;
+            }
         }
     }
 
@@ -107,13 +138,13 @@ export function getMultilineInput(name: string | string[], options: InputOptions
         for (const env of envArray) {
             const envVal = process.env[env];
             if (envVal) {
-                if (opts.trimWhitespace) {
-                    const trimmed = envVal.trim();
-                    if (trimmed) {
-                        return [trimmed];
-                    }
-                } else {
-                    return [envVal];
+                const envLines = envVal.split('\n');
+                const filtered = filterLines(
+                    opts.trimWhitespace ? envLines.map(l => l.trim()) : envLines,
+                    opts
+                );
+                if (filtered.length > 0) {
+                    return filtered;
                 }
             }
         }

@@ -133,6 +133,100 @@ describe('gh-inputs', () => {
 
             expect(result).toEqual(['default']);
         });
+
+        it('should filter comment lines by default', () => {
+            mockedCore.getMultilineInput.mockReturnValue([
+                'value1',
+                '# this is a comment',
+                'value2',
+                '  # indented comment',
+                'value3'
+            ]);
+
+            const result = ghInputs.getMultilineInput('test');
+
+            expect(result).toEqual(['value1', 'value2', 'value3']);
+        });
+
+        it('should filter blank lines by default', () => {
+            mockedCore.getMultilineInput.mockReturnValue([
+                'value1',
+                '',
+                'value2',
+                '   ',
+                'value3'
+            ]);
+
+            const result = ghInputs.getMultilineInput('test');
+
+            expect(result).toEqual(['value1', 'value2', 'value3']);
+        });
+
+        it('should filter both comments and blank lines', () => {
+            mockedCore.getMultilineInput.mockReturnValue([
+                '# Header comment',
+                '',
+                'key1:value1',
+                '  ',
+                '# Section divider',
+                'key2:value2',
+                '# Trailing comment'
+            ]);
+
+            const result = ghInputs.getMultilineInput('test');
+
+            expect(result).toEqual(['key1:value1', 'key2:value2']);
+        });
+
+        it('should preserve comments when filterComments is false', () => {
+            mockedCore.getMultilineInput.mockReturnValue([
+                'value1',
+                '# comment',
+                'value2'
+            ]);
+
+            const result = ghInputs.getMultilineInput('test', { filterComments: false });
+
+            expect(result).toEqual(['value1', '# comment', 'value2']);
+        });
+
+        it('should preserve blank lines when filterBlankLines is false', () => {
+            mockedCore.getMultilineInput.mockReturnValue([
+                'value1',
+                '',
+                'value2'
+            ]);
+
+            const result = ghInputs.getMultilineInput('test', { filterBlankLines: false });
+
+            expect(result).toEqual(['value1', '', 'value2']);
+        });
+
+        it('should use custom comment prefix', () => {
+            mockedCore.getMultilineInput.mockReturnValue([
+                'value1',
+                '// js comment',
+                '# not a comment',
+                'value2'
+            ]);
+
+            const result = ghInputs.getMultilineInput('test', { commentPrefix: '//' });
+
+            expect(result).toEqual(['value1', '# not a comment', 'value2']);
+        });
+
+        it('should return empty array when all lines are comments or blank', () => {
+            mockedCore.getMultilineInput.mockReturnValue([
+                '# comment only',
+                '',
+                '  # another comment',
+                '   '
+            ]);
+
+            const result = ghInputs.getMultilineInput('test');
+
+            expect(result).toEqual([]);
+        });
     });
 
     describe('getArray', () => {

@@ -10,6 +10,12 @@ export interface InputOptions {
     fallbackEnv?: string | string[];
     /** Default value if input is not provided */
     defaultValue?: string | boolean | string[];
+    /** Whether to filter out comment lines (lines starting with commentPrefix). Defaults to true. */
+    filterComments?: boolean;
+    /** The prefix that identifies comment lines. Defaults to '#'. */
+    commentPrefix?: string;
+    /** Whether to filter out blank/whitespace-only lines. Defaults to true. */
+    filterBlankLines?: boolean;
 }
 
 /**
