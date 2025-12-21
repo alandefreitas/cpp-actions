@@ -5,7 +5,6 @@ import * as semver from 'semver';
 import * as fs from 'fs';
 import * as exec from '@actions/exec';
 import * as path from 'path';
-import * as os from 'os';
 import * as httpm from '@actions/http-client';
 import * as trace_commands from 'trace-commands';
 import * as gh_inputs from 'gh-inputs';
@@ -15,53 +14,57 @@ import clangDefaultTags from '../clang-tags.json';
 import cmakeDefaultTags from '../cmake-tags.json';
 import ubuntuVersionNames from '../ubuntu-versions.json';
 
-/**
- * Result of a program search or installation operation.
- */
-interface ProgramResult {
-    output_version: string | null;
-    output_path: string | null;
-    /** The APT package name that was installed (only set when installed via APT) */
-    installed_package?: string | null;
-}
+import {
+    ProgramResult,
+    ExecOutput,
+    SetupProgramInputs,
+    PackagePreferenceTier,
+    FetchGitTagsOptions,
+    CloneGitRepoOptions,
+    AptPackageMatch
+} from './types';
 
-/**
- * Output from executing a command via exec.getExecOutput.
- */
-interface ExecOutput {
-    exitCode: number;
-    stdout: string;
-    stderr: string;
-}
+import {
+    escapeRegExp,
+    removeSemverLeadingZeros,
+    renderTemplate,
+    get_runner_os,
+    sleep
+} from './utils';
 
-/**
- * Configuration inputs for the setup-program action.
- */
-interface SetupProgramInputs {
-    name: string[];
-    version: string;
-    paths: string[];
-    check_latest: boolean;
-    update_environment: boolean;
-    url: string | null;
-    install_prefix: string | null;
-    fail_on_error: boolean;
-    trace_commands: boolean;
-}
+import {
+    readVersionsFromFile,
+    saveVersionsToFile
+} from './version-cache';
 
-/**
- * Package preference tier for APT package selection.
- *
- * Lower tier number means higher preference:
- * - Tier 1: Unversioned packages (e.g., "clang", "gcc") - best system integration
- * - Tier 2: Raw versioned packages (e.g., "clang-14", "gcc-12") - what users expect
- * - Tier 3: Other versioned packages (e.g., "clang-14-tools") - fallback only
- */
-export enum PackagePreferenceTier {
-    UNVERSIONED = 1,
-    RAW_VERSIONED = 2,
-    OTHER_VERSIONED = 3
-}
+import {
+    getAllSubdirectories,
+    isSymlink,
+    copySymlink
+} from './file-utils';
+
+import {
+    downloadAndExtract,
+    stripSingleDirectoryFromPath
+} from './download-utils';
+
+import {
+    find_program_in_path,
+    find_program_in_paths,
+    find_program_in_system_paths
+} from './program-search';
+
+// Re-export types for external consumers
+export { PackagePreferenceTier } from './types';
+
+// Re-export version cache functions for external consumers
+export { setVersionsCacheDir, resolveVersionsCachePath, readVersionsFromFile, saveVersionsToFile } from './version-cache';
+
+// Re-export download utilities for external consumers
+export { downloadAndExtract, stripSingleDirectoryFromPath } from './download-utils';
+
+// Re-export program search functions for external consumers
+export { find_program_in_path, find_program_in_system_paths } from './program-search';
 
 /**
  * Determines the preference tier for an APT package based on its name.
@@ -92,363 +95,6 @@ export function getPackagePreferenceTier(packageName: string, baseNames: string[
 
     // Everything else is other versioned (e.g., "clang-14-tools", "clang-format-14")
     return PackagePreferenceTier.OTHER_VERSIONED;
-}
-
-/**
- * Checks if a file at the given path is executable.
- *
- * On Windows, checks for .exe, .cmd, or .bat extensions.
- * On other platforms, checks the file's executable permission bit.
- *
- * @param filePath - Path to the file to check
- * @returns True if the file exists and is executable, false otherwise
- */
-function isExecutable(filePath: string): boolean {
-    if (!fs.existsSync(filePath) || fs.lstatSync(filePath).isDirectory()) {
-        return false;
-    }
-    try {
-        if (process.platform === 'win32') {
-            // On Windows, check if the file has a .exe extension
-            const extensions = ['.exe', '.cmd', '.bat'];
-            for (const extension of extensions) {
-                if (filePath.toLowerCase().endsWith(extension)) {
-                    return true;
-                }
-            }
-            return false;
-        } else {
-            // On Linux and other platforms, check the file permissions
-            const stats = fs.statSync(filePath);
-            const mode = stats.mode;
-            return (mode & fs.constants.S_IXUSR) !== 0;
-        }
-    } catch (error) {
-        // Handle file not found or other errors
-        console.error(error);
-        return false;
-    }
-}
-
-/**
- * Checks if a program's version satisfies the specified semver requirements.
- *
- * Executes the program with --version flag and parses the output to extract
- * the version. Returns null if the version doesn't satisfy requirements, or
- * "0.0.0" if the version cannot be determined.
- *
- * @param execPath - Path to the executable to check
- * @param semverRequirements - Semver range requirement (e.g., ">=10", "*")
- * @returns The version string if satisfied, "0.0.0" if unparseable, null if not satisfied
- */
-async function program_satisfies(execPath: string, semverRequirements: string): Promise<string | null> {
-    function fnlog(msg: string): void {
-        trace_commands.log('program_satisfies: ' + msg);
-    }
-
-    // Try to run the program and get the version string
-    fnlog(`Checking if program ${execPath} version satisfies ${semverRequirements}`);
-    let version_output: string | null = null;
-    try {
-        fnlog(`Running ${execPath} --version`);
-        const { exitCode, stdout }: ExecOutput = await exec.getExecOutput(`"${execPath}"`, ['--version']);
-        fnlog(`Exit code: ${exitCode}`);
-        fnlog(`Output: ${stdout.slice(0, 300)}`);
-        version_output = stdout.trim();
-        if (exitCode !== 0) {
-            fnlog(`Path program ${execPath} --version exited with code ${exitCode}`);
-            return '0.0.0';
-        }
-    } catch (error) {
-        fnlog(`Path program ${execPath} does not have a version string`);
-        return '0.0.0';
-    }
-
-    const version_regexes = [/(\d+\.\d+\.\d+)/, /(\d+\.\d+)/, /(\d+)/];
-    let version: semver.SemVer | null = null;
-    for (const version_regex of version_regexes) {
-        const version_matches = version_output.match(version_regex);
-        if (version_matches !== null) {
-            fnlog(`Path program ${execPath} matches version string ${version_matches[1]}`);
-            const version_str = version_matches[1];
-            version = semver.coerce(version_str, { includePrerelease: false, loose: true });
-            if (version === null) {
-                continue;
-            }
-            if (semverRequirements === '*' || semverRequirements === '' || semver.satisfies(version, semverRequirements)) {
-                return version.toString();
-            }
-            break;
-        }
-    }
-
-    // If no version could be parsed, then return 0.0.0
-    if (version === null) {
-        return '0.0.0';
-    }
-
-    // If parsed version does not satisfy the requirements, then return null
-    return null;
-}
-
-/**
- * Attempt to resolve an executable by inspecting a list of user-supplied paths.
- *
- * Behaviour depends on each entry:
- * - Basename entries (e.g. "cmake") are treated as hints and forwarded to
- *   {@link find_program_in_system_paths}, so PATH and cached locations are
- *   still searched with the current version requirement.
- * - Absolute or relative paths are treated as candidate files. On Windows, we
- *   also probe typical executable extensions (".exe", ".cmd", ".bat") when the
- *   entry has no extension. Each candidate must exist, be executable, and
- *   satisfy the supplied semver range; otherwise it is skipped.
- *
- * The function keeps track of the "best" candidate according to the
- * check_latest flag: the earliest satisfying version when false, the latest
- * when true. Returning {output_version: null, output_path: null} means no valid
- * executable met the constraint (use version="*" to opt out of filtering).
- *
- * @param paths - Array of paths to search for the executable
- * @param version - Semver version constraint (e.g., ">=10", "14.0.0", "*")
- * @param check_latest - If true, prefer latest matching version; if false, prefer earliest
- * @returns Object containing the found executable path and version, or nulls if not found
- */
-export async function find_program_in_path(paths: string[], version: string, check_latest: boolean): Promise<ProgramResult> {
-    function fnlog(msg: string): void {
-        trace_commands.log('find_program_in_path: ' + msg);
-    }
-
-    let output_version: string | null = null;
-    let output_path: string | null = null;
-    if (paths.length > 1) {
-        fnlog(`Searching for program version ${version} in paths [${paths.join(', ')}]`);
-    }
-    for (const exec_path of paths) {
-        if (exec_path === '') {
-            continue;
-        }
-        fnlog(`Searching for program version ${version} in "${exec_path}"`);
-
-        // Find as a program in path if only basename is provided
-        const isBasenameOnly = path.basename(exec_path) === exec_path;
-        if (isBasenameOnly) {
-            const result = await find_program_in_system_paths([], [exec_path], version, check_latest);
-            if (result.output_path && result.output_version) {
-                fnlog(`Found program ${exec_path} in system paths (${result.output_path} - version ${result.output_version}).`);
-                return { output_version: result.output_version, output_path: result.output_path };
-            }
-        }
-
-        // Find as a file in path
-        const extensions = process.platform === 'win32' ? ['', '.exe', '.cmd', '.bat'] : [''];
-        for (const extension of extensions) {
-            const filePath = exec_path + extension;
-            if (!fs.existsSync(filePath)) {
-                continue;
-            }
-
-            if (fs.lstatSync(filePath).isDirectory()) {
-                fnlog(`Path ${filePath} is a directory. Skipping it.`);
-                continue;
-            }
-
-            if (!isExecutable(filePath)) {
-                core.debug(`Path ${filePath} is not an executable. Skipping it.`);
-                continue;
-            }
-
-            // Execute program in path and extract a version string
-            const this_output_version = await program_satisfies(filePath, version);
-            const has_no_output_version_yet = output_version === null;
-            const real_version_parsed = this_output_version !== '0.0.0';
-            const satisfied_requirements = this_output_version !== null;
-            if (has_no_output_version_yet ||
-                (real_version_parsed && satisfied_requirements) ||
-                (check_latest && this_output_version !== null && output_version !== null && semver.gt(this_output_version, output_version)) ||
-                (!check_latest && this_output_version !== null && output_version !== null && semver.lt(this_output_version, output_version))) {
-                output_version = this_output_version;
-                output_path = filePath;
-            }
-        }
-    }
-    return { output_version, output_path };
-}
-
-/**
- * Searches for executables in specified directory paths.
- *
- * Iterates through directories looking for executables matching the given names,
- * checking each candidate against the version requirement.
- *
- * @param paths - Array of directory paths to search
- * @param names - Array of executable names to search for
- * @param version - Semver version constraint (e.g., ">=10", "*")
- * @param check_latest - If true, prefer latest matching version; if false, prefer earliest
- * @param stop_at_first - If true, stop searching after finding the first match
- * @returns Object containing the found executable path and version, or nulls if not found
- */
-async function find_program_in_paths(paths: string[], names: string[], version: string, check_latest: boolean, stop_at_first: boolean): Promise<ProgramResult> {
-    function fnlog(msg: string): void {
-        trace_commands.log('find_program_in_paths: ' + msg);
-    }
-
-    let output_version: string | null = null;
-    let output_path: string | null = null;
-    let path_log_view: string[] = paths;
-    if (paths.length > 10) {
-        path_log_view = paths.slice(0, 10).concat(['...']);
-    }
-    fnlog(`Searching for ${names.join(', ')} ${version} in [${path_log_view.join(', ')}]`);
-
-    // Check if version requirement can be coerced into version
-    const exec_name_candidates: string[] = [];
-    const version_obj = semver.coerce(version);
-
-    for (const name of names) {
-        const filename_prefixes: string[] = [];
-        if (version_obj !== null) {
-            filename_prefixes.push(`${name}-${version_obj.major}.${version_obj.minor}.${version_obj.patch}`);
-            filename_prefixes.push(`${name}-${version_obj.major}.${version_obj.minor}`);
-            filename_prefixes.push(`${name}-${version_obj.major}`);
-        }
-        filename_prefixes.push(`${name}`);
-        const filename_suffixes = process.platform === 'win32' ? ['.exe', '.cmd', '.bat', ''] : [''];
-        // exec_name_candidates is the cross-product of filename prefixes and suffixes
-        for (const filename_prefix of filename_prefixes) {
-            for (const filename_suffix of filename_suffixes) {
-                exec_name_candidates.push(filename_prefix + filename_suffix);
-            }
-        }
-    }
-    fnlog(`Searching for ${names.join(', ')} ${version} with filenames [${exec_name_candidates.join(', ')}]`);
-
-    // Setup System program
-    for (const dir of paths) {
-        // Skip path if not a directory
-        if (!fs.existsSync(dir)) {
-            fnlog(`Path ${dir} does not exist.`);
-            continue;
-        }
-        if (!fs.lstatSync(dir).isDirectory()) {
-            fnlog(`Path ${dir} is not a directory.`);
-            continue;
-        }
-        fnlog(`Searching for ${names.join(', ')} ${version} in ${dir}`);
-        // add each exec_name_candidate to dir
-        for (const exec_name_candidate of exec_name_candidates) {
-            const exec_path = path.join(dir, exec_name_candidate);
-            if (!fs.existsSync(exec_path)) {
-                continue;
-            }
-            if (fs.lstatSync(exec_path).isDirectory()) {
-                fnlog(`Path ${exec_path} is a directory. Skipping it.`);
-                continue;
-            }
-            if (!isExecutable(exec_path)) {
-                fnlog(`Path program ${exec_path} is not an executable.`);
-                continue;
-            }
-            // Execute program in exec_path and extract a version string
-            core.info(`Found ${exec_path}`);
-            const this_output_version = await program_satisfies(exec_path, version);
-            if (this_output_version === null) {
-                core.info(`${exec_path} does not satisfy requirement ${version}`);
-            } else {
-                core.info(`Executable version: ${this_output_version} satisfies requirement ${version}`);
-            }
-            if (output_version === null ||
-                (check_latest && typeof (this_output_version) === 'string' && semver.gt(this_output_version, output_version)) ||
-                (!check_latest && typeof (this_output_version) === 'string' && semver.lt(this_output_version, output_version))) {
-                fnlog(`Found ${exec_path} with version ${this_output_version}.`);
-                if (output_version && output_version !== this_output_version) {
-                    fnlog(`Previous best version was ${output_version}.`);
-                }
-                output_version = this_output_version;
-                output_path = exec_path;
-            }
-        }
-        if (stop_at_first && output_version !== null && output_version !== '0.0.0') {
-            break;
-        }
-    }
-    return { output_version, output_path };
-}
-
-/**
- * Searches for an executable in system PATH and tool cache directories.
- *
- * Combines the system PATH environment variable with any extra paths provided,
- * and also searches the GitHub Actions runner tool cache for matching executables.
- *
- * @param extra_paths - Additional directories to search before PATH
- * @param names - Array of executable names to search for (e.g., ["gcc", "g++"])
- * @param version - Semver version constraint (e.g., ">=10", "14.0.0", "*")
- * @param check_latest - If true, prefer latest matching version; if false, prefer earliest
- * @returns Object containing the found executable path and version, or nulls if not found
- */
-export async function find_program_in_system_paths(extra_paths: string[], names: string[], version: string, check_latest: boolean): Promise<ProgramResult> {
-    function fnlog(msg: string): void {
-        trace_commands.log('find_program_in_system_paths: ' + msg);
-    }
-
-    // Append directories from PATH environment variable to paths
-    // Get system PATHs with core
-    fnlog(`Looking for ${names.join(', ')} ${version} in system PATH`);
-    let path_dirs = process.platform.startsWith('win') ? (process.env.PATH || '').split(/;/) : (process.env.PATH || '').split(/[:;]/);
-    fnlog(`Paths in $PATH environment variable: ${path_dirs.slice(0, 10).join(', ')}...`);
-    if (process.env['RUNNER_TOOL_CACHE']) {
-        fnlog(`RUNNER_TOOL_CACHE environment variable: ${process.env['RUNNER_TOOL_CACHE']}`);
-        const cached_tool_versions_paths: string[] = [];
-        for (const name of names) {
-            cached_tool_versions_paths.push(path.join(process.env['RUNNER_TOOL_CACHE'], name));
-        }
-        for (const cached_tool_versions_path of cached_tool_versions_paths) {
-            fnlog(`Cached tool versions path: ${cached_tool_versions_path}`);
-            if (fs.existsSync(cached_tool_versions_path) && fs.lstatSync(cached_tool_versions_path).isDirectory()) {
-                // Iterate all directories in cached_tool_versions_path at the first level
-                const subdirectories = fs.readdirSync(cached_tool_versions_path)
-                    .filter((file) => fs.lstatSync(path.join(cached_tool_versions_path, file)).isDirectory());
-                fnlog(`Adding ${cached_tool_versions_path} to PATH`);
-                path_dirs.push(cached_tool_versions_path);
-                for (const subdirectory of subdirectories) {
-                    fnlog(`Adding ${subdirectory} to PATH`);
-                    const subdirectory_path = path.join(cached_tool_versions_path, subdirectory);
-                    path_dirs.push(subdirectory_path);
-                    const subdirectory_bin_path = path.join(subdirectory_path, 'bin');
-                    if (fs.existsSync(subdirectory_bin_path) && fs.lstatSync(subdirectory_bin_path).isDirectory()) {
-                        fnlog(`Adding ${subdirectory_bin_path} to PATH`);
-                        path_dirs.push(subdirectory_bin_path);
-                    }
-                }
-            }
-        }
-    }
-
-    // Merge PATH paths with paths passed as parameter
-    for (const path_dir of path_dirs) {
-        if (!extra_paths.includes(path_dir)) {
-            extra_paths.push(path_dir);
-        }
-    }
-    const result = await find_program_in_paths(extra_paths, names, version, check_latest, false);
-    if (result.output_path) {
-        fnlog(`Found ${names.join(', ')} version ${result.output_version} in ${result.output_path}`);
-    }
-    return result;
-}
-
-/**
- * Removes leading zeros from semver version components.
- *
- * Converts "01.02.03" to "1.2.3" for proper semver comparison.
- *
- * @param version - Version string with potentially leading zeros
- * @returns Cleaned version string without leading zeros
- */
-function removeSemverLeadingZeros(version: string): string {
-    const components = version.split('.');
-    const cleanedComponents = components.map(component => parseInt(component, 10));
-    return cleanedComponents.join('.');
 }
 
 /**
@@ -521,31 +167,8 @@ export async function urlExists(url: string): Promise<boolean> {
     }
 }
 
-/**
- * Escapes special regex characters in a string.
- *
- * @param string - String to escape for use in a regular expression
- * @returns Escaped string safe for regex pattern construction
- */
-function escapeRegExp(string: string): string {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-/**
- * Result of searching APT repositories for a package.
- */
-export interface AptPackageMatch {
-    /** The best matching package name (e.g., "clang-14") */
-    packageName: string;
-    /** The specific APT version string for installation (e.g., "1:14.0.0-1ubuntu1") */
-    packageVersion: string | null;
-    /** The parsed semver version (e.g., "14.0.0") */
-    semverVersion: string;
-    /** The preference tier of this package */
-    tier: PackagePreferenceTier;
-    /** Alternative packages that also satisfy requirements, in "package=version" format */
-    alternatives: string[];
-}
+// Re-export AptPackageMatch for external consumers
+export { AptPackageMatch } from './types';
 
 /**
  * Searches APT repositories for packages matching the specified names and version.
@@ -866,99 +489,6 @@ export async function find_program_with_apt(names: string[], version: string, ch
 }
 
 /**
- * Recursively finds all subdirectories within a directory.
- *
- * @param directory - Root directory to search
- * @returns Array of absolute paths to all nested subdirectories
- */
-function getAllSubdirectories(directory: string): string[] {
-    const subdirectories: string[] = [];
-
-    function traverse(currentDir: string): void {
-        const files = fs.readdirSync(currentDir);
-
-        files.forEach(file => {
-            const filePath = path.join(currentDir, file);
-            const fileStat = fs.statSync(filePath);
-
-            if (fileStat.isDirectory()) {
-                subdirectories.push(filePath);
-                traverse(filePath);
-            }
-        });
-    }
-
-    traverse(directory);
-    return subdirectories;
-}
-
-/**
- * Renders a template string by replacing placeholders with data values.
- *
- * Placeholders use mustache-style syntax: {{key}}.
- *
- * @param template - Template string with {{key}} placeholders
- * @param data - Object mapping placeholder keys to replacement values
- * @returns Rendered string with placeholders replaced
- */
-function renderTemplate(template: string, data: Record<string, string | number>): string {
-    const tokenRegex = /{{\s*([^\s{}]+)\s*}}/g;
-    return template.replaceAll(tokenRegex, (match, key) => {
-        const value = data[key];
-        return value !== undefined ? String(value) : match;
-    });
-}
-
-/**
- * Returns the GitHub Actions runner OS name based on current platform.
- *
- * @returns "Windows", "macOS", or "Linux" depending on process.platform
- */
-function get_runner_os(): string {
-    const platform = process.platform;
-    if (platform === 'win32') {
-        return 'Windows';
-    } else if (platform === 'darwin') {
-        return 'macOS';
-    } else {
-        return 'Linux';
-    }
-}
-
-/**
- * Checks if a file path is a symbolic link.
- *
- * @param filePath - Path to check
- * @returns True if the path is a symlink, false otherwise
- */
-function isSymlink(filePath: string): boolean {
-    try {
-        const stats = fs.lstatSync(filePath);
-        return stats.isSymbolicLink();
-    } catch (error) {
-        trace_commands.log('An error occurred while checking if the path is a symlink:' + String(error));
-        return false;
-    }
-}
-
-/**
- * Copies a symbolic link to a new location.
- *
- * Recreates the symlink at the destination pointing to the same target.
- *
- * @param sourcePath - Path to the source symlink
- * @param destinationPath - Path where the symlink should be created
- * @param level - Recursion depth for logging indentation
- */
-function copySymlink(sourcePath: string, destinationPath: string, level = 0): void {
-    const targetPath = fs.readlinkSync(sourcePath);
-    const levelPrefix = ' '.repeat(level * 2);
-    trace_commands.log(`${levelPrefix}Symlink found from ${sourcePath} to ${targetPath}`);
-    fs.symlinkSync(targetPath, destinationPath);
-    trace_commands.log(`${levelPrefix}Symlink recreated from ${sourcePath} to ${destinationPath} with target ${targetPath}`);
-}
-
-/**
  * Locates or installs Git on the system.
  *
  * First attempts to find Git in PATH. If not found on Linux, installs it via APT.
@@ -983,24 +513,6 @@ export async function findGit(): Promise<string | null> {
         }
     }
     return git_path || null;
-}
-
-/**
- * Pauses execution for a specified duration.
- *
- * @param ms - Duration to wait in milliseconds
- * @returns Promise that resolves after the specified duration
- */
-function sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-/**
- * Options for fetching Git tags from a repository.
- */
-interface FetchGitTagsOptions {
-    maxRetries?: number;
-    defaultTags?: string[];
 }
 
 /**
@@ -1086,44 +598,6 @@ export async function fetchGitTags(repo: string, options: FetchGitTagsOptions = 
     }
 }
 
-let versionsCacheDir: string | null = null;
-
-/**
- * Returns the default directory path for caching version information.
- *
- * @returns Absolute path to the default cache directory
- */
-function defaultVersionsCacheDir(): string {
-    // Keep caches near the action code, not the caller's CWD
-    return path.join(__dirname, '..', 'var', 'cache', 'setup-program');
-}
-
-/**
- * Sets the directory used for caching version information files.
- *
- * @param dir - Absolute path to the cache directory
- */
-export function setVersionsCacheDir(dir: string): void {
-    versionsCacheDir = dir;
-}
-
-/**
- * Resolves a filename to a full path within the versions cache directory.
- *
- * If the filename is already absolute, returns it unchanged. Otherwise,
- * prepends the cache directory path.
- *
- * @param filename - Filename or path to resolve
- * @returns Absolute path to the file within the cache directory
- */
-export function resolveVersionsCachePath(filename: string): string {
-    if (path.isAbsolute(filename)) {
-        return filename;
-    }
-    const baseDir = versionsCacheDir || process.env.SETUP_PROGRAM_CACHE_DIR || defaultVersionsCacheDir();
-    return path.join(baseDir, filename);
-}
-
 /**
  * Extracts version numbers from Git repository tags.
  *
@@ -1207,13 +681,6 @@ export async function findCMakeVersions(): Promise<string[]> {
 }
 
 /**
- * Options for cloning a Git repository.
- */
-interface CloneGitRepoOptions {
-    shallow?: boolean;
-}
-
-/**
  * Clones a Git repository to a local directory.
  *
  * Supports cloning by branch/tag name or by commit hash. When cloning by hash,
@@ -1275,46 +742,6 @@ export async function cloneGitRepo(repo: string, destPath: string, ref: string |
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         throw new Error('Error cloning Git repository: ' + errorMessage);
-    }
-}
-
-/**
- * Reads cached version information from a JSON file.
- *
- * @param filename - Filename or path to the cache file
- * @returns Array of version strings if file exists and is valid, null otherwise
- */
-export function readVersionsFromFile(filename: string): string[] | null {
-    const resolvedFilename = resolveVersionsCachePath(filename);
-    try {
-        const fileContents = fs.readFileSync(resolvedFilename, 'utf8');
-        const versions = JSON.parse(fileContents);
-        if (Array.isArray(versions)) {
-            return versions;
-        }
-    } catch (error) {
-        // File reading failed or versions couldn't be parsed
-    }
-    return null;
-}
-
-/**
- * Saves version information to a JSON cache file.
- *
- * Creates the parent directory if it doesn't exist.
- *
- * @param versions - Array of version strings to cache
- * @param filename - Filename or path to the cache file
- */
-export function saveVersionsToFile(versions: string[], filename: string): void {
-    const resolvedFilename = resolveVersionsCachePath(filename);
-    try {
-        const fileContents = JSON.stringify(versions);
-        fs.mkdirSync(path.dirname(resolvedFilename), { recursive: true });
-        fs.writeFileSync(resolvedFilename, fileContents, 'utf8');
-        trace_commands.log('Versions saved to file.');
-    } catch (error) {
-        trace_commands.log('Error saving versions to file: ' + String(error));
     }
 }
 
@@ -1537,232 +964,6 @@ async function moveWithSudo(source: string, destination: string, copyInstead = f
         }
     }
     return true;
-}
-
-/**
- * Extracts a tar archive to a destination directory.
- *
- * On Windows, uses 7z for extraction. On other platforms, uses the native
- * tar command via tc.extractTar.
- *
- * @param tarPath - Path to the tar archive file
- * @param destPath - Destination directory for extraction
- * @param flags - Optional tar flags (e.g., "-xz" for gzip)
- * @returns Path to the extracted contents
- * @throws Error if extraction fails
- */
-async function extractTar(tarPath: string, destPath: string | undefined, flags: string | undefined = undefined): Promise<string> {
-    function fnlog(msg: string): void {
-        trace_commands.log('extractTar: ' + msg);
-    }
-
-    const IS_WINDOWS = process.platform === 'win32';
-    if (!IS_WINDOWS) {
-        return await tc.extractTar(tarPath, destPath, flags);
-    } else {
-        // Define the destPath
-        flags = flags || '';
-        const tarFilename = path.basename(tarPath);
-        const tarBasename = path.basename(tarFilename, path.extname(tarFilename));
-        if (destPath === undefined) {
-            destPath = path.join(os.tmpdir(), tarBasename);
-            await io.mkdirP(destPath);
-        }
-        // Define the intermediary paths
-        const isTwoStep = !tarPath.endsWith('.tar');
-        const firstDestPath = path.join(os.tmpdir(), tarBasename + '_1st');
-        await io.mkdirP(firstDestPath);
-        const secondDestPath = path.join(os.tmpdir(), tarBasename + '_2nd');
-        if (isTwoStep) {
-            await io.mkdirP(secondDestPath);
-        }
-        const finalDestPath = destPath;
-        await io.mkdirP(finalDestPath);
-
-        fnlog(`First destination path: ${firstDestPath}`);
-        fnlog(`Second destination path: ${secondDestPath}`);
-        fnlog(`Final destination path: ${finalDestPath}`);
-
-        // First step
-        const path7z = await io.which('7z', true);
-        const args = ['x', tarPath, `-o${firstDestPath}`].concat(flags.includes('v') ? ['-bb1'] : []);
-        const { exitCode, stderr }: ExecOutput = await exec.getExecOutput(path7z, args);
-        if (exitCode !== 0) {
-            throw new Error(`Failed to extract ${tarPath} to ${firstDestPath} with 7z: ${stderr}`);
-        }
-
-        async function copyFilesAndRemoveDir(sourcePath: string, destPath: string): Promise<string> {
-            fnlog(`Moving ${sourcePath} to ${destPath}`);
-            const files = fs.readdirSync(sourcePath);
-            for (const file of files) {
-                const sourceFilePath = path.join(sourcePath, file);
-                const destFilePath = path.join(destPath, file);
-                fnlog(`Copying ${sourceFilePath} to ${destFilePath}`);
-                await io.cp(sourceFilePath, destFilePath, { recursive: true });
-            }
-            fnlog(`Removing ${sourcePath}`);
-            await io.rmRF(sourcePath);
-            return destPath;
-        }
-
-        if (!isTwoStep) {
-            return await copyFilesAndRemoveDir(firstDestPath, finalDestPath);
-        }
-
-        // Find tar file for the second step
-        // The tar archive is compressed so 7z produces a .tar file and leaves
-        // it in the destination directory. So now we extract the tar
-        // file with 7z.
-        const files = fs.readdirSync(firstDestPath);
-        if (files.length > 1) {
-            // It extracted more than one file, so we assume it's the deflated
-            // tar file
-            return await copyFilesAndRemoveDir(firstDestPath, finalDestPath);
-        }
-        const tarFiles = files.filter(file => file.endsWith('.tar'));
-        if (tarFiles.length === 0) {
-            // No tar file, so we assume it's the deflated tar file
-            return await copyFilesAndRemoveDir(firstDestPath, finalDestPath);
-        }
-
-        // Second step
-        const tarFile = path.join(firstDestPath, tarFiles[0]);
-        fnlog(`Extracting ${tarFile} to ${secondDestPath} with 7z`);
-        const args2 = ['x', tarFile, `-o${secondDestPath}`].concat(flags.includes('v') ? ['-bb1'] : []);
-        const { exitCode: exitCode2, stderr: stderr2 }: ExecOutput = await exec.getExecOutput(path7z, args2);
-        if (exitCode2 !== 0) {
-            throw new Error(`Failed to extract ${tarFile} to ${secondDestPath} with 7z: ${stderr2}`);
-        }
-        if (secondDestPath !== finalDestPath) {
-            await copyFilesAndRemoveDir(secondDestPath, finalDestPath);
-        }
-        if (firstDestPath !== finalDestPath) {
-            fnlog(`Removing ${firstDestPath}`);
-            await io.rmRF(firstDestPath);
-        }
-        return finalDestPath;
-    }
-}
-
-/**
- * Downloads and extracts an archive from a URL.
- *
- * Supports .zip, .tar, .tar.gz, .tar.xz, .tar.bz2, .7z, and .pkg (macOS) formats.
- * Uses 7z for extraction on Windows.
- *
- * @param url - URL of the archive to download
- * @param destPath - Optional destination directory for extraction
- * @returns Path to the extracted contents, or undefined if extraction failed
- */
-export async function downloadAndExtract(url: string, destPath: string | undefined = undefined): Promise<string | undefined> {
-    function fnlog(msg: string): void {
-        trace_commands.log('downloadAndExtract: ' + msg);
-    }
-
-    let extPath: string | undefined = undefined;
-    try {
-        let toolPath = await tc.downloadTool(url);
-        fnlog(`Downloaded ${url} to ${toolPath}`);
-        // Resolve the destination path if not undefined
-        if (destPath !== undefined) {
-            // Resolve the destination path if relative
-            if (!path.isAbsolute(destPath)) {
-                destPath = path.resolve(destPath);
-                fnlog(`Destination path is relative. Resolved to ${destPath}`);
-            }
-            // Create destination directory
-            if (!fs.existsSync(destPath)) {
-                fnlog(`Creating directory ${destPath}`);
-                await io.mkdirP(destPath);
-            }
-        }
-        // Rename the toolPath filename to match the URL filename
-        const urlFilename = path.basename(url);
-        const isValidFilenameChars = /^[a-z0-9._-]+$/i.test(urlFilename);
-        if (isValidFilenameChars) {
-            // Rename only if the filename is valid
-            // Renaming makes the archive file name consistent with the URL
-            // and easier for tools to recognize the archive type
-            const newToolPath = path.join(path.dirname(toolPath), urlFilename);
-            await io.mv(toolPath, newToolPath);
-            fnlog(`Renamed ${toolPath} to ${newToolPath}`);
-            toolPath = newToolPath;
-        }
-        // Patches for Windows
-        if (process.platform === 'win32' && destPath !== undefined) {
-            // https://github.com/actions/toolkit/pull/180
-            destPath = destPath.replace(/\\/g, '/');
-            toolPath = toolPath.replace(/\\/g, '/');
-        }
-        // Extract
-        if (url.endsWith('.zip')) {
-            extPath = await tc.extractZip(toolPath, destPath);
-        } else if (url.endsWith('.tar')) {
-            const flags = trace_commands.enabled() ? '-vx' : '-x';
-            extPath = await extractTar(toolPath, destPath, flags);
-        } else if (url.endsWith('.tar.gz')) {
-            const flags = trace_commands.enabled() ? '-vxz' : '-xz';
-            extPath = await extractTar(toolPath, destPath, flags);
-        } else if (url.endsWith('.tar.xz')) {
-            const flags = trace_commands.enabled() ? '-vxJ' : '-xJ';
-            extPath = await extractTar(toolPath, destPath, flags);
-        } else if (url.endsWith('.tar.bz2')) {
-            const flags = trace_commands.enabled() ? '-vxj' : '-xj';
-            extPath = await extractTar(toolPath, destPath, flags);
-        } else if (url.endsWith('.7z')) {
-            extPath = await tc.extract7z(toolPath, destPath);
-        } else if (process.platform === 'darwin' && url.endsWith('.pkg')) {
-            extPath = await tc.extractXar(toolPath, destPath);
-        } else {
-            fnlog(`Unsupported archive format: ${path.basename(url)}`);
-            return extPath;
-        }
-        fnlog(`Extracted ${toolPath} to ${extPath}`);
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        fnlog(errorMessage);
-        extPath = undefined;
-    }
-    return extPath;
-}
-
-/**
- * Strips a single nested directory from an extracted archive path.
- *
- * When archives contain a single top-level directory (common pattern),
- * moves its contents up one level to simplify the path structure.
- *
- * @param dirPath - Directory path to check and potentially flatten
- * @returns True if a directory was stripped, false otherwise
- */
-export async function stripSingleDirectoryFromPath(dirPath: string): Promise<boolean> {
-    function fnlog(msg: string): void {
-        trace_commands.log('stripSingleDirectoryFromPath: ' + msg);
-    }
-
-    fnlog(`Checking if ${dirPath} contains a single directory`);
-    const files = fs.readdirSync(dirPath);
-    if (files.length === 1) {
-        const subPath = path.join(dirPath, files[0]);
-        fnlog(`Single file found in ${dirPath}: ${subPath}`);
-        const fileStat = fs.statSync(subPath);
-        if (fileStat.isDirectory()) {
-            // List all files in subpath
-            const subFiles = fs.readdirSync(subPath);
-            fnlog(`Strip files from ${subPath}: [${subFiles.join(', ')}]`);
-
-            // Move everything to the parent directory
-            for (const file of subFiles) {
-                const sourcePath = path.join(subPath, file);
-                const destPath = path.join(dirPath, file);
-                await io.mv(sourcePath, destPath);
-            }
-            return true;
-        } else {
-            fnlog(`Single file is not a directory: ${subPath}`);
-        }
-    }
-    return false;
 }
 
 /**

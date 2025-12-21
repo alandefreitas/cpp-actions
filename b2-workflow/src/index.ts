@@ -1,3 +1,9 @@
+/**
+ * Main entry point for b2-workflow action.
+ *
+ * @module index
+ */
+
 import * as core from '@actions/core';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -8,159 +14,12 @@ import * as trace_commands from 'trace-commands';
 import * as gh_inputs from 'gh-inputs';
 import { reportAndSetFailed } from 'pretty-errors';
 
-/**
- * Returns the number of available CPU cores.
- *
- * @returns Number of available CPUs, minimum 1
- */
-function numberOfCpus(): number {
-    const result = typeof os.availableParallelism === 'function'
-        ? os.availableParallelism()
-        : os.cpus().length;
-    if (!result || result === 0) {
-        return 1;
-    }
-    return result;
-}
+// Type imports and re-exports
+import { Inputs, BoolOrStringOption } from './types';
+export type { Inputs, ArchConfig, BoolOrStringOption } from './types';
 
-/**
- * Normalizes an architecture string to a standard format.
- *
- * @param arch - Architecture string to normalize
- * @returns Normalized architecture: 'x86', 'x64', 'arm', 'arm64', or original
- */
-function normalizeArchitectureInput(arch: string): string {
-    if (!arch) {
-        return '';
-    }
-    const token = arch.toLowerCase();
-    if (['x86', 'win32', 'ia32', 'i386', 'i486', 'i586', 'i686'].includes(token)) {
-        return 'x86';
-    }
-    if (['x64', 'amd64', 'x86_64', 'x86-64'].includes(token)) {
-        return 'x64';
-    }
-    if (['arm', 'arm32'].includes(token)) {
-        return 'arm';
-    }
-    if (['arm64', 'aarch64'].includes(token)) {
-        return 'arm64';
-    }
-    return arch;
-}
-
-/**
- * Configuration for B2 architecture settings.
- */
-interface ArchConfig {
-    /** Normalized architecture identifier (x86, x64, arm, arm64) */
-    normalizedArch: string;
-    /** B2 address model (32 or 64 bit) */
-    addressModel?: string;
-    /** B2 architecture family (x86 or arm) */
-    architecture?: string;
-}
-
-/**
- * Derives B2 architecture configuration from an architecture string.
- *
- * Maps architecture to appropriate address model (32/64 bit) and
- * architecture family (x86/arm) for B2 build configuration.
- *
- * @param arch - Architecture string to derive configuration from
- * @returns Architecture configuration with normalized values
- */
-function deriveB2ArchConfig(arch: string): ArchConfig {
-    const normalizedArch = normalizeArchitectureInput(arch);
-    if (!normalizedArch) {
-        return { normalizedArch: '' };
-    }
-    if (normalizedArch === 'x86') {
-        return { normalizedArch, addressModel: '32', architecture: 'x86' };
-    }
-    if (normalizedArch === 'x64') {
-        return { normalizedArch, addressModel: '64', architecture: 'x86' };
-    }
-    if (normalizedArch === 'arm') {
-        return { normalizedArch, addressModel: '32', architecture: 'arm' };
-    }
-    if (normalizedArch === 'arm64') {
-        return { normalizedArch, addressModel: '64', architecture: 'arm' };
-    }
-    return { normalizedArch };
-}
-
-/**
- * Configuration for options that accept boolean or string values.
- *
- * Allows users to provide either true/false or custom string values
- * for B2 options.
- */
-interface BoolOrStringOption {
-    /** Input key name */
-    key: string;
-    /** Corresponding B2 command-line key */
-    b2_key: string;
-    /** Value to use when option is true */
-    true_value: string;
-    /** Value to use when option is false, or undefined to omit */
-    false_value: string | undefined;
-}
-
-/**
- * Input configuration for the B2 workflow action.
- *
- * Contains all settings for configuring and running a Boost.Build workflow,
- * including compiler settings, build options, sanitizers, and debug flags.
- */
-interface Inputs {
-    // Configure options
-    source_dir: string;
-    build_dir: string;
-    cxx: string;
-    ccflags: string;
-    cxxflags: string;
-    cxxstd: string;
-    shared: boolean | undefined;
-    toolset: string;
-    arch: string;
-    build_type: string;
-    modules: string[];
-    module_target: string[];
-    extra_args: string[];
-    // B2-specific options
-    warnings_as_errors: boolean | string | undefined;
-    address_model: string | undefined;
-    asan: boolean | string | undefined;
-    ubsan: boolean | string | undefined;
-    msan: boolean | string | undefined;
-    tsan: boolean | string | undefined;
-    coverage: string | undefined;
-    linkflags: string | undefined;
-    threading: string | undefined;
-    rtti: boolean | string | undefined;
-    clean: boolean | undefined;
-    clean_all: boolean | undefined;
-    abbreviate_paths: boolean | undefined;
-    hash: boolean | undefined;
-    rebuild_all: boolean | undefined;
-    dry_run: boolean | undefined;
-    stop_on_error: boolean | undefined;
-    config: string;
-    site_config: string;
-    user_config: string;
-    project_config: string;
-    debug_configuration: boolean | undefined;
-    debug_building: boolean | undefined;
-    debug_generators: boolean | undefined;
-    include: string;
-    define: string | undefined;
-    runtime_link: boolean | string | undefined;
-    // Build options
-    jobs: number;
-    // Annotations and tracing
-    trace_commands: boolean;
-}
+// Module imports
+import { numberOfCpus, normalizeArchitectureInput, deriveB2ArchConfig } from './arch-utils';
 
 /**
  * Executes a Boost.Build (B2) workflow for building and testing C++ libraries.

@@ -15,41 +15,9 @@ const setup_clang = require('setup-clang');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const setup_msvc = require('setup-msvc');
 
-/**
- * Result of normalizing a compiler name and version.
- */
-interface NormalizedCompiler {
-    compiler: string;
-    version: string;
-}
-
-/**
- * Configuration inputs for the setup-cpp action.
- */
-interface Inputs {
-    compiler: string;
-    version: string;
-    path: string[];
-    check_latest: boolean;
-    update_environment: boolean;
-    trace_commands: boolean;
-    arch: string;
-}
-
-/**
- * Result of setting up a C++ compiler.
- */
-interface SetupResult {
-    output_path: string | null;
-    cc: string | null;
-    cxx: string | null;
-    bindir: string | null;
-    dir: string | null;
-    release: string | null;
-    version_major: number | null;
-    version_minor: number | null;
-    version_patch: number | null;
-}
+// Type imports and re-exports
+import { NormalizedCompiler, Inputs, SetupResult } from './types';
+export type { NormalizedCompiler, Inputs, SetupResult }
 
 /**
  * Normalizes a compiler name and extracts version information.

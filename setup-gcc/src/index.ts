@@ -12,39 +12,9 @@ import { reportAndSetFailed } from 'pretty-errors';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const setup_program = require('setup-program');
 
-/**
- * Configuration inputs for the setup-gcc action.
- */
-interface Inputs {
-    version: string;
-    path: string[];
-    check_latest: boolean;
-    update_environment: boolean;
-    trace_commands: boolean;
-}
-
-/**
- * Output values produced by GCC setup.
- */
-interface MainOutputs {
-    output_path: string | null;
-    cc: string | null;
-    cxx: string | null;
-    bindir: string;
-    dir: string;
-    version: string;
-    version_major: number;
-    version_minor: number;
-    version_patch: number;
-}
-
-/**
- * Result of a program search operation.
- */
-interface ProgramResult {
-    output_version: string | null;
-    output_path: string | null;
-}
+// Type imports and re-exports
+import { Inputs, MainOutputs, ProgramResult } from './types';
+export type { Inputs, MainOutputs, ProgramResult }
 
 /**
  * Removes "gcc-" or "g++-" prefixes from a version string.
@@ -89,7 +59,7 @@ export async function main(
     check_latest: boolean,
     update_environment: boolean
 ): Promise<MainOutputs> {
-    core.startGroup('Find GCC versions');
+    core.startGroup('🔎 Find GCC versions');
     if (process.platform === 'darwin') {
         process.env['AGENT_TOOLSDIRECTORY'] = '/Users/runner/hostedtoolcache';
     }
@@ -110,7 +80,7 @@ export async function main(
     let output_version: string | null = null;
 
     // Setup path program
-    core.startGroup('Find GCC in specified paths');
+    core.startGroup('🔍 Find GCC in specified paths');
     core.info(`Searching for GCC ${version} in paths [${paths.join(',')}]`);
     const pathResult: ProgramResult = await setup_program.find_program_in_path(paths, version, check_latest);
     output_version = pathResult.output_version;
@@ -122,7 +92,7 @@ export async function main(
     // search list so we still pick up preinstalled C-only toolchains.
     const names = ['g++', 'gcc'];
     if (output_path === null) {
-        core.startGroup('Find GCC in system paths');
+        core.startGroup('📁 Find GCC in system paths');
         core.info(`Searching for GCC ${version} in PATH`);
         const systemResult: ProgramResult = await setup_program.find_program_in_system_paths(paths, names, version, check_latest);
         output_version = systemResult.output_version;
@@ -132,7 +102,7 @@ export async function main(
 
     // Setup APT program
     if (output_version === null && process.platform === 'linux') {
-        core.startGroup('Find GCC with APT');
+        core.startGroup('📦 Find GCC with APT');
         core.info(`Searching for GCC ${version} with APT`);
 
         // Add APT repository
@@ -168,7 +138,7 @@ export async function main(
 
     // Install program from a valid URL
     if (output_version === null) {
-        core.startGroup('Download GCC from release binaries');
+        core.startGroup('⬇️ Download GCC from release binaries');
         core.info(`Fetching GCC ${version} from release binaries`);
         // Determine the release to install and version candidates to fallback to
         trace_commands.log('All GCC versions: ' + allVersions);
@@ -281,7 +251,7 @@ export async function main(
     }
 
     // Create outputs
-    core.startGroup('Set outputs');
+    core.startGroup('📤 Set outputs');
     let cc: string | null = output_path;
     let cxx: string | null = output_path;
     let bindir = '';

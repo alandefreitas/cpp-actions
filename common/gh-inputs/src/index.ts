@@ -1,9 +1,25 @@
+/**
+ * Enhanced GitHub Actions input handling utilities.
+ *
+ * Provides functions for retrieving and parsing GitHub Actions inputs with
+ * support for multiple name aliases, environment variable fallbacks, type
+ * conversions, and various parsing formats.
+ *
+ * @module gh-inputs
+ */
+
 import * as core from '@actions/core';
 import * as nodePath from 'path';
 import type { InputOptions, KeyValue, Tribool, FilterFn, SplitterArg, StringRecord } from './types';
 
 export type { InputOptions, KeyValue, Tribool, FilterFn, SplitterArg, StringRecord };
 
+// Re-export utilities from modules
+export { parseBashArguments, getBashArguments } from './bash-parser';
+export { parseKeyValues, parseMap } from './key-value-parser';
+export { makeValueString, makeKebabName, printInputObject, setOutputObject } from './output-utils';
+
+/** Default options for input retrieval. */
 const defaultOptions: InputOptions = {
     required: false,
     trimWhitespace: true,
@@ -14,7 +30,10 @@ const defaultOptions: InputOptions = {
     filterBlankLines: true
 };
 
+/** Default regex pattern for splitting array inputs. */
 const defaultSplitRegex = /[,; ]/;
+
+/** Filter function that returns true for non-empty strings. */
 const isNonEmptyStr: FilterFn = (s: string): boolean => s !== '';
 
 /**
@@ -412,169 +431,8 @@ export function getBool(name: string | string[], options: InputOptions = {}): bo
  */
 export const getBoolean = getBool;
 
-/**
- * Result of extracting an environment variable identifier from a string.
- */
-interface ExtractIdentifierResult {
-    i: number;
-    curArg: string;
-}
-
-/**
- * Extracts and expands an environment variable identifier from a string position.
- *
- * @param i - Current position in the line
- * @param line - The line being parsed
- * @param char - Current character being processed
- * @param curArg - Current argument being built
- * @returns Updated position and argument with expanded variable
- */
-function extractIdentifier(
-    i: number,
-    line: string,
-    char: string,
-    curArg: string
-): ExtractIdentifierResult {
-    const nextChar = i < line.length - 1 ? line[i + 1] : undefined;
-    if (nextChar && /^[a-zA-Z_]/.test(nextChar)) {
-        let identifier = nextChar;
-        let j = i + 2;
-        for (; j < line.length; j++) {
-            const idChar = line[j];
-            if (/^[a-zA-Z0-9_]/.test(idChar)) {
-                identifier += idChar;
-            } else {
-                break;
-            }
-        }
-        const envValue = process.env[identifier];
-        if (envValue) {
-            curArg += envValue;
-        }
-        i = j - 1;
-    } else {
-        curArg += char;
-    }
-    return { i, curArg };
-}
-
-/**
- * Parses a bash-style argument string into an array of individual arguments.
- *
- * Handles:
- * - Single and double quoted strings (preserving spaces within)
- * - Escaped characters with backslash
- * - Environment variable expansion ($VAR syntax)
- * - Proper quote nesting rules (single quotes are literal, double quotes allow escapes)
- *
- * @param extra_args - A string or array of strings containing bash-style arguments
- * @returns Array of parsed individual arguments
- */
-export function parseBashArguments(extra_args: string | string[]): string[] {
-    const argsArray = Array.isArray(extra_args) ? extra_args : [extra_args];
-
-    const args: string[] = [];
-    for (const line of argsArray) {
-        let curQuote: string | undefined = undefined;
-        let curArg = '';
-
-        for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            const inQuote = curQuote !== undefined;
-            const curIsQuote = ['"', "'"].includes(char);
-            const curIsEscaped = i > 0 && line[i - 1] === '\\';
-
-            if (!inQuote) {
-                if (!curIsEscaped) {
-                    if (curIsQuote) {
-                        curQuote = char;
-                    } else if (char === ' ') {
-                        if (curArg !== '') {
-                            args.push(curArg);
-                            curArg = '';
-                        }
-                    } else if (char === '$') {
-                        const result = extractIdentifier(i, line, char, curArg);
-                        i = result.i;
-                        curArg = result.curArg;
-                    } else if (char !== '\\') {
-                        curArg += char;
-                    }
-                } else {
-                    curArg += char;
-                }
-            } else if (curQuote === '"') {
-                if (!curIsEscaped) {
-                    if (char === curQuote) {
-                        curQuote = undefined;
-                    } else if (char === '$') {
-                        const result = extractIdentifier(i, line, char, curArg);
-                        i = result.i;
-                        curArg = result.curArg;
-                    } else if (char !== '\\') {
-                        curArg += char;
-                    }
-                } else {
-                    if (!['$', '`', '"', '\\'].includes(char)) {
-                        curArg += '\\';
-                    }
-                    curArg += char;
-                }
-            } else if (curQuote === "'") {
-                if (char !== curQuote) {
-                    curArg += char;
-                } else {
-                    curQuote = undefined;
-                }
-            }
-        }
-
-        if (curArg !== '') {
-            args.push(curArg);
-        }
-    }
-    return args;
-}
-
-/**
- * Retrieves a multiline GitHub Actions input and parses it as bash-style arguments.
- *
- * Combines getMultilineInput with parseBashArguments to retrieve and parse
- * command-line style arguments from a GitHub Actions input.
- *
- * @param name - The input name or array of name aliases to retrieve
- * @param options - Configuration options for input retrieval
- * @returns Array of parsed individual arguments
- */
-export function getBashArguments(name: string | string[], options: InputOptions = {}): string[] {
-    return parseBashArguments(core.getMultilineInput(Array.isArray(name) ? name[0] : name, options));
-}
-
-/**
- * Parses an array of strings into key-value pairs using a delimiter.
- *
- * Each line is split at the first occurrence of the delimiter. Lines without
- * a delimiter are treated as values with an empty key. Empty lines are skipped.
- *
- * @param lines - Array of strings to parse
- * @param delimiter - The character(s) separating keys from values. Defaults to ':'
- * @returns Array of KeyValue objects with key and value properties
- */
-export function parseKeyValues(lines: string[], delimiter: string = ':'): KeyValue[] {
-    const keyValues: KeyValue[] = [];
-    for (const line of lines) {
-        const delimiterIndex = line.indexOf(delimiter);
-        const key = delimiterIndex !== -1 ? line.substring(0, delimiterIndex) : '';
-        const value = delimiterIndex !== -1 ? line.substring(delimiterIndex + delimiter.length) : line;
-
-        if (key && value) {
-            keyValues.push({ key: key.trim(), value: value.trim() });
-        } else if (key) {
-            keyValues.push({ key: '', value: key.trim() });
-        }
-    }
-    return keyValues;
-}
+// Import parseKeyValues and parseMap for use in getKeyValues and getMap
+import { parseKeyValues, parseMap } from './key-value-parser';
 
 /**
  * Retrieves a multiline GitHub Actions input as an array of key-value pairs.
@@ -597,22 +455,6 @@ export function getKeyValues(
 }
 
 /**
- * Parses an array of strings into a Record (object) mapping keys to values.
- *
- * Similar to parseKeyValues but returns a plain object instead of an array.
- * Note: If duplicate keys exist, later values will overwrite earlier ones.
- *
- * @param lines - Array of strings to parse
- * @param delimiter - The character(s) separating keys from values. Defaults to ':'
- * @returns Record object mapping keys to their corresponding values
- */
-export function parseMap(lines: string[], delimiter: string = ':'): Record<string, string> {
-    return Object.fromEntries(
-        parseKeyValues(lines, delimiter).map(({ key, value }) => [key, value])
-    );
-}
-
-/**
  * Retrieves a multiline GitHub Actions input as a Record (object) mapping keys to values.
  *
  * Combines getMultilineInput with parseMap to retrieve and parse
@@ -630,76 +472,4 @@ export function getMap(
     options: InputOptions = {}
 ): Record<string, string> {
     return parseMap(getMultilineInput(name, options), delimiter);
-}
-
-/**
- * Converts an unknown value to a human-readable string representation.
- *
- * Handles various types with special formatting:
- * - Set: Converted to JSON array with braces (e.g., {1, 2, 3})
- * - Map: Converted to JSON object
- * - Boolean: Returns 'true' or 'false'
- * - Falsy values: Returns '<empty>'
- * - Other values: Returns JSON stringified representation
- *
- * @param value - The value to convert to a string
- * @returns A human-readable string representation of the value
- */
-export function makeValueString(value: unknown): string {
-    if (value instanceof Set) {
-        return JSON.stringify(Array.from(value)).replace(/^\[/, '{').replace(/]$/, '}');
-    }
-    if (value instanceof Map) {
-        return JSON.stringify(Object.fromEntries(value));
-    }
-    if (typeof value === 'boolean') {
-        return value ? 'true' : 'false';
-    }
-    if (!value) {
-        return '<empty>';
-    }
-    return JSON.stringify(value);
-}
-
-/**
- * Converts a name from snake_case to kebab-case.
- *
- * Replaces all underscores with hyphens. This is commonly used to convert
- * JavaScript property names to GitHub Actions input/output names.
- *
- * @param name - The snake_case name to convert
- * @returns The name in kebab-case
- */
-export function makeKebabName(name: string): string {
-    return name.replaceAll('_', '-');
-}
-
-/**
- * Prints all properties of an input object to the GitHub Actions log.
- *
- * Each property is logged with its name converted to kebab-case and its
- * value formatted using makeValueString. Useful for debugging action inputs.
- *
- * @param inputObject - An object whose properties will be logged
- */
-export function printInputObject(inputObject: StringRecord): void {
-    for (const [name, value] of Object.entries(inputObject)) {
-        core.info(`🧩 ${makeKebabName(name)}: ${makeValueString(value)}`);
-    }
-}
-
-/**
- * Sets GitHub Actions outputs from all properties of an object.
- *
- * Each property is set as an output with its name converted to kebab-case.
- * Also logs each output to the GitHub Actions log for visibility. Useful for
- * setting multiple related outputs at once.
- *
- * @param outputObject - An object whose properties will be set as outputs
- */
-export function setOutputObject(outputObject: StringRecord): void {
-    for (const [name, value] of Object.entries(outputObject)) {
-        core.info(`🧩 ${makeKebabName(name)}: ${makeValueString(value)}`);
-        core.setOutput(makeKebabName(name), value);
-    }
 }

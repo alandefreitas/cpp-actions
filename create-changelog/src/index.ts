@@ -7,140 +7,43 @@ import * as trace_commands from 'trace-commands';
 import * as gh_inputs from 'gh-inputs';
 import { reportAndSetFailed } from 'pretty-errors';
 
-/**
- * Represents a parsed git commit with conventional commit information.
- *
- * This class stores all metadata about a commit including author information,
- * conventional commit parsing results (type, scope, description, breaking changes),
- * associated GitHub issues, and release tag information.
- */
-export class Commit {
-    hash: string | null = null;
-    extra_hashes: string[] = [];
-    author: string | null = null;
-    author_name: string | null = null;
-    author_email: string | null = null;
-    gh_name: string | null = null;
-    gh_username: string | null = null;
-    date: string | null = null;
-    message = '';
+import {
+    Commit,
+    GitHubUser,
+    Tag,
+    CheckUnconventionalMode,
+    SortByOption,
+    parseSortByOption,
+    Inputs,
+    parseCheckUnconventionalMode,
+    Changes
+} from './types';
 
-    // conventional fields
-    subject: string | null = null;
-    type: string | null = null;
-    scope: string | null = null;
-    description: string | null = null;
-    body = '';
-    footers: Record<string, string> = {};
-    breaking = false;
+import {
+    isValidType,
+    normalizeType,
+    iconFor,
+    humanize,
+    commitTypeDescription,
+    capitalizeSentences,
+    featureSubjectIcon
+} from './commit-formatting';
 
-    // Extensions to conventional fields (#<tag-expr>)
-    tags: string[] = [];
+import {
+    getGithubRepoOwner,
+    getGithubRepoName,
+    getIssueAuthor,
+    getGithubTags,
+    getGithubProfileName,
+    populateGithubUsernames,
+    populateIssueData
+} from './github-api';
 
-    // whether the commit is conventional or not
-    conventional = true;
+// Re-export types for external consumers
+export { Commit, GitHubUser, SortByOption, parseSortByOption, Changes } from './types';
 
-    // issue info
-    issue: string | null = null;
-    gh_issue_username: string | null = null;
-
-    // delimiter (git tag or version pattern)
-    tag: string | null = null;
-    is_parent_release = false;
-
-    // diff statistics (populated when sort-by is lines-based)
-    lines_added = 0;
-    lines_deleted = 0;
-    lines_changed = 0;
-}
-
-/**
- * Represents a GitHub user with contribution statistics.
- *
- * This class stores information about a contributor including their
- * GitHub username, display name, commit count, and repository role
- * (owner, admin, affiliated, or regular contributor).
- */
-export class GitHubUser {
-    username: string | null = null;
-    name: string | null = null;
-    commits = 0;
-    commits_perc = 0;
-    is_owner = false;
-    is_admin = false;
-    is_affiliated = false;
-    is_regular = true;
-}
-
-/**
- * Represents a Git tag with its name and commit SHA.
- */
-interface Tag {
-    /** Tag name (e.g., 'v1.0.0') */
-    name: string;
-    /** Commit SHA the tag points to */
-    sha: string;
-}
-
-/**
- * Valid modes for the check-unconventional input.
- *
- * - 'false': Disable checking (no warnings or errors)
- * - 'warn': Emit warnings for unconventional commits
- * - 'error': Fail the action if unconventional commits are found
- */
-type CheckUnconventionalMode = 'false' | 'warn' | 'error';
-
-/**
- * Valid sorting options for changelog commits within each scope.
- *
- * - 'most-changes-first': Sort by lines changed, most changes first (default)
- * - 'latest-first': Sort by date, newest first
- * - 'oldest-first': Sort by date, oldest first
- */
-export type SortByOption = 'most-changes-first' | 'latest-first' | 'oldest-first';
-
-/**
- * Parses a sort-by input value into its validated option.
- *
- * @param value - The input value to parse
- * @returns The normalized SortByOption, defaulting to 'most-changes-first' for invalid values
- */
-export function parseSortByOption(value: string): SortByOption {
-    const normalized = value.toLowerCase().trim();
-    if (['most-changes-first', 'latest-first', 'oldest-first'].includes(normalized)) {
-        return normalized as SortByOption;
-    }
-    return 'most-changes-first';
-}
-
-/**
- * Configuration inputs for the create-changelog action.
- */
-interface Inputs {
-    /** Path to the source repository */
-    source_dir: string;
-    /** Pattern to match version strings in commit messages */
-    version_pattern: RegExp;
-    /** Pattern to match version tags */
-    tag_pattern: RegExp;
-    /** Path where the changelog will be written */
-    output_path: string;
-    limit: number;
-    thank_non_regular: boolean;
-    check_unconventional: CheckUnconventionalMode;
-    link_commits: boolean;
-    github_token: string;
-    update_summary: boolean;
-    trace_commands: boolean;
-    include_types: Set<string>;
-    exclude_types: Set<string>;
-    sort_by: SortByOption;
-    repo_branch?: string;
-    repoUrl?: string;
-    repoOwner?: string;
-    repoName?: string;
-}
+// Re-export formatting functions for external consumers
+export { featureSubjectIcon } from './commit-formatting';
 
 /**
  * Gets the current Git branch name.
@@ -212,54 +115,6 @@ async function getGithubRemote(gitPath: string): Promise<string | null> {
         return null;
     }
 
-    return null;
-}
-
-/**
- * Extracts the repository owner from a GitHub URL.
- *
- * @param repoUrl - GitHub repository URL
- * @returns Repository owner name or null if not found
- */
-function getGithubRepoOwner(repoUrl: string | undefined): string | null {
-    if (!repoUrl) {
-        return null;
-    }
-
-    // Remove leading "https://" or "http://" if present
-    repoUrl = repoUrl.replace(/^https?:\/\//, '');
-
-    // Extract the repository owner
-    if (repoUrl.startsWith('github.com/')) {
-        const pathParts = repoUrl.split('/');
-        if (pathParts.length >= 2) {
-            return pathParts[1];
-        }
-    }
-    return null;
-}
-
-/**
- * Extracts the repository name from a GitHub URL.
- *
- * @param repoUrl - GitHub repository URL
- * @returns Repository name or null if not found
- */
-function getGithubRepoName(repoUrl: string | undefined): string | null {
-    if (!repoUrl) {
-        return null;
-    }
-
-    // Remove leading "https://" or "http://" if present
-    repoUrl = repoUrl.replace(/^https?:\/\//, '');
-
-    // Extract the repository name
-    if (repoUrl.startsWith('github.com/')) {
-        const pathParts = repoUrl.split('/');
-        if (pathParts.length >= 3) {
-            return pathParts[2];
-        }
-    }
     return null;
 }
 
@@ -363,71 +218,6 @@ async function getLocalTags(projectPath: string, tagPattern: RegExp): Promise<Ta
 }
 
 /**
- * Fetches tags from GitHub API matching a pattern.
- *
- * @param repoUrl - GitHub repository URL
- * @param tagPattern - Regex pattern to filter tags
- * @param accessToken - GitHub access token for API requests
- * @returns Array of matching tags
- */
-async function getGithubTags(repoUrl: string | undefined, tagPattern: RegExp, accessToken: string): Promise<Tag[]> {
-    if (!repoUrl) {
-        return [];
-    }
-
-    const url = `https://api.github.com/repos/${getGithubRepoOwner(repoUrl)}/${getGithubRepoName(repoUrl)}/tags`;
-    const headers: Record<string, string> = {
-        'Accept': 'application/vnd.github+json',
-        'User-Agent': 'My-User-Agent'
-    };
-
-    if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
-    }
-
-    const tags: Tag[] = [];
-    let page = 1;
-    const perPage = 100;
-
-    while (true) {
-        const params = {
-            page: page,
-            per_page: perPage
-        };
-
-        try {
-            const response = await axios.default.get(url, { headers, params });
-            if (response.status === 200) {
-                const pageTags = response.data;
-                if (pageTags.length > 0) {
-                    for (const pageTag of pageTags) {
-                        if (tagPattern.test(pageTag.name)) {
-                            tags.push({ name: pageTag.name, sha: pageTag.commit.sha });
-                        }
-                    }
-                    page += 1;
-                } else {
-                    break;
-                }
-            } else {
-                console.error(`Error: ${response.status} - ${response.statusText}`);
-                return tags;
-            }
-        } catch (error) {
-            const axiosError = error as { response?: { status: number; statusText: string } };
-            if (axiosError.response) {
-                console.error(`Error: ${axiosError.response.status} - ${axiosError.response.statusText}`);
-            } else {
-                console.error(`Error: ${(error as Error).message}`);
-            }
-            return tags;
-        }
-    }
-
-    return tags;
-}
-
-/**
  * Removes duplicate tags based on specified fields.
  *
  * @param tags - Array of tags to deduplicate
@@ -481,123 +271,6 @@ async function processTags(projectPath: string, tagPattern: RegExp, repoUrl: str
     tags = removeTagDuplicates(tags, ['name', 'sha']);
     fnlog(`${tags.length} tags`);
     return tags;
-}
-
-/**
- * Gets the author username of a GitHub issue.
- *
- * @param repoUrl - GitHub repository URL
- * @param issueNumber - Issue number
- * @param accessToken - GitHub access token for API requests
- * @returns Issue author username or null if not found
- */
-async function getIssueAuthor(repoUrl: string, issueNumber: string, accessToken: string): Promise<string | null> {
-    // Extract the owner and repository name from the URL
-    const urlParts = repoUrl.replace(/\/$/, '').split('/');
-    const owner = urlParts[urlParts.length - 2];
-    const repository = urlParts[urlParts.length - 1];
-
-    // Construct the GitHub API URL for the issue
-    const url = `https://api.github.com/repos/${owner}/${repository}/issues/${issueNumber}`;
-    const headers: Record<string, string> = {
-        'Accept': 'application/vnd.github.v3+json'
-    };
-
-    if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
-    }
-
-    try {
-        const response = await axios.default.get(url, { headers });
-        if (response.status === 200) {
-            const issueData = response.data;
-            const author = issueData.user.login;
-            return author;
-        }
-    } catch (error) {
-        console.error(`Error fetching issue author: ${(error as Error).message}`);
-    }
-
-    return null;
-}
-
-/**
- * Checks if a string is a valid conventional commit type.
- *
- * @param s - String to validate
- * @returns True if the string is a valid commit type
- */
-function isValidType(s: string): boolean {
-    // A valid type according to `normalizeType`
-    // Used to identify tags that can be converted to types
-    const recognizedTypes = [
-        'doc',
-        'docs',
-        'documentation',
-        'fix',
-        'fixes',
-        'bugfix',
-        'chore',
-        'work',
-        'chores',
-        'maintenance',
-        'feat',
-        'feature',
-        'refactor',
-        'cleanup',
-        'perf',
-        'performance',
-        'test',
-        'testing',
-        'tests',
-        'release',
-        'version',
-        'ci',
-        'integration',
-        'breaking',
-        'break',
-        'revert',
-        'undo',
-        'style',
-        'build',
-        'improvement'
-    ];
-    return recognizedTypes.includes(s);
-}
-
-/**
- * Normalizes a commit type to a standard format.
- *
- * @param s - Type string to normalize
- * @returns Normalized type string
- */
-function normalizeType(s: string | null): string {
-    if (!s) {
-        return 'other';
-    }
-
-    // The units of information that make up Conventional Commits MUST NOT be treated as case sensitive
-    // by implementors, with the exception of BREAKING CHANGE which MUST be uppercase.
-    // BREAKING-CHANGE MUST be synonymous with BREAKING CHANGE
-    const categoryMapping: Record<string, string> = {
-        'doc': 'docs',
-        'documentation': 'docs',
-        'fixes': 'fix',
-        'bugfix': 'fix',
-        'work': 'chore',
-        'chores': 'chore',
-        'maintenance': 'chore',
-        'feature': 'feat',
-        'cleanup': 'refactor',
-        'performance': 'perf',
-        'testing': 'test',
-        'tests': 'test',
-        'version': 'release',
-        'integration': 'ci',
-        'break': 'breaking',
-        'undo': 'revert'
-    };
-    return categoryMapping[s.toLowerCase()] || s;
 }
 
 /**
@@ -1056,283 +729,6 @@ async function processCommits(projectPath: string, repoUrl: string | undefined, 
 }
 
 /**
- * Fetches a user's display name from their GitHub profile.
- *
- * @param username - GitHub username
- * @param accessToken - GitHub access token
- * @returns Profile display name or null if not found
- */
-async function getGithubProfileName(username: string, accessToken: string): Promise<string | null> {
-    const url = `https://api.github.com/users/${username}`;
-    const headers: Record<string, string> = {
-        'Accept': 'application/vnd.github.v3+json'
-    };
-
-    if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
-    }
-
-    try {
-        const response = await axios.default.get(url, { headers });
-        if (response.status === 200) {
-            const profileData = response.data;
-            const githubProfileName = profileData.name;
-            if (githubProfileName) {
-                return githubProfileName;
-            }
-        }
-    } catch (error) {
-        console.error(`Error fetching GitHub profile name: ${(error as Error).message}`);
-    }
-
-    return null;
-}
-
-/**
- * Finds a GitHub username by email address.
- *
- * @param email - Email address to search for
- * @param accessToken - GitHub access token
- * @returns GitHub username or null if not found
- */
-async function getGithubUsername(email: string, accessToken: string): Promise<string | null> {
-    const url = `https://api.github.com/search/users?q=${encodeURIComponent(email)}+in:email`;
-    const headers: Record<string, string> = {
-        'Accept': 'application/vnd.github.v3+json'
-    };
-
-    if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
-    }
-
-    try {
-        const response = await axios.default.get(url, { headers });
-        if (response.status === 200) {
-            const searchResults = response.data;
-            const items = searchResults.items;
-            if (items && items.length > 0) {
-                return items[0].login;
-            }
-        }
-    } catch (error) {
-        console.error(`Error fetching GitHub username: ${(error as Error).message}`);
-    }
-
-    return null;
-}
-
-/**
- * Populates GitHub usernames and names for all commits.
- *
- * Propagates username information to commits with matching email addresses.
- *
- * @param commits - Array of commits to populate
- * @param accessToken - GitHub access token
- */
-async function populateGithubUsernames(commits: Commit[], accessToken: string): Promise<void> {
-    for (const commit of commits) {
-        if (!commit.gh_username) {
-            continue;
-        }
-        let ghUsername = commit.gh_username;
-        let ghName = commit.gh_name;
-        if (!ghName) {
-            ghName = await getGithubProfileName(ghUsername, accessToken);
-        }
-        if (ghName) {
-            commit.gh_name = ghName;
-            for (const commit2 of commits) {
-                if (commit2.author_email === commit.author_email) {
-                    commit2.gh_username = ghUsername;
-                    commit2.gh_name = ghName;
-                }
-            }
-        }
-    }
-
-    for (const commit of commits) {
-        if (commit.gh_username) {
-            continue;
-        }
-        if (!commit.author_email) {
-            continue;
-        }
-        const ghUsername = await getGithubUsername(commit.author_email, accessToken);
-        if (!ghUsername) {
-            continue;
-        }
-        const ghName = await getGithubProfileName(ghUsername, accessToken);
-        if (ghName) {
-            commit.gh_username = ghUsername;
-            commit.gh_name = ghName;
-            for (const commit2 of commits) {
-                if (commit2.author_email === commit.author_email) {
-                    commit2.gh_username = ghUsername;
-                    commit2.gh_name = ghName;
-                }
-            }
-        }
-    }
-}
-
-/**
- * Checks if a user has admin permissions on a repository.
- *
- * @param repoUrl - GitHub repository URL
- * @param username - GitHub username to check
- * @param accessToken - GitHub access token
- * @returns True if user has admin permissions
- */
-async function checkGithubAdminPermissions(repoUrl: string, username: string, accessToken: string): Promise<boolean> {
-    // Extract the repository owner and name from the URL
-    const [, , , owner, repo] = repoUrl.replace(/\/$/, '').split('/');
-
-    // Prepare the API endpoint URL
-    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/collaborators/${username}/permission`;
-
-    // Set the request headers with the access token for authentication
-    const headers: Record<string, string> = {
-        'Accept': 'application/vnd.github.v3+json'
-    };
-    if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
-    }
-
-    try {
-        // Send the GET request to the API endpoint
-        const response = await axios.default.get(apiUrl, { headers });
-        if (response.status === 200) {
-            const permissionData = response.data;
-            if (permissionData.permission === 'admin') {
-                return true;
-            }
-        }
-    } catch (error) {
-        console.error(`Error checking GitHub admin permissions: ${(error as Error).message}`);
-    }
-
-    return false;
-}
-
-/**
- * Checks if a user belongs to the repository owner's organization.
- *
- * @param repoUrl - GitHub repository URL
- * @param username - GitHub username to check
- * @param accessToken - GitHub access token
- * @returns True if user is in the owner's organization
- */
-async function checkUserInstitution(repoUrl: string, username: string, accessToken: string): Promise<boolean> {
-    // Extract the repository owner from the URL
-    const [, , , owner] = repoUrl.replace(/\/$/, '').split('/');
-
-    // Prepare the API endpoint URL to retrieve user information
-    const apiUrl = `https://api.github.com/users/${username}`;
-
-    // Set the authorization header with the access token
-    const headers: Record<string, string> = {};
-    if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
-    }
-
-    try {
-        // Send the GET request to the API endpoint
-        const response = await axios.default.get(apiUrl, { headers });
-        if (response.status === 200) {
-            const userData = response.data;
-            const organizationsUrl = userData.organizations_url;
-
-            // Retrieve all organizations using pagination
-            const organizations: { login: string }[] = [];
-            let page = 1;
-            while (true) {
-                const orgsUrl = `${organizationsUrl}?page=${page}&per_page=100`;
-                const orgsResponse = await axios.default.get(orgsUrl, { headers });
-                if (orgsResponse.status === 200) {
-                    const orgsData = orgsResponse.data;
-                    if (orgsData.length > 0) {
-                        organizations.push(...orgsData);
-                        page += 1;
-                    } else {
-                        break;
-                    }
-                } else {
-                    break;
-                }
-            }
-
-            // Check if the repository owner is in the organization list
-            for (const org of organizations) {
-                if (org.login === owner) {
-                    return true;
-                }
-            }
-        }
-    } catch (error) {
-        console.error(`Error checking user institution: ${(error as Error).message}`);
-    }
-
-    return false;
-}
-
-/**
- * Populates author data and issue information for commits.
- *
- * Creates GitHubUser entries for commit authors and issue reporters,
- * including permission and affiliation checks.
- *
- * @param commits - Array of commits to process
- * @param repoUrl - GitHub repository URL
- * @param repoOwner - Repository owner username
- * @param accessToken - GitHub access token
- * @returns Map of usernames to GitHubUser objects
- */
-async function populateIssueData(commits: Commit[], repoUrl: string | undefined, repoOwner: string | undefined, accessToken: string): Promise<Record<string, GitHubUser>> {
-    const authors: Record<string, GitHubUser> = {};
-
-    if (!repoUrl) {
-        return authors;
-    }
-
-    for (const commit of commits) {
-        if (commit.gh_username) {
-            if (!authors[commit.gh_username]) {
-                authors[commit.gh_username] = new GitHubUser();
-                authors[commit.gh_username].username = commit.gh_username;
-                authors[commit.gh_username].name = commit.gh_name;
-                authors[commit.gh_username].commits = 1;
-                authors[commit.gh_username].commits_perc = 1 / commits.length;
-                if (repoOwner && repoOwner === commit.gh_username) {
-                    authors[commit.gh_username].is_owner = true;
-                }
-                authors[commit.gh_username].is_admin = await checkGithubAdminPermissions(repoUrl, commit.gh_username, accessToken);
-                authors[commit.gh_username].is_affiliated = await checkUserInstitution(repoUrl, commit.gh_username, accessToken);
-            } else {
-                authors[commit.gh_username].commits += 1;
-                authors[commit.gh_username].commits_perc = authors[commit.gh_username].commits / commits.length;
-            }
-        }
-
-        if (commit.gh_issue_username) {
-            if (!authors[commit.gh_issue_username]) {
-                authors[commit.gh_issue_username] = new GitHubUser();
-                authors[commit.gh_issue_username].username = commit.gh_issue_username;
-                authors[commit.gh_issue_username].name = await getGithubProfileName(commit.gh_issue_username, accessToken);
-                authors[commit.gh_issue_username].commits = 0;
-                authors[commit.gh_issue_username].commits_perc = 0;
-                if (repoOwner && repoOwner === commit.gh_issue_username) {
-                    authors[commit.gh_issue_username].is_owner = true;
-                }
-                authors[commit.gh_issue_username].is_admin = await checkGithubAdminPermissions(repoUrl, commit.gh_issue_username, accessToken);
-                authors[commit.gh_issue_username].is_affiliated = await checkUserInstitution(repoUrl, commit.gh_issue_username, accessToken);
-            }
-        }
-    }
-
-    return authors;
-}
-
-/**
  * Calculates a percentile value from an array of numbers.
  *
  * @param data - Array of numbers to calculate percentile from
@@ -1393,88 +789,6 @@ function identifyNonRegularContributors(authors: Record<string, GitHubUser>): vo
         }
         author.is_regular = true;
     }
-}
-
-/**
- * Returns an emoji icon for a commit type.
- *
- * @param s - Commit type string
- * @returns Emoji icon representing the commit type
- */
-function iconFor(s: string | null): string {
-    // https://github.com/favoloso/conventional-changelog-emoji#available-emojis
-    const m: Record<string, string> = {
-        'docs': '📖',
-        'fix': '🐛',
-        'style': '🎨',
-        'chore': '🏗️',
-        'build': '📦️',
-        'feat': '🚀',
-        'refactor': '♻️',
-        'perf': '⚡️',
-        'test': '🧪',
-        'release': '🔖',
-        'ci': '🚦',
-        'improvement': '🛠️',
-        'breaking': '🚨',
-        'revert': '🔙',
-        'other': '💬'
-    };
-    if (s === null) {
-        return '💬';
-    }
-    return m.hasOwnProperty(s) ? m[s] : s;
-}
-
-/**
- * Returns a rotating icon for feature commits in the changelog.
- *
- * Cycles through sparkle/star icons (✨, 💫, 🌟) to add visual variety
- * when listing multiple feature commits in the generated changelog.
- *
- * @returns An emoji icon string that cycles through available feature icons
- */
-export function featureSubjectIcon(): string {
-    const icons = ['✨', '💫', '🌟'];
-    const icon = icons[featureSubjectIcon.count % icons.length];
-    featureSubjectIcon.count += 1;
-    return icon;
-}
-
-// Initialize the count property
-featureSubjectIcon.count = 0;
-
-/**
- * Capitalizes the first letter of each sentence in a text.
- *
- * @param text - Text to capitalize
- * @returns Text with capitalized sentences
- */
-function capitalizeSentences(text: string): string {
-    const sentences = text.split('. ');
-    let result = '';
-    for (let sentence of sentences) {
-        sentence = sentence.charAt(0).toUpperCase() + sentence.slice(1);
-        sentence = sentence.trim();
-        result += sentence;
-        if (!sentence.endsWith('.')) {
-            result += '. ';
-        }
-    }
-    return result.trim();
-}
-
-/**
- * A mapping of commit types to scopes to commits for changelog generation.
- *
- * The first level key is the commit type (e.g., 'feat', 'fix', 'docs').
- * The second level key is the scope (or 'null' for unscoped commits).
- * The value is an array of commits with that type and scope.
- */
-export interface Changes {
-    [type: string]: {
-        [scope: string]: Commit[];
-    };
 }
 
 /**
@@ -1614,60 +928,6 @@ function categorizeCommits(commits: Commit[]): { changes: Changes; changeTypePri
     }
 
     return { changes, changeTypePriority, parentRelease };
-}
-
-/**
- * Converts a commit type to a human-readable section title.
- *
- * @param s - Commit type string
- * @returns Human-readable title for the commit type
- */
-function humanize(s: string): string {
-    const mapping: Record<string, string> = {
-        'docs': 'Documentation',
-        'fix': 'Fixes',
-        'style': 'Style',
-        'chore': 'Chores',
-        'build': 'Build',
-        'feat': 'Features',
-        'refactor': 'Refactor',
-        'perf': 'Performance',
-        'test': 'Tests',
-        'release': 'Release',
-        'ci': 'Continuous Integration',
-        'improvement': 'Improvement',
-        'breaking': 'Breaking',
-        'revert': 'Revert',
-        'other': 'Other'
-    };
-    return mapping[s] || s;
-}
-
-/**
- * Returns a description for a commit type.
- *
- * @param s - Commit type string
- * @returns Description of what this commit type represents
- */
-function commitTypeDescription(s: string): string {
-    const mapping: Record<string, string> = {
-        'docs': 'Documentation updates and improvements',
-        'fix': 'Bug fixes and error corrections',
-        'style': 'Code style and formatting changes',
-        'chore': 'Routine tasks, maintenance, and housekeeping',
-        'build': 'Build system and configuration changes',
-        'feat': 'New features and additions',
-        'refactor': 'Code refactoring and restructuring',
-        'perf': 'Performance optimizations and enhancements',
-        'test': 'Test cases and testing-related changes',
-        'release': 'Release-specific changes and preparations',
-        'ci': 'Changes related to continuous integration',
-        'improvement': 'General improvements and enhancements',
-        'breaking': 'Breaking changes and compatibility modifications',
-        'revert': 'Reverted changes to previous versions',
-        'other': 'Other changes not covered by specific categories'
-    };
-    return mapping[s] || '';
 }
 
 /**
@@ -1942,27 +1202,6 @@ export async function main(inputs: Inputs): Promise<void> {
         }
         core.endGroup();
     }
-}
-
-/**
- * Parses a check-unconventional input value into its mode.
- *
- * Handles backwards compatibility with boolean values ('true'/'false')
- * and the new mode values ('warn'/'error').
- *
- * @param value - The input value to parse
- * @returns The normalized CheckUnconventionalMode
- */
-function parseCheckUnconventionalMode(value: string): CheckUnconventionalMode {
-    const normalized = value.toLowerCase().trim();
-    if (normalized === 'false') {
-        return 'false';
-    }
-    if (normalized === 'error') {
-        return 'error';
-    }
-    // 'true', 'warn', or any other value defaults to 'warn'
-    return 'warn';
 }
 
 /**
