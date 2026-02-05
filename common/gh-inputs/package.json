@@ -6,10 +6,9 @@
   "types": "lib/index.d.ts",
   "scripts": {
     "build": "tsc -p .config/tsconfig.json",
-    "prepare": "npm run build && node ../../utils/esbuild/dist/index.js .",
     "typecheck": "tsc -p .config/tsconfig.json --noEmit",
     "test": "jest --config ../../jest.config.js --selectProjects gh-inputs",
-    "all": "npm run prepare && npm run test"
+    "all": "npm run build && node ../../utils/esbuild/dist/index.js ."
   },
   "keywords": [],
   "author": "",
