@@ -840,7 +840,10 @@ export function setCompilerContainer(entry: MatrixEntry, inputs: Inputs, compile
             if (versionMajor < 20) {
                 entry.container = {
                     image: image,
-                    volumes: ['/node20217:/node20217:rw,rshared', '/node20217:/__e/node20:ro,rshared']
+                    volumes: [
+                        '/node20217:/node20217:rw,rshared', '/node20217:/__e/node20:ro,rshared',
+                        '/node24:/node24:rw,rshared', '/node24:/__e/node24:ro,rshared'
+                    ]
                 };
             }
         }

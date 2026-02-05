@@ -666,7 +666,10 @@ describe('setCompilerContainer', () => {
         setCompilerContainer(entry, makeInputs(), 'apple-clang', semver.parse('15.0.0')!, '15');
         expect(entry.container).toEqual({
             image: 'ubuntu:18.04',
-            volumes: ['/node20217:/node20217:rw,rshared', '/node20217:/__e/node20:ro,rshared']
+            volumes: [
+                '/node20217:/node20217:rw,rshared', '/node20217:/__e/node20:ro,rshared',
+                '/node24:/node24:rw,rshared', '/node24:/__e/node24:ro,rshared'
+            ]
         });
     });
 });
