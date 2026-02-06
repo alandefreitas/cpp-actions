@@ -10,6 +10,7 @@ git clone https://github.com/alandefreitas/cpp-actions.git
 cd cpp-actions
 npm install
 npm test
+npm run lint
 ----
 
 == Quick Contribution Path
@@ -18,8 +19,8 @@ npm test
 * **Review the action metadata:** Read `<action-name>/action.yml` before changing behavior so your updates match the documented inputs and outputs.
 * **Understand the project layout:** Each GitHub Action lives in its own top-level directory (for example `setup-cmake/`, `cmake-workflow/`, or `cpp-matrix/`). Make your edits inside the action you are targeting so changes stay scoped.
 * **Edit source files:** Update TypeScript code under `<action-name>/src/` and leave generated assets alone until you rebuild with the provided scripts (see below).
-* **Run focused checks:** Execute `npm run prepare -w <action-name>` to rebuild the bundle, then `npx jest --selectProjects <action-name>` to run tests for that action.
-* **Validate the full suite:** Finish by running `npm run build` at the repository root to regenerate every action bundle and rerun all tests.
+* **Run focused checks:** Execute `npm run build -w <action-name>` to rebuild the bundle, then `npx jest --selectProjects <action-name>` to run tests for that action.
+* **Validate the full suite:** Finish by running `npm run build` at the repository root to recompile all workspaces, then `npm test` and `npm run lint` to verify.
 * **Commit regenerated artifacts:** Include the refreshed `<action-name>/dist` output in the same commit as your source changes so the published action matches the repository.
 
 [.text-center]
@@ -29,9 +30,9 @@ flowchart TD
   decide{Pick an action}
   scope[Work inside action directory]
   edit[Update TypeScript in src/]
-  localBuild["npm run prepare -w &lt;action-name&gt;"]
+  localBuild["npm run build -w &lt;action-name&gt;"]
   localTest["npx jest --selectProjects &lt;action-name&gt;"]
-  repoTest["npm run build"]
+  repoTest["npm run build && npm test && npm run lint"]
   commit["Commit source + &lt;action-name&gt;/dist"]
   decide --> scope --> edit --> localBuild --> localTest --> repoTest --> commit
 ....
@@ -44,13 +45,13 @@ flowchart TD
 == Understand the Build Workflow
 
 Contributing to the repository is relatively easy.
-All actions are written in TypeScript, which compiles to JavaScript and is then bundled into a single file using https://github.com/vercel/ncc[ncc].
+All actions are written in TypeScript, which compiles to JavaScript and is then bundled into a single file using https://esbuild.github.io/[esbuild].
 The only caveat — especially for C++ programmers unfamiliar with the JavaScript ecosystem — is that the compiled output must be committed to the repository.
 This is a requirement of how GitHub Actions work.
 
 The repository uses https://docs.npmjs.com/cli/v10/using-npm/workspaces[npm workspaces] to manage dependencies across all packages.
-A single `npm install` at the root installs dependencies for all actions.
-The `npm run build` command builds all actions, runs tests, lints documentation, and generates docs.
+A single `npm install` at the root installs dependencies and compiles all actions (via the `prepare` lifecycle hook).
+Use `npm run build` to recompile, `npm test` to run tests, and `npm run lint` to lint documentation.
 
 So far, we've accepted nearly all contributions — except those that break composability or introduce hard-coded values tied to a specific library.
 
@@ -73,6 +74,12 @@ cpp-actions/
 │   ├── gh-inputs/         # Input parsing utilities
 │   ├── pretty-errors/     # Error formatting
 │   └── trace-commands/    # Debug logging
+├── utils/                 # Internal developer tooling
+│   ├── esbuild/           # esbuild bundler config
+│   ├── jsdoc-linter/      # JSDoc linting tool
+│   ├── update-data/       # Fetches compiler tags and version data
+│   ├── docs/              # Documentation generation
+│   └── release/           # Release workflow
 └── docs/                  # Documentation site
 ----
 
@@ -94,7 +101,8 @@ In theory, we could use https://github.com/nektos/act[nektos/act] for that, but,
 The root `package.json` provides the following scripts for development and maintenance.
 
 NOTE: The naming follows npm conventions where `prepare` is a lifecycle hook that runs automatically after `npm install`.
-In this repo, `prepare` compiles and bundles code (what you might normally call "build"), while `build` runs the full validation suite (compile + test + lint + docs) that you should run before committing changes.
+In this repo, `prepare` compiles and bundles all workspaces. `build` is an alias for `prepare` for manual use.
+Each script does one thing — use `npm run validate` for the full check.
 
 === Build and Test
 
@@ -102,15 +110,14 @@ In this repo, `prepare` compiles and bundles code (what you might normally call 
 |===
 |Script |Description |Usage
 
-|`build`
-|Full build orchestration: compiles all workspaces, runs tests, lints JSDoc, and generates documentation.
-|`npm run build` +
-`npm run build -- -w <workspace>`
-
 |`prepare`
-|Compiles TypeScript and bundles with ncc across all workspaces. Runs automatically after `npm install`.
-|`npm run prepare` +
-`npm run prepare -w <workspace>`
+|Compiles TypeScript and bundles with esbuild across all workspaces. Runs automatically after `npm install`.
+|`npm run prepare`
+
+|`build`
+|Recompiles everything (alias for `prepare`, for manual use). Also available per-workspace.
+|`npm run build` +
+`npm run build -w <workspace>`
 
 |`test`
 |Runs Jest tests across all workspaces.
@@ -121,13 +128,21 @@ In this repo, `prepare` compiles and bundles code (what you might normally call 
 |Runs tests with coverage reporting.
 |`npm run test:coverage`
 
+|`lint`
+|Lints JSDoc comments across all workspaces.
+|`npm run lint`
+
 |`docs`
-|Generates documentation only (Antora + action reference pages).
+|Generates documentation (Python deps + parse_actions.py + Antora).
 |`npm run docs`
 
-|`lint:jsdoc`
-|Lints JSDoc comments across all workspaces.
-|`npm run lint:jsdoc`
+|`update-data`
+|Fetches compiler tags, ubuntu versions, and boost dependency data.
+|`npm run update-data`
+
+|`validate`
+|Runs the full validation suite: update-data + build + test + lint.
+|`npm run validate`
 |===
 
 === Dependency Management

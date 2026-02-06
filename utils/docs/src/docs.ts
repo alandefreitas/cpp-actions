@@ -4,7 +4,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { runCommand, TaskResult } from './runner';
+import { runCommand } from './runner';
 
 /**
  * Ensures Python dependencies are installed for docs generation.
@@ -134,48 +134,19 @@ async function buildAntoraSite(rootDir: string): Promise<boolean> {
 }
 
 /**
- * Generates all documentation.
+ * Generates all documentation: Python deps, YAML pages, and Antora site.
  * @param rootDir - The root directory of the monorepo
- * @returns Promise resolving to the task result
+ * @returns Promise resolving to true if all steps succeeded
  */
-export async function generateDocs(rootDir: string): Promise<TaskResult> {
+export async function generateDocs(rootDir: string): Promise<boolean> {
     console.log('\n==== Regenerating documentation ====');
 
-    const results: { step: string; success: boolean }[] = [];
-
-    // Step 1: Ensure Python deps
     const depsOk = await ensurePythonDeps(rootDir);
-    results.push({ step: 'Python dependencies', success: depsOk });
+    if (!depsOk) return false;
 
-    if (!depsOk) {
-        return {
-            name: 'Documentation',
-            success: false,
-            error: 'Failed to install Python dependencies'
-        };
-    }
-
-    // Step 2: Generate pages from YAML
     const yamlOk = await generatePagesFromYaml(rootDir);
-    results.push({ step: 'YAML parsing', success: yamlOk });
+    if (!yamlOk) return false;
 
-    if (!yamlOk) {
-        return {
-            name: 'Documentation',
-            success: false,
-            error: 'Failed to generate pages from YAML'
-        };
-    }
-
-    // Step 3: Build Antora site
     const antoraOk = await buildAntoraSite(rootDir);
-    results.push({ step: 'Antora build', success: antoraOk });
-
-    const allSuccess = results.every(r => r.success);
-
-    return {
-        name: 'Documentation',
-        success: allSuccess,
-        error: allSuccess ? undefined : 'Documentation generation failed'
-    };
+    return antoraOk;
 }
