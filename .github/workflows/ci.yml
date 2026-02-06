@@ -54,22 +54,16 @@ jobs:
         run: npm run lint
 
       - name: Check dist bundles
-        if: matrix.os == 'ubuntu-latest' && github.event_name == 'pull_request'
+        if: matrix.os == 'ubuntu-latest'
         run: |
-          # Get files changed in this PR
-          git fetch origin ${{ github.base_ref }} --depth=1
-          changed_files=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
-
-          # Check for source and dist changes
-          source_changed=$(echo "$changed_files" | grep -E '\.ts$' || true)
-          dist_changed=$(echo "$changed_files" | grep -E '/dist/' || true)
-
-          if [ -n "$source_changed" ] && [ -z "$dist_changed" ]; then
-            echo "::warning::Source files changed but no dist/ files were updated. Run 'npm run build' and commit the updated dist/ files."
-            echo "Changed source files:"
-            echo "$source_changed"
-          else
+          # npm install already ran prepare (which rebuilds all workspaces).
+          # If any dist/ file differs from what is committed, the bundle is stale.
+          if git diff --quiet -- '*/dist/'; then
             echo "Dist bundle check passed"
+          else
+            echo "::warning::dist/ files are out of date. Run 'npm run build' and commit the updated dist/ files."
+            echo "Out-of-date files:"
+            git diff --name-only -- '*/dist/'
           fi
 
   # ===========================================================================
