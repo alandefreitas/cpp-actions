@@ -2,6 +2,16 @@
 
 If there's a platform where one of the actions does not work, feel free to submit a PR with adaptations and tests.
 
+== Developer Workflow
+
+[source,bash]
+----
+git clone https://github.com/alandefreitas/cpp-actions.git
+cd cpp-actions
+npm install
+npm test
+----
+
 == Quick Contribution Path
 
 * **Ground yourself in the design rationale:** Remember that every action stays independent and overrideable—nothing is hard-coded for a single project, and contributors are expected to compose the pieces that fit their workflows rather than baking in assumptions.

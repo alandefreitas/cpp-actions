@@ -6,9 +6,8 @@
   "types": "lib/index.d.ts",
   "scripts": {
     "build": "tsc -p .config/tsconfig.json",
-    "prepare": "npm run build && node ../utils/esbuild/dist/index.js .",
     "test": "jest --config ../jest.config.js --selectProjects setup-program",
-    "all": "npm run prepare && npm run test"
+    "all": "npm run build && node ../utils/esbuild/dist/index.js ."
   },
   "keywords": [],
   "author": "",

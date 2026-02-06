@@ -12,16 +12,19 @@ import { runCommand, runParallel, TaskResult, printSummary } from './runner';
  * @returns Promise resolving to true if successful
  */
 async function prepareWorkspace(workspace: WorkspaceInfo, rootDir: string): Promise<boolean> {
-    console.log(`==== Building (npm run prepare) for ${workspace.name} ====`);
+    // Use 'all' script for packages that have it (does build + esbuild bundle)
+    // Fall back to 'build' script for utils packages that only need tsc
+    const script = workspace.name.startsWith('utils/') ? 'build' : 'all';
+    console.log(`==== Building (npm run ${script}) for ${workspace.name} ====`);
 
-    const result = await runCommand('npm', ['run', 'prepare', '-w', workspace.name], {
+    const result = await runCommand('npm', ['run', script, '-w', workspace.name], {
         cwd: rootDir,
         timeout: 300000 // 5 minutes
     });
 
     if (!result.success) {
-        console.error(`npm run prepare failed for ${workspace.name}`);
-        console.error(`Re-run locally: npm run prepare -w "${workspace.name}"`);
+        console.error(`npm run ${script} failed for ${workspace.name}`);
+        console.error(`Re-run locally: npm run ${script} -w "${workspace.name}"`);
         if (result.stderr) {
             console.error(result.stderr);
         }

@@ -21,7 +21,60 @@ env:
   DEFAULT_BUILD_VARIANT: debug,release
 
 jobs:
+  # ===========================================================================
+  # Developer workflow tests
+  # Ensures contributors can clone, install, build, and test locally
+  # ===========================================================================
+  dev-workflow:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    name: Dev Workflow (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies and build
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+      - name: Check dist bundles
+        if: matrix.os == 'ubuntu-latest' && github.event_name == 'pull_request'
+        run: |
+          # Get files changed in this PR
+          git fetch origin ${{ github.base_ref }} --depth=1
+          changed_files=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+
+          # Check for source and dist changes
+          source_changed=$(echo "$changed_files" | grep -E '\.ts$' || true)
+          dist_changed=$(echo "$changed_files" | grep -E '/dist/' || true)
+
+          if [ -n "$source_changed" ] && [ -z "$dist_changed" ]; then
+            echo "::warning::Source files changed but no dist/ files were updated. Run 'npm run build' and commit the updated dist/ files."
+            echo "Changed source files:"
+            echo "$source_changed"
+          else
+            echo "Dist bundle check passed"
+          fi
+
+  # ===========================================================================
+  # Action integration tests
+  # Tests the actions in practice with various C++ compilers and platforms
+  # ===========================================================================
   cpp-matrix:
+    needs: dev-workflow
     runs-on: ubuntu-latest
     name: Generate Test Matrix
     outputs:

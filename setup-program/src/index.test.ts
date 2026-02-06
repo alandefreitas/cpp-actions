@@ -17,7 +17,7 @@ test('find_program_in_path', async () => {
             expect(result.output_path == `/usr/local/bin/${name}` || result.output_path == `/usr/bin/${name}`).toBe(true);
         }
     }
-});
+}, 30000);
 
 test('find_program_in_system_paths', async () => {
     const { find_program_in_system_paths } = main;
@@ -33,7 +33,7 @@ test('find_program_in_system_paths', async () => {
             expect(result.output_path == `/usr/local/bin/${name}` || result.output_path == `/usr/bin/${name}`).toBe(true);
         }
     }
-});
+}, 30000);
 
 describe('pretty errors', () => {
     it.skip('logs once and fails once', async () => {

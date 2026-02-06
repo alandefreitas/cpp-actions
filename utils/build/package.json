@@ -8,8 +8,7 @@
     "build-cli": "dist/index.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "prepare": "npm run build"
+    "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "glob": "^13.0.0"

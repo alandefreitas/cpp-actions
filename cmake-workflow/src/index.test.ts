@@ -1,3 +1,4 @@
+import * as path from 'path';
 import * as main from './index';
 import * as gh_inputs from 'gh-inputs';
 import * as io from '@actions/io';
@@ -218,8 +219,8 @@ describe('applyPatches', () => {
 
         expect(mockIoCp).toHaveBeenCalledTimes(1);
         expect(mockIoCp).toHaveBeenCalledWith(
-            '/patches/CMakePresets.json',
-            '/project/src/CMakePresets.json',
+            path.resolve('/patches/CMakePresets.json'),
+            path.resolve('/project/src', 'CMakePresets.json'),
             { force: true }
         );
     });
@@ -238,13 +239,13 @@ describe('applyPatches', () => {
 
         expect(mockIoCp).toHaveBeenCalledTimes(2);
         expect(mockIoCp).toHaveBeenCalledWith(
-            '/patches/file.txt',
-            '/project/src/file.txt',
+            path.resolve('/patches', 'file.txt'),
+            path.resolve('/project/src', 'file.txt'),
             { recursive: true, force: true }
         );
         expect(mockIoCp).toHaveBeenCalledWith(
-            '/patches/subdir',
-            '/project/src/subdir',
+            path.resolve('/patches', 'subdir'),
+            path.resolve('/project/src', 'subdir'),
             { recursive: true, force: true }
         );
     });
@@ -275,7 +276,7 @@ describe('applyPatches', () => {
 
         expect(mockIoCp).toHaveBeenCalledTimes(2);
         // Verify order
-        expect(mockIoCp.mock.calls[0][0]).toBe('/patches/first.txt');
-        expect(mockIoCp.mock.calls[1][0]).toBe('/patches/second.txt');
+        expect(mockIoCp.mock.calls[0][0]).toBe(path.resolve('/patches/first.txt'));
+        expect(mockIoCp.mock.calls[1][0]).toBe(path.resolve('/patches/second.txt'));
     });
 });
