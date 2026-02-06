@@ -180,6 +180,7 @@ export { AptPackageMatch } from './types';
  * @param version - Semver version constraint (e.g., ">=10", "14.0.0", "*")
  * @param check_latest - If true, prefer latest matching version; if false, prefer earliest
  * @returns The best matching package info, or null if no match found
+ * @throws Error if apt-cache search or showpkg commands fail
  */
 export async function search_apt_packages(
     names: string[],

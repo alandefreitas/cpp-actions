@@ -5,11 +5,10 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
-    "build": "tsc -p .config/tsconfig.json",
+    "build": "tsc -p .config/tsconfig.json && node ../../utils/esbuild/dist/index.js .",
     "typecheck": "tsc -p .config/tsconfig.json --noEmit",
     "test": "jest --config ../../jest.config.js --selectProjects pretty-errors",
-    "example": "tsc -p .config/tsconfig.json && node lib/example.js",
-    "all": "npm run build && node ../../utils/esbuild/dist/index.js ."
+    "example": "tsc -p .config/tsconfig.json && node lib/example.js"
   },
   "keywords": [],
   "author": "",
