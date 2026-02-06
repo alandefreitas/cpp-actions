@@ -421,7 +421,8 @@
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">git clone https://github.com/alandefreitas/cpp-actions.git
 cd cpp-actions
 npm install
-npm test</code></pre>
+npm test
+npm run lint</code></pre>
 </div>
 </div>
 </div>
@@ -444,10 +445,10 @@ npm test</code></pre>
 <p><strong>Edit source files:</strong> Update TypeScript code under <code>&lt;action-name&gt;/src/</code> and leave generated assets alone until you rebuild with the provided scripts (see below).</p>
 </li>
 <li>
-<p><strong>Run focused checks:</strong> Execute <code>npm run prepare -w &lt;action-name&gt;</code> to rebuild the bundle, then <code>npx jest --selectProjects &lt;action-name&gt;</code> to run tests for that action.</p>
+<p><strong>Run focused checks:</strong> Execute <code>npm run build -w &lt;action-name&gt;</code> to rebuild the bundle, then <code>npx jest --selectProjects &lt;action-name&gt;</code> to run tests for that action.</p>
 </li>
 <li>
-<p><strong>Validate the full suite:</strong> Finish by running <code>npm run build</code> at the repository root to regenerate every action bundle and rerun all tests.</p>
+<p><strong>Validate the full suite:</strong> Finish by running <code>npm run build</code> at the repository root to recompile all workspaces, then <code>npm test</code> and <code>npm run lint</code> to verify.</p>
 </li>
 <li>
 <p><strong>Commit regenerated artifacts:</strong> Include the refreshed <code>&lt;action-name&gt;/dist</code> output in the same commit as your source changes so the published action matches the repository.</p>
@@ -458,9 +459,9 @@ npm test</code></pre>
   decide{Pick an action}
   scope[Work inside action directory]
   edit[Update TypeScript in src/]
-  localBuild["npm run prepare -w &lt;action-name&gt;"]
+  localBuild["npm run build -w &lt;action-name&gt;"]
   localTest["npx jest --selectProjects &lt;action-name&gt;"]
-  repoTest["npm run build"]
+  repoTest["npm run build && npm test && npm run lint"]
   commit["Commit source + &lt;action-name&gt;/dist"]
   decide --> scope --> edit --> localBuild --> localTest --> repoTest --> commit</div></div>
 </div>
@@ -485,14 +486,14 @@ npm test</code></pre>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Contributing to the repository is relatively easy.
-All actions are written in TypeScript, which compiles to JavaScript and is then bundled into a single file using <a href="https://github.com/vercel/ncc">ncc</a>.
+All actions are written in TypeScript, which compiles to JavaScript and is then bundled into a single file using <a href="https://esbuild.github.io/">esbuild</a>.
 The only caveat — especially for C++ programmers unfamiliar with the JavaScript ecosystem — is that the compiled output must be committed to the repository.
 This is a requirement of how GitHub Actions work.</p>
 </div>
 <div class="paragraph">
 <p>The repository uses <a href="https://docs.npmjs.com/cli/v10/using-npm/workspaces">npm workspaces</a> to manage dependencies across all packages.
-A single <code>npm install</code> at the root installs dependencies for all actions.
-The <code>npm run build</code> command builds all actions, runs tests, lints documentation, and generates docs.</p>
+A single <code>npm install</code> at the root installs dependencies and compiles all actions (via the <code>prepare</code> lifecycle hook).
+Use <code>npm run build</code> to recompile, <code>npm test</code> to run tests, and <code>npm run lint</code> to lint documentation.</p>
 </div>
 <div class="paragraph">
 <p>So far, we&#8217;ve accepted nearly all contributions — except those that break composability or introduce hard-coded values tied to a specific library.</p>
@@ -519,6 +520,12 @@ The <code>npm run build</code> command builds all actions, runs tests, lints doc
 │   ├── gh-inputs/         # Input parsing utilities
 │   ├── pretty-errors/     # Error formatting
 │   └── trace-commands/    # Debug logging
+├── utils/                 # Internal developer tooling
+│   ├── esbuild/           # esbuild bundler config
+│   ├── jsdoc-linter/      # JSDoc linting tool
+│   ├── update-data/       # Fetches compiler tags and version data
+│   ├── docs/              # Documentation generation
+│   └── release/           # Release workflow
 └── docs/                  # Documentation site</code></pre>
 </div>
 </div>
@@ -557,7 +564,8 @@ In theory, we could use <a href="https://github.com/nektos/act">nektos/act</a> f
 </td>
 <td class="content">
 The naming follows npm conventions where <code>prepare</code> is a lifecycle hook that runs automatically after <code>npm install</code>.
-In this repo, <code>prepare</code> compiles and bundles code (what you might normally call "build"), while <code>build</code> runs the full validation suite (compile + test + lint + docs) that you should run before committing changes.
+In this repo, <code>prepare</code> compiles and bundles all workspaces. <code>build</code> is an alias for <code>prepare</code> for manual use.
+Each script does one thing — use <code>npm run validate</code> for the full check.
 </td>
 </tr>
 </table>
@@ -579,16 +587,15 @@ In this repo, <code>prepare</code> compiles and bundles code (what you might nor
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Full build orchestration: compiles all workspaces, runs tests, lints JSDoc, and generates documentation.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>npm run build</code><br>
-<code>npm run build&#8201;&#8212;&#8201;-w &lt;workspace&gt;</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>prepare</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Compiles TypeScript and bundles with esbuild across all workspaces. Runs automatically after <code>npm install</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>npm run prepare</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>prepare</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Compiles TypeScript and bundles with ncc across all workspaces. Runs automatically after <code>npm install</code>.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>npm run prepare</code><br>
-<code>npm run prepare -w &lt;workspace&gt;</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>build</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Recompiles everything (alias for <code>prepare</code>, for manual use). Also available per-workspace.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>npm run build</code><br>
+<code>npm run build -w &lt;workspace&gt;</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>test</code></p></td>
@@ -602,14 +609,24 @@ In this repo, <code>prepare</code> compiles and bundles code (what you might nor
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>npm run test:coverage</code></p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>lint</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Lints JSDoc comments across all workspaces.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>npm run lint</code></p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>docs</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Generates documentation only (Antora + action reference pages).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Generates documentation (Python deps + parse_actions.py + Antora).</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>npm run docs</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>lint:jsdoc</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Lints JSDoc comments across all workspaces.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>npm run lint:jsdoc</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>update-data</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Fetches compiler tags, ubuntu versions, and boost dependency data.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>npm run update-data</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>validate</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Runs the full validation suite: update-data + build + test + lint.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>npm run validate</code></p></td>
 </tr>
 </tbody>
 </table>
