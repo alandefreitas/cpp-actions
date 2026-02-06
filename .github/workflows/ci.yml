@@ -50,6 +50,9 @@ jobs:
       - name: Run tests
         run: npm test
 
+      - name: Lint
+        run: npm run lint
+
       - name: Check dist bundles
         if: matrix.os == 'ubuntu-latest' && github.event_name == 'pull_request'
         run: |

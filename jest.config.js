@@ -50,7 +50,8 @@ const commonPackages = [
 
 // Utils packages (no moduleNameMapper needed)
 const utilsPackages = [
-    'utils/build',
+    'utils/update-data',
+    'utils/docs',
     'utils/jsdoc-linter',
     'utils/release'
 ];

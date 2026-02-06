@@ -4,10 +4,9 @@
   "description": "Set up a specific version of Clang compiler",
   "main": "lib/index.js",
   "scripts": {
-    "build": "tsc -p .config/tsconfig.json",
+    "build": "tsc -p .config/tsconfig.json && node ../utils/esbuild/dist/index.js .",
     "typecheck": "tsc -p .config/tsconfig.json --noEmit",
-    "test": "jest --config ../jest.config.js --selectProjects setup-clang",
-    "all": "npm run build && node ../utils/esbuild/dist/index.js ."
+    "test": "jest --config ../jest.config.js --selectProjects setup-clang"
   },
   "keywords": [],
   "author": "",

@@ -803,6 +803,8 @@ async function processEntry(
  *
  * Parses action inputs, expands combinatorial factors, and executes
  * the CMake workflow for each factor combination.
+ *
+ * @throws Error if CMake is not found
  */
 async function run(): Promise<void> {
     // ==============================================
