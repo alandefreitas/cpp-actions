@@ -263,7 +263,7 @@ jobs:
         with:
           source-dir: tests
           build-dir: tests/build
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           trace-commands: true
 
       - name: Codecov
@@ -324,7 +324,7 @@ jobs:
       - name: Publish to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: docs/build/site
 
       - name: Changelog
