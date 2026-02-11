@@ -1,0 +1,27 @@
+{
+  "name": "action-schema",
+  "version": "1.9.2",
+  "description": "Schema-driven action definition and input parsing for GitHub Actions",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "build": "tsc -p .config/tsconfig.json",
+    "typecheck": "tsc -p .config/tsconfig.json --noEmit",
+    "test": "jest --config ../../jest.config.js --selectProjects action-schema",
+    "all": "npm run build && npm run test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "Boost Software License 1.0",
+  "dependencies": {
+    "@actions/core": "^2.0.1",
+    "gh-inputs": "*",
+    "trace-commands": "*",
+    "pretty-errors": "*",
+    "yaml": "^2.7.1",
+    "source-map-support": "^0.5.21"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.2"
+  }
+}

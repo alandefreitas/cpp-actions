@@ -15,6 +15,7 @@
     "@actions/core": "^2.0.1",
     "@actions/exec": "^2.0.0",
     "@actions/io": "^2.0.0",
+    "action-schema": "*",
     "gh-inputs": "*",
     "semver": "^7.7.3",
     "trace-commands": "*",

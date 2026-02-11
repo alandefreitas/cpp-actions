@@ -6,10 +6,10 @@ import * as Handlebars from 'handlebars';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as trace_commands from 'trace-commands';
-import * as gh_inputs from 'gh-inputs';
-import { reportAndSetFailed } from 'pretty-errors';
+import { runAction } from 'action-schema';
 
 import {
+    RawInputs,
     CompilerFactors,
     CompilerSuggestion,
     KeyValue,
@@ -17,6 +17,10 @@ import {
     Inputs,
     MatrixEntry
 } from './types';
+
+// Schema imports
+import { inputsSchema, outputsSchema } from './schema';
+export { inputsSchema, outputsSchema };
 
 import {
     parseCompilerRequirements,
@@ -736,62 +740,90 @@ function normalizeCompilerNameSuggestions(suggestionMap: CompilerSuggestion[]): 
 }
 
 /**
- * GitHub Actions entry point for the cpp-matrix action.
+ * Parses key-value pairs from an array of strings.
+ *
+ * @param lines - Array of strings in format "key: value"
+ * @returns Array of KeyValue objects
  */
-async function run(): Promise<void> {
-    const compilerVersions = parseCompilerRequirements(gh_inputs.getInput('compilers'));
+function parseKeyValues(lines: string[]): KeyValue[] | undefined {
+    const result: KeyValue[] = [];
+    for (const line of lines) {
+        const colonIndex = line.indexOf(':');
+        if (colonIndex > 0) {
+            result.push({
+                key: line.slice(0, colonIndex).trim(),
+                value: line.slice(colonIndex + 1).trim()
+            });
+        }
+    }
+    return result.length > 0 ? result : undefined;
+}
+
+/**
+ * Converts raw parsed inputs to the internal Inputs type.
+ *
+ * @param raw - Raw inputs from schema parsing
+ * @returns Converted Inputs object
+ */
+function convertRawInputs(raw: RawInputs): Inputs {
+    const compilerVersions = parseCompilerRequirements(raw.compilers.join('\n'));
     const compilerKeys = Object.keys(compilerVersions);
-    let inputs: Inputs = {
+
+    return {
         // Compilers
         compiler_versions: compilerVersions,
-        subrange_policy: gh_inputs.getMap('subrange-policy') as SubrangePolicyMap,
-        standards: normalizeCppVersionRequirement(gh_inputs.getInput('standards')),
-        max_standards: gh_inputs.getInt('max-standards'),
+        subrange_policy: raw.subrange_policy as SubrangePolicyMap,
+        standards: normalizeCppVersionRequirement(raw.standards),
+        max_standards: raw.max_standards || undefined,
 
         // Factors
-        latest_factors: parseCompilerFactors(gh_inputs.getInput('latest-factors'), compilerKeys),
-        factors: parseCompilerFactors(gh_inputs.getInput('factors'), compilerKeys),
-        combinatorial_factors: parseCompilerFactors(gh_inputs.getInput('combinatorial-factors'), compilerKeys),
-        force_factors: parseCompilerSuggestions(gh_inputs.getMultilineInput('force-factors'), compilerKeys),
-        extra_values: gh_inputs.getKeyValues('extra-values') as KeyValue[] | undefined,
+        latest_factors: parseCompilerFactors(raw.latest_factors.join('\n'), compilerKeys),
+        factors: parseCompilerFactors(raw.factors.join('\n'), compilerKeys),
+        combinatorial_factors: parseCompilerFactors(raw.combinatorial_factors.join('\n'), compilerKeys),
+        force_factors: parseCompilerSuggestions(raw.force_factors, compilerKeys),
+        extra_values: parseKeyValues(raw.extra_values),
 
         // Customize suggestions
-        runs_on: parseCompilerSuggestions(gh_inputs.getMultilineInput('runs-on'), compilerKeys),
-        containers: parseCompilerSuggestions(gh_inputs.getMultilineInput('containers'), compilerKeys),
-        generators: parseCompilerSuggestions(gh_inputs.getMultilineInput('generators'), compilerKeys),
-        generator_toolsets: parseCompilerSuggestions(gh_inputs.getMultilineInput('generator-toolsets'), compilerKeys),
-        b2_toolsets: parseCompilerSuggestions(gh_inputs.getMultilineInput('b2-toolsets'), compilerKeys),
-        ccflags: parseCompilerSuggestions(gh_inputs.getMultilineInput('ccflags'), compilerKeys),
-        cxxflags: parseCompilerSuggestions(gh_inputs.getMultilineInput('cxxflags'), compilerKeys),
-        install: parseCompilerSuggestions(gh_inputs.getMultilineInput('install'), compilerKeys),
-        triplets: parseCompilerSuggestions(gh_inputs.getMultilineInput('triplets'), compilerKeys),
-        build_types: parseCompilerSuggestions(gh_inputs.getMultilineInput('build-types'), compilerKeys),
+        runs_on: parseCompilerSuggestions(raw.runs_on, compilerKeys),
+        containers: parseCompilerSuggestions(raw.containers, compilerKeys),
+        generators: parseCompilerSuggestions(raw.generators, compilerKeys),
+        generator_toolsets: parseCompilerSuggestions(raw.generator_toolsets, compilerKeys),
+        b2_toolsets: parseCompilerSuggestions(raw.b2_toolsets, compilerKeys),
+        ccflags: parseCompilerSuggestions(raw.ccflags, compilerKeys),
+        cxxflags: parseCompilerSuggestions(raw.cxxflags, compilerKeys),
+        install: parseCompilerSuggestions(raw.install, compilerKeys),
+        triplets: parseCompilerSuggestions(raw.triplets, compilerKeys),
+        build_types: parseCompilerSuggestions(raw.build_types, compilerKeys),
 
         // Customization flags
-        default_build_type: gh_inputs.getInput('default-build-type').trim() || 'Release',
-        sanitizer_build_type: gh_inputs.getInput('sanitizer-build-type').trim() || 'Release',
-        x86_build_type: gh_inputs.getInput('x86-build-type').trim() || 'Release',
-        use_containers: gh_inputs.getBoolean('use-containers'),
-        warn_no_matches: gh_inputs.getBoolean('warn-no-matches', { defaultValue: true }),
+        default_build_type: raw.default_build_type.trim() || 'Release',
+        sanitizer_build_type: raw.sanitizer_build_type.trim() || 'Release',
+        x86_build_type: raw.x86_build_type.trim() || 'Release',
+        use_containers: raw.use_containers,
+        warn_no_matches: raw.warn_no_matches,
 
         // Output file
-        output_file: gh_inputs.getNormalizedPath('output-file'),
+        output_file: raw.output_file,
 
         // Annotations and tracing
-        log_matrix: gh_inputs.getBoolean('log-matrix'),
-        generate_summary: gh_inputs.getBoolean('generate-summary'),
-        trace_commands: gh_inputs.getBoolean('trace-commands'),
+        log_matrix: raw.log_matrix,
+        generate_summary: raw.generate_summary,
+        trace_commands: raw.trace_commands,
 
         // Failure rate sorting
-        sort_by_failure_rate: gh_inputs.getBoolean('sort-by-failure-rate'),
-        failure_rate_runs: gh_inputs.getInt('failure-rate-runs') ?? 20,
-        github_token: gh_inputs.getInput('github-token')
+        sort_by_failure_rate: raw.sort_by_failure_rate,
+        failure_rate_runs: raw.failure_rate_runs,
+        github_token: raw.github_token
     };
+}
 
-    if (inputs.trace_commands) {
-        trace_commands.set_trace_commands(true);
-    }
-
+/**
+ * Main entry point for the matrix generation.
+ *
+ * @param inputs - Converted input parameters
+ * @returns The generated matrix entries
+ */
+export async function main(inputs: Inputs): Promise<MatrixEntry[]> {
     // Normalize compiler names in the keys of compiler_versions,
     // latest_factors, factors, combinatorial_factors
     normalizeCompilerNameKeys(inputs.subrange_policy as unknown as Record<string, unknown>);
@@ -813,22 +845,22 @@ async function run(): Promise<void> {
     normalizeCompilerNameSuggestions(inputs.triplets);
     normalizeCompilerNameSuggestions(inputs.build_types);
 
-    core.startGroup('📥 C++ Matrix Requirements');
-    gh_inputs.printInputObject(inputs as unknown as Record<string, unknown>);
-    core.endGroup();
-
-    const matrix = await generateMatrix(inputs);
-    core.setOutput('matrix', matrix);
+    return await generateMatrix(inputs);
 }
 
-if (require.main === module) {
-    (async () => {
-        try {
-            await run();
-        } catch (error) {
-            await reportAndSetFailed(error as Error, {
-                title: 'CPP matrix failed'
-            });
-        }
-    })();
-}
+/**
+ * Action entry point using schema-driven runner.
+ */
+runAction({
+    inputsSchema,
+    outputsSchema,
+    title: 'C++ Matrix',
+    main: async (rawInputs: RawInputs) => {
+        const inputs = convertRawInputs(rawInputs);
+        const matrixEntries = await main(inputs);
+        const matrixJson = JSON.stringify(matrixEntries);
+        core.setOutput('matrix', matrixJson);
+        return { matrix: matrixJson };
+    },
+    callerModule: module
+});

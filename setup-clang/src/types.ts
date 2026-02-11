@@ -4,6 +4,15 @@
  * @module types
  */
 
+import type { InferInputs } from 'action-schema';
+import type { inputsSchema } from './schema';
+
+/**
+ * Input configuration for the setup-clang action.
+ * Inferred from the schema definition in schema.ts.
+ */
+export type Inputs = InferInputs<typeof inputsSchema>;
+
 /**
  * Candidate versions and Ubuntu releases for Clang download attempts.
  */
@@ -43,17 +52,6 @@ export interface MainOutputs {
     version_minor: number;
     version_patch: number;
     symbolizer_path: string | null;
-}
-
-/**
- * Configuration inputs for the setup-clang action.
- */
-export interface Inputs {
-    version: string;
-    path: string[];
-    check_latest: boolean;
-    update_environment: boolean;
-    trace_commands: boolean;
 }
 
 /**

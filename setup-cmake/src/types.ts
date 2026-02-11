@@ -4,20 +4,14 @@
  * @module types
  */
 
+import type { InferInputs } from 'action-schema';
+import type { inputsSchema } from './schema';
+
 /**
- * Configuration inputs for the setup-cmake action.
+ * Input configuration for the setup-cmake action.
+ * Inferred from the schema definition in schema.ts.
  */
-export interface Inputs {
-    version: string;
-    architecture: string;
-    cmake_file: string;
-    path: string;
-    cmake_path: string;
-    cache: boolean;
-    check_latest: boolean;
-    update_environment: boolean;
-    trace_commands: boolean;
-}
+export type Inputs = InferInputs<typeof inputsSchema>;
 
 /**
  * Output values produced by CMake setup.

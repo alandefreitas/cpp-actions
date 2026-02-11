@@ -18,11 +18,11 @@
   "dependencies": {
     "@actions/core": "^2.0.1",
     "@actions/exec": "^2.0.0",
+    "action-schema": "*",
     "axios": "^1.13.2",
-    "trace-commands": "*",
-    "gh-inputs": "*",
     "pretty-errors": "*",
-    "source-map-support": "^0.5.21"
+    "source-map-support": "^0.5.21",
+    "trace-commands": "*"
   },
   "devDependencies": {
     "esbuild": "^0.27.2"

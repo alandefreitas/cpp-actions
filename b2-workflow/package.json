@@ -15,10 +15,10 @@
     "@actions/core": "^2.0.1",
     "@actions/exec": "^2.0.0",
     "@actions/io": "^2.0.0",
-    "trace-commands": "*",
-    "gh-inputs": "*",
+    "action-schema": "*",
     "pretty-errors": "*",
-    "source-map-support": "^0.5.21"
+    "source-map-support": "^0.5.21",
+    "trace-commands": "*"
   },
   "devDependencies": {
     "esbuild": "^0.27.2"

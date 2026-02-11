@@ -8,6 +8,7 @@
     "common/trace-commands",
     "common/gh-inputs",
     "common/pretty-errors",
+    "common/action-schema",
     "utils/jsdoc-linter",
     "utils/update-data",
     "utils/docs",
@@ -28,7 +29,8 @@
   ],
   "scripts": {
     "update-data": "node utils/update-data/dist/index.js",
-    "prepare": "npm run build --workspaces",
+    "update-action-ymls": "node utils/update-data/dist/action-yml.js",
+    "prepare": "npm run build --workspaces && npm run update-action-ymls",
     "build": "npm run prepare",
     "test": "jest",
     "test:coverage": "jest --coverage",

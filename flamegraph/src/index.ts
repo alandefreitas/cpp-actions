@@ -3,8 +3,7 @@ import { DefaultArtifactClient } from '@actions/artifact';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as trace_commands from 'trace-commands';
-import * as gh_inputs from 'gh-inputs';
-import { reportAndSetFailed } from 'pretty-errors';
+import { runAction } from 'action-schema';
 
 import {
     TraceEvent,
@@ -12,8 +11,11 @@ import {
     CompileCommand,
     UploadArtifactsInputs,
     MainInputs,
-    MainOutputs
+    MainOutputs,
+    RawInputs
 } from './types';
+
+import { inputsSchema, outputsSchema } from './schema';
 
 import {
     createReadmeFile,
@@ -531,73 +533,42 @@ async function main(inputs: MainInputs): Promise<MainOutputs> {
     return { traces_path: combinedTracePath, svg_path: imagePath };
 }
 
-/** Captured inputs for error reporting context */
-let lastInputsForErrors: Record<string, unknown> | undefined = undefined;
+/**
+ * Converts raw schema inputs to the internal MainInputs format.
+ *
+ * @param raw - Raw inputs from schema parsing
+ * @returns Converted inputs for the main function
+ */
+function convertRawInputs(raw: RawInputs): MainInputs {
+    const source_dir = path.resolve(raw.source_dir);
+    const build_dir = path.resolve(raw.build_dir);
+    return {
+        source_dir,
+        build_dir,
+        output_path: path.resolve(build_dir, raw.output_path),
+        report_path: path.resolve(build_dir, raw.report_path),
+        update_summary: raw.update_summary,
+        upload_artifact: raw.upload_artifact
+    };
+}
 
 /**
- * GitHub Actions entry point for the flamegraph action.
+ * Action entry point using schema-driven runner.
  */
-async function run() {
-    const inputs = {
-        // Paths
-        source_dir: gh_inputs.getResolvedPath('source-dir'),
-        build_dir: gh_inputs.getResolvedPath('build-dir'),
-        output_path: gh_inputs.getNormalizedPath('output-path'),
-        report_path: gh_inputs.getNormalizedPath('report-path'),
-        // Artifacts
-        generate_svg: gh_inputs.getBoolean('generate-svg'),
-        generate_report: gh_inputs.getBoolean('generate-report'),
-        update_summary: gh_inputs.getBoolean('update-summary'),
-        github_token: gh_inputs.getInput(['github-token', 'github_token']),
-        upload_artifact: gh_inputs.getBoolean('upload-artifact'),
-        trace_commands: gh_inputs.getBoolean('trace-commands')
-    };
-
-    lastInputsForErrors = inputs as unknown as Record<string, unknown>;
-
-    inputs.output_path = path.resolve(inputs.build_dir, inputs.output_path);
-    inputs.report_path = path.resolve(inputs.build_dir, inputs.report_path);
-
-    if (inputs.trace_commands) {
-        trace_commands.set_trace_commands(true);
-    }
-
-    core.startGroup('📥 Action Inputs');
-    gh_inputs.printInputObject(inputs as unknown as Record<string, unknown>);
-    core.endGroup();
-
-    const outputs = await main(inputs);
-
-    // Parse Final program / Setup version / Outputs
-    if (outputs && Object.keys(outputs).length) {
-        core.startGroup('📤 Action Outputs');
-        gh_inputs.setOutputObject(outputs as unknown as Record<string, unknown>);
-        core.endGroup();
-    } else {
-        core.setFailed('Cannot analyze time-traces');
-    }
-}
-
-if (require.main === module) {
-    (async () => {
-        try {
-            await run();
-        } catch (error) {
-            let hint = 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. ';
-            if (lastInputsForErrors && typeof lastInputsForErrors === 'object' && 'trace_commands' in lastInputsForErrors) {
-                const inputs = lastInputsForErrors as Record<string, unknown>;
-                if (inputs.trace_commands) {
-                    hint = 'Trace commands already enabled; if this looks like a bug, please open an issue at github.com/alandefreitas/cpp-actions with stack and logs.';
-                }
-            }
-            const err = error instanceof Error ? error : new Error(String(error));
-            await reportAndSetFailed(err, {
-                title: 'Flamegraph failed',
-                hint
-            });
-        }
-    })();
-}
+runAction({
+    inputsSchema,
+    outputsSchema,
+    title: 'Flamegraph',
+    main: async (rawInputs: RawInputs) => {
+        const inputs = convertRawInputs(rawInputs);
+        const outputs = await main(inputs);
+        return {
+            traces_path: outputs.traces_path,
+            svg_path: outputs.svg_path
+        };
+    },
+    callerModule: module
+});
 
 export {
     main,

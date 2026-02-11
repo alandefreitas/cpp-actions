@@ -11,12 +11,15 @@ import * as exec from '@actions/exec';
 import * as io from '@actions/io';
 import * as os from 'os';
 import * as trace_commands from 'trace-commands';
-import * as gh_inputs from 'gh-inputs';
-import { reportAndSetFailed } from 'pretty-errors';
+import { runAction } from 'action-schema';
 
 // Type imports and re-exports
-import { Inputs, BoolOrStringOption } from './types';
+import { RawInputs, Inputs, BoolOrStringOption } from './types';
 export type { Inputs, ArchConfig, BoolOrStringOption } from './types';
+
+// Schema imports
+import { inputsSchema, outputsSchema } from './schema';
+export { inputsSchema, outputsSchema };
 
 // Module imports
 import { numberOfCpus, normalizeArchitectureInput, deriveB2ArchConfig } from './arch-utils';
@@ -319,99 +322,102 @@ export async function main(inputs: Inputs): Promise<void> {
 }
 
 
-/** Captured inputs for error reporting context */
-let lastInputsForErrors: Inputs | undefined = undefined;
+/**
+ * Parses a bool-or-string option value.
+ *
+ * Returns true/false for boolean-like strings, the string itself for custom values,
+ * or undefined for empty strings.
+ *
+ * @param value - The string value to parse
+ * @returns true/false for boolean strings, the original string for custom values, or undefined for empty
+ */
+function parseBoolOrString(value: string): boolean | string | undefined {
+    if (value === '') {
+        return undefined;
+    }
+    const lower = value.toLowerCase();
+    if (lower === 'true' || lower === 'on' || lower === 'yes' || lower === '1') {
+        return true;
+    }
+    if (lower === 'false' || lower === 'off' || lower === 'no' || lower === '0') {
+        return false;
+    }
+    return value;
+}
 
 /**
- * Entry point for the B2 workflow GitHub Action.
+ * Converts raw parsed inputs to the internal Inputs type.
  *
- * Parses action inputs, configures tracing, and executes the B2 workflow.
+ * @param raw - Raw inputs from schema parsing
+ * @returns Converted Inputs object
  */
-async function run(): Promise<void> {
-    function fnlog(msg: string): void {
-        trace_commands.log('b2-workflow: ' + msg);
-    }
+function convertRawInputs(raw: RawInputs): Inputs {
+    // Use build_variant if provided, otherwise fall back to build_type
+    const build_type = (raw.build_variant || raw.build_type).toLowerCase();
 
-    const inputs: Inputs = {
+    return {
         // Configure options
-        source_dir: gh_inputs.getResolvedPath('source-dir'),
-        build_dir: gh_inputs.getNormalizedPath('build-dir'),
-        cxx: gh_inputs.getNormalizedPath('cxx', { fallbackEnv: 'CXX' }),
-        ccflags: gh_inputs.getInput('ccflags', { fallbackEnv: 'CFLAGS' }),
-        cxxflags: gh_inputs.getInput('cxxflags', { fallbackEnv: 'CXXFLAGS' }),
-        cxxstd: gh_inputs.getInput('cxxstd', { fallbackEnv: 'CXXSTD' }),
-        shared: gh_inputs.getTribool('shared', { fallbackEnv: 'BUILD_SHARED_LIBS' }),
-        toolset: gh_inputs.getInput('toolset', { fallbackEnv: 'B2_TOOLSET' }),
-        arch: gh_inputs.getInput('arch'),
-        build_type: gh_inputs.getLowerCaseInput(['build-variant', 'build-type'], { fallbackEnv: ['B2_BUILD_VARIANT', 'B2_BUILD_TYPE'] }),
-        modules: gh_inputs.getArray('modules', /[,; ]/),
-        module_target: gh_inputs.getArray('module-target', /[,; ]/),
-        extra_args: gh_inputs.getBashArguments('extra-args'),
+        source_dir: path.resolve(raw.source_dir),
+        build_dir: raw.build_dir,
+        cxx: raw.cxx,
+        ccflags: raw.ccflags,
+        cxxflags: raw.cxxflags,
+        cxxstd: raw.cxxstd,
+        shared: raw.shared,
+        toolset: raw.toolset,
+        arch: normalizeArchitectureInput(raw.arch),
+        build_type,
+        modules: raw.modules,
+        module_target: raw.module_target,
+        extra_args: raw.extra_args,
         // B2-specific options
-        warnings_as_errors: gh_inputs.getBoolOrString('warnings-as-errors'),
-        address_model: gh_inputs.getInput('address-model') || undefined,
-        asan: gh_inputs.getBoolOrString('asan'),
-        ubsan: gh_inputs.getBoolOrString('ubsan'),
-        msan: gh_inputs.getBoolOrString('msan'),
-        tsan: gh_inputs.getBoolOrString('tsan'),
-        coverage: gh_inputs.getInput('coverage') || undefined,
-        linkflags: gh_inputs.getInput('linkflags') || undefined,
-        threading: gh_inputs.getInput('threading') || undefined,
-        rtti: gh_inputs.getBoolOrString('rtti'),
-        clean: gh_inputs.getTribool('clean'),
-        clean_all: gh_inputs.getTribool('clean-all'),
-        abbreviate_paths: gh_inputs.getTribool('abbreviate-paths'),
-        hash: gh_inputs.getTribool('hash'),
-        rebuild_all: gh_inputs.getTribool('rebuild-all'),
-        dry_run: gh_inputs.getTribool('dry-run'),
-        stop_on_error: gh_inputs.getTribool('stop-on-error'),
-        config: gh_inputs.getNormalizedPath('config'),
-        site_config: gh_inputs.getNormalizedPath('site-config'),
-        user_config: gh_inputs.getNormalizedPath('user-config'),
-        project_config: gh_inputs.getNormalizedPath('project-config'),
-        debug_configuration: gh_inputs.getTribool('debug-configuration'),
-        debug_building: gh_inputs.getTribool('debug-building'),
-        debug_generators: gh_inputs.getTribool('debug-generators'),
-        include: gh_inputs.getNormalizedPath('include'),
-        define: gh_inputs.getInput('define'),
-        runtime_link: gh_inputs.getBoolOrString('runtime-link'),
+        warnings_as_errors: parseBoolOrString(raw.warnings_as_errors),
+        address_model: raw.address_model || undefined,
+        asan: parseBoolOrString(raw.asan),
+        ubsan: parseBoolOrString(raw.ubsan),
+        msan: parseBoolOrString(raw.msan),
+        tsan: parseBoolOrString(raw.tsan),
+        coverage: raw.coverage || undefined,
+        linkflags: raw.linkflags || undefined,
+        threading: raw.threading || undefined,
+        rtti: parseBoolOrString(raw.rtti),
+        clean: raw.clean,
+        clean_all: raw.clean_all,
+        abbreviate_paths: raw.abbreviate_paths,
+        hash: raw.hash,
+        rebuild_all: raw.rebuild_all,
+        dry_run: raw.dry_run,
+        stop_on_error: raw.stop_on_error,
+        config: raw.config,
+        site_config: raw.site_config,
+        user_config: raw.user_config,
+        project_config: raw.project_config,
+        debug_configuration: raw.debug_configuration,
+        debug_building: raw.debug_building,
+        debug_generators: raw.debug_generators,
+        include: raw.include,
+        define: raw.define || undefined,
+        runtime_link: parseBoolOrString(raw.runtime_link),
         // Build options
-        jobs: gh_inputs.getInt('jobs', { fallbackEnv: 'B2_JOBS' }) || numberOfCpus(),
+        jobs: raw.jobs || numberOfCpus(),
         // Annotations and tracing
-        trace_commands: gh_inputs.getBoolean('trace-commands')
+        trace_commands: raw.trace_commands
     };
-
-    lastInputsForErrors = inputs;
-
-    // Apply trace commands
-    if (inputs.trace_commands) {
-        trace_commands.set_trace_commands(true);
-    }
-    inputs.arch = normalizeArchitectureInput(inputs.arch);
-    fnlog(`🧩 b2-workflow.trace_commands: ${trace_commands}`);
-
-    core.startGroup('📥 Action Inputs');
-    gh_inputs.printInputObject(inputs as unknown as Record<string, unknown>);
-    core.endGroup();
-
-    await main(inputs);
 }
 
-if (require.main === module) {
-    (async () => {
-        try {
-            await run();
-        } catch (error) {
-            const capturedInputs = lastInputsForErrors as Inputs | undefined;
-            const hint = capturedInputs?.trace_commands
-                ? 'Trace commands already enabled; if this looks like a bug, please open an issue at github.com/alandefreitas/cpp-actions with stack and logs.'
-                : 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. ';
-            await reportAndSetFailed(error as Error, {
-                title: 'B2 workflow failed',
-                hint
-            });
-        }
-    })();
-}
+/**
+ * Action entry point using schema-driven runner.
+ */
+runAction({
+    inputsSchema,
+    outputsSchema,
+    title: 'B2 Workflow',
+    main: async (rawInputs: RawInputs) => {
+        const inputs = convertRawInputs(rawInputs);
+        await main(inputs);
+        return {};
+    },
+    callerModule: module
+});
 
 export { main as default };

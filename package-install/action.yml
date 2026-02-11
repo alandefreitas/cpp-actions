@@ -6,7 +6,7 @@ description: |
 
   The action currently supports installing packages with `apt-get` and `vcpkg`.  
   A number of auxiliary options are available to customize the behavior of both `apt-get` and `vcpkg`.
-  
+
   If vcpkg dependencies are required, vcpkg will be installed and related paths are returned from the action.
   Both vcpkg and its compiled dependencies are cached.
 
@@ -16,7 +16,7 @@ description: |
   action before this step because vcpkg packages are built from source and this allows us to use the compiler
   set up in the previous step.
   ====
-  
+
   == Next steps
 
   After setting up the dependencies for your C++ project, the next step in your workflow should usually be
@@ -27,206 +27,160 @@ description: |
   required by the project.
 
 inputs:
-  # --------------------------------
-  # Packages
-  # --------------------------------
+  trace-commands:
+    description: Trace commands executed by the workflow.
+    required: false
+    default: 'false'
   vcpkg:
-    description: |
+    description: |-
       List of packages we should install with vcpkg.
-      
-      If any package is included in this list, vcpkg will be installed and the vcpkg toolchain file will be returned.
-      
-      Individual packages can define a custom triplet by appending `:<triplet>` to the package name.
 
+      If any package is included in this list, vcpkg will be installed and the vcpkg toolchain file will be returned.
+
+      Individual packages can define a custom triplet by appending `:<triplet>` to the package name.
     required: false
     default: ''
   apt-get:
-    description: |
+    description: |-
       List of packages we should install with apt-get.
-      
-      Additional options are provided to customize the behavior of apt-get.
 
+      Additional options are provided to customize the behavior of apt-get.
     required: false
     default: ''
-
-  # --------------------------------
-  # VcPkg options
-  # --------------------------------
   cxx:
-    description: |
+    description: |-
       C++ compiler to be used by vcpkg. If the compiler is not specified, the value will be retrieved from
       the environment variable `CXX`.
 
       Setting the compiler is particularly important when the compiler being tested is different from the default
       compiler used by vcpkg.
-
     required: false
     default: ''
-
   cxxflags:
-    description: |
+    description: |-
       C++ flags used by vcpkg. If the flags are not specified, the value will be retrieved from the environment
       variable `CXXFLAGS`.
-
     required: false
     default: ''
-
   cc:
-    description: |
+    description: |-
       C compiler used by vcpkg. If the compiler is not specified, the value will be retrieved from the environment
       variable `CC`.
-
     required: false
     default: ''
-
   ccflags:
-    description: |
+    description: |-
       C flags used by vcpkg. If the flags are not specified, the value will be retrieved from the environment
       variable `CFLAGS`.
-
     required: false
     default: ''
-
   vcpkg-triplet:
-    description: |
+    description: |-
       The triplet used by vcpkg to install packages.
-      
-      If no triplet is specified, a default triplet will be inferred from the platform.
-      
-      Individual packages can override this value by specifying a triplet in the package name.
 
+      If no triplet is specified, a default triplet will be inferred from the platform.
+
+      Individual packages can override this value by specifying a triplet in the package name.
     required: false
     default: ''
   vcpkg-dir:
-    description: |
+    description: |-
       The directory where vcpkg should be cloned and installed.
 
       If the directory is unspecified, the runner tool cache is used.
-
     required: false
     default: ''
-
   vcpkg-branch:
-    description: |
-      vcpkg branch we should use. This is usually the master branch.
-
+    description: vcpkg branch we should use. This is usually the master branch.
     required: false
-    default: 'master'
-
+    default: master
   vcpkg-cache:
-    description: |
+    description: |-
       Whether we should cache vcpkg and its built dependencies.
-      
+
       This is useful when you want to speed up your workflow by caching vcpkg and its built dependencies
       for next workflows.
-      
+
       You can disable this option when you want to always build vcpkg and its dependencies from scratch
       or want to save cache storage.
-
     required: false
     default: 'true'
-
   vcpkg-force-install:
-    description: |
+    description: |-
       Whether we should force install vcpkg and even when no vcpkg packages are listed.
-      
-      This is useful when you want to use vcpkg in manifest mode.
 
+      This is useful when you want to use vcpkg in manifest mode.
     required: false
     default: 'false'
-
-  # --------------------------------
-  # APT Options
-  # --------------------------------
   apt-get-retries:
-    description: |
+    description: |-
       Number of times we should retry when apt-get fails.
-      
+
       This option is useful when apt-get fails due to a temporary network issue.
-      
+
       When calling apt-get to install packages, this passes the `-o Acquire::Retries` option
       to apt-get.
-      
+
       For other commands, the command will be called multiple times until it succeeds or
       the number of retries is exhausted. Each retry will be separated by a delay with an
       exponential backoff.
-
     required: false
     default: '5'
-
   apt-get-sources:
-    description: |
+    description: |-
       List of sources for apt-get.
-      
+
       Sources are installed with `apt-add-repository`.
-
     required: false
     default: ''
-
   apt-get-source-keys:
-    description: |
+    description: |-
       List of source keys for apt-get.
-      
-      Source keys are installed with `apt-key`.
 
+      Source keys are installed with `apt-key`.
     required: false
     default: ''
-
   apt-get-ignore-missing:
-    description: |
+    description: |-
       Whether apt-get should ignore missing packages.
-      
-      This attempts to install packages one by one and passes the `--ignore-missing` option to apt-get.
 
+      This attempts to install packages one by one and passes the `--ignore-missing` option to apt-get.
     required: false
     default: 'false'
-
   apt-get-add-architecture:
-    description: |
+    description: |-
       Argument to pass to `dpkg` to add an architecture.
-      
+
       This is useful when installing packages that require a different architecture than the default one.
-      
+
       If this string is not empty, it will be passed to `dpkg` with the `--add-architecture` flag.
-      
+
       Common values for this parameter are: `amd64` (64-bit x86), `i386` (32-bit x86),
       `armhf` (ARM Hard Float), `arm64` (ARM 64-bit), and `ppc64el` (PowerPC 64-bit Little Endian).
-      
-      This parameter can also be a list of architectures.
 
+      This parameter can also be a list of architectures.
     required: false
     default: ''
-
   apt-get-bulk-install:
-    description: |
+    description: |-
       This option determines if we should call apt-get once for each package (false) or if we should call apt-get once
       for all packages (true).
-      
+
       This option is useful when installing a large number of packages, since it can speed up the installation process.
-      
+
       However, installing libraries individually provides more better information in the logs, which can be useful
       for debugging.
-
-    required: false
-    default: 'false'
-
-  # --------------------------------
-  # Extra options
-  # --------------------------------
-  trace-commands:
-    description: 'Trace commands executed by the action.'
     required: false
     default: 'false'
 
 outputs:
   vcpkg-toolchain:
-    description: |
+    description: |-
       vcpkg toolchain file
-      
-      This output value can be used to configure CMake to use vcpkg.
 
+      This output value can be used to configure CMake to use vcpkg.
   vcpkg-executable:
-    description: "vcpkg executable file"
+    description: vcpkg executable file
 
 runs:
   using: 'node20'

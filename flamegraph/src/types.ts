@@ -4,6 +4,15 @@
  * @module types
  */
 
+import type { InferInputs } from 'action-schema';
+import type { inputsSchema } from './schema';
+
+/**
+ * Raw input type as parsed from the schema.
+ * Uses simple types that are later converted to internal types.
+ */
+export type RawInputs = InferInputs<typeof inputsSchema>;
+
 /**
  * A single event from a Chrome trace file.
  */

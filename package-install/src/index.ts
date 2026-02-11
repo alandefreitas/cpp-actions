@@ -4,14 +4,15 @@
  * @module index
  */
 
-import * as core from '@actions/core';
-import * as trace_commands from 'trace-commands';
-import * as gh_inputs from 'gh-inputs';
-import { reportAndSetFailed } from 'pretty-errors';
+import { runAction } from 'action-schema';
 
 // Type imports and re-exports
 import { Inputs, VcpkgOutputs } from './types';
 export type { Inputs, VcpkgOutputs }
+
+// Schema imports
+import { inputsSchema, outputsSchema } from './schema';
+export { inputsSchema, outputsSchema };
 
 // Module imports
 import { apt_get_main } from './apt-install';
@@ -50,82 +51,42 @@ export async function main(inputs: Inputs, _force_install_vcpkg?: boolean): Prom
 }
 
 /**
- * Main entry point for the package-install GitHub Action.
+ * Action entry point using schema-driven runner.
  *
- * Parses inputs and orchestrates apt-get and vcpkg package installation.
+ * This replaces the previous manual input extraction and error handling
+ * with the standardized runAction wrapper.
  */
-async function run(): Promise<void> {
-    let inputs: Inputs = {
-        // packages
-        vcpkg: gh_inputs.getArray('vcpkg'),
-        apt_get: gh_inputs.getArray('apt-get'),
-        // vcpkg options
-        cxx: gh_inputs.getNormalizedPath('cxx', {fallbackEnv: 'CXX'}),
-        cxxflags: gh_inputs.getInput('cxxflags', {fallbackEnv: 'CXXFLAGS'}),
-        cc: gh_inputs.getNormalizedPath('cc', {fallbackEnv: 'CC'}),
-        ccflags: gh_inputs.getInput('ccflags', {fallbackEnv: 'CFLAGS'}),
-        vcpkg_triplet: gh_inputs.getInput('vcpkg-triplet'),
-        vcpkg_dir: gh_inputs.getNormalizedPath('vcpkg-dir'),
-        vcpkg_branch: gh_inputs.getInput('vcpkg-branch'),
-        vcpkg_cache: gh_inputs.getBoolean('vcpkg-cache', {defaultValue: true}),
-        vcpkg_force_install: gh_inputs.getBoolean('vcpkg-force-install', {defaultValue: false}),
-        // apt-get options
-        apt_get_retries: (gh_inputs.getInt('apt-get-retries', {fallbackEnv: 'APT_GET_RETRIES', defaultValue: '3'}) ?? 3),
-        apt_get_sources: gh_inputs.getArray('apt-get-sources'),
-        apt_get_source_keys: gh_inputs.getArray('apt-get-source-keys'),
-        apt_get_ignore_missing: gh_inputs.getBoolean('apt-get-ignore-missing', {defaultValue: false}),
-        apt_get_add_architecture: gh_inputs.getArray('apt-get-add-architecture'),
-        apt_get_bulk_install: gh_inputs.getBoolean('apt-get-bulk-install', {defaultValue: false}),
-        // Annotations and tracing
-        trace_commands: gh_inputs.getBoolean('trace-commands')
-    };
+runAction({
+    inputsSchema,
+    outputsSchema,
+    title: 'Package Install',
+    main: async (inputs: Inputs) => {
+        // Create a mutable copy
+        const effectiveInputs = { ...inputs };
+        effectiveInputs.apt_get = [...inputs.apt_get];
+        effectiveInputs.vcpkg = [...inputs.vcpkg];
 
-    // Resolve paths
-    if (inputs.trace_commands) {
-        trace_commands.set_trace_commands(true);
-    }
-
-    // ----------------------------------------------
-    // patch apt-get packages for vcpkg
-    // ----------------------------------------------
-    if (inputs.vcpkg.length > 0 && process.platform === 'linux') {
-        let vcpkgDependencies = ['git', 'curl', 'zip', 'unzip', 'tar'];
-        for (const pkg of vcpkgDependencies) {
-            if (!inputs.apt_get.includes(pkg)) {
-                inputs.apt_get.push(pkg);
+        // Patch apt-get packages for vcpkg dependencies
+        if (effectiveInputs.vcpkg.length > 0 && process.platform === 'linux') {
+            const vcpkgDependencies = ['git', 'curl', 'zip', 'unzip', 'tar'];
+            for (const pkg of vcpkgDependencies) {
+                if (!effectiveInputs.apt_get.includes(pkg)) {
+                    effectiveInputs.apt_get.push(pkg);
+                }
             }
         }
-    }
 
-    // ----------------------------------------------
-    // Force install vcpkg anyway
-    // ----------------------------------------------
-    if (inputs.apt_get.includes('vcpkg')) {
-        inputs.vcpkg_force_install = true;
-        inputs.apt_get = inputs.apt_get.filter((item) => item !== 'vcpkg');
-    } else if (inputs.vcpkg.includes('true')) {
-        inputs.vcpkg_force_install = true;
-        inputs.vcpkg = inputs.vcpkg.filter((item) => item !== 'true');
-    }
-
-    core.startGroup('📥 Action Inputs');
-    gh_inputs.printInputObject(inputs as unknown as Record<string, unknown>);
-    core.endGroup();
-
-    const outputs = await main(inputs);
-    core.startGroup('📤 Action Outputs');
-    gh_inputs.setOutputObject(outputs as unknown as Record<string, unknown>);
-    core.endGroup();
-}
-
-if (require.main === module) {
-    (async () => {
-        try {
-            await run();
-        } catch (error) {
-            await reportAndSetFailed(error as Error, {
-                title: 'Package install failed'
-            });
+        // Force install vcpkg if 'vcpkg' is in apt-get list or 'true' is in vcpkg list
+        if (effectiveInputs.apt_get.includes('vcpkg')) {
+            effectiveInputs.vcpkg_force_install = true;
+            effectiveInputs.apt_get = effectiveInputs.apt_get.filter((item) => item !== 'vcpkg');
+        } else if (effectiveInputs.vcpkg.includes('true')) {
+            effectiveInputs.vcpkg_force_install = true;
+            effectiveInputs.vcpkg = effectiveInputs.vcpkg.filter((item) => item !== 'true');
         }
-    })();
-}
+
+        const outputs = await main(effectiveInputs);
+        return outputs as unknown as Record<string, unknown>;
+    },
+    callerModule: module
+});

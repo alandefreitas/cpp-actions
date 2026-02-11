@@ -4,10 +4,10 @@ import * as path from 'path';
 import * as exec from '@actions/exec';
 import * as axios from 'axios';
 import * as trace_commands from 'trace-commands';
-import * as gh_inputs from 'gh-inputs';
-import { reportAndSetFailed } from 'pretty-errors';
+import { runAction } from 'action-schema';
 
 import {
+    RawInputs,
     Commit,
     GitHubUser,
     Tag,
@@ -18,6 +18,10 @@ import {
     parseCheckUnconventionalMode,
     Changes
 } from './types';
+
+// Schema imports
+import { inputsSchema, outputsSchema } from './schema';
+export { inputsSchema, outputsSchema };
 
 import {
     isValidType,
@@ -1012,7 +1016,7 @@ export function generateOutput(changes: Changes, changeTypePriority: string[], a
                     if (Object.entries(commit.footers).length > 0) {
                         const footerStrings = Object.entries(commit.footers).map(([key, value]) =>
                             typeof value !== 'string' ?
-                                `${key}: ${gh_inputs.makeValueString(value)}` :
+                                `${key}: ${JSON.stringify(value)}` :
                                 value.startsWith('#') ?
                                     `${key} ${value}` :
                                     `${key}: ${value}`
@@ -1205,59 +1209,42 @@ export async function main(inputs: Inputs): Promise<void> {
 }
 
 /**
- * GitHub Actions entry point for the create-changelog action.
+ * Converts raw parsed inputs to the internal Inputs type.
  *
- * Reads inputs from GitHub Actions context, configures trace commands,
- * and invokes the main function with the parsed inputs. Handles errors
- * with pretty error reporting for better debugging experience.
+ * @param raw - Raw inputs from schema parsing
+ * @returns Converted Inputs object
  */
-export async function run(): Promise<void> {
-    let inputs: Inputs = {
-        // Configure options
-        source_dir: gh_inputs.getNormalizedPath('source-dir'),
-        version_pattern: gh_inputs.getRegex('version-pattern'),
-        tag_pattern: gh_inputs.getRegex('tag-pattern'),
-        output_path: gh_inputs.getNormalizedPath('output-path'),
-        limit: gh_inputs.getInt('limit') || 0,
-        thank_non_regular: gh_inputs.getBoolean('thank-non-regular'),
-        check_unconventional: parseCheckUnconventionalMode(gh_inputs.getInput('check-unconventional') || 'warn'),
-        link_commits: gh_inputs.getBoolean('link-commits'),
-        github_token: gh_inputs.getInput('github-token'),
-        update_summary: gh_inputs.getBoolean('update-summary'),
-        trace_commands: gh_inputs.getBoolean('trace-commands'),
-        include_types: gh_inputs.getSet('include-types'),
-        exclude_types: gh_inputs.getSet('exclude-types'),
-        sort_by: parseSortByOption(gh_inputs.getInput('sort-by') || 'most-changes-first')
+function convertRawInputs(raw: RawInputs): Inputs {
+    const source_dir = path.resolve(raw.source_dir);
+    return {
+        source_dir,
+        version_pattern: new RegExp(raw.version_pattern),
+        tag_pattern: new RegExp(raw.tag_pattern),
+        output_path: path.resolve(source_dir, raw.output_path),
+        limit: raw.limit,
+        thank_non_regular: raw.thank_non_regular,
+        check_unconventional: parseCheckUnconventionalMode(raw.check_unconventional),
+        link_commits: raw.link_commits,
+        github_token: raw.github_token,
+        update_summary: raw.update_summary,
+        trace_commands: raw.trace_commands,
+        include_types: new Set(raw.include_types),
+        exclude_types: new Set(raw.exclude_types),
+        sort_by: parseSortByOption(raw.sort_by)
     };
-
-    // Resolve paths
-    inputs.source_dir = path.resolve(inputs.source_dir);
-    // output path, if relative, is relative to the source directory
-    inputs.output_path = path.resolve(inputs.source_dir, inputs.output_path);
-
-    // Set trace_commands when in debug mode or when
-    // the user explicitly sets it to true.
-    // This enables the log() function to print to the console.
-    if (inputs.trace_commands) {
-        trace_commands.set_trace_commands(true);
-    }
-
-    // Print a summary of the inputs
-    core.startGroup('📥 Action Inputs');
-    gh_inputs.printInputObject(inputs as unknown as Record<string, unknown>);
-    core.endGroup();
-
-    await main(inputs);
 }
 
-if (require.main === module) {
-    (async () => {
-        try {
-            await run();
-        } catch (error) {
-            await reportAndSetFailed(error as Error, {
-                title: 'Create changelog failed'
-            });
-        }
-    })();
-}
+/**
+ * Action entry point using schema-driven runner.
+ */
+runAction({
+    inputsSchema,
+    outputsSchema,
+    title: 'Create Changelog',
+    main: async (rawInputs: RawInputs) => {
+        const inputs = convertRawInputs(rawInputs);
+        await main(inputs);
+        return {};
+    },
+    callerModule: module
+});

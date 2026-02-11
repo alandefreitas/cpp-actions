@@ -5,8 +5,7 @@ import * as fs from 'fs';
 import * as exec from '@actions/exec';
 import * as path from 'path';
 import * as trace_commands from 'trace-commands';
-import * as gh_inputs from 'gh-inputs';
-import { reportAndSetFailed } from 'pretty-errors';
+import { runAction } from 'action-schema';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const setup_gcc = require('setup-gcc');
@@ -18,6 +17,10 @@ const setup_msvc = require('setup-msvc');
 // Type imports and re-exports
 import { NormalizedCompiler, Inputs, SetupResult } from './types';
 export type { NormalizedCompiler, Inputs, SetupResult }
+
+// Schema imports
+import { inputsSchema, outputsSchema } from './schema';
+export { inputsSchema, outputsSchema };
 
 /**
  * Normalizes a compiler name and extracts version information.
@@ -118,39 +121,18 @@ export function resolveMSVCArch(requestedArch: string, envArch: string | undefin
     return 'x64';
 }
 
-let lastInputsForErrors: Inputs | undefined = undefined;
-
 /**
- * Main entry point for the setup-cpp GitHub Action.
+ * Main function that sets up the C++ compiler.
  *
- * Parses inputs and sets up the requested C++ compiler (GCC, Clang, or MSVC).
+ * @param inputs - Configuration inputs for the action
+ * @returns Object containing compiler paths and version info
  */
-async function run(): Promise<void> {
-    const inputs: Inputs = {
-        compiler: gh_inputs.getInput('compiler', { defaultValue: '*' }),
-        version: gh_inputs.getInput('version', { defaultValue: '*' }),
-        path: gh_inputs.getArray('path', /[:;]/),
-        check_latest: gh_inputs.getBoolean('check-latest'),
-        update_environment: gh_inputs.getBoolean('update-environment'),
-        trace_commands: gh_inputs.getBoolean('trace-commands'),
-        arch: gh_inputs.getInput('arch')
-    };
+async function main(inputs: Inputs): Promise<Record<string, unknown>> {
+    // Normalize architecture
+    const normalizedArch = normalizeMSVCArchToken(inputs.arch);
 
-    lastInputsForErrors = inputs;
-
-    if (inputs.trace_commands) {
-        trace_commands.set_trace_commands(true);
-    }
-
-    inputs.arch = normalizeMSVCArchToken(inputs.arch);
-
+    // Normalize compiler and version
     const { compiler, version } = normalizeCompiler(inputs.compiler, inputs.version);
-    inputs.compiler = compiler;
-    inputs.version = version;
-
-    core.startGroup('📥 Action Inputs');
-    gh_inputs.printInputObject(inputs as unknown as Record<string, unknown>);
-    core.endGroup();
 
     let output_path: string | null = null;
     let cc: string | null = null;
@@ -164,41 +146,40 @@ async function run(): Promise<void> {
 
     if (['clang', 'gcc'].includes(compiler) && process.platform === 'linux') {
         trace_commands.log(`compiler: ${compiler}... forwarding to setup ${compiler} action.`);
-        let SetupResult: SetupResult | null = null;
+        let setupResult: SetupResult | null = null;
         if (compiler === 'clang') {
-            SetupResult = await setup_clang.main(
-                inputs.version,
+            setupResult = await setup_clang.main(
+                version,
                 inputs.path,
                 inputs.check_latest,
                 inputs.update_environment
             );
         } else if (compiler === 'gcc') {
-            SetupResult = await setup_gcc.main(
-                inputs.version,
+            setupResult = await setup_gcc.main(
+                version,
                 inputs.path,
                 inputs.check_latest,
                 inputs.update_environment
             );
         }
-        if (SetupResult !== null) {
-            output_path = SetupResult.output_path;
-            cc = SetupResult.cc;
-            cxx = SetupResult.cxx;
-            bindir = SetupResult.bindir;
-            dir = SetupResult.dir;
-            release = SetupResult.release;
-            version_major = SetupResult.version_major;
-            version_minor = SetupResult.version_minor;
-            version_patch = SetupResult.version_patch;
+        if (setupResult !== null) {
+            output_path = setupResult.output_path;
+            cc = setupResult.cc;
+            cxx = setupResult.cxx;
+            bindir = setupResult.bindir;
+            dir = setupResult.dir;
+            release = setupResult.release;
+            version_major = setupResult.version_major;
+            version_minor = setupResult.version_minor;
+            version_patch = setupResult.version_patch;
         }
     } else if (compiler === 'msvc') {
         trace_commands.log(`compiler: ${compiler}... forwarding to setup-msvc.`);
-        const arch = resolveMSVCArch(inputs.arch, process.env['PROCESSOR_ARCHITECTURE']);
-        inputs.arch = arch;
+        const arch = resolveMSVCArch(normalizedArch, process.env['PROCESSOR_ARCHITECTURE']);
         let msvcOutputs: SetupResult;
         try {
             msvcOutputs = await setup_msvc.main(
-                inputs.version,
+                version,
                 arch,
                 '',
                 '',
@@ -208,7 +189,7 @@ async function run(): Promise<void> {
             );
         } catch (error) {
             core.setFailed((error as Error).message);
-            return;
+            return {};
         }
         core.startGroup('📗 MSVC Environment Variables');
         for (const [key, value] of Object.entries(process.env)) {
@@ -286,39 +267,36 @@ async function run(): Promise<void> {
         core.endGroup();
     }
 
-    // Parse Final program / Setup version / Outputs
+    // Return outputs
     if (output_path !== null && output_path !== undefined) {
-        const outputs = {
-            cc: cc,
-            cxx: cxx,
-            bindir: bindir,
-            dir: dir,
+        return {
+            cc,
+            cxx,
+            bindir,
+            dir,
             version: release,
-            version_major: version_major,
-            version_minor: version_minor,
-            version_patch: version_patch
+            version_major,
+            version_minor,
+            version_patch
         };
-        core.startGroup('📤 Action Outputs');
-        gh_inputs.setOutputObject(outputs as unknown as Record<string, unknown>);
-        core.endGroup();
-    } else {
-        core.setFailed(`Cannot setup ${compiler}`);
     }
+
+    core.setFailed(`Cannot setup ${compiler}`);
+    return {};
 }
 
-if (require.main === module) {
-    (async () => {
-        try {
-            await run();
-        } catch (error) {
-            const capturedInputs = lastInputsForErrors as Inputs | undefined;
-            const hint = capturedInputs?.trace_commands
-                ? 'Trace commands already enabled; if this looks like a bug, please open an issue at github.com/alandefreitas/cpp-actions with stack and logs.'
-                : 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. ';
-            await reportAndSetFailed(error as Error, {
-                title: 'Setup C++ failed',
-                hint
-            });
-        }
-    })();
-}
+/**
+ * Action entry point using schema-driven runner.
+ *
+ * This replaces the previous manual input extraction and error handling
+ * with the standardized runAction wrapper.
+ */
+runAction({
+    inputsSchema,
+    outputsSchema,
+    title: 'Setup C++',
+    main: async (inputs: Inputs) => {
+        return await main(inputs);
+    },
+    callerModule: module
+});

@@ -5,6 +5,7 @@ const rootDir = __dirname;
 
 // Common module mapper for action packages (use absolute paths)
 const commonModuleMapper = {
+    '^action-schema$': path.join(rootDir, 'common/action-schema/src/index.ts'),
     '^trace-commands$': path.join(rootDir, 'common/trace-commands/src/index.ts'),
     '^gh-inputs$': path.join(rootDir, 'common/gh-inputs/src/index.ts'),
     '^pretty-errors$': path.join(rootDir, 'common/pretty-errors/src/index.ts')
@@ -43,6 +44,7 @@ const actionPackages = [
 
 // Common packages (no moduleNameMapper needed)
 const commonPackages = [
+    'common/action-schema',
     'common/gh-inputs',
     'common/pretty-errors',
     'common/trace-commands'

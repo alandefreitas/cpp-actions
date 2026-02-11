@@ -2,10 +2,10 @@ name: "Setup Clang"
 description: |
   Set up a specific version of a Clang compiler and add it to the PATH.
   In most workflows, this is used as an auxiliary action for the setup-cpp action.
-  
+
   This allows us to test a C++ library with any Clang version, and not only the versions 
   circumstantially provided by apt-get.
-  
+
   This action uses a number of alternatives to find or install Clang:
 
   - The Clang path provided to 'path'
@@ -28,63 +28,56 @@ description: |
   which already calls this action if necessary.
 
   == Next steps
-  
+
   After setting up the proper C++ compiler for a matrix entry, the next step in your workflow should usually be
   xref:actions/package-install.adoc[].
 
-
 inputs:
-  version:
-    description: |
-      Version range or exact version of Clang to use, using SemVer's version range syntax. 
-      
-      By default, it uses any version available in the environment.
-
-    required: false
-    default: '*'
-
-  path:
-    description: 'The clang or clang++ executable. We attempt to find Clang at this path first.'
-    required: false
-    default: 'clang++'
-
-  check-latest:
-    description: |
-      By default, when Clang is not available, this action will install the minimum version in the version spec.
-      This ensures the code respects its contract in terms of what minimum Clang version is supported.
-      
-      Set this option if you want the action to check for the latest available version that satisfies the version spec
-      instead.
+  trace-commands:
+    description: Trace commands executed by the workflow.
     required: false
     default: 'false'
+  version:
+    description: |-
+      Version range or exact version of Clang to use, using SemVer's version range syntax.
 
+      By default, it uses any version available in the environment.
+    required: false
+    default: '*'
+  path:
+    description: The clang or clang++ executable. We attempt to find Clang at this path first.
+    required: false
+    default: clang++
+  check-latest:
+    description: |-
+      By default, when Clang is not available, this action will install the minimum version in the version spec.
+      This ensures the code respects its contract in terms of what minimum Clang version is supported.
+
+      Set this option if you want the action to check for the latest available version that satisfies the version spec instead.
+    required: false
+    default: 'false'
   update-environment:
-    description: "Set this option if you want the action to update environment variables."
+    description: Set this option if you want the action to update environment variables.
     required: false
     default: 'true'
 
-  trace-commands:
-    description: 'Trace commands executed by the workflow.'
-    required: false
-    default: 'false'
-
 outputs:
   cc:
-    description: "The absolute path to the clang executable."
+    description: The absolute path to the clang executable.
   cxx:
-    description: "The absolute path to the clang++ executable."
+    description: The absolute path to the clang++ executable.
   dir:
-    description: "The absolute path to the Clang directory containing the executable."
+    description: The absolute path to the Clang directory containing the executable.
   version:
-    description: "The installed Clang version. Useful when given a version range as input."
+    description: The installed Clang version. Useful when given a version range as input.
   version-major:
-    description: "The installed Clang version major. Useful when given a version range as input."
+    description: The installed Clang version major. Useful when given a version range as input.
   version-minor:
-    description: "The installed Clang version minor. Useful when given a version range as input."
+    description: The installed Clang version minor. Useful when given a version range as input.
   version-patch:
-    description: "The installed Clang version patch. Useful when given a version range as input."
+    description: The installed Clang version patch. Useful when given a version range as input.
   symbolizer-path:
-    description: |
+    description: |-
       The absolute path to llvm-symbolizer (Linux only).
 
       This is also exported as ASAN_SYMBOLIZER_PATH, MSAN_SYMBOLIZER_PATH,

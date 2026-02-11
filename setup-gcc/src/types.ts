@@ -4,16 +4,14 @@
  * @module types
  */
 
+import type { InferInputs } from 'action-schema';
+import type { inputsSchema } from './schema';
+
 /**
- * Configuration inputs for the setup-gcc action.
+ * Input configuration for the setup-gcc action.
+ * Inferred from the schema definition in schema.ts.
  */
-export interface Inputs {
-    version: string;
-    path: string[];
-    check_latest: boolean;
-    update_environment: boolean;
-    trace_commands: boolean;
-}
+export type Inputs = InferInputs<typeof inputsSchema>;
 
 /**
  * Output values produced by GCC setup.

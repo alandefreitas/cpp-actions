@@ -12,11 +12,18 @@ import * as fs from 'fs';
 import * as exec from '@actions/exec';
 import * as path from 'path';
 import * as trace_commands from 'trace-commands';
-import * as gh_inputs from 'gh-inputs';
-import { reportAndSetFailed } from 'pretty-errors';
+import { runAction } from 'action-schema';
 
 // Type imports
 import { Inputs, MainOutputs } from './types';
+export type { Inputs, MainOutputs };
+
+// Schema imports
+import { inputsSchema, outputsSchema } from './schema';
+export { inputsSchema, outputsSchema };
+
+// Re-export removeClangPrefix for external use
+export { removeClangPrefix } from './schema';
 
 // Module imports
 import { clangDownloadCandidates, install_program_from_clang_urls } from './download';
@@ -24,26 +31,6 @@ import { installCompanionPackages } from './companion-packages';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const setup_program = require('setup-program');
-
-/**
- * Removes "clang-" or "clang++-" prefixes from a version string.
- *
- * @param version - Version string potentially prefixed with clang- or clang++-
- * @returns Cleaned version string without the prefix
- */
-function removeClangPrefix(version: string): string {
-    // Remove "clang-" or "clang++-" prefix
-    if (version.startsWith('clang-') || version.startsWith('clang++-')) {
-        version = version.replace('clang-', '').replace('clang++-', '');
-    }
-
-    // Remove "clang " or "clang++ " prefix
-    if (version.startsWith('clang ') || version.startsWith('clang++ ')) {
-        version = version.replace('clang ', '').replace('clang++ ', '');
-    }
-
-    return version;
-}
 
 /**
  * Sets up Clang compiler on the runner with the specified version.
@@ -334,57 +321,30 @@ export async function main(
     };
 }
 
-let lastInputsForErrors: Inputs | undefined = undefined;
-
 /**
- * Main entry point for the setup-clang GitHub Action.
+ * Action entry point using schema-driven runner.
  *
- * Parses inputs and sets up the Clang compiler environment.
+ * This replaces the previous manual input extraction and error handling
+ * with the standardized runAction wrapper.
  */
-async function run(): Promise<void> {
-    const inputs: Inputs = {
-        version: removeClangPrefix(gh_inputs.getInput('version', { defaultValue: '*' })),
-        path: gh_inputs.getArray('path', /[:;]/),
-        check_latest: gh_inputs.getBoolean('check-latest'),
-        update_environment: gh_inputs.getBoolean('update-environment'),
-        trace_commands: gh_inputs.getBoolean('trace-commands')
-    };
+runAction({
+    inputsSchema,
+    outputsSchema,
+    title: 'Setup Clang',
+    main: async (inputs: Inputs) => {
+        const outputs = await main(
+            inputs.version,
+            inputs.path,
+            inputs.check_latest,
+            inputs.update_environment
+        );
 
-    lastInputsForErrors = inputs;
-
-    if (inputs.trace_commands) {
-        trace_commands.set_trace_commands(true);
-    }
-
-    core.startGroup('📥 Action Inputs');
-    gh_inputs.printInputObject(inputs as unknown as Record<string, unknown>);
-    core.endGroup();
-
-    const outputs = await main(inputs.version, inputs.path, inputs.check_latest, inputs.update_environment);
-
-    // Parse Final program / Setup version / Outputs
-    if (outputs.output_path) {
-        core.startGroup('📤 Action Outputs');
-        gh_inputs.setOutputObject(outputs as unknown as Record<string, unknown>);
-        core.endGroup();
-    } else {
-        core.setFailed('Cannot setup Clang');
-    }
-}
-
-if (require.main === module) {
-    (async () => {
-        try {
-            await run();
-        } catch (error) {
-            const capturedInputs = lastInputsForErrors as Inputs | undefined;
-            const hint = capturedInputs?.trace_commands
-                ? 'Trace commands already enabled; if this looks like a bug, please open an issue at github.com/alandefreitas/cpp-actions with stack and logs.'
-                : 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. ';
-            await reportAndSetFailed(error as Error, {
-                title: 'Setup Clang failed',
-                hint
-            });
+        // Validate that Clang was found
+        if (!outputs.output_path) {
+            core.setFailed('Cannot setup Clang');
         }
-    })();
-}
+
+        return outputs as unknown as Record<string, unknown>;
+    },
+    callerModule: module
+});
