@@ -476,6 +476,11 @@ replaced.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>version</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Version range or exact version of CMake to use, using SemVer&#8217;s version range syntax.</p>
 <p class="tableblock">Reads from <code>cmake-file</code> input if unset.</p>
@@ -490,7 +495,7 @@ replaced.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-file</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">File containing the CMake version to use in a cmake_minimum_required command.</p>
-<p class="tableblock">Example: A CMakeLists.txt file containing a call to cmake_minimum_required.".</p></td>
+<p class="tableblock">Example: A CMakeLists.txt file containing a call to cmake_minimum_required.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>CMakeLists.txt</code></p></td>
 </tr>
 <tr>
@@ -511,27 +516,20 @@ replaced.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cache</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Used to specify whether the CMake installation should be cached in the case CMake needs to be downloaded.</p>
-<p class="tableblock">As binaries are provided for all versions of CMake, this option is deprecated and will be removed in
-a future release.</p></td>
+<p class="tableblock">As binaries are provided for all versions of CMake, this option is deprecated and will be removed in a future release.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>check-latest</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">By default, when CMake is not available, this action will install the minimum version in the version spec.
 This ensures the code respects its contract in terms of what minimum CMake version is supported.</p>
-<p class="tableblock">Set this option if you want the action to check for the latest available version that satisfies the version spec
-instead.</p></td>
+<p class="tableblock">Set this option if you want the action to check for the latest available version that satisfies the version spec instead.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>update-environment</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Set this option if you want the action to update environment variables.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 </tbody>
 </table>

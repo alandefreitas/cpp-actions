@@ -621,6 +621,11 @@ node lib/create-changelog.js --source_dir ~/projects/my-repo --limit 50</code></
 <td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>source-dir</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The source directory from whose commits will be analyzed.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
@@ -734,11 +739,6 @@ with the current changelog.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
-</tr>
-<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>include-types</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Comma-separated list of commit types to include in the changelog.</p>
 <p class="tableblock">When specified, only commits with these types will appear in the changelog.
@@ -756,7 +756,8 @@ This filter is applied after include-types (if specified).</p>
 <p class="tableblock">Common types: feat, fix, perf, refactor, docs, style, build, test, ci, chore, release, other</p>
 <p class="tableblock">Example: 'chore, style, release'</p>
 <p class="tableblock">Tip: Use this to create cleaner changelogs by excluding routine maintenance commits.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>chore, style</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>chore</code></p>
+<p class="tableblock"><code>style</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>sort-by</code></p></td>
