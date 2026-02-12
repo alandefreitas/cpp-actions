@@ -29,7 +29,7 @@
   ],
   "scripts": {
     "update-data": "node utils/update-data/dist/index.js",
-    "update-action-ymls": "node utils/update-data/dist/action-yml.js",
+    "update-action-ymls": "node --conditions=import utils/update-data/dist/action-yml.js",
     "prepare": "npm run build --workspaces && npm run update-action-ymls",
     "build": "npm run prepare",
     "test": "jest",

@@ -12,10 +12,10 @@
   "author": "",
   "license": "Boost Software License 1.0",
   "dependencies": {
-    "@actions/artifact": "^5.0.1",
-    "@actions/core": "^2.0.1",
-    "@actions/exec": "^2.0.0",
-    "@actions/io": "^2.0.0",
+    "@actions/artifact": "^6.1.0",
+    "@actions/core": "^3.0.0",
+    "@actions/exec": "^3.0.0",
+    "@actions/io": "^3.0.2",
     "action-schema": "*",
     "pretty-errors": "*",
     "setup-cmake": "*",
@@ -24,6 +24,6 @@
     "trace-commands": "*"
   },
   "devDependencies": {
-    "esbuild": "^0.27.2"
+    "esbuild": "^0.27.3"
   }
 }

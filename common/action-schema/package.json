@@ -14,14 +14,14 @@
   "author": "",
   "license": "Boost Software License 1.0",
   "dependencies": {
-    "@actions/core": "^2.0.1",
+    "@actions/core": "^3.0.0",
     "gh-inputs": "*",
     "trace-commands": "*",
     "pretty-errors": "*",
-    "yaml": "^2.7.1",
+    "yaml": "^2.8.2",
     "source-map-support": "^0.5.21"
   },
   "devDependencies": {
-    "esbuild": "^0.27.2"
+    "esbuild": "^0.27.3"
   }
 }

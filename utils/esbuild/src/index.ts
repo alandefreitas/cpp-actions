@@ -62,6 +62,8 @@ async function build(): Promise<void> {
             sourcesContent: true,
             // Inject source-map-support/register so it's bundled (no external dep)
             inject: [injectSourceMapRegister],
+            // Also resolve ESM export conditions (needed for ESM-only @actions/* v3+ packages)
+            conditions: ['import'],
             // Mark native modules as external
             external: [],
             // Generate metafile for analysis

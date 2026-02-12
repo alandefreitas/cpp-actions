@@ -11,6 +11,26 @@ const commonModuleMapper = {
     '^pretty-errors$': path.join(rootDir, 'common/pretty-errors/src/index.ts')
 };
 
+// Transform config for TypeScript source files
+const tsTransform = {
+    '^.+\\.tsx?$': ['ts-jest', {
+        tsconfig: path.join(rootDir, 'tsconfig.test.json')
+    }]
+};
+
+// Transform config for ESM-only JS packages (e.g. @actions/* v3+)
+const esmJsTransform = {
+    '^.+\\.m?js$': ['ts-jest', {
+        tsconfig: {
+            allowJs: true,
+            esModuleInterop: true,
+            resolveJsonModule: true,
+            target: 'ES2021',
+            module: 'CommonJS'
+        }
+    }]
+};
+
 // Base configuration shared across all projects
 const baseConfig = {
     preset: 'ts-jest',
@@ -22,6 +42,10 @@ const baseConfig = {
         '!src/**/*.d.ts',
         '!src/**/*.test.ts'
     ],
+    // Custom resolver to handle ESM-only @actions/* v3+ package exports
+    resolver: path.join(rootDir, 'jest-resolver.js'),
+    // Allow transforming ESM-only node_modules (many deps are now ESM-only)
+    transformIgnorePatterns: [],
     verbose: true
 };
 
@@ -64,11 +88,7 @@ const actionProjects = actionPackages.map(pkg => ({
     displayName: pkg,
     rootDir: path.join(rootDir, pkg),
     roots: ['<rootDir>/src'],
-    transform: {
-        '^.+\\.tsx?$': ['ts-jest', {
-            tsconfig: path.join(rootDir, 'tsconfig.test.json')
-        }]
-    },
+    transform: { ...tsTransform, ...esmJsTransform },
     moduleNameMapper: commonModuleMapper
 }));
 
@@ -78,11 +98,7 @@ const commonProjects = commonPackages.map(pkg => ({
     displayName: pkg.split('/')[1],
     rootDir: path.join(rootDir, pkg),
     roots: ['<rootDir>/src'],
-    transform: {
-        '^.+\\.tsx?$': ['ts-jest', {
-            tsconfig: path.join(rootDir, 'tsconfig.test.json')
-        }]
-    }
+    transform: { ...tsTransform, ...esmJsTransform }
 }));
 
 // Generate project configs for utils modules
@@ -91,11 +107,7 @@ const utilsProjects = utilsPackages.map(pkg => ({
     displayName: pkg.split('/')[1],
     rootDir: path.join(rootDir, pkg),
     roots: ['<rootDir>/src'],
-    transform: {
-        '^.+\\.tsx?$': ['ts-jest', {
-            tsconfig: path.join(rootDir, 'tsconfig.test.json')
-        }]
-    }
+    transform: { ...tsTransform, ...esmJsTransform }
 }));
 
 module.exports = {

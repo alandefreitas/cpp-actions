@@ -11,14 +11,14 @@
   "author": "",
   "license": "Boost Software License 1.0",
   "dependencies": {
-    "@actions/artifact": "^5.0.1",
-    "@actions/core": "^2.0.1",
+    "@actions/artifact": "^6.1.0",
+    "@actions/core": "^3.0.0",
     "action-schema": "*",
     "pretty-errors": "*",
     "source-map-support": "^0.5.21",
     "trace-commands": "*"
   },
   "devDependencies": {
-    "esbuild": "^0.27.2"
+    "esbuild": "^0.27.3"
   }
 }
