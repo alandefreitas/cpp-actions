@@ -1,6 +1,6 @@
 {
   "name": "setup-clang",
-  "version": "1.9.2",
+  "version": "1.9.3",
   "description": "Set up a specific version of Clang compiler",
   "main": "lib/index.js",
   "scripts": {

@@ -1,6 +1,6 @@
 {
   "name": "docs-cli",
-  "version": "1.9.2",
+  "version": "1.9.3",
   "private": true,
   "description": "Generates documentation from action YAML files and Antora",
   "main": "dist/index.js",
