@@ -252,6 +252,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.9.3/index.html">v1.9.3</a>
+        </li>
+        <li class="version">
           <a href="../v1.9.2/index.html">v1.9.2</a>
         </li>
         <li class="version">
@@ -364,6 +367,7 @@
   <div class="version-menu">
     <a class="version is-current" href="setup-msvc.html">master</a>
     <a class="version" href="../develop/actions/setup-msvc.html">develop</a>
+    <a class="version" href="../v1.9.3/actions/setup-msvc.html">v1.9.3</a>
     <a class="version" href="../v1.9.2/actions/setup-msvc.html">v1.9.2</a>
     <a class="version" href="../v1.9.1/actions/setup-msvc.html">v1.9.1</a>
     <a class="version" href="../v1.9/actions/setup-msvc.html">v1.9</a>
@@ -459,6 +463,11 @@ Unlike GCC or Clang, this action does not download MSVC – it configures the ve
 <td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>version</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">MSVC toolset version (SemVer range). When provided, it is forwarded to <code>vcvarsall.bat</code> via <code>-vcvars_ver</code>.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>*</code></p></td>
@@ -491,11 +500,6 @@ Unlike GCC or Clang, this action does not download MSVC – it configures the ve
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>spectre</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Set to true to request Spectre-mitigated libraries.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the action.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 </tbody>

@@ -255,6 +255,9 @@
           <a href="../../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../../v1.9.3/index.html">v1.9.3</a>
+        </li>
+        <li class="version">
           <a href="../../v1.9.2/index.html">v1.9.2</a>
         </li>
         <li class="version">
@@ -367,6 +370,7 @@
   <div class="version-menu">
     <a class="version" href="../../actions/cmake-workflow.html">master</a>
     <a class="version" href="../../develop/actions/cmake-workflow.html">develop</a>
+    <a class="version" href="../../v1.9.3/actions/cmake-workflow.html">v1.9.3</a>
     <a class="version" href="../../v1.9.2/actions/cmake-workflow.html">v1.9.2</a>
     <a class="version" href="../../v1.9.1/actions/cmake-workflow.html">v1.9.1</a>
     <a class="version" href="../../v1.9/actions/cmake-workflow.html">v1.9</a>
@@ -566,6 +570,11 @@ CMake workflow steps as integration tests for CMake.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cmake-path</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Ordered list of candidate paths to the cmake executable.</p>
 <p class="tableblock">Entries follow the same rules as the underlying <code>setup-cmake</code> action:</p>
@@ -674,9 +683,9 @@ the current working directory.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Flags to be used with the C++ compiler.
-If the input is not specified, the action will use the flags defined by the environment variable <code>CXXFLAGS</code>.
-If the environment variable is not specified, the action will use the default flags as identified by CMake.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Flags to be used with the C++ compiler.</p>
+<p class="tableblock">If the input is not specified, the action will use the flags defined by the environment variable <code>CXXFLAGS</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default flags as identified by CMake.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
@@ -774,7 +783,7 @@ instead of <code>CMAKE_BUILD_TYPE</code>.</p></td>
 <p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>CMAKE_JOBS</code>.</p>
 <p class="tableblock">If the environment variable is also not specified, the action will use the number of processors available in the
 system.</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>0</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>run-tests</code></p></td>
@@ -805,7 +814,7 @@ When the value is undefined, the <code>configure-tests-flag</code> is ignored.</
 <p class="tableblock">If a test runs longer than this value, it will be killed and marked as failed.</p>
 <p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>CTEST_TEST_TIMEOUT</code>.</p>
 <p class="tableblock">If the environment variable is also not specified, ctest will use its default behavior (no timeout).</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>0</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>install</code></p></td>
@@ -867,7 +876,7 @@ CPack generators available to CMake.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Whether the packages generated with CPack should be stored as action artifacts.</p>
 <p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>CMAKE_PACKAGE_ARTIFACT</code>.</p>
 <p class="tableblock">If the environment variable is also not specified, the action will store the packages as artifacts.</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>package-retention-days</code></p></td>
@@ -879,7 +888,7 @@ CPack generators available to CMake.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Create github annotations for errors and warnings at all steps.</p>
 <p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>CMAKE_CREATE_ANNOTATIONS</code>.</p>
 <p class="tableblock">If the environment variable is also not specified, the action will create annotations.</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>ref-source-dir</code></p></td>
@@ -895,11 +904,6 @@ called without specifying a custom <code>path</code> option.</p>
 which we need to make annotations relative to some other directory.</p>
 <p class="tableblock">In most cases, the default option should be enough.</p></td>
 <td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 </tbody>
 </table>

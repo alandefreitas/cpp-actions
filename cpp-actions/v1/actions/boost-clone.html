@@ -255,6 +255,9 @@
           <a href="../../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../../v1.9.3/index.html">v1.9.3</a>
+        </li>
+        <li class="version">
           <a href="../../v1.9.2/index.html">v1.9.2</a>
         </li>
         <li class="version">
@@ -367,6 +370,7 @@
   <div class="version-menu">
     <a class="version" href="../../actions/boost-clone.html">master</a>
     <a class="version" href="../../develop/actions/boost-clone.html">develop</a>
+    <a class="version" href="../../v1.9.3/actions/boost-clone.html">v1.9.3</a>
     <a class="version" href="../../v1.9.2/actions/boost-clone.html">v1.9.2</a>
     <a class="version" href="../../v1.9.1/actions/boost-clone.html">v1.9.1</a>
     <a class="version" href="../../v1.9/actions/boost-clone.html">v1.9</a>
@@ -508,10 +512,14 @@ step to be the <a href="b2-workflow.html" class="xref page">B2 Workflow</a>.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>boost-dir</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The directory where Boost should be cloned.</p>
-<p class="tableblock">If no value is provided (default), the action will clone boost in a temporary
-directory.</p></td>
+<p class="tableblock">If no value is provided (default), the action will clone boost in a temporary directory.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
@@ -525,7 +533,7 @@ to the project branch they are working on.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>patches</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">A list of patches to apply to the boost super-project.</p>
 <p class="tableblock">A patch is a module intended as a Boost library that is not yet part of the super-project.</p>
-<p class="tableblock">Each path will be cloned in the <code>libs</code> directory of the super-project. ⚠️ This parameter is required.</p></td>
+<p class="tableblock">Each path will be cloned in the <code>libs</code> directory of the super-project.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
@@ -555,7 +563,8 @@ The Boost modules required in files from this directory will be added to the <co
 <td class="tableblock halign-left valign-top"><p class="tableblock">Module subdirectory to exclude from scanning.</p>
 <p class="tableblock">Directories that match any of the values in this list will be ignored.</p>
 <p class="tableblock">By default, the action excludes the ['test', 'tests'] directories.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>test tests</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>test</code></p>
+<p class="tableblock"><code>tests</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>scan-modules-ignore</code></p></td>
@@ -593,11 +602,6 @@ hash only for transitive dependencies would require us to clone these transitive
 makes the cache useless.</p>
 <p class="tableblock">The default value is <code>false</code>, because we prioritize correctness over performance. However,
 most users should consider the possibility of setting this option to <code>true</code>, considering their requirements.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>

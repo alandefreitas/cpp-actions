@@ -252,6 +252,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.9.3/index.html">v1.9.3</a>
+        </li>
+        <li class="version">
           <a href="../v1.9.2/index.html">v1.9.2</a>
         </li>
         <li class="version">
@@ -363,6 +366,7 @@
   <div class="version-menu">
     <a class="version is-current" href="cpp-matrix.html">master</a>
     <a class="version" href="../develop/actions/cpp-matrix.html">develop</a>
+    <a class="version" href="../v1.9.3/actions/cpp-matrix.html">v1.9.3</a>
     <a class="version" href="../v1.9.2/actions/cpp-matrix.html">v1.9.2</a>
     <a class="version" href="../v1.9.1/actions/cpp-matrix.html">v1.9.1</a>
     <a class="version" href="../v1.9/actions/cpp-matrix.html">v1.9</a>
@@ -1208,13 +1212,14 @@ in the <code>/__e/node20</code> directory.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>compilers</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A list of compilers to be tested. Each compiler can be complemented with its semver version requirements
-to be tested.</p>
-<p class="tableblock">When the compiler version requirements are provided, the action will break the requirements into
-subsets of major versions to be tested. When no version is provided, the '*' semver requirement
-is assumed. The action can identifies subsets of compiler versions for GCC, Clang, and MSVC.
-For any other compilers, the version requirements will passthrough to the output.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A list of compilers to be tested. Each compiler can be complemented with its semver version requirements to be tested.</p>
+<p class="tableblock">When the compiler version requirements are provided, the action will break the requirements into subsets of major versions to be tested. When no version is provided, the '*' semver requirement is assumed. The action can identifies subsets of compiler versions for GCC, Clang, and MSVC. For any other compilers, the version requirements will passthrough to the output.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc &gt;=4.8</code></p>
 <p class="tableblock"><code>clang &gt;=3.8</code></p>
 <p class="tableblock"><code>msvc &gt;=14</code></p>
@@ -1225,63 +1230,37 @@ For any other compilers, the version requirements will passthrough to the output
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>subrange-policy</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The policy to be used to break the compiler version requirements into sub-ranges of versions.</p>
-<p class="tableblock">For instance, if the compiler requirements are <code>gcc &gt;=4.8</code>, the action will typically generate
-entries that satisfy <code>gcc &gt;=4.8 &lt;5</code>, <code>gcc &gt;=5 &lt;6</code>, <code>gcc &gt;=6 &lt;7</code>, and so on, because the default policy
-is <code>one-per-major</code>.</p>
+<p class="tableblock">For instance, if the compiler requirements are <code>gcc &gt;=4.8</code>, the action will typically generate entries that satisfy <code>gcc &gt;=4.8 &lt;5</code>, <code>gcc &gt;=5 &lt;6</code>, <code>gcc &gt;=6 &lt;7</code>, and so on, because the default policy is <code>one-per-major</code>.</p>
 <p class="tableblock">The policy can be <code>one-per-major</code> or <code>one-per-minor</code>.</p>
 <p class="tableblock">This input can be a single value for all compilers or a multi-line list of compiler-specific policies.</p>
-<p class="tableblock">Another policy is to break into major versions when the range contains multiple major versions and
-into minor versions when the range contains multiple minor versions. The name of this policy
-is <code>one-per-major-minor</code>.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>one-per-major</code></p></td>
+<p class="tableblock">Another policy is to break into major versions when the range contains multiple major versions and into minor versions when the range contains multiple minor versions. The name of this policy is <code>one-per-major-minor</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>: one-per-major</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>standards</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A semver range describing what C standards should be tested. For instance, `&gt;=11` indicates that
-the library should be tested with C11 and later standards.</p>
-<p class="tableblock">These requirements can include C standards as 2 or 4 digits versions, such as 11, 2011, 98, or 1998.
-2 digit versions are normalized into the 4 digits form so that 11 &gt; 98 (2011 &gt; 1998).</p>
-<p class="tableblock">The action will generate entries for each compiler version that satisfies the requirements.
-The compiler ranges defined in `compilers` are adjusted to only include compilers that support any
-subrange of these requirements. Compilers that don't support any of the standards in the range will
-be excluded from the matrix.</p>
-<p class="tableblock">Each entry in the matrix will include the `cxxstd` key with a list of standards to be tested with that
-compiler version. This list will include the `max-standards` latest standards supported by the compiler
-specified in that entry. For instance, if `max-standards` is `3` and the compiler supports
-'11,14,17,20,23' given the the `standards` requirement `&gt;=11`, the `cxxstd` field of the entry
-will include the standards `20,23` will be tested by this compiler. This allows the matrix to be
-more focused on the latest standards supported by each compiler (the ones that are more likely to be
-contain compatibility issues) while still testing all standards required by the library in the matrix.</p>
-<p class="tableblock">It's very common for compilers to not fully comply with the standards they claim to support, even
-for the old standards. The criteria used by this action for determining if a compiler supports a
-standard is based on the whether the compiler claims to support the standard by providing a corresponding
-`-std=cXX` flag to enable the standard. This criteria is easy to follow, minimizes surprises, covers
-the most common bugs, and ensures users the library is compliant with all standard flags
-supported by the compilers.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A semver range describing what C standards should be tested. For instance, `&gt;=11` indicates that the library should be tested with C11 and later standards.</p>
+<p class="tableblock">These requirements can include C standards as 2 or 4 digits versions, such as 11, 2011, 98, or 1998. 2 digit versions are normalized into the 4 digits form so that 11 &gt; 98 (2011 &gt; 1998).</p>
+<p class="tableblock">The action will generate entries for each compiler version that satisfies the requirements. The compiler ranges defined in `compilers` are adjusted to only include compilers that support any subrange of these requirements. Compilers that don't support any of the standards in the range will be excluded from the matrix.</p>
+<p class="tableblock">Each entry in the matrix will include the `cxxstd` key with a list of standards to be tested with that compiler version. This list will include the `max-standards` latest standards supported by the compiler specified in that entry. For instance, if `max-standards` is `3` and the compiler supports '11,14,17,20,23' given the the `standards` requirement `&gt;=11`, the `cxxstd` field of the entry will include the standards `20,23` will be tested by this compiler. This allows the matrix to be more focused on the latest standards supported by each compiler (the ones that are more likely to be contain compatibility issues) while still testing all standards required by the library in the matrix.</p>
+<p class="tableblock">It's very common for compilers to not fully comply with the standards they claim to support, even for the old standards. The criteria used by this action for determining if a compiler supports a standard is based on the whether the compiler claims to support the standard by providing a corresponding `-std=cXX` flag to enable the standard. This criteria is easy to follow, minimizes surprises, covers the most common bugs, and ensures users the library is compliant with all standard flags supported by the compilers.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>&gt;=11</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>max-standards</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The maximum number of standards to be tested with each compiler.</p>
-<p class="tableblock">For instance, if 'max-standards' is 2 and the compiler supports '11,14,17,20,23' given the in the standard
-requirements, the standards 20,23 will be tested by this compiler.</p></td>
+<p class="tableblock">For instance, if 'max-standards' is 2 and the compiler supports '11,14,17,20,23' given the in the standard requirements, the standards 20,23 will be tested by this compiler.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>2</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>latest-factors</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The factors to be tested with the latest versions of each compiler. For each factor in this list, the
-entry with the latest version of a compiler will be duplicated with an entry that sets this factor to true.</p>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The factors to be tested with the latest versions of each compiler. For each factor in this list, the entry with the latest version of a compiler will be duplicated with an entry that sets this factor to true.</p>
 <p class="tableblock">Other entries will also include this factor as false.</p>
-<p class="tableblock">The following factors are considered special: 'asan', 'ubsan', 'msan', 'tsan', and 'coverage'.
-When these factors are defined in an entry, its 'ccflags', 'cxxflags', and 'linkflags' value are
-also modified to include the suggested flags for factor.</p></td>
+<p class="tableblock">The following factors are considered special: 'asan', 'ubsan', 'msan', 'tsan', and 'coverage'. When these factors are defined in an entry, its 'ccflags', 'cxxflags', and 'linkflags' value are also modified to include the suggested flags for factor.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc Coverage TSan UBSan</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>factors</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The factors to be tested with other versions of each compiler. Each factor in this list will be injected
-into a version of the compiler that is not the latest version. An entry with the latest version of the compiler
-will be duplicated with this factor if there are no entries left to inject the factor.</p>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The factors to be tested with other versions of each compiler. Each factor in this list will be injected into a version of the compiler that is not the latest version. An entry with the latest version of the compiler will be duplicated with this factor if there are no entries left to inject the factor.</p>
 <p class="tableblock">Other entries will also include this factor as false.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc Asan Shared</code></p>
 <p class="tableblock"><code>msvc Shared x86</code></p>
@@ -1290,33 +1269,19 @@ will be duplicated with this factor if there are no entries left to inject the f
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>combinatorial-factors</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The factors to be tested with all combinations of other factors. When combinatorial factors are defined,
-for each entry in the matrix, a new entry will be created with the factors in this list set to <code>true</code>.</p>
-<p class="tableblock">For instance, if the library can be built both in "Standalone" mode and with dependencies, the factor 'Standalone'
-can be added to this list to duplicate all entries. Each copy would include a "Standalone" factor set to
-<code>true</code> or <code>false</code>.</p>
-<p class="tableblock">Typically, it is advisable to steer clear of combinatorial factors to prevent a combinatorial explosion.
-It&#8217;s usually better to only test the combinations that are expected to be used in practice and include an
-extra steps in the workflow to test any combinatorial factors.</p>
-<p class="tableblock">For instance, if the library can be built both in "Standalone" mode and with dependencies, its workflow can
-simply include an extra step to also test the library in "Standalone" mode and keep the step to test the library
-with dependencies. This is usually safer and cheaper than duplicating the entire matrix to test all
-combinations of these factors and also allows steps to be skipped when the library is not expected to be built
-in a given mode. For instance, testing a library on Standalone mode might not be necessary when the library
-is being tested with intermediary compilers.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The factors to be tested with all combinations of other factors. When combinatorial factors are defined, for each entry in the matrix, a new entry will be created with the factors in this list set to <code>true</code>.</p>
+<p class="tableblock">For instance, if the library can be built both in "Standalone" mode and with dependencies, the factor 'Standalone' can be added to this list to duplicate all entries. Each copy would include a "Standalone" factor set to <code>true</code> or <code>false</code>.</p>
+<p class="tableblock">Typically, it is advisable to steer clear of combinatorial factors to prevent a combinatorial explosion. It&#8217;s usually better to only test the combinations that are expected to be used in practice and include an extra steps in the workflow to test any combinatorial factors.</p>
+<p class="tableblock">For instance, if the library can be built both in "Standalone" mode and with dependencies, its workflow can simply include an extra step to also test the library in "Standalone" mode and keep the step to test the library with dependencies. This is usually safer and cheaper than duplicating the entire matrix to test all combinations of these factors and also allows steps to be skipped when the library is not expected to be built in a given mode. For instance, testing a library on Standalone mode might not be necessary when the library is being tested with intermediary compilers.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>force-factors</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of factor flags to be injected with each range of compiler version
-even if the entry doesn&#8217;t have the usual requirements to have that factor.</p>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of factor flags to be injected with each range of compiler version even if the entry doesn&#8217;t have the usual requirements to have that factor.</p>
 <p class="tableblock">Each line has the format:</p>
 <p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;build-type&gt;</code></p>
-<p class="tableblock">For instance, <code>gcc &gt;=13 &lt;14: Asan</code> indicates that the flag <code>asan</code> will be included with
-any version of <code>gcc</code> in that range, even if the entry doesn&#8217;t have the usual requirements
-to have the <code>Asan</code> factor.</p>
-<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the build type
-to all versions of the compiler.</p>
+<p class="tableblock">For instance, <code>gcc &gt;=13 &lt;14: Asan</code> indicates that the flag <code>asan</code> will be included with any version of <code>gcc</code> in that range, even if the entry doesn&#8217;t have the usual requirements to have the <code>Asan</code> factor.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the build type to all versions of the compiler.</p>
 <p class="tableblock">When the build type is unspecified, the action will infer the build type from the compiler name and its version.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
@@ -1325,142 +1290,109 @@ to all versions of the compiler.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of key-value pairs to be injected in each entry of the matrix.</p>
 <p class="tableblock">Each line has the format:</p>
 <p class="tableblock"><code>&lt;key&gt;: &lt;value&gt;</code></p>
-<p class="tableblock">For instance, <code>hash-key: value</code> includes the hash-key with the value <code>value</code> in each entry of the matrix.
-This means it can later be accessed more easily via the <code>matrix</code> output of the action.</p>
-<p class="tableblock">The values also support Handlebars expressions, which can be used to generate values based on other values
-in the entry. For instance,</p>
+<p class="tableblock">For instance, <code>hash-key: value</code> includes the hash-key with the value <code>value</code> in each entry of the matrix. This means it can later be accessed more easily via the <code>matrix</code> output of the action.</p>
+<p class="tableblock">The values also support Handlebars expressions, which can be used to generate values based on other values in the entry. For instance,</p>
 <p class="tableblock"><code>hash-key: {{ compiler }}-{{ version }}</code></p>
-<p class="tableblock">would generate a hash-key with the value <code>gcc-11.1</code> for an entry with the compiler <code>gcc</code> and version <code>11.1</code>.
-Previous extra values in the entry can also be accessed via the <code>matrix</code> output of the action. For instance:</p>
+<p class="tableblock">would generate a hash-key with the value <code>gcc-11.1</code> for an entry with the compiler <code>gcc</code> and version <code>11.1</code>. Previous extra values in the entry can also be accessed via the <code>matrix</code> output of the action. For instance:</p>
 <p class="tableblock"><code>cache-key: cache-{{ hash-key }}</code>.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>runs-on</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of github runner images to be used with each range of compiler version.
-Each line has the format:</p>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of github runner images to be used with each range of compiler version. Each line has the format:</p>
 <p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;github-runner-image&gt;</code></p>
-<p class="tableblock">For instance, <code>gcc &gt;=13.1: ubuntu-latest</code> indicates that the runner image <code>ubuntu-latest</code> should be used
-to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
-<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the runner
-image to all versions of the compiler.</p>
-<p class="tableblock">When the runner image is specified, a container is only be suggested for the entries if the <code>container</code>
-option for that compiler version is also specified.</p>
-<p class="tableblock">When the runner image is unspecified, the action will infer the runner image and potentially a container
-from the compiler name and its version.</p></td>
+<p class="tableblock">For instance, <code>gcc &gt;=13.1: ubuntu-latest</code> indicates that the runner image <code>ubuntu-latest</code> should be used to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the runner image to all versions of the compiler.</p>
+<p class="tableblock">When the runner image is specified, a container is only be suggested for the entries if the <code>container</code> option for that compiler version is also specified.</p>
+<p class="tableblock">When the runner image is unspecified, the action will infer the runner image and potentially a container from the compiler name and its version.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>containers</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of docker containers to be used with each range of compiler version.
-Each line has the format:</p>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of docker containers to be used with each range of compiler version. Each line has the format:</p>
 <p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;docker-container&gt;</code></p>
-<p class="tableblock">For instance, <code>gcc &gt;=13.1: ubuntu:22.04</code> indicates that the docker container <code>ubuntu:22.04</code> should be used
-to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
-<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the container
-to all versions of the compiler.</p>
-<p class="tableblock">When the container is specified for that compiler version and the <code>runs-on</code> option is not, an ubuntu image
-is suggested for the entry to run the container.</p>
-<p class="tableblock">When the container is unspecified, the action can still infer a container for the compiler version according
-to the rules defined in the <code>use-containers</code> option.</p></td>
+<p class="tableblock">For instance, <code>gcc &gt;=13.1: ubuntu:22.04</code> indicates that the docker container <code>ubuntu:22.04</code> should be used to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the container to all versions of the compiler.</p>
+<p class="tableblock">When the container is specified for that compiler version and the <code>runs-on</code> option is not, an ubuntu image is suggested for the entry to run the container.</p>
+<p class="tableblock">When the container is unspecified, the action can still infer a container for the compiler version according to the rules defined in the <code>use-containers</code> option.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>generators</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of cmake generators to be used with each range of compiler version.
-Each line has the format:</p>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of cmake generators to be used with each range of compiler version. Each line has the format:</p>
 <p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;cmake-generator&gt;</code></p>
-<p class="tableblock">For instance, <code>gcc &gt;=13.1: Ninja</code> indicates that the cmake generator <code>Ninja</code> should be used
-to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
-<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the generator
-to all versions of the compiler.</p>
+<p class="tableblock">For instance, <code>gcc &gt;=13.1: Ninja</code> indicates that the cmake generator <code>Ninja</code> should be used to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the generator to all versions of the compiler.</p>
 <p class="tableblock">When the generator is unspecified, the action will infer the generator from the compiler name and its version.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>generator-toolsets</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of cmake generator toolsets to be used with each range of compiler version.
-Each line has the format:</p>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of cmake generator toolsets to be used with each range of compiler version. Each line has the format:</p>
 <p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;cmake-generator-toolset&gt;</code></p>
-<p class="tableblock">For instance, <code>clang-cl *: ClangCL</code> indicates that the cmake generator toolset <code>ClangCL</code> should be used
-to test <code>clang-cl</code> with any version.</p>
-<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the generator
-to all versions of the compiler.</p>
-<p class="tableblock">When the generator toolset is unspecified, the action will infer the generator toolset from the compiler name
-and its version.</p></td>
+<p class="tableblock">For instance, <code>clang-cl *: ClangCL</code> indicates that the cmake generator toolset <code>ClangCL</code> should be used to test <code>clang-cl</code> with any version.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the generator to all versions of the compiler.</p>
+<p class="tableblock">When the generator toolset is unspecified, the action will infer the generator toolset from the compiler name and its version.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>b2-toolsets</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of b2 toolsets to be used with each range of compiler version.
-Each line has the format:</p>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of b2 toolsets to be used with each range of compiler version. Each line has the format:</p>
 <p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;b2-toolset&gt;</code></p>
-<p class="tableblock">For instance, <code>gcc &gt;=13.1: gcc</code> indicates that the b2 toolset <code>gcc-13</code> should be used
-to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
-<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the toolset
-to all versions of the compiler.</p>
+<p class="tableblock">For instance, <code>gcc &gt;=13.1: gcc</code> indicates that the b2 toolset <code>gcc-13</code> should be used to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the toolset to all versions of the compiler.</p>
 <p class="tableblock">When the toolset is unspecified, the action will infer the toolset from the compiler name and its version.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>ccflags</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of C compiler flags to be used with each range of compiler version.
-Each line has the format:</p>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of C compiler flags to be used with each range of compiler version. Each line has the format:</p>
 <p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;ccflags&gt;</code></p>
-<p class="tableblock">For instance, <code>gcc &gt;=13.1: -O3</code> indicates that the C compiler flag <code>-O3</code> should be used
-to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
-<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the flag
-to all versions of the compiler.</p>
+<p class="tableblock">For instance, <code>gcc &gt;=13.1: -O3</code> indicates that the C compiler flag <code>-O3</code> should be used to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the flag to all versions of the compiler.</p>
 <p class="tableblock">When the flag is unspecified, the action will infer the flag from the compiler name and its version.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of C compiler flags to be used with each range of compiler version.
-Each line has the format:</p>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of C compiler flags to be used with each range of compiler version. Each line has the format:</p>
 <p class="tableblock">`&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;cxxflags&gt;`</p>
-<p class="tableblock">For instance, `gcc &gt;=13.1: -O3` indicates that the C compiler flag <code>-O3</code> should be used
-to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
-<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the flag
-to all versions of the compiler.</p>
+<p class="tableblock">For instance, `gcc &gt;=13.1: -O3` indicates that the C compiler flag <code>-O3</code> should be used to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the flag to all versions of the compiler.</p>
 <p class="tableblock">When the flag is unspecified, the action will infer the flag from the compiler name and its version.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>install</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of packages to be installed with each range of compiler version.
-Each line has the format:</p>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of packages to be installed with each range of compiler version. Each line has the format:</p>
 <p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;packages&gt;</code></p>
-<p class="tableblock">For instance, <code>gcc &gt;=13.1: build-essential</code> indicates that the package <code>build-essential</code> should be installed
-to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
-<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the package
-to all versions of the compiler.</p>
+<p class="tableblock">For instance, <code>gcc &gt;=13.1: build-essential</code> indicates that the package <code>build-essential</code> should be installed to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the package to all versions of the compiler.</p>
 <p class="tableblock">When the package is unspecified, the action will infer the package from the compiler name and its version.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>triplets</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of triplets to be used with each range of compiler version.
-Each line has the format:</p>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of triplets to be used with each range of compiler version. Each line has the format:</p>
 <p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;triplet&gt;</code></p>
-<p class="tableblock">For instance, <code>gcc &gt;=13.1: x86_64-linux-gnu</code> indicates that the triplet <code>x86_64-linux-gnu</code> should be used
-to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
-<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the triplet
-to all versions of the compiler.</p>
+<p class="tableblock">For instance, <code>gcc &gt;=13.1: x86_64-linux-gnu</code> indicates that the triplet <code>x86_64-linux-gnu</code> should be used to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the triplet to all versions of the compiler.</p>
 <p class="tableblock">When the triplet is unspecified, the action will infer the triplet from the compiler name and its version.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>build-types</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of build types to be used with each range of compiler version.
-Each line has the format:</p>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of build types to be used with each range of compiler version. Each line has the format:</p>
 <p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;build-type&gt;</code></p>
-<p class="tableblock">For instance, <code>gcc &gt;=13.1: Release</code> indicates that the build type <code>Release</code> should be used
-to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
-<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the build type
-to all versions of the compiler.</p>
+<p class="tableblock">For instance, <code>gcc &gt;=13.1: Release</code> indicates that the build type <code>Release</code> should be used to test <code>gcc</code> with any version in the semver range <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the build type to all versions of the compiler.</p>
 <p class="tableblock">When the build type is unspecified, the action will infer the build type from the compiler name and its version.</p></td>
 <td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>default-build-type</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The default build type to suggest for entries without a specific build type.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>Release</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>sanitizer-build-type</code></p></td>
@@ -1475,22 +1407,15 @@ to all versions of the compiler.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>use-containers</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Determine whether to use containers whenever possible to run the tests.</p>
-<p class="tableblock">By using containers for all jobs, the workflow can be more stable and reproducible.
-For instance, without containers an existing workflow cannot start to fail because
-of a change in the GitHub runner environments.</p>
-<p class="tableblock">However, this comes at a cost of initial setup time. Some existing workflows can also break when
-moving to containers because existing assumptions about tools available in the runner environment
-are no longer valid.</p>
-<p class="tableblock">When the value is false, the action will still use containers when needed. This may happen because
-the compiler is not available in the runner image or when there&#8217;s a reported conflict between
-compilers in the runner image.</p></td>
+<p class="tableblock">By using containers for all jobs, the workflow can be more stable and reproducible. For instance, without containers an existing workflow cannot start to fail because of a change in the GitHub runner environments.</p>
+<p class="tableblock">However, this comes at a cost of initial setup time. Some existing workflows can also break when moving to containers because existing assumptions about tools available in the runner environment are no longer valid.</p>
+<p class="tableblock">When the value is false, the action will still use containers when needed. This may happen because the compiler is not available in the runner image or when there&#8217;s a reported conflict between compilers in the runner image.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>output-file</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The file to output the matrix as a JSON string.</p>
-<p class="tableblock">This is useful when the matrix is too large to be printed in the logs or when the matrix needs to be
-saved for later use.</p>
+<p class="tableblock">This is useful when the matrix is too large to be printed in the logs or when the matrix needs to be saved for later use.</p>
 <p class="tableblock">The file will be saved in the current working directory of the action.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>matrix.json</code></p></td>
 </tr>
@@ -1506,45 +1431,30 @@ saved for later use.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the action.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
-</tr>
-<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>warn-no-matches</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Emit a GitHub warning whenever a compiler configuration results in zero matrix entries because
-no known versions can satisfy the requested version range and C++ standard requirements simultaneously.
-Leave this enabled to catch unintended gaps; set it to <code>false</code> if you deliberately provide
-unsatisfiable requirements and do not want the additional annotation.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Emit a GitHub warning whenever a compiler configuration results in zero matrix entries because no known versions can satisfy the requested version range and C++ standard requirements simultaneously. Leave this enabled to catch unintended gaps; set it to <code>false</code> if you deliberately provide unsatisfiable requirements and do not want the additional annotation.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>sort-by-failure-rate</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Sort matrix entries by historical failure rate.</p>
-<p class="tableblock">The action fetches recent workflow run history and calculates the failure rate
-for each matrix entry based on job name matching. Entries with higher failure rates are
-sorted first (stable sort preserving existing order for equal rates).</p>
-<p class="tableblock">This is useful when combined with <code>max-parallel</code> or limited runners, as it ensures jobs
-most likely to fail run first, providing faster feedback.</p>
+<p class="tableblock">The action fetches recent workflow run history and calculates the failure rate for each matrix entry based on job name matching. Entries with higher failure rates are sorted first (stable sort preserving existing order for equal rates).</p>
+<p class="tableblock">This is useful when combined with <code>max-parallel</code> or limited runners, as it ensures jobs most likely to fail run first, providing faster feedback.</p>
 <p class="tableblock">When enabled, the summary table includes a "Failure Rate" column.</p>
-<p class="tableblock">Requires <code>github-token</code> to be set for API access. If failure rates cannot be calculated
-(no token, no history, API errors), the action continues gracefully without error.</p></td>
+<p class="tableblock">Requires <code>github-token</code> to be set for API access. If failure rates cannot be calculated (no token, no history, API errors), the action continues gracefully without error.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>failure-rate-runs</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Number of recent workflow runs to analyze when calculating failure rates.</p>
-<p class="tableblock">Jobs for each run are fetched in parallel, so increasing this value has
-minimal impact on execution time.</p>
+<p class="tableblock">Jobs for each run are fetched in parallel, so increasing this value has minimal impact on execution time.</p>
 <p class="tableblock">Only used when <code>sort-by-failure-rate</code> is enabled.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>100</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>github-token</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">GitHub token for API access when fetching workflow run history for failure rate calculation.</p>
-<p class="tableblock">Required when <code>sort-by-failure-rate</code> is enabled. Pass <code>secrets.GITHUB_TOKEN</code> or
-<code>github.token</code>. Alternatively, set the <code>GITHUB_TOKEN</code> environment variable in your
-workflow step.</p></td>
+<p class="tableblock">Required when <code>sort-by-failure-rate</code> is enabled. Pass <code>secrets.GITHUB_TOKEN</code> or <code>github.token</code>. Alternatively, set the <code>GITHUB_TOKEN</code> environment variable in your workflow step.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 </tbody>
@@ -1566,56 +1476,38 @@ workflow step.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>matrix</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The test matrix is an array of dictionaries, where each entry represents a combination of compiler version
-and factors to be tested.</p>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The test matrix is an array of dictionaries, where each entry represents a combination of compiler version and factors to be tested.</p>
 <p class="tableblock">Each entry in the test matrix dictionary contains key-value pairs in the following categories:</p>
 <p class="tableblock"><strong>Basic fields</strong>:</p>
 <p class="tableblock">- <code>name</code>: A suggested name for the job testing this entry</p>
-<p class="tableblock">- <code>compiler</code>: Specifies the name of the compiler to be used for the test configuration. This can be used as
-  input to the setup-cpp action.</p>
-<p class="tableblock">- <code>version</code>: Specifies the version requirements of the compiler to be used for the test configuration. This can
-  be used as input to the setup-cpp action.</p>
-<p class="tableblock">- <code>cxxstd</code>: A list of standards that should be tested with this compiler version. This option considers
-  the <code>max-standards</code> latest standards supported by each compiler in its subrange of <code>standards</code>.</p>
+<p class="tableblock">- <code>compiler</code>: Specifies the name of the compiler to be used for the test configuration. This can be used as input to the setup-cpp action.</p>
+<p class="tableblock">- <code>version</code>: Specifies the version requirements of the compiler to be used for the test configuration. This can be used as input to the setup-cpp action.</p>
+<p class="tableblock">- <code>cxxstd</code>: A list of standards that should be tested with this compiler version. This option considers the <code>max-standards</code> latest standards supported by each compiler in its subrange of <code>standards</code>.</p>
 <p class="tableblock">- <code>latest-cxxstd</code>: The last standard listed in <code>cxxstd</code> as a convenience variable</p>
 <p class="tableblock"><strong>Auxiliary</strong>:</p>
-<p class="tableblock">- <code>major</code>, <code>minor</code>, <code>patch</code>: Specifies the version components of the compiler whenever the whole range includes
-   a single major, minor, or patch.</p>
-<p class="tableblock">- <code>has_major</code>, <code>has_minor</code>, <code>has_patch</code>: Determines if the corresponding version component of the compiler
-   is available representing all versions in the range.</p>
+<p class="tableblock">- <code>major</code>, <code>minor</code>, <code>patch</code>: Specifies the version components of the compiler whenever the whole range includes a single major, minor, or patch.</p>
+<p class="tableblock">- <code>has_major</code>, <code>has_minor</code>, <code>has_patch</code>: Determines if the corresponding version component of the compiler is available representing all versions in the range.</p>
 <p class="tableblock">- <code>is-latest</code>: Specifies whether the entry version requirement is the latest version among the test configurations.</p>
-<p class="tableblock">- <code>is-main</code>: Specifies whether the entry version requirement is the latest version among the test configurations
-  without any factors applied.</p>
+<p class="tableblock">- <code>is-main</code>: Specifies whether the entry version requirement is the latest version among the test configurations without any factors applied.</p>
 <p class="tableblock">- <code>is-earliest</code>: Specifies whether the entry version requirement is the earliest version among the test configurations.</p>
-<p class="tableblock">- <code>is-intermediary</code>: Specifies whether the entry version requirement is neither the earliest nor the latest version
-  among the test configurations.</p>
+<p class="tableblock">- <code>is-intermediary</code>: Specifies whether the entry version requirement is neither the earliest nor the latest version among the test configurations.</p>
 <p class="tableblock">- <code>has-factors</code>: Specifies whether the entry has any factors applied.</p>
 <p class="tableblock">- <code>is-no-factor-intermediary</code>: Specifies whether the entry is an intermediary version without any factors applied.</p>
 <p class="tableblock">- <code>is-container</code>: Specifies whether the entry has a container suggested.</p>
 <p class="tableblock"><strong>Factors</strong>:</p>
-<p class="tableblock">- <code>&lt;factors&gt;&#8230;&#8203;</code>: Provides additional factors or attributes associated with the test configuration as defined by
-  the <code>factors</code> inputs. These usually include variant build configurations spread among the
-  entries, such as asan, coverage, and shared libraries. For instance, if the <code>Asan</code> factor is applied to
-  an entry, the entry will define the <code>asan</code> key with the value <code>true</code> and all other entries will
-  define the <code>asan</code> key with the value <code>false</code>.</p>
+<p class="tableblock">- <code>&lt;factors&gt;&#8230;&#8203;</code>: Provides additional factors or attributes associated with the test configuration as defined by the <code>factors</code> inputs. These usually include variant build configurations spread among the entries, such as asan, coverage, and shared libraries. For instance, if the <code>Asan</code> factor is applied to an entry, the entry will define the <code>asan</code> key with the value <code>true</code> and all other entries will define the <code>asan</code> key with the value <code>false</code>.</p>
 <p class="tableblock"><strong>Suggestions</strong>:</p>
 <p class="tableblock">- <code>runs-on</code>: A suggested github runner image name for the job testing this entry</p>
 <p class="tableblock">- <code>container</code>: A suggested docker container for the job testing this entry</p>
-<p class="tableblock">- <code>cxx</code>: The usual name of the C&#43;&#43; compiler executable. If using the <code>setup-cpp</code> action, its output should be used
-  instead.</p>
-<p class="tableblock">- <code>cc</code>: The usual name of the C compiler executable. If using the <code>setup-cpp</code> action, its output should be used
-  instead.</p>
+<p class="tableblock">- <code>cxx</code>: The usual name of the C&#43;&#43; compiler executable. If using the <code>setup-cpp</code> action, its output should be used instead.</p>
+<p class="tableblock">- <code>cc</code>: The usual name of the C compiler executable. If using the <code>setup-cpp</code> action, its output should be used instead.</p>
 <p class="tableblock">- <code>b2-toolset</code>: The usual name of the toolset to be used in a b2 workflow.</p>
 <p class="tableblock">- <code>generator</code>: A CMake generator recommended to run the CMake workflow.</p>
-<p class="tableblock">- <code>build-type</code>: A build type recommended to test this entry. This is usually <code>Release</code>, unless some special
-  factor that requires <code>Debug</code> is defined.</p>
-<p class="tableblock">- <code>ccflags</code>: The recommended C flags to be used by this entry. It reflects the values of special factors, such
-   as sanitizers, coverage, and time-trace.</p>
-<p class="tableblock">- <code>cxxflags</code>: The recommended C&#43;&#43; flags to be used by this entry. It reflects the values of special factors, such
-   as sanitizers, coverage, and time-trace.</p>
+<p class="tableblock">- <code>build-type</code>: A build type recommended to test this entry. This is usually <code>Release</code>, unless some special factor that requires <code>Debug</code> is defined.</p>
+<p class="tableblock">- <code>ccflags</code>: The recommended C flags to be used by this entry. It reflects the values of special factors, such as sanitizers, coverage, and time-trace.</p>
+<p class="tableblock">- <code>cxxflags</code>: The recommended C&#43;&#43; flags to be used by this entry. It reflects the values of special factors, such as sanitizers, coverage, and time-trace.</p>
 <p class="tableblock">- <code>env</code>: A dictionary of environment variables to be set for this entry.</p>
-<p class="tableblock">- <code>install</code>: The recommended packages to be installed before running the workflow. This includes packages
-  such as build-essential for ubuntu containers and lcov for coverage entries.</p></td>
+<p class="tableblock">- <code>install</code>: The recommended packages to be installed before running the workflow. This includes packages such as build-essential for ubuntu containers and lcov for coverage entries.</p></td>
 </tr>
 </tbody>
 </table>

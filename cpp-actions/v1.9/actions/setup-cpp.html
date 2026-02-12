@@ -255,6 +255,9 @@
           <a href="../../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../../v1.9.3/index.html">v1.9.3</a>
+        </li>
+        <li class="version">
           <a href="../../v1.9.2/index.html">v1.9.2</a>
         </li>
         <li class="version">
@@ -367,6 +370,7 @@
   <div class="version-menu">
     <a class="version" href="../../actions/setup-cpp.html">master</a>
     <a class="version" href="../../develop/actions/setup-cpp.html">develop</a>
+    <a class="version" href="../../v1.9.3/actions/setup-cpp.html">v1.9.3</a>
     <a class="version" href="../../v1.9.2/actions/setup-cpp.html">v1.9.2</a>
     <a class="version" href="../../v1.9.1/actions/setup-cpp.html">v1.9.1</a>
     <a class="version is-current" href="setup-cpp.html">v1.9</a>
@@ -533,6 +537,11 @@ version ultimately setup by the action.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>compiler</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Compiler name. If the compiler contains a version, it overrides 'version'.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>*</code></p></td>
@@ -552,19 +561,13 @@ version ultimately setup by the action.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>check-latest</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">By default, when the compiler is not available, this action will install the minimum version in the version spec.
 This ensures the code respects its contract in terms of what minimum GCC version is supported.</p>
-<p class="tableblock">Set this option if you want the action to check for the latest available version that satisfies the version spec
-instead.</p></td>
+<p class="tableblock">Set this option if you want the action to check for the latest available version that satisfies the version spec instead.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>update-environment</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Set this option if you want the action to update environment variables.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>arch</code></p></td>

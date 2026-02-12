@@ -252,6 +252,9 @@
           <a href="../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../v1.9.3/index.html">v1.9.3</a>
+        </li>
+        <li class="version">
           <a href="../v1.9.2/index.html">v1.9.2</a>
         </li>
         <li class="version">
@@ -364,6 +367,7 @@
   <div class="version-menu">
     <a class="version is-current" href="flamegraph.html">master</a>
     <a class="version" href="../develop/actions/flamegraph.html">develop</a>
+    <a class="version" href="../v1.9.3/actions/flamegraph.html">v1.9.3</a>
     <a class="version" href="../v1.9.2/actions/flamegraph.html">v1.9.2</a>
     <a class="version" href="../v1.9.1/actions/flamegraph.html">v1.9.1</a>
     <a class="version" href="../v1.9/actions/flamegraph.html">v1.9</a>
@@ -453,7 +457,7 @@ also generated. This report is saved to 'inputs.report-path' and also included w
   with:
     source-dir: tests
     build-dir: tests/build
-    github_token: ${{ secrets.GITHUB_TOKEN }}</code></pre>
+    github-token: ${{ secrets.GITHUB_TOKEN }}</code></pre>
 </div>
 </div>
 </div>
@@ -472,6 +476,11 @@ also generated. This report is saved to 'inputs.report-path' and also included w
 <td class="tableblock halign-left valign-top"><p class="tableblock">Parameter</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>source-dir</code></p></td>
@@ -522,14 +531,8 @@ workflow run summary, making it easy to review without downloading artifacts.</p
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>github_token</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The GitHub token used to upload the artifacts.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>github-token</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The GitHub token used to upload the artifacts.</p>
-<p class="tableblock">This is an alias for 'github_token'.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The GitHub token used to upload the artifacts.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
@@ -540,14 +543,6 @@ workflow run summary, making it easy to review without downloading artifacts.</p
 - combined-traces.json.svg: Interactive SVG flamegraph viewable in browser
 - time-trace-report.md: Markdown report with compilation time analysis.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Enable verbose logging of internal operations for debugging.</p>
-<p class="tableblock">When enabled, detailed trace output is logged showing file processing,
-trace merging, and report generation steps. Useful for troubleshooting
-issues with time-trace file processing.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 </tbody>
 </table>

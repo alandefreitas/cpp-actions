@@ -255,6 +255,9 @@
           <a href="../../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../../v1.9.3/index.html">v1.9.3</a>
+        </li>
+        <li class="version">
           <a href="../../v1.9.2/index.html">v1.9.2</a>
         </li>
         <li class="version">
@@ -367,6 +370,7 @@
   <div class="version-menu">
     <a class="version" href="../../actions/b2-workflow.html">master</a>
     <a class="version" href="../../develop/actions/b2-workflow.html">develop</a>
+    <a class="version" href="../../v1.9.3/actions/b2-workflow.html">v1.9.3</a>
     <a class="version" href="../../v1.9.2/actions/b2-workflow.html">v1.9.2</a>
     <a class="version" href="../../v1.9.1/actions/b2-workflow.html">v1.9.1</a>
     <a class="version" href="../../v1.9/actions/b2-workflow.html">v1.9</a>
@@ -506,6 +510,11 @@ CMake workflow steps as integration tests for CMake.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>source-dir</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The boost source directory.</p>
 <p class="tableblock">This path will be used to build and install <code>B2</code> for the workflow
@@ -519,7 +528,7 @@ and test the specified modules.</p></td>
 <p class="tableblock">The build directory for the project root will be computed by concatenating the value of the
 --build-dir option, the project name specified in Jamroot, and the build dir specified in Jamroot
 (or bin, if none is specified).</p>
-<p class="tableblock">The option is primarily useful when building from read-only media, when you can’t modify Jamroot.</p></td>
+<p class="tableblock">The option is primarily useful when building from read-only media, when you can&#8217;t modify Jamroot.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
@@ -531,9 +540,9 @@ and test the specified modules.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Flags to be used with the C++ compiler.
-If the input is not specified, the action will use the flags defined by the environment variable <code>CXXFLAGS</code>.
-If the environment variable is not specified, the action will use the default flags as identified by B2.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Flags to be used with the C++ compiler.</p>
+<p class="tableblock">If the input is not specified, the action will use the flags defined by the environment variable <code>CXXFLAGS</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default flags as identified by B2.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
@@ -607,7 +616,7 @@ this input is used to set the build variant.</p>
 <code>libs/&lt;module&gt;/example</code>. If a module entry already contains a path or target separators (for example
 <code>libs/filesystem/example</code> or <code>libs/filesystem//unit_tests</code>), the action forwards it verbatim without prefixing it.</p>
 <p class="tableblock">This input accepts a single value or a list separated by spaces, commas, or new lines. When multiple values are
-provided they are applied positionally to the module list, and the final value is reused for any remaining modules.</p></td>
+provided, every target is applied to every module.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>test</code></p></td>
 </tr>
 <tr>
@@ -684,7 +693,7 @@ other project roots.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Compresses target paths by abbreviating each component.</p>
 <p class="tableblock">This option is useful to keep paths from becoming longer than the filesystem supports.</p>
 <p class="tableblock">See also the B2 documentation section
-<a href="https://www.boost.org/doc/libs/master/tools/build/doc/html/index.html#bbv2.reference.buildprocess.targetpath">“Target Paths”</a>.</p></td>
+<a href="https://www.boost.org/doc/libs/master/tools/build/doc/html/index.html#bbv2.reference.buildprocess.targetpath">"Target Paths"</a>.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 <tr>
@@ -694,7 +703,7 @@ other project roots.</p></td>
 <p class="tableblock">This option produces shorter paths than --abbreviate-paths does, but at the cost of making them less
 understandable.</p>
 <p class="tableblock">See also the B2 documentation section
-<a href="https://www.boost.org/doc/libs/master/tools/build/doc/html/index.html#bbv2.reference.buildprocess.targetpath">“Target Paths”</a>.</p></td>
+<a href="https://www.boost.org/doc/libs/master/tools/build/doc/html/index.html#bbv2.reference.buildprocess.targetpath">"Target Paths"</a>.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
@@ -712,7 +721,7 @@ understandable.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>stop-on-error</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Equivalent to the <code>-q</code> option.</p>
-<p class="tableblock">Stop at the first error, as opposed to continuing to build targets that don’t depend on the failed ones.</p></td>
+<p class="tableblock">Stop at the first error, as opposed to continuing to build targets that don&#8217;t depend on the failed ones.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
@@ -769,8 +778,8 @@ the <code>cxx</code> toolset path.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>define</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Additional macro definitions for C and C++ compilers.
-The string should be either SYMBOL or SYMBOL=VALUE.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Additional macro definitions for C and C++ compilers.</p>
+<p class="tableblock">The string should be either SYMBOL or SYMBOL=VALUE.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
@@ -785,12 +794,7 @@ The string should be either SYMBOL or SYMBOL=VALUE.</p></td>
 <p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>B2_JOBS</code>.</p>
 <p class="tableblock">If the environment variable is also not specified, the action will use the number of processors available in the
 system.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>0</code></p></td>
 </tr>
 </tbody>
 </table>
