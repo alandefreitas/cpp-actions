@@ -34,11 +34,13 @@ export function numberOfCpus(): number {
  * @param inputs - User inputs
  * @param allModules - Complete set of modules to initialize (including transitive deps)
  * @param gitFeatures - Git capabilities
+ * @param patchNames - Names of patch modules already cloned by applyPatches (excluded from git submodule init)
  */
 export async function batchInitializeSubmodules(
     inputs: Inputs,
     allModules: Set<string>,
-    gitFeatures: GitFeatures
+    gitFeatures: GitFeatures,
+    patchNames: Set<string> = new Set()
 ): Promise<void> {
     function fnlog(msg: string): void {
         trace_commands.log(`batchInitializeSubmodules: ${msg}`);
@@ -52,25 +54,32 @@ export async function batchInitializeSubmodules(
     const essentialModules = ['config', 'headers'];
     const essentialTools = ['tools/boost_install', 'tools/build', 'tools/cmake'];
 
+    // Seed patch names so they aren't re-cloned via git submodule update
     const allModulesWithEssentials = new Set(allModules);
     for (const mod of essentialModules) {
         allModulesWithEssentials.add(mod);
     }
+    for (const patchName of patchNames) {
+        allModulesWithEssentials.add(patchName);
+    }
 
-    // Build list of all submodule paths to initialize
-    const submodulePaths: string[] = [];
+    // Build list of all submodule paths to initialize, excluding patches
+    // (they're already cloned by applyPatches and aren't registered submodules)
+    const submoduleInitPaths: string[] = [];
     for (const mod of allModulesWithEssentials) {
-        submodulePaths.push(`libs/${mod}`);
+        if (!patchNames.has(mod)) {
+            submoduleInitPaths.push(`libs/${mod}`);
+        }
     }
     for (const tool of essentialTools) {
-        submodulePaths.push(tool);
+        submoduleInitPaths.push(tool);
     }
 
-    fnlog(`Batch initializing ${submodulePaths.length} submodules`);
+    fnlog(`Batch initializing ${submoduleInitPaths.length} submodules`);
 
     // Initialize all submodules in one command with multiple paths
     // This is more efficient than individual commands
-    for (const submodulePath of submodulePaths) {
+    for (const submodulePath of submoduleInitPaths) {
         const args = ['submodule', 'update'].concat(gitArgs).concat(['--init', submodulePath]);
         await exec.exec(`"${gitFeatures.gitPath}"`, args, { cwd: inputs.boost_dir });
     }
@@ -89,8 +98,9 @@ export async function batchInitializeSubmodules(
  * @param gitFeatures - Git executable capabilities
  * @param exceptions - Map of header exceptions to module names
  * @param submodulePaths - Set of valid submodule paths from .gitmodules
+ * @param patchNames - Names of patch modules already cloned by applyPatches (excluded from git submodule init, seeded into scan loop)
  */
-export async function initializeSubmodules(inputs: Inputs, allModules: Set<string>, gitFeatures: GitFeatures, exceptions: Record<string, string>, submodulePaths: Set<string>): Promise<void> {
+export async function initializeSubmodules(inputs: Inputs, allModules: Set<string>, gitFeatures: GitFeatures, exceptions: Record<string, string>, submodulePaths: Set<string>, patchNames: Set<string> = new Set()): Promise<void> {
     function fnlog(msg: string): void {
         trace_commands.log(`initializeSubmodules: ${msg}`);
     }
@@ -99,7 +109,12 @@ export async function initializeSubmodules(inputs: Inputs, allModules: Set<strin
     const depthArgs = gitFeatures.supportsDepth ? ['--depth', '1'] : [];
     const gitArgs = jobsArgs.concat(depthArgs).concat(['-q']);
 
-    const allModulesSubPaths = new Set(Array.from(allModules).map((module) => `libs/${module}`));
+    // Filter patch modules out of submodule init (they're already cloned, not git submodules)
+    const allModulesSubPaths = new Set(
+        Array.from(allModules)
+            .filter((module) => !patchNames.has(module))
+            .map((module) => `libs/${module}`)
+    );
     const essentialModuleSubPaths = new Set(['libs/config', 'libs/headers', 'tools/boost_install', 'tools/build', 'tools/cmake']);
     const initialModuleSubpaths = new Set(Array.from(allModulesSubPaths).concat(Array.from(essentialModuleSubPaths)));
     for (const moduleSubPath of initialModuleSubpaths) {
@@ -107,9 +122,13 @@ export async function initializeSubmodules(inputs: Inputs, allModules: Set<strin
         await exec.exec(`"${gitFeatures.gitPath}"`, args, { cwd: inputs.boost_dir });
     }
 
+    // Seed patch modules as already initialized so they enter the scan loop
     const initializedModules = new Set(allModules);
     initializedModules.add('config');
     initializedModules.add('headers');
+    for (const patchName of patchNames) {
+        initializedModules.add(patchName);
+    }
     const scannedModules = new Set<string>();
     const remainingModules = new Set(initializedModules);
     while (remainingModules.size > 0) {
@@ -120,9 +139,12 @@ export async function initializeSubmodules(inputs: Inputs, allModules: Set<strin
 
         const module = remainingModules.values().next().value as string;
         const modulePath = path.resolve(path.join(inputs.boost_dir, 'libs', module));
+        // Preserve the user's scan_modules_ignore and add the current module
+        const ignoreSet = new Set<string>(inputs.scan_modules_ignore);
+        ignoreSet.add(module);
         const moduleInputs: Inputs = {
             ...inputs,
-            scan_modules_ignore: new Set<string>([module]),
+            scan_modules_ignore: ignoreSet,
             modules_scan_paths: new Set<string>(),
             modules_exclude_paths: new Set<string>(['test', 'tests', 'example', 'examples'])
         };
@@ -141,7 +163,7 @@ export async function initializeSubmodules(inputs: Inputs, allModules: Set<strin
             } else {
                 fnlog(`Submodule: ${submodule} has already been scanned`);
             }
-            // Initialize submodule if not initialized yet
+            // Initialize submodule if not initialized yet (skip patches, they're already cloned)
             if (!initializedModules.has(submodule)) {
                 fnlog(`Initializing submodule: ${submodule}`);
                 const moduleSubPath = `libs/${submodule}`;

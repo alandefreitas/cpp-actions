@@ -33,7 +33,7 @@ import { isReleaseTag, estimateTotalModules, decideStrategy, getBoostDepsData } 
 import { batchInitializeSubmodules, initializeSubmodules, initializeAllSubmodules } from './submodules';
 import { readExceptions, readGitmodules, scanBoostDependencies } from './header-scan';
 import { getArchiveUrl, downloadAndExtractArchive } from './archive';
-import { findGitFeatures, cloneBoostSuperproject, applyPatches } from './git-utils';
+import { findGitFeatures, cloneBoostSuperproject, applyPatches, getRepoName } from './git-utils';
 
 // Re-export for external consumers
 export { generateCacheKey } from './cache';
@@ -207,6 +207,20 @@ async function executeGitStrategy(
         core.endGroup();
     }
 
+    // Collect patch module names so they can be treated as already-initialized
+    // and scanned for their own transitive Boost dependencies
+    const patchNames = new Set<string>();
+    for (const patch of inputs.patches) {
+        patchNames.add(getRepoName(patch));
+    }
+
+    // Extend submodulePaths with patch names so the header scanner recognizes
+    // them as valid modules (they aren't in .gitmodules but exist on disk)
+    const allValidPaths = new Set(submodulePaths);
+    for (const name of patchNames) {
+        allValidPaths.add(`libs/${name}`);
+    }
+
     // Initialize submodules
     // Check if we have precomputed dependencies for this exact release tag
     const depsData = getBoostDepsData();
@@ -224,13 +238,13 @@ async function executeGitStrategy(
         // or release tags not in our precomputed data, we must use layer-by-layer discovery.
         core.startGroup('🔧 Batch Initialize Boost Submodules');
         core.info(`Using precomputed dependencies for batch initialization`);
-        await batchInitializeSubmodules(inputs, estimation.allModules, gitFeatures);
+        await batchInitializeSubmodules(inputs, estimation.allModules, gitFeatures, patchNames);
         core.endGroup();
     } else {
         // No precomputed data for this branch, use layer-by-layer discovery
         core.startGroup('🔧 Initialize Boost Submodules');
         core.info(`Using layer-by-layer dependency discovery`);
-        await initializeSubmodules(inputs, directModules, gitFeatures, exceptions, submodulePaths);
+        await initializeSubmodules(inputs, directModules, gitFeatures, exceptions, allValidPaths, patchNames);
         core.endGroup();
     }
 }
