@@ -174,7 +174,7 @@ When this input is left as the default (\`test\`), every module listed above con
 \`libs/filesystem/example\` or \`libs/filesystem//unit_tests\`), the action forwards it verbatim without prefixing it.
 
 This input accepts a single value or a list separated by spaces, commas, or new lines. When multiple values are
-provided they are applied positionally to the module list, and the final value is reused for any remaining modules.`
+provided, every target is applied to every module.`
     },
 
     extra_args: {

@@ -287,8 +287,7 @@ export async function main(inputs: Inputs): Promise<void> {
     if (moduleTargets.length === 0) {
         moduleTargets = ['test'];
     }
-    for (let index = 0; index < inputs.modules.length; ++index) {
-        const moduleEntry = inputs.modules[index];
+    for (const moduleEntry of inputs.modules) {
         const module = moduleEntry && moduleEntry.trim ? moduleEntry.trim() : moduleEntry;
         if (!module) {
             continue;
@@ -297,8 +296,9 @@ export async function main(inputs: Inputs): Promise<void> {
         if (hasExplicitTarget) {
             b2_args.push(module);
         } else {
-            const target = moduleTargets[Math.min(index, moduleTargets.length - 1)];
-            b2_args.push(`libs/${module}/${target}`);
+            for (const target of moduleTargets) {
+                b2_args.push(`libs/${module}/${target}`);
+            }
         }
     }
 

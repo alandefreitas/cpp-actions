@@ -156,7 +156,7 @@ test('passes through explicit module paths untouched', async () => {
     expect(buildArgs).toContain('libs/math/example');
 });
 
-// Multiple targets should map positionally to the module list with the last reused as needed.
+// Multiple targets should be broadcast to every module.
 test('applies per-module targets when multiple values are provided', async () => {
     const inputs = createInputs({
         modules: ['filesystem', 'chrono'],
@@ -165,7 +165,21 @@ test('applies per-module targets when multiple values are provided', async () =>
     await main(inputs);
     const buildArgs = exec.getExecOutput.mock.calls[2][1];
     expect(buildArgs).toContain('libs/filesystem/test');
+    expect(buildArgs).toContain('libs/filesystem/example');
+    expect(buildArgs).toContain('libs/chrono/test');
     expect(buildArgs).toContain('libs/chrono/example');
+});
+
+// Multiple targets for a single module should all appear in the B2 arguments.
+test('broadcasts all targets to a single module', async () => {
+    const inputs = createInputs({
+        modules: ['beast2'],
+        module_target: ['test', 'example']
+    });
+    await main(inputs);
+    const buildArgs = exec.getExecOutput.mock.calls[2][1];
+    expect(buildArgs).toContain('libs/beast2/test');
+    expect(buildArgs).toContain('libs/beast2/example');
 });
 
 test('derives address model and architecture from arch input when unspecified', async () => {
