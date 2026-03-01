@@ -2,10 +2,10 @@ name: "Setup GCC"
 description: |
   Set up a specific version of a GCC compiler and add it to the PATH.
   In most workflows, this is used as an auxiliary action for the setup-cpp action.
-  
+
   This allows us to test a C++ library with any GCC version, and not only the versions 
   circumstantially provided by apt-get.
-  
+
   This action uses a number of alternatives to find or install GCC:
 
   - The GCC path provided to 'path'
@@ -22,70 +22,64 @@ description: |
   The action will *not* attempt to install GCC from source files, which is the only 
   officially supported method but impossible to run in CI because the machines would take
   hours to do that.
-  
+
   If a version of GCC is not available by any other methods above, the GCC binaries for
   a given platform can be built locally with a 
   https://github.com/alandefreitas/cpp-actions/tree/develop/setup-gcc[script,window="_blank"]
   provided in this repository and added to our binary release.
-  
+
   In most workflows, this is used as an auxiliary action for the xref:actions/setup-cpp.adoc[] action,
   which already calls this action if necessary.
-  
+
   == Next steps
-  
+
   After setting up the proper C++ compiler for a matrix entry, the next step in your workflow should usually be
   xref:actions/package-install.adoc[].
 
 inputs:
-  version:
-    description: |
-      Version range or exact version of GCC to use, using SemVer's version range syntax. 
-      
-      By default, it uses any version available in the environment.
-
-    required: false
-    default: '*'
-
-  path:
-    description: 'Path to the gcc or g++ executable. We attempt to find GCC at this path first.'
-    required: false
-    default: ''
-
-  check-latest:
-    description: |
-      By default, when GCC is not available, this action will install the minimum version in the version spec.
-      This ensures the code respects its contract in terms of what minimum GCC version is supported.
-      
-      Set this option if you want the action to check for the latest available version that satisfies the version spec
-      instead.
+  trace-commands:
+    description: Trace commands executed by the workflow.
     required: false
     default: 'false'
+  version:
+    description: |-
+      Version range or exact version of GCC to use, using SemVer's version range syntax.
 
+      By default, it uses any version available in the environment.
+    required: false
+    default: '*'
+  path:
+    description: Path to the gcc or g++ executable. We attempt to find GCC at this path first.
+    required: false
+    default: ''
+  check-latest:
+    description: |-
+      By default, when GCC is not available, this action will install the minimum version in the version spec.
+      This ensures the code respects its contract in terms of what minimum GCC version is supported.
+
+      Set this option if you want the action to check for the latest available version that satisfies the version spec instead.
+    required: false
+    default: 'false'
   update-environment:
-    description: "Set this option if you want the action to update environment variables."
+    description: Set this option if you want the action to update environment variables.
     required: false
     default: 'true'
 
-  trace-commands:
-    description: 'Trace commands executed by the workflow.'
-    required: false
-    default: 'false'
-
 outputs:
   cc:
-    description: "The absolute path to the gcc executable."
+    description: The absolute path to the gcc executable.
   cxx:
-    description: "The absolute path to the g++ executable."
+    description: The absolute path to the g++ executable.
   dir:
-    description: "The absolute path to the GCC directory containing the executable."
+    description: The absolute path to the GCC directory containing the executable.
   version:
-    description: "The installed GCC version. Useful when given a version range as input."
+    description: The installed GCC version. Useful when given a version range as input.
   version-major:
-    description: "The installed GCC version major. Useful when given a version range as input."
+    description: The installed GCC version major. Useful when given a version range as input.
   version-minor:
-    description: "The installed GCC version minor. Useful when given a version range as input."
+    description: The installed GCC version minor. Useful when given a version range as input.
   version-patch:
-    description: "The installed GCC version patch. Useful when given a version range as input."
+    description: The installed GCC version patch. Useful when given a version range as input.
 
 runs:
   using: 'node20'
@@ -94,4 +88,3 @@ runs:
 branding:
   icon: 'code'
   color: 'yellow'
-

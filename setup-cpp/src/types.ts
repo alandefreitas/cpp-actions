@@ -4,25 +4,21 @@
  * @module types
  */
 
+import type { InferInputs } from 'action-schema';
+import type { inputsSchema } from './schema';
+
+/**
+ * Input configuration for the setup-cpp action.
+ * Inferred from the schema definition in schema.ts.
+ */
+export type Inputs = InferInputs<typeof inputsSchema>;
+
 /**
  * Result of normalizing a compiler name and version.
  */
 export interface NormalizedCompiler {
     compiler: string;
     version: string;
-}
-
-/**
- * Configuration inputs for the setup-cpp action.
- */
-export interface Inputs {
-    compiler: string;
-    version: string;
-    path: string[];
-    check_latest: boolean;
-    update_environment: boolean;
-    trace_commands: boolean;
-    arch: string;
 }
 
 /**

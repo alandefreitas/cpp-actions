@@ -1,90 +1,82 @@
 name: "Setup MSVC"
 description: |
   Configure the Microsoft Visual C++ (MSVC) toolchain and expose consistent compiler outputs.
-  
+
   MSVC advertises four overlapping version identifiers:
-  
+
   * **Release year** – marketing name such as 2022 or 2026.
   * **Product version** – IDE channel numbers like 17.11.
   * **MSVC toolset version** – compiler/toolchain identifier such as 14.44.35207. This is the value used by `version`.
   * **MSVC compiler version** – the `cl.exe` front-end version reported by `cl /Bv` (for example 19.44.35219).
-  
+
   This action finds an installed Visual Studio toolchain, runs `vcvarsall.bat` to configure the Developer
   Command Prompt, and emits all of these identifiers so downstream steps can unambiguously select the toolchain.
   Unlike GCC or Clang, this action does not download MSVC – it configures the version already available on the runner.
 
   == Next steps
-  
+
   After setting up the proper C++ compiler for a matrix entry, the next step in your workflow should usually be
   xref:actions/package-install.adoc[].
 
 inputs:
+  trace-commands:
+    description: Trace commands executed by the workflow.
+    required: false
+    default: 'false'
   version:
-    description: |
-      MSVC toolset version (SemVer range). When provided, it is forwarded to `vcvarsall.bat` via `-vcvars_ver`.
+    description: MSVC toolset version (SemVer range). When provided, it is forwarded to `vcvarsall.bat` via `-vcvars_ver`.
     required: false
     default: '*'
-
   arch:
-    description: "Target architecture passed to vcvarsall (for example x86, x64, arm64)."
+    description: Target architecture passed to vcvarsall (for example x86, x64, arm64).
     required: false
-    default: 'x64'
-
+    default: x64
   sdk:
-    description: "Optional Windows SDK version to pass to vcvarsall."
+    description: Optional Windows SDK version to pass to vcvarsall.
     required: false
     default: ''
-
   toolset:
-    description: "Explicit MSVC toolset version override. When empty we fall back to `version`."
+    description: Explicit MSVC toolset version override. When empty we fall back to `version`.
     required: false
     default: ''
-
   visual-studio-version:
-    description: "Visual Studio product version or year constraint forwarded to vswhere/vcvarsall."
+    description: Visual Studio product version or year constraint forwarded to vswhere/vcvarsall.
     required: false
     default: ''
-
   uwp:
-    description: "Set to true to request the UWP environment (appends 'uwp' when invoking vcvarsall)."
+    description: Set to true to request the UWP environment (appends 'uwp' when invoking vcvarsall).
     required: false
     default: 'false'
-
   spectre:
-    description: "Set to true to request Spectre-mitigated libraries."
-    required: false
-    default: 'false'
-
-  trace-commands:
-    description: 'Trace commands executed by the action.'
+    description: Set to true to request Spectre-mitigated libraries.
     required: false
     default: 'false'
 
 outputs:
   cc:
-    description: "Absolute path to cl.exe."
+    description: Absolute path to cl.exe.
   cxx:
-    description: "Absolute path to the C++ compiler (same as cl.exe)."
+    description: Absolute path to the C++ compiler (same as cl.exe).
   bindir:
-    description: "Directory that contains cl.exe."
+    description: Directory that contains cl.exe.
   dir:
-    description: "Root Visual C++ installation directory."
+    description: Root Visual C++ installation directory.
   version:
-    description: "Resolved MSVC toolset version (matches `version`)."
+    description: Resolved MSVC toolset version (matches `version`).
   version-major:
-    description: "MSVC toolset major version."
+    description: MSVC toolset major version.
   version-minor:
-    description: "MSVC toolset minor version."
+    description: MSVC toolset minor version.
   version-patch:
-    description: "MSVC toolset patch version."
+    description: MSVC toolset patch version.
   msvc-toolset-version:
-    description: "Exact MSVC toolset version reported by the environment."
+    description: Exact MSVC toolset version reported by the environment.
   msvc-product-version:
-    description: "Visual Studio product version (channel)."
+    description: Visual Studio product version (channel).
   msvc-release-year:
-    description: "Visual Studio release year derived from the product version."
+    description: Visual Studio release year derived from the product version.
   msvc-compiler-version:
-    description: "cl.exe front-end version read from `cl /Bv`."
+    description: cl.exe front-end version read from `cl /Bv`.
 
 runs:
   using: 'node20'

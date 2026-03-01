@@ -1,6 +1,6 @@
 {
   "name": "b2-workflow",
-  "version": "1.9.2",
+  "version": "1.9.3",
   "description": "",
   "main": "lib/index.js",
   "scripts": {
@@ -12,15 +12,15 @@
   "author": "",
   "license": "Boost Software License 1.0",
   "dependencies": {
-    "@actions/core": "^2.0.1",
-    "@actions/exec": "^2.0.0",
-    "@actions/io": "^2.0.0",
-    "trace-commands": "*",
-    "gh-inputs": "*",
+    "@actions/core": "^3.0.0",
+    "@actions/exec": "^3.0.0",
+    "@actions/io": "^3.0.2",
+    "action-schema": "*",
     "pretty-errors": "*",
-    "source-map-support": "^0.5.21"
+    "source-map-support": "^0.5.21",
+    "trace-commands": "*"
   },
   "devDependencies": {
-    "esbuild": "^0.27.2"
+    "esbuild": "^0.27.3"
   }
 }

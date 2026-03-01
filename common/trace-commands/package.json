@@ -1,6 +1,6 @@
 {
   "name": "trace-commands",
-  "version": "1.9.2",
+  "version": "1.9.3",
   "description": "Conditional command tracing for GitHub Actions",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -13,10 +13,10 @@
   "author": "",
   "license": "Boost Software License 1.0",
   "dependencies": {
-    "@actions/core": "^2.0.1",
+    "@actions/core": "^3.0.0",
     "source-map-support": "^0.5.21"
   },
   "devDependencies": {
-    "esbuild": "^0.27.2"
+    "esbuild": "^0.27.3"
   }
 }

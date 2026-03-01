@@ -9,8 +9,7 @@ import * as tc from '@actions/tool-cache';
 import * as semver from 'semver';
 import * as path from 'path';
 import * as trace_commands from 'trace-commands';
-import * as gh_inputs from 'gh-inputs';
-import { reportAndSetFailed } from 'pretty-errors';
+import { runAction } from 'action-schema';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const setup_program = require('setup-program');
@@ -18,6 +17,10 @@ const setup_program = require('setup-program');
 // Type imports and re-exports
 import { Inputs, Outputs, ProgramResult } from './types';
 export type { Inputs, Outputs, ProgramResult }
+
+// Schema imports
+import { inputsSchema, outputsSchema } from './schema';
+export { inputsSchema, outputsSchema };
 
 // Module imports
 import { updateCMakeVersionFromFile } from './version-resolve';
@@ -259,54 +262,29 @@ export async function main(inputs: Inputs, subgroups = true): Promise<Partial<Ou
 }
 
 /**
- * Main entry point for the setup-cmake GitHub Action.
+ * Action entry point using schema-driven runner.
  *
- * Parses inputs and sets up CMake on the runner.
+ * This replaces the previous manual input extraction and error handling
+ * with the standardized runAction wrapper.
  */
-async function run(): Promise<void> {
-    const inputs: Inputs = {
-        version: gh_inputs.getInput('version', { defaultValue: '*' }),
-        architecture: gh_inputs.getInput('architecture'),
-        cmake_file: gh_inputs.getInput('cmake-file'),
-        path: gh_inputs.getInput('path'),
-        cmake_path: gh_inputs.getInput('cmake-path'),
-        cache: gh_inputs.getBoolean('cache'),
-        check_latest: gh_inputs.getBoolean('check-latest'),
-        update_environment: gh_inputs.getBoolean('update-environment'),
-        trace_commands: gh_inputs.getBoolean('trace-commands')
-    };
-
-    if (inputs.cmake_path) {
-        inputs.path = inputs.cmake_path;
-    }
-
-    if (inputs.trace_commands) {
-        trace_commands.set_trace_commands(true);
-    }
-
-    core.startGroup('📥 Action Inputs');
-    gh_inputs.printInputObject(inputs as unknown as Record<string, unknown>);
-    core.endGroup();
-
-    const outputs = await main(inputs);
-    // Parse Final program / Setup version / Outputs
-    if (outputs['path']) {
-        core.startGroup('📤 Action Outputs');
-        gh_inputs.setOutputObject(outputs as unknown as Record<string, unknown>);
-        core.endGroup();
-    } else {
-        core.setFailed('Cannot setup CMake');
-    }
-}
-
-if (require.main === module) {
-    (async (): Promise<void> => {
-        try {
-            await run();
-        } catch (error) {
-            await reportAndSetFailed(error as Error, {
-                title: 'Setup CMake failed'
-            });
+runAction({
+    inputsSchema,
+    outputsSchema,
+    title: 'Setup CMake',
+    main: async (inputs: Inputs) => {
+        // Handle cmake_path alias for backwards compatibility
+        const effectiveInputs = { ...inputs };
+        if (effectiveInputs.cmake_path) {
+            effectiveInputs.path = effectiveInputs.cmake_path;
         }
-    })();
-}
+
+        const outputs = await main(effectiveInputs);
+
+        if (!outputs.path) {
+            core.setFailed('Cannot setup CMake');
+        }
+
+        return outputs as unknown as Record<string, unknown>;
+    },
+    callerModule: module
+});

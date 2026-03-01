@@ -4,6 +4,15 @@
  * @module types
  */
 
+import type { InferInputs } from 'action-schema';
+import type { inputsSchema } from './schema';
+
+/**
+ * Input configuration for the setup-program action.
+ * Inferred from the schema definition in schema.ts.
+ */
+export type SetupProgramInputs = InferInputs<typeof inputsSchema>;
+
 /**
  * Result of a program search or installation operation.
  */
@@ -21,21 +30,6 @@ export interface ExecOutput {
     exitCode: number;
     stdout: string;
     stderr: string;
-}
-
-/**
- * Configuration inputs for the setup-program action.
- */
-export interface SetupProgramInputs {
-    name: string[];
-    version: string;
-    paths: string[];
-    check_latest: boolean;
-    update_environment: boolean;
-    url: string | null;
-    install_prefix: string | null;
-    fail_on_error: boolean;
-    trace_commands: boolean;
 }
 
 /**

@@ -53,18 +53,29 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Check action.yml files
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          # npm install already ran prepare (which regenerates action.yml from schemas).
+          # If any action.yml differs from what is committed, the schema is out of sync.
+          if ! git diff --quiet -- '*/action.yml'; then
+            echo "::error::action.yml files are out of date. Run 'npm run build' and commit the updated action.yml files."
+            git diff --name-only -- '*/action.yml'
+            exit 1
+          fi
+          echo "action.yml check passed"
+
       - name: Check dist bundles
         if: matrix.os == 'ubuntu-latest'
         run: |
           # npm install already ran prepare (which rebuilds all workspaces).
           # If any dist/ file differs from what is committed, the bundle is stale.
-          if git diff --quiet -- '*/dist/'; then
-            echo "Dist bundle check passed"
-          else
-            echo "::warning::dist/ files are out of date. Run 'npm run build' and commit the updated dist/ files."
-            echo "Out-of-date files:"
+          if ! git diff --quiet -- '*/dist/'; then
+            echo "::error::dist/ files are out of date. Run 'npm run build' and commit the updated dist/ files."
             git diff --name-only -- '*/dist/'
+            exit 1
           fi
+          echo "Dist bundle check passed"
 
   # ===========================================================================
   # Action integration tests
@@ -252,7 +263,7 @@ jobs:
         with:
           source-dir: tests
           build-dir: tests/build
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           trace-commands: true
 
       - name: Codecov

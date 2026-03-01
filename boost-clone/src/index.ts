@@ -11,17 +11,21 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import * as trace_commands from 'trace-commands';
-import * as gh_inputs from 'gh-inputs';
-import { reportAndSetFailed } from 'pretty-errors';
+import { runAction } from 'action-schema';
 
 // Type imports
 import {
     CloneStrategy,
+    RawInputs,
     Inputs,
     Outputs,
     CacheKeyResult,
     ModuleEstimation
 } from './types';
+
+// Schema imports
+import { inputsSchema, outputsSchema } from './schema';
+export { inputsSchema, outputsSchema };
 
 // Module imports
 import { generateCacheKey, getCachedBoost, cacheBoost } from './cache';
@@ -29,7 +33,7 @@ import { isReleaseTag, estimateTotalModules, decideStrategy, getBoostDepsData } 
 import { batchInitializeSubmodules, initializeSubmodules, initializeAllSubmodules } from './submodules';
 import { readExceptions, readGitmodules, scanBoostDependencies } from './header-scan';
 import { getArchiveUrl, downloadAndExtractArchive } from './archive';
-import { findGitFeatures, cloneBoostSuperproject, applyPatches } from './git-utils';
+import { findGitFeatures, cloneBoostSuperproject, applyPatches, getRepoName } from './git-utils';
 
 // Re-export for external consumers
 export { generateCacheKey } from './cache';
@@ -93,7 +97,7 @@ export async function main(inputs: Inputs): Promise<Outputs> {
     const gitmodulesPath = path.resolve(await tc.downloadTool(gitmodulesUrl));
     core.info(`Downloaded ${gitmodulesUrl} to ${gitmodulesPath}`);
     const submodulePaths = readGitmodules(gitmodulesPath);
-    fnlog(`Submodule Paths: ${gh_inputs.makeValueString(submodulePaths)}`);
+    fnlog(`Submodule Paths: ${JSON.stringify([...submodulePaths])}`);
 
     const exceptionsUrl = `https://raw.githubusercontent.com/boostorg/boostdep/${inputs.branch}/depinst/exceptions.txt`;
     const exceptionsPath = path.resolve(await tc.downloadTool(exceptionsUrl));
@@ -203,6 +207,20 @@ async function executeGitStrategy(
         core.endGroup();
     }
 
+    // Collect patch module names so they can be treated as already-initialized
+    // and scanned for their own transitive Boost dependencies
+    const patchNames = new Set<string>();
+    for (const patch of inputs.patches) {
+        patchNames.add(getRepoName(patch));
+    }
+
+    // Extend submodulePaths with patch names so the header scanner recognizes
+    // them as valid modules (they aren't in .gitmodules but exist on disk)
+    const allValidPaths = new Set(submodulePaths);
+    for (const name of patchNames) {
+        allValidPaths.add(`libs/${name}`);
+    }
+
     // Initialize submodules
     // Check if we have precomputed dependencies for this exact release tag
     const depsData = getBoostDepsData();
@@ -220,91 +238,79 @@ async function executeGitStrategy(
         // or release tags not in our precomputed data, we must use layer-by-layer discovery.
         core.startGroup('🔧 Batch Initialize Boost Submodules');
         core.info(`Using precomputed dependencies for batch initialization`);
-        await batchInitializeSubmodules(inputs, estimation.allModules, gitFeatures);
+        await batchInitializeSubmodules(inputs, estimation.allModules, gitFeatures, patchNames);
         core.endGroup();
     } else {
         // No precomputed data for this branch, use layer-by-layer discovery
         core.startGroup('🔧 Initialize Boost Submodules');
         core.info(`Using layer-by-layer dependency discovery`);
-        await initializeSubmodules(inputs, directModules, gitFeatures, exceptions, submodulePaths);
+        await initializeSubmodules(inputs, directModules, gitFeatures, exceptions, allValidPaths, patchNames);
         core.endGroup();
     }
 }
 
 /**
- * Entry point for the GitHub Action.
+ * Converts raw parsed inputs (with string[]) to the Inputs type (with Set<string>).
  *
- * Parses action inputs, validates configuration, and orchestrates the
- * boost-clone workflow including caching, cloning, and submodule initialization.
+ * @param raw - Raw inputs from schema parsing
+ * @returns Converted Inputs object with Sets instead of arrays
  */
-async function run(): Promise<void> {
-    const cloneStrategyInput = gh_inputs.getInput('clone-strategy', { defaultValue: 'auto' }) || 'auto';
+function convertRawInputs(raw: RawInputs): Inputs {
+    // Validate clone strategy
     const validStrategies: CloneStrategy[] = ['auto', 'git', 'archive'];
-    const cloneStrategy: CloneStrategy = validStrategies.includes(cloneStrategyInput as CloneStrategy)
-        ? (cloneStrategyInput as CloneStrategy)
+    const cloneStrategy: CloneStrategy = validStrategies.includes(raw.clone_strategy as CloneStrategy)
+        ? (raw.clone_strategy as CloneStrategy)
         : 'auto';
 
-    const inputs: Inputs = {
-        boost_dir: gh_inputs.getInput('boost-dir') || '',
-        branch: gh_inputs.getInput('branch', { defaultValue: 'master' }) || 'master',
-        // Modules to clone
-        modules: new Set([...gh_inputs.getSet('modules')].filter((m): m is string => m !== undefined)),
-        patches: new Set([...gh_inputs.getSet('patches')].filter((p): p is string => p !== undefined)),
-        scan_modules_ignore: new Set([...gh_inputs.getSet('scan-modules-ignore')].filter((s): s is string => s !== undefined)),
-        // Paths to scan
-        scan_modules_dir: new Set(gh_inputs.getMultilineInput('scan-modules-dir').filter((d): d is string => d !== undefined)),
-        modules_scan_paths: new Set([...gh_inputs.getSet('modules-scan-paths')].filter((m): m is string => m !== undefined)),
-        modules_exclude_paths: new Set([...gh_inputs.getSet('modules-exclude-paths')].filter((m): m is string => m !== undefined)),
-        // Caching
-        cache: gh_inputs.getBoolean('cache', { defaultValue: true }),
-        optimistic_caching: gh_inputs.getBoolean('optimistic-caching', { defaultValue: false }),
-        trace_commands: gh_inputs.getBoolean('trace-commands', { defaultValue: false }),
-        // Strategy
+    // Convert string arrays to Sets
+    let scan_modules_dir = new Set(raw.scan_modules_dir.filter((dir) => dir.trim() !== ''));
+    scan_modules_dir = new Set([...scan_modules_dir].map((dir) => path.resolve(dir)));
+
+    // Calculate boost_dir
+    let boost_dir = raw.boost_dir;
+    if (!boost_dir) {
+        const pathSuffix = `boost-${raw.branch}`;
+        boost_dir = path.join(os.tmpdir(), pathSuffix);
+    }
+    boost_dir = path.resolve(boost_dir);
+
+    return {
+        boost_dir,
+        branch: raw.branch,
+        modules: new Set(raw.modules),
+        patches: new Set(raw.patches),
+        scan_modules_ignore: new Set(raw.scan_modules_ignore),
+        scan_modules_dir,
+        modules_scan_paths: new Set(raw.modules_scan_paths),
+        modules_exclude_paths: new Set(raw.modules_exclude_paths),
+        cache: raw.cache,
+        optimistic_caching: raw.optimistic_caching,
+        trace_commands: raw.trace_commands,
         clone_strategy: cloneStrategy,
-        archive_threshold: parseInt(gh_inputs.getInput('archive-threshold', { defaultValue: '25' }) || '25', 10)
+        archive_threshold: raw.archive_threshold
     };
-
-    // Remove any empty entry from scan_modules_dir
-    inputs.scan_modules_dir = new Set([...inputs.scan_modules_dir].filter((dir) => dir.trim() !== ''));
-    // Resolve scan modules dir
-    inputs.scan_modules_dir = new Set([...inputs.scan_modules_dir].map((dir) => path.resolve(dir)));
-
-    // If Boost dir is not provided, we will use a temporary directory
-    // for it. This directory will be returned as an output.
-    if (!inputs.boost_dir) {
-        const pathSuffix = `boost-${inputs.branch}`;
-        inputs.boost_dir = path.join(os.tmpdir(), pathSuffix);
-    }
-    inputs.boost_dir = path.resolve(inputs.boost_dir);
-
-    if (inputs.trace_commands) {
-        trace_commands.set_trace_commands(true);
-    }
-
-    core.startGroup('📥 Action Inputs');
-    gh_inputs.printInputObject(inputs as unknown as Record<string, unknown>);
-    core.endGroup();
-
-    const outputs = await main(inputs);
-
-    // Parse Final program / Setup version / Outputs
-    if (outputs.boost_dir) {
-        core.startGroup('📤 Action Outputs');
-        gh_inputs.setOutputObject(outputs as unknown as Record<string, unknown>);
-        core.endGroup();
-    } else {
-        core.setFailed('Cannot clone Boost');
-    }
 }
 
-if (require.main === module) {
-    (async () => {
-        try {
-            await run();
-        } catch (error) {
-            await reportAndSetFailed(error as Error, {
-                title: 'Boost clone failed'
-            });
+/**
+ * Action entry point using schema-driven runner.
+ *
+ * This replaces the previous manual input extraction and error handling
+ * with the standardized runAction wrapper.
+ */
+runAction({
+    inputsSchema,
+    outputsSchema,
+    title: 'Boost Clone',
+    main: async (rawInputs: RawInputs) => {
+        const inputs = convertRawInputs(rawInputs);
+
+        const outputs = await main(inputs);
+
+        if (!outputs.boost_dir) {
+            core.setFailed('Cannot clone Boost');
         }
-    })();
-}
+
+        return outputs as unknown as Record<string, unknown>;
+    },
+    callerModule: module
+});

@@ -6,15 +6,19 @@ import * as exec from '@actions/exec';
 import * as io from '@actions/io';
 import * as os from 'os';
 import * as trace_commands from 'trace-commands';
-import * as gh_inputs from 'gh-inputs';
-import { reportAndSetFailed } from 'pretty-errors';
+import { runAction } from 'action-schema';
 
 import {
+    RawInputs,
     Inputs,
     ResolvedInputs,
     SetupCMakeOutputs,
     ResolvedParameters
 } from './types';
+
+// Schema imports
+import { inputsSchema, outputsSchema } from './schema';
+export { inputsSchema, outputsSchema };
 
 import {
     createCMakeConfigureAnnotations,
@@ -799,87 +803,77 @@ async function processEntry(
 }
 
 /**
- * GitHub Actions entry point for the CMake workflow action.
+ * Converts raw parsed inputs to the internal Inputs type.
  *
- * Parses action inputs, expands combinatorial factors, and executes
- * the CMake workflow for each factor combination.
- *
- * @throws Error if CMake is not found
+ * @param raw - Raw inputs from schema parsing
+ * @returns Converted Inputs object
  */
-async function run(): Promise<void> {
-    // ==============================================
-    // Parse inputs
-    // ==============================================
-    const inputs: Inputs = {
+function convertRawInputs(raw: RawInputs): Inputs {
+    return {
         // CMake
-        cmake_path: gh_inputs.getInput('cmake-path'),
-        cmake_version: gh_inputs.getInput('cmake-version', { defaultValue: '*' }),
+        cmake_path: raw.cmake_path,
+        cmake_version: raw.cmake_version,
         // Source project
-        source_dir: gh_inputs.getResolvedPath('source-dir'),
-        url: gh_inputs.getInput('url'),
-        git_repository: gh_inputs.getInput('git-repository'),
-        git_tag: gh_inputs.getInput('git-tag'),
-        download_dir: gh_inputs.getNormalizedPath('download-dir'),
-        patches: gh_inputs.getMultilineInput('patches'),
+        source_dir: path.resolve(raw.source_dir),
+        url: raw.url,
+        git_repository: raw.git_repository,
+        git_tag: raw.git_tag,
+        download_dir: raw.download_dir,
+        patches: raw.patches,
         // Configure options
-        build_dir: gh_inputs.getNormalizedPath('build-dir'),
-        preset: gh_inputs.getInput('preset') || '',
-        cc: gh_inputs.getNormalizedPath('cc', { fallbackEnv: 'CC' }),
-        ccflags: gh_inputs.getInput('ccflags', { fallbackEnv: 'CFLAGS' }),
-        cxx: gh_inputs.getNormalizedPath('cxx', { fallbackEnv: 'CXX' }),
-        cxxflags: gh_inputs.getInput('cxxflags', { fallbackEnv: 'CXXFLAGS' }),
-        cxxstd: gh_inputs.getArray('cxxstd', undefined, undefined, { fallbackEnv: 'CXXSTD' }),
-        shared: gh_inputs.getTribool('shared', { fallbackEnv: 'BUILD_SHARED_LIBS' }),
-        toolchain: gh_inputs.getNormalizedPath('toolchain', { fallbackEnv: 'CMAKE_TOOLCHAIN_FILE' }),
-        generator: gh_inputs.getInput('generator', { fallbackEnv: 'CMAKE_GENERATOR' }),
-        generator_toolset: gh_inputs.getInput('generator-toolset', { fallbackEnv: 'CMAKE_GENERATOR_TOOLSET' }),
-        generator_architecture: gh_inputs.getInput('generator-architecture', { fallbackEnv: 'CMAKE_GENERATOR_ARCHITECTURE' }),
-        arch: gh_inputs.getInput('arch'),
-        build_type: gh_inputs.getInput('build-type', { fallbackEnv: 'CMAKE_BUILD_TYPE' }),
-        build_target: gh_inputs.getArray('build-target'),
-        extra_args: parseExtraArgs(gh_inputs.getMultilineInput('extra-args')),
-        export_compile_commands: gh_inputs.getTribool('export-compile-commands', { fallbackEnv: 'CMAKE_EXPORT_COMPILE_COMMANDS' }),
+        build_dir: raw.build_dir,
+        preset: raw.preset,
+        cc: raw.cc,
+        ccflags: raw.ccflags,
+        cxx: raw.cxx,
+        cxxflags: raw.cxxflags,
+        cxxstd: raw.cxxstd as (string | null)[],
+        shared: raw.shared,
+        toolchain: raw.toolchain,
+        generator: raw.generator,
+        generator_toolset: raw.generator_toolset,
+        generator_architecture: raw.generator_architecture,
+        arch: normalizeArchitectureInput(raw.arch),
+        build_type: raw.build_type,
+        build_target: raw.build_target as (string | null)[],
+        extra_args: parseExtraArgs(raw.extra_args),
+        export_compile_commands: raw.export_compile_commands,
         // Build options
-        jobs: gh_inputs.getInt('jobs', { fallbackEnv: 'CMAKE_JOBS' }) ?? numberOfCpus(),
+        jobs: raw.jobs || numberOfCpus(),
         // Test options
-        run_tests: gh_inputs.getTribool('run-tests', { fallbackEnv: 'CMAKE_RUN_TESTS' }),
-        configure_tests_flag: gh_inputs.getInput('configure-tests-flag'),
-        test_all_cxxstd: gh_inputs.getBoolean('test-all-cxxstd'),
-        ctest_timeout: gh_inputs.getInt('ctest-timeout', { fallbackEnv: 'CTEST_TEST_TIMEOUT' }),
+        run_tests: raw.run_tests,
+        configure_tests_flag: raw.configure_tests_flag,
+        test_all_cxxstd: raw.test_all_cxxstd,
+        ctest_timeout: raw.ctest_timeout || undefined,
         // Install
-        install: gh_inputs.getTribool('install', { fallbackEnv: 'CMAKE_INSTALL' }),
-        install_all_cxxstd: gh_inputs.getTribool('install-all-cxxstd'),
-        install_prefix: gh_inputs.getNormalizedPath('install-prefix', { fallbackEnv: 'CMAKE_INSTALL_PREFIX' }),
+        install: raw.install,
+        install_all_cxxstd: raw.install_all_cxxstd,
+        install_prefix: raw.install_prefix,
         // Package
-        package: gh_inputs.getTribool('package', { fallbackEnv: 'CMAKE_PACKAGE' }),
-        package_all_cxxstd: gh_inputs.getBoolean('package-all-cxxstd'),
-        package_name: gh_inputs.getInput('package-name'),
-        package_dir: gh_inputs.getNormalizedPath('package-dir'),
-        package_vendor: gh_inputs.getInput('package-vendor'),
-        package_generators: gh_inputs.getArray('package-generators', undefined, undefined, { fallbackEnv: 'CPACK_GENERATOR' }),
-        package_artifact: gh_inputs.getTribool('package-artifact', {
-            fallbackEnv: 'CMAKE_PACKAGE_ARTIFACT',
-            defaultValue: true
-        }),
-        package_retention_days: gh_inputs.getInt('package-retention-days') ?? 10,
+        package: raw.package,
+        package_all_cxxstd: raw.package_all_cxxstd,
+        package_name: raw.package_name,
+        package_dir: raw.package_dir,
+        package_vendor: raw.package_vendor,
+        package_generators: raw.package_generators,
+        package_artifact: raw.package_artifact,
+        package_retention_days: raw.package_retention_days,
         // Annotations and tracing
-        create_annotations: gh_inputs.getTribool('create-annotations', {
-            fallbackEnv: 'CMAKE_CREATE_ANNOTATIONS',
-            defaultValue: true
-        }),
-        ref_source_dir: gh_inputs.getResolvedPath('ref-source-dir', { fallbackEnv: 'GITHUB_WORKSPACE' }),
-        trace_commands: gh_inputs.getBoolean('trace-commands')
+        create_annotations: raw.create_annotations,
+        ref_source_dir: path.resolve(raw.ref_source_dir || process.env.GITHUB_WORKSPACE || '.'),
+        trace_commands: raw.trace_commands
     };
+}
 
-    if (inputs.trace_commands) {
-        trace_commands.set_trace_commands(true);
-    }
-    inputs.arch = normalizeArchitectureInput(inputs.arch);
-
-    core.startGroup('📥 Action Inputs');
-    gh_inputs.printInputObject(inputs as unknown as Record<string, unknown>);
-    core.endGroup();
-
+/**
+ * Main entry point for the CMake workflow.
+ *
+ * Expands combinatorial factors and executes the CMake workflow
+ * for each factor combination.
+ *
+ * @param inputs - Converted input parameters
+ */
+export async function main(inputs: Inputs): Promise<void> {
     // ==============================================
     // Download source code (once)
     // ==============================================
@@ -913,7 +907,7 @@ async function run(): Promise<void> {
         update_environment: false
     }, false);
     if (!setupCMakeOutputs.path) {
-        throw new Error('❌ CMake not found');
+        throw new Error('CMake not found');
     }
     inputs.cmake_path = setupCMakeOutputs.path;
     core.endGroup();
@@ -949,17 +943,20 @@ async function run(): Promise<void> {
     }
 }
 
-if (require.main === module) {
-    (async () => {
-        try {
-            await run();
-        } catch (error) {
-            await reportAndSetFailed(error as Error, {
-            title: 'CMake workflow failed'
-            });
-        }
-    })();
-}
+/**
+ * Action entry point using schema-driven runner.
+ */
+runAction({
+    inputsSchema,
+    outputsSchema,
+    title: 'CMake Workflow',
+    main: async (rawInputs: RawInputs) => {
+        const inputs = convertRawInputs(rawInputs);
+        await main(inputs);
+        return {};
+    },
+    callerModule: module
+});
 
 export {
     processEntry,

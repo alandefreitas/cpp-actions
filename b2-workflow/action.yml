@@ -1,173 +1,160 @@
 name: 'B2 Workflow'
 description: |
   This action runs a complete B2 workflow from Boost source files.
-  
+
   If you are developing a Boost library, this is usually the next step in your workflow after setting up a C++ compiler
   and fetching dependencies with xref:actions/package-install.adoc[].
-  
+
   It takes the Boost source directory and runs the usual steps to test the specified modules. This includes 
   compiling `b2` if needed and generating a proper `user-config.jam` file to define the path to the C++ compiler 
   provided by the `cxx` input. 
-  
+
   [IMPORTANT]
   ====
   **Scope**
-  
+
   * **Boost layout required.** The action assumes the library under test lives in the Boost super-project structure (`source-dir/libs/<library>`). It configures `b2` and generates `user-config.jam` with that layout in mind.
   * **Workflow intent.** It streamlines the workflow Boost maintainers follow after provisioning a compiler and dependencies: bootstrap `b2`, apply toolchain settings, and run the requested module tests.
   * **Future work.** Support for standalone B2 projects would need different assumptions about paths, bootstrap steps, and cache strategy. We plan to track that in dedicated issues so contributors can tackle each gap incrementally.
   ====
-  
+
   == Next steps
-  
+
   If your library also supports CMake, the next step in your workflow should usually be 
   xref:actions/cmake-workflow.adoc[]. Otherwise, the next step in your workflow should usually be
   the generation of reports, with tools such as the xref:actions/flamegraph.adoc[] (when `matrix.time-trace`) and 
   xref:actions/create-changelog.adoc[] (usually in another workflow job). You can also include customs steps to
   upload coverage reports (when `matrix.coverage`).
-  
+
   If your b2 workflow provides CMake installation and configuration scripts, it is also usual to include multiple
   CMake workflow steps as integration tests for CMake.
 
 inputs:
-  # ======================================
-  # Configure options
-  # ======================================
+  trace-commands:
+    description: Trace commands executed by the workflow.
+    required: false
+    default: 'false'
   source-dir:
-    description: |
+    description: |-
       The boost source directory.
-      
+
       This path will be used to build and install `B2` for the workflow
       and test the specified modules.
-
     required: false
-    default: '.'
+    default: .
   build-dir:
-    description: |
-      Changes the build directories for all project roots being built. 
-      
-      When this option is specified, all Jamroot files must declare a project name. 
-      
+    description: |-
+      Changes the build directories for all project roots being built.
+
+      When this option is specified, all Jamroot files must declare a project name.
+
       The build directory for the project root will be computed by concatenating the value of the
       --build-dir option, the project name specified in Jamroot, and the build dir specified in Jamroot
-      (or bin, if none is specified). 
-      
-      The option is primarily useful when building from read-only media, when you can’t modify Jamroot.
+      (or bin, if none is specified).
+
+      The option is primarily useful when building from read-only media, when you can't modify Jamroot.
     required: false
     default: ''
   cxx:
-    description: |
+    description: |-
       Path to C++ compiler.
-      
+
       If the input is not specified, the action will use the compiler defined by the environment variable `CXX`.
-      
+
       If the environment variable is not specified, the action will use the default compiler as identified by B2.
     required: false
     default: ''
   cxxflags:
-    description:
+    description: |-
       Flags to be used with the C++ compiler.
-      
-      If the input is not specified, the action will use the flags defined by the environment variable `CXXFLAGS`.
-      
-      If the environment variable is not specified, the action will use the default flags as identified by B2.
 
+      If the input is not specified, the action will use the flags defined by the environment variable `CXXFLAGS`.
+
+      If the environment variable is not specified, the action will use the default flags as identified by B2.
     required: false
     default: ''
   ccflags:
-    description: |
+    description: |-
       Flags to be used with the C compiler.
-      
-      If the input is not specified, the action will use the flags defined by the environment variable `CFLAGS`.
-      
-      If the environment variable is not specified, the action will use the default flags as identified by B2.
 
+      If the input is not specified, the action will use the flags defined by the environment variable `CFLAGS`.
+
+      If the environment variable is not specified, the action will use the default flags as identified by B2.
     required: false
     default: ''
   cxxstd:
-    description: |
+    description: |-
       Comma-separated list of standards with which B2 will build and test the program.
-      
+
       If the input is not specified, the action will use the standards defined by the environment variable `CXXSTD`.
-      
+
       If the environment variable is not specified, the action will use the default standards as identified by B2.
-      
+
       B2 will iteratively build and test the specified modules with multiple standards.
     required: false
     default: ''
   shared:
-    description: |
+    description: |-
       Determines if the `link` option should be `shared` so that it creates shared libraries.
       When the input is `true`, the `link` option is `shared`. When it is `false`, the `link` option is `static`.
-      
+
       If the input is not specified, the action will use the value defined by the environment variable `BUILD_SHARED_LIBS`.
-      
+
       If the environment variable is not specified, the action will use the default value as identified by B2,
       which sets no value for the `link` option and defaults to `shared`.
-
     required: false
-    default: ''
   toolset:
-    description: |
+    description: |-
       B2 toolset name. The toolset is somewhat equivalent to a CMake generator.
-      
-      If not specified, the action will use the toolset defined by the environment variable `B2_TOOLSET`.
-      
-      If the environment variable is not specified, the action will use the default toolset detected by B2.
 
+      If not specified, the action will use the toolset defined by the environment variable `B2_TOOLSET`.
+
+      If the environment variable is not specified, the action will use the default toolset detected by B2.
     required: false
     default: ''
-
   arch:
-    description: |
+    description: |-
       Target architecture hint (for example `x86`, `x64`, `arm64`). When provided, the action derives sensible defaults
       for the B2 `address-model` and `architecture` properties unless they are explicitly set.
     required: false
     default: ''
-
   build-variant:
-    description: |
-      Custom build variants. If the provided variant is a CMake build-type, the 
+    description: |-
+      Custom build variants. If the provided variant is a CMake build-type, the
       argument is mapped to the equivalent B2 variant:
-      
-      - `Release` -> `release`
-      
-      - `Debug` -> `debug`
-      
-      - `RelWithDebInfo` -> `release` with `debug-symbols=on`
-      
-      - `<other>` -> lowercase <other>
-      
-      If the input is not specified, the action will use the value defined by the environment variable `B2_BUILD_VARIANT`.
-      
-      If the environment variable is not specified, the action will use the value from `build-type`.
 
+      - `Release` -> `release`
+
+      - `Debug` -> `debug`
+
+      - `RelWithDebInfo` -> `release` with `debug-symbols=on`
+
+      - `<other>` -> lowercase <other>
+
+      If the input is not specified, the action will use the value defined by the environment variable `B2_BUILD_VARIANT`.
+
+      If the environment variable is not specified, the action will use the value from `build-type`.
     required: false
     default: ''
-
   build-type:
-    description: |
+    description: |-
       An alternative to `build-variant`, for compatibility with CMake workflows. When `build-variant` is not provided,
       this input is used to set the build variant.
-      
-      If the input is not specified, the action will use the value defined by the environment variable `B2_BUILD_TYPE`.
-      
-      If the environment variable is not specified, the action will use the default value as identified by B2.
 
+      If the input is not specified, the action will use the value defined by the environment variable `B2_BUILD_TYPE`.
+
+      If the environment variable is not specified, the action will use the default value as identified by B2.
     required: false
     default: ''
-
   modules:
-    description: |
+    description: |-
       The list of modules we should test with B2 in the `libs` directory of the Boost super-project.
 
       The directory `libs/<module>/test` will be provided for each module in the list.
-
     required: true
     default: ''
-
   module-target:
-    description: |
+    description: |-
       Subdirectory or explicit target to append to each module.
 
       When this input is left as the default (`test`), every module listed above contributes the argument
@@ -176,247 +163,196 @@ inputs:
       `libs/filesystem/example` or `libs/filesystem//unit_tests`), the action forwards it verbatim without prefixing it.
 
       This input accepts a single value or a list separated by spaces, commas, or new lines. When multiple values are
-      provided they are applied positionally to the module list, and the final value is reused for any remaining modules.
-
+      provided, every target is applied to every module.
     required: false
-    default: 'test'
-
+    default: test
   extra-args:
-    description: 'Extra arguments.'
+    description: Extra arguments.
     required: false
     default: ''
-
-  # ======================================
-  # B2-specific options
-  # ======================================
   warnings-as-errors:
-    description: |
-      Treat warnings as errors.
+    description: Treat warnings as errors.
     required: false
     default: ''
   address-model:
-    description: 'Valid B2 list of address models.'
+    description: Valid B2 list of address models.
     required: false
     default: ''
   asan:
-    description: 'Enable address-sanitizer.'
+    description: Enable address-sanitizer.
     required: false
     default: ''
   ubsan:
-    description: 'Enable undefined-sanitizer.'
+    description: Enable undefined-sanitizer.
     required: false
     default: ''
   msan:
-    description: 'Enable memory-sanitizer.'
+    description: Enable memory-sanitizer.
     required: false
     default: ''
   tsan:
-    description: 'Enable thread-sanitizer.'
+    description: Enable thread-sanitizer.
     required: false
     default: ''
   coverage:
-    description: 'Enable coverage.'
+    description: Enable coverage.
     required: false
     default: ''
   linkflags:
-    description: 'Extra linker flags.'
+    description: Extra linker flags.
     required: false
     default: ''
   threading:
-    description: 'B2 threading option.'
+    description: B2 threading option.
     required: false
     default: ''
   rtti:
-    description: |
-      Enables or disables run-time type information.
+    description: Enables or disables run-time type information.
     required: false
     default: ''
   clean:
-    description: |
-      Cleans all targets in the current directory and in any sub-projects. 
-      
+    description: |-
+      Cleans all targets in the current directory and in any sub-projects.
+
       Note that unlike the `clean` target in make, you can use --clean together with target names to
       clean specific targets.
-
     required: false
     default: 'false'
   clean-all:
-    description: |
-      Cleans all targets, no matter where they are defined. 
-      
+    description: |-
+      Cleans all targets, no matter where they are defined.
+
       In particular, it will clean targets in parent Jamfiles, and targets defined under
       other project roots.
     required: false
     default: 'false'
   abbreviate-paths:
-    description: |
-      Compresses target paths by abbreviating each component. 
-      
-      This option is useful to keep paths from becoming longer than the filesystem supports. 
-      
-      See also the B2 documentation section  
-      https://www.boost.org/doc/libs/master/tools/build/doc/html/index.html#bbv2.reference.buildprocess.targetpath[“Target Paths”].
+    description: |-
+      Compresses target paths by abbreviating each component.
 
+      This option is useful to keep paths from becoming longer than the filesystem supports.
+
+      See also the B2 documentation section
+      https://www.boost.org/doc/libs/master/tools/build/doc/html/index.html#bbv2.reference.buildprocess.targetpath["Target Paths"].
     required: false
     default: 'true'
   hash:
-    description: |
-      Compresses target paths using an MD5 hash. 
-      
-      This option is useful to keep paths from becoming longer than the filesystem supports. 
-      
-      This option produces shorter paths than --abbreviate-paths does, but at the cost of making them less 
-      understandable. 
-      
-      See also the B2 documentation section  
-      https://www.boost.org/doc/libs/master/tools/build/doc/html/index.html#bbv2.reference.buildprocess.targetpath[“Target Paths”].
+    description: |-
+      Compresses target paths using an MD5 hash.
 
+      This option is useful to keep paths from becoming longer than the filesystem supports.
+
+      This option produces shorter paths than --abbreviate-paths does, but at the cost of making them less
+      understandable.
+
+      See also the B2 documentation section
+      https://www.boost.org/doc/libs/master/tools/build/doc/html/index.html#bbv2.reference.buildprocess.targetpath["Target Paths"].
     required: false
     default: 'false'
   rebuild-all:
-    description: |
+    description: |-
       Equivalent to the `-a` option.
-      
-      Causes all files to be rebuilt.
 
+      Causes all files to be rebuilt.
     required: false
     default: 'false'
   dry-run:
-    description: |
+    description: |-
       Equivalent to the `-n` option.
-      
-      Do not execute the commands, only print them.      
 
+      Do not execute the commands, only print them.
     required: false
     default: 'false'
   stop-on-error:
-    description: |
+    description: |-
       Equivalent to the `-q` option.
-      
-      Stop at the first error, as opposed to continuing to build targets that don’t depend on the failed ones.
 
+      Stop at the first error, as opposed to continuing to build targets that don't depend on the failed ones.
     required: false
     default: 'false'
   config:
-    description: |
+    description: |-
       Equivalent to the `--config=filename` option.
-      
-      Override all configuration files
 
+      Override all configuration files
     required: false
     default: ''
   site-config:
-    description: |
+    description: |-
       Equivalent to the `--site-config=filename` option.
-      
-      Override the default site-config.jam.
 
+      Override the default site-config.jam.
     required: false
     default: ''
   user-config:
-    description: |
+    description: |-
       Equivalent to the `--user-config=filename` option.
-      
-      Override the default user-config.jam.
-      
-      When this option is specified, the action will not generate a `user-config.jam` file with 
-      the `cxx` toolset path.
 
+      Override the default user-config.jam.
+
+      When this option is specified, the action will not generate a `user-config.jam` file with
+      the `cxx` toolset path.
     required: false
     default: ''
   project-config:
-    description: |
+    description: |-
       Equivalent to the `--project-config=filename` option.
-      
-      Override the default project-config.jam    
 
+      Override the default project-config.jam
     required: false
     default: ''
   debug-configuration:
-    description: |
+    description: |-
       Equivalent to the `--debug-configuration` option.
-      
-      Produces debug information about the loading of B2 and toolset files.
-      
-      If not specified, the value is inherited from `trace-commands`.
 
+      Produces debug information about the loading of B2 and toolset files.
+
+      If not specified, the value is inherited from `trace-commands`.
     required: false
-    default: ''
   debug-building:
-    description: |
+    description: |-
       Equivalent to the `--debug-building` option.
-      
+
       Prints what targets are being built and with what properties.
 
       If not specified, the value is inherited from `trace-commands`.
-
     required: false
-    default: ''
   debug-generators:
-    description: |
+    description: |-
       Equivalent to the `--debug-generators` option.
-      
+
       Produces debug output from the generator search process. Useful for debugging custom generators.
 
       If not specified, the value is inherited from `trace-commands`.
-
     required: false
-    default: ''
   include:
-    description:
-      Additional include paths for C and C++ compilers.
+    description: Additional include paths for C and C++ compilers.
     required: false
     default: ''
   define:
-    description:
+    description: |-
       Additional macro definitions for C and C++ compilers.
-      
+
       The string should be either SYMBOL or SYMBOL=VALUE.
     required: false
     default: ''
   runtime-link:
-    description: |
+    description: |-
       Equivalent to the `--runtime-link=<shared,static>` option.
-      
+
       Determines if shared or static version of C and C++ runtimes should be used.
-
     required: false
     default: ''
-
-  # ======================================
-  # Configure and Install options
-  # ======================================
-
-  # ======================================
-  # Build options
-  # ======================================
   jobs:
-    description: |
+    description: |-
       Number of jobs to use in parallel builds.
-      
+
       If the input is not specified, the action will use the value defined by the environment variable `B2_JOBS`.
-      
-      If the environment variable is also not specified, the action will use the number of processors available in the 
+
+      If the environment variable is also not specified, the action will use the number of processors available in the
       system.
-
     required: false
-    default: ''
-
-  # ======================================
-  # Test options
-  # ======================================
-
-  # ======================================
-  # Install options
-  # ======================================
-
-  # ======================================
-  # Annotation options
-  # ======================================
-  trace-commands:
-    description: 'Trace commands executed by the workflow.'
-    required: false
-    default: 'false'
+    default: '0'
 
 runs:
   using: 'node20'
@@ -425,3 +361,4 @@ runs:
 branding:
   icon: 'code'
   color: 'yellow'
+outputs: {}

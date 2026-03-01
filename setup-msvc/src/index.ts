@@ -8,13 +8,15 @@ import * as core from '@actions/core'
 import * as child_process from 'child_process'
 import * as path from 'path'
 import * as process from 'process'
-import * as trace_commands from 'trace-commands'
-import * as gh_inputs from 'gh-inputs'
-import { reportAndSetFailed } from 'pretty-errors'
+import { runAction } from 'action-schema'
 
 // Type imports and re-exports
 import { Inputs, Outputs, MainOutputs, BuildOutputsMetadata } from './types'
 export type { Inputs, Outputs, MainOutputs, BuildOutputsMetadata }
+
+// Schema imports
+import { inputsSchema, outputsSchema } from './schema'
+export { inputsSchema, outputsSchema }
 
 // Module imports
 import { listInstalledToolsets, selectToolsetVersion } from './version-utils'
@@ -225,53 +227,27 @@ export async function main(version: string, arch: string, sdk: string, toolset: 
 }
 
 /**
- * Main entry point for the setup-msvc GitHub Action.
+ * Action entry point using schema-driven runner.
  *
- * Parses inputs and configures the MSVC developer environment.
+ * This replaces the previous manual input extraction and error handling
+ * with the standardized runAction wrapper.
  */
-async function run(): Promise<void> {
-    const inputs: Inputs = {
-        version: gh_inputs.getInput('version', {defaultValue: '*'}),
-        arch: gh_inputs.getInput('arch', {defaultValue: getDefaultArch()}),
-        sdk: gh_inputs.getInput('sdk', {defaultValue: ''}),
-        toolset: gh_inputs.getInput('toolset', {defaultValue: ''}),
-        vsversion: gh_inputs.getInput('visual-studio-version', {defaultValue: ''}),
-        uwp: gh_inputs.getBoolean('uwp'),
-        spectre: gh_inputs.getBoolean('spectre'),
-        trace_commands: gh_inputs.getBoolean('trace-commands')
-    }
+runAction({
+    inputsSchema,
+    outputsSchema,
+    title: 'Setup MSVC',
+    main: async (inputs: Inputs) => {
+        const outputs = await main(
+            inputs.version,
+            inputs.arch,
+            inputs.sdk,
+            inputs.toolset,
+            inputs.uwp,
+            inputs.spectre,
+            inputs.visual_studio_version
+        )
 
-    if (inputs.trace_commands) {
-        trace_commands.set_trace_commands(true)
-    }
-
-    core.startGroup('📥 Action Inputs')
-    gh_inputs.printInputObject(inputs as unknown as Record<string, unknown>)
-    core.endGroup()
-
-    const outputs = await main(
-        inputs.version,
-        inputs.arch,
-        inputs.sdk,
-        inputs.toolset,
-        inputs.uwp,
-        inputs.spectre,
-        inputs.vsversion
-    )
-
-    core.startGroup('📤 Action Outputs')
-    gh_inputs.setOutputObject(outputs as unknown as Record<string, unknown>)
-    core.endGroup()
-}
-
-if (require.main === module) {
-    (async () => {
-        try {
-            await run()
-        } catch (error) {
-            await reportAndSetFailed(error as Error, {
-                title: 'Setup MSVC failed'
-            })
-        }
-    })()
-}
+        return outputs as unknown as Record<string, unknown>
+    },
+    callerModule: module
+})

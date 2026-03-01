@@ -5,11 +5,17 @@
  */
 
 import * as semver from 'semver';
+import type { InferInputs } from 'action-schema';
+import type { inputsSchema, CloneStrategy } from './schema';
 
 /**
- * Strategy for obtaining Boost source files.
+ * Raw input type as parsed from the schema.
+ * Uses string[] instead of Set<string>.
  */
-export type CloneStrategy = 'auto' | 'git' | 'archive';
+export type RawInputs = InferInputs<typeof inputsSchema>;
+
+// Re-export CloneStrategy from schema
+export type { CloneStrategy };
 
 /**
  * Module dependency information from precomputed data.

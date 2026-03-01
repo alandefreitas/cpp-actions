@@ -1,27 +1,27 @@
 name: 'CMake Workflow'
 description: |
   This action runs a complete CMake workflow from source files. 
-  
+
   This is usually the next step in your workflow after setting up a C++ compiler and fetching dependencies with 
   xref:actions/package-install.adoc[].
-  
+
   A workflow is composed of the following steps:
-  
+
   - Configure
   - Build
   - Test
   - Install
-  
+
   The action also sets up the environment for the workflow: 
-  
+
   - It validates the CMake version installed in the system, 
   - Updates CMake if the library has a different minimum version, 
   - Identifies what features the current CMake version supports, and 
   - Runs a complete cmake workflow
-  
+
   The action will adjusts the parameters as needed according to the features that CMake version supports. 
   For instance, 
-  
+
   - If the CMake version does not support the `-S ... -B ...` syntax, the action will create the build directory and
   run the configuration step from there.
   - If the specified or default generator is multi-config, `CMAKE_CONFIGURATION_TYPES` will be used instead of 
@@ -30,108 +30,94 @@ description: |
   will be use instead.
   - If the CMake version does not support multiple targets in the `cmake --build` syntax, the action will run the build
   step once for each target.
-  
+
   The action also creates GitHub annotations when warnings or errors are emitted at any of these steps. This includes
   annotations for CMake errors at the configure step and build errors emitted from the compiler at the build step.
-  
+
   == Presets
-  
+
   The action supports CMake presets. If a preset is defined, the action will use the values defined in the preset file
   for the configure step. The other options will be used to override the values defined in the preset.
-  
+
   If the CMake version does not support presets, the action will attempt to parse the preset file and use the values
   defined in it for inputs that are not defined.
-  
+
   The action also supports preset macros in the input values. For instance, if the `build-dir` is defined as
   `$\{sourceDir\}/build/$\{hostSystemName\}`, the action will replace this value with the actual values of the variables
   defined in the input options.
-  
+
   == Next steps
-  
+
   After running the a complete CMake workflow for your project, the next step in your workflow should usually be
   the generation of reports, with tools such as the xref:actions/flamegraph.adoc[] (when `matrix.time-trace`) and 
   xref:actions/create-changelog.adoc[] (usually in another workflow job). You can also include customs steps to
   upload coverage reports (when `matrix.coverage`).
-  
+
   If your project provides CMake installation and configuration scripts, it is also usual to include multiple
   CMake workflow steps as integration tests for CMake.
 
 inputs:
-  # ======================================
-  # CMake options
-  # ======================================
+  trace-commands:
+    description: Trace commands executed by the workflow.
+    required: false
+    default: 'false'
   cmake-path:
-    description: |
+    description: |-
       Ordered list of candidate paths to the cmake executable.
-      
+
       Entries follow the same rules as the underlying `setup-cmake` action:
-      
+
       - Provide absolute/relative file paths when you want to pin a specific binary; on Windows we will also probe `.exe`, `.cmd`, and `.bat` if no extension is given.
       - Provide a bare name such as `cmake` to reuse whatever version is already available on PATH.
-      
+
       Separate multiple entries with the platform path delimiter (`:` on Unix-like systems, `;` on Windows) or new lines. They are evaluated in order, and each must still satisfy the `cmake-version` range. Set `cmake-version: '*'` if you intentionally want to skip version filtering.
     required: false
-    default: 'cmake'
-
+    default: cmake
   cmake-version:
-    description: |
-      A semver range string with the cmake versions supported by this workflow. 
-      
+    description: |-
+      A semver range string with the cmake versions supported by this workflow.
+
       If the existing version in the environment does not satisfy this requirement, the action install
       the min CMake version that satisfies it.
-      
-      This should usually match the `cmake_minimum_required` defined in your CMakeLists.txt file.
 
+      This should usually match the `cmake_minimum_required` defined in your CMakeLists.txt file.
     required: false
     default: '*'
-
-  # ======================================
-  # Configure options
-  # ======================================
   source-dir:
-    description: 'Directory for the source files.'
+    description: Directory for the source files.
     required: false
-    default: '.'
-
+    default: .
   url:
-    description: |
+    description: |-
       URL to the source code.
-      
+
       If this input is defined, the action will download the source code from the URL and use it as the
       source directory.
-
     required: false
     default: ''
-
   git-repository:
-    description: |
+    description: |-
       Git repository to clone.
-      
+
       If this input is defined, the action will shallow clone the repository and use it as the source directory.
-
     required: false
     default: ''
-
   git-tag:
-    description: |
+    description: |-
       Git branch name, tag or commit hash to checkout from the git repository.
-      
+
       If this input is defined, the action will checkout this tag from the repository.
-
     required: false
     default: ''
-
   download-dir:
-    description: |
+    description: |-
       Directory where the source code will be downloaded.
-      
-      If the input is not specified, the action will download the source code to the source directory.
 
+      If the input is not specified, the action will download the source code to the source directory.
     required: false
     default: ''
-
   patches:
-    description: |
+    description: |-
       List of patch files or directories to be copied to the source directory.
 
       The action copies the files to the source directory before running the configure step.
@@ -148,264 +134,223 @@ inputs:
 
       Patches are applied in the order they are defined. If a file already exists in the
       source directory, it will be overwritten. This allows later patches to override earlier ones.
-
     required: false
     default: ''
-
   build-dir:
-    description: |
+    description: |-
       Directory for the binaries relative to the source directory.
-      
-      The build directory might come from a preset file or be defined by the user.
-      
-      If no preset file is specified and the user does not define the build directory, 
-      the action will use the default `build` directory. 
 
+      The build directory might come from a preset file or be defined by the user.
+
+      If no preset file is specified and the user does not define the build directory,
+      the action will use the default `build` directory.
     required: false
     default: ''
   preset:
-    description: |
+    description: |-
       Name of the CMake preset to use.
-      
+
       If a preset is defined, other options will be used by CMake to override
       the values defined in the preset.
-      
+
       If the CMake version doesn't support presets, the action will attempt
       to parse the preset file and use the values defined in it.
-
     required: false
     default: ''
   cc:
-    description: |
+    description: |-
       Path to C compiler.
-      
+
       If the input is not specified, the action will use the compiler defined by the environment variable `CC`.
 
       The value can be an absolute path or the name of an application to be found it PATH.
       If the value is a relative path starting with '.', the path is resolved relative to
       the current working directory.
-      
-      If the environment variable is not specified, the action will use the default compiler as identified by CMake.
 
+      If the environment variable is not specified, the action will use the default compiler as identified by CMake.
     required: false
     default: ''
   ccflags:
-    description: |
+    description: |-
       Flags to be used with the C compiler.
-      
-      If the input is not specified, the action will use the flags defined by the environment variable `CFLAGS`.
-      
-      If the environment variable is not specified, the action will use the default flags as identified by CMake.
 
+      If the input is not specified, the action will use the flags defined by the environment variable `CFLAGS`.
+
+      If the environment variable is not specified, the action will use the default flags as identified by CMake.
     required: false
     default: ''
   cxx:
-    description: |
+    description: |-
       Path to C++ compiler.
-      
+
       If the input is not specified, the action will use the compiler defined by the environment variable `CXX`.
-      
+
       The value can be an absolute path or the name of an application to be found it PATH.
       If the value is a relative path starting with '.', the path is resolved relative to
       the current working directory.
-      
-      If the environment variable is not specified, the action will use the default compiler as identified by CMake.
 
+      If the environment variable is not specified, the action will use the default compiler as identified by CMake.
     required: false
     default: ''
   cxxflags:
-    description:
+    description: |-
       Flags to be used with the C++ compiler.
-      
-      If the input is not specified, the action will use the flags defined by the environment variable `CXXFLAGS`.
-      
-      If the environment variable is not specified, the action will use the default flags as identified by CMake.
 
+      If the input is not specified, the action will use the flags defined by the environment variable `CXXFLAGS`.
+
+      If the environment variable is not specified, the action will use the default flags as identified by CMake.
     required: false
     default: ''
   cxxstd:
-    description: |
+    description: |-
       Comma-separated list of standards with which cmake will build and test the program.
-      
+
       If the input is not specified, the action will use the standards defined by the environment variable `CXXSTD`.
-      
+
       If the environment variable is not specified, the action will use the default standards as identified by CMake.
-      
+
       Unlike CMake, which can only build with one standard at a time, this action will iteratively build and test
       with multiple standards. When multiple standards are used, the build directory will be suffixed with the
       standard number with the exception of the latest standard.
-
     required: false
     default: ''
   shared:
-    description: |
+    description: |-
       Determines if add_library should create shared libraries (`BUILD_SHARED_LIBS`).
-      
+
       If the input is not specified, the action will use the value defined by the environment variable `BUILD_SHARED_LIBS`.
-      
+
       If the environment variable is not specified, the action will use the default value as identified by CMake (OFF).
-
     required: false
-    default: ''
   toolchain:
-    description: |
+    description: |-
       Path to toolchain.
-      
-      If the input is not specified, the action will use the toolchain defined by the environment variable `CMAKE_TOOLCHAIN_FILE`.
-      
-      If the environment variable is not specified, the action will use the default toolchain as identified by CMake.
 
+      If the input is not specified, the action will use the toolchain defined by the environment variable `CMAKE_TOOLCHAIN_FILE`.
+
+      If the environment variable is not specified, the action will use the default toolchain as identified by CMake.
     required: false
     default: ''
   generator:
-    description: |
-      Generator name. 
-      
-      If not specified, the action will use the generator defined by the environment variable `CMAKE_GENERATOR`.
-      
-      If the environment variable is not specified, the action will try to use the default generator for the platform.
+    description: |-
+      Generator name.
 
+      If not specified, the action will use the generator defined by the environment variable `CMAKE_GENERATOR`.
+
+      If the environment variable is not specified, the action will try to use the default generator for the platform.
     required: false
     default: ''
   generator-toolset:
-    description: |
+    description: |-
       Toolset specification for the generator, if supported.
-      
-      The option will be applied in the command line as the `-T` option.
-      
-      If not specified, the action will use the toolset defined by the environment variable `CMAKE_GENERATOR_TOOLSET`.
-      
-      If the environment variable is not specified, the action will use the default toolset for the generator.
 
+      The option will be applied in the command line as the `-T` option.
+
+      If not specified, the action will use the toolset defined by the environment variable `CMAKE_GENERATOR_TOOLSET`.
+
+      If the environment variable is not specified, the action will use the default toolset for the generator.
     required: false
     default: ''
   generator-architecture:
-    description: |
-      Architecture specification for the generator, if supported. 
-      
-      The option will be applied in the command line as the `-A` option.
-      
-      If not specified, the action will use the architecture defined by the environment variable `CMAKE_GENERATOR_ARCHITECTURE`.
-      
-      If the environment variable is not specified, the action will use the default toolset for the generator.
+    description: |-
+      Architecture specification for the generator, if supported.
 
+      The option will be applied in the command line as the `-A` option.
+
+      If not specified, the action will use the architecture defined by the environment variable `CMAKE_GENERATOR_ARCHITECTURE`.
+
+      If the environment variable is not specified, the action will use the default toolset for the generator.
     required: false
     default: ''
-
   arch:
-    description: |
+    description: |-
       Target architecture hint (for example `x86`, `x64`, `arm64`). When `generator-architecture` is not set and the
       chosen generator is Visual Studio, the action derives the appropriate `-A` switch from this value. Other
       generators ignore this input.
     required: false
     default: ''
   build-type:
-    description: |
+    description: |-
       Build type.
-      
+
       If not specified, the action will use the build type defined by the environment variable `CMAKE_BUILD_TYPE`.
-      
+
       If the environment variable is not specified, the action will use `Release` as the build type.
-      
+
       If all values are empty, the action will try to use the default generator for the platform.
-      
+
       If the generator is multi-config, this values will be applies to the `CMAKE_CONFIGURATION_TYPES` CMake options
       instead of `CMAKE_BUILD_TYPE`.
-
     required: false
     default: ''
   build-target:
-    description: |
+    description: |-
       Targets to build instead of the default target.
-      
-      This can be a single target or a list of targets separated by a `,`, `;` or space. 
 
+      This can be a single target or a list of targets separated by a `,`, `;` or space.
     required: false
     default: ''
   extra-args:
-    description: 'Extra arguments to cmake configure command.'
+    description: Extra arguments to cmake configure command.
     required: false
     default: ''
   export-compile-commands:
-    description: |
+    description: |-
       Set CMAKE_EXPORT_COMPILE_COMMANDS=ON in the configure step.
-      
+
       If the input is not specified, the action will use the value defined by the environment variable `CMAKE_EXPORT_COMPILE_COMMANDS`.
-      
+
       If the environment variable is not specified, the action will use the default value as identified by CMake (OFF).
-
     required: false
-    default: ''
-
-  # ======================================
-  # Configure and Install options
-  # ======================================
   install-prefix:
-    description: |
+    description: |-
       Path where the library should be installed.
-      
+
       If the input is not specified, the action will use the path defined by the environment variable `CMAKE_INSTALL_PREFIX`.
-      
+
       If the environment variable is not specified, the action will use the default path as identified by CMake.
-
     required: false
     default: ''
-
-  # ======================================
-  # Build options
-  # ======================================
   jobs:
-    description: |
+    description: |-
       Number of jobs to use in parallel builds.
-      
+
       If the input is not specified, the action will use the value defined by the environment variable `CMAKE_JOBS`.
-      
-      If the environment variable is also not specified, the action will use the number of processors available in the 
+
+      If the environment variable is also not specified, the action will use the number of processors available in the
       system.
-
     required: false
-    default: ''
-
-  # ======================================
-  # Test options
-  # ======================================
+    default: '0'
   run-tests:
-    description: |
+    description: |-
       Whether we should run tests.
-      
+
       If the input is not specified, the action will use the value defined by the environment variable `CMAKE_RUN_TESTS`.
-      
+
       If the environment variable is also not specified, the action will attempt to run tests but will not fail if
       there are no tests.
-      
+
       When the value is `true` or `false`, the action will also set the `configure-tests-flag` to `ON` or `OFF`.
       When the value is undefined, the `configure-tests-flag` is ignored.
-
     required: false
-    default: ''
-
   configure-tests-flag:
-    description: |
+    description: |-
       Specify the flag to be passed to cmake to enable/disable tests in the configuration step.
-      
+
       By default this is `BUILD_TESTING`, which is an option automatically created by the CTest module.
-      
+
       If the input contains a "=", the action will use the value as is.
-
     required: false
-    default: 'BUILD_TESTING'
-
+    default: BUILD_TESTING
   test-all-cxxstd:
-    description: |
+    description: |-
       Whether we should run tests for all C++ standards defined by `cxxstd`.
 
       If the input is not specified, the action will only run the tests with the last value defined in `cxxstd`.
-
     required: false
     default: 'false'
-
   ctest-timeout:
-    description: |
+    description: |-
       Maximum time in seconds allowed for each test to run.
 
       If a test runs longer than this value, it will be killed and marked as failed.
@@ -413,153 +358,111 @@ inputs:
       If the input is not specified, the action will use the value defined by the environment variable `CTEST_TEST_TIMEOUT`.
 
       If the environment variable is also not specified, ctest will use its default behavior (no timeout).
-
     required: false
-    default: ''
-
-  # ======================================
-  # Install options
-  # ======================================
+    default: '0'
   install:
-    description: |
+    description: |-
       Whether we should install the library. The library is only installed once in the `install-prefix` using
       the latest standard in `cxxstd`.
-      
+
       If the input is not specified, the action will use the value defined by the environment variable `CMAKE_INSTALL`.
-      
+
       If the environment variable is also not specified, the action will attempt to install the library but will not
       fail if the library cannot installed.
-
     required: false
-    default: ''
-
   install-all-cxxstd:
-    description: |
+    description: |-
       Whether we should install the library for all C++ standards defined by `cxxstd`.
-      
-      If the input is not specified, the action will only install the library with the last value defined in `cxxstd`.
 
+      If the input is not specified, the action will only install the library with the last value defined in `cxxstd`.
     required: false
     default: 'false'
-
-  # ======================================
-  # Packaging options
-  # ======================================
   package:
-    description: |
+    description: |-
       Whether we should run cpack with the specified `package-generators` after the install step.
-      
+
       If the input is not specified, the action will use the value defined by the environment variable `CMAKE_PACKAGE`.
-      
+
       If the environment variable is also not specified, the action will attempt to run cpack but will not
       fail if cpack cannot be run.
-
     required: false
     default: 'false'
-
   package-all-cxxstd:
-    description: |
+    description: |-
       Whether we should run `cpack` for all C++ standards defined by `cxxstd`.
-      
-      If the input is not specified, the action will only run cpack with the last value defined in `cxxstd`.
 
+      If the input is not specified, the action will only run cpack with the last value defined in `cxxstd`.
     required: false
     default: 'false'
-
   package-name:
-    description: |
-      The name of the package (or application). If not specified, CMake will default to the project name.
-
+    description: The name of the package (or application). If not specified, CMake will default to the project name.
     required: false
     default: ''
-
   package-dir:
-    description: |
+    description: |-
       The directory in which the packages are generated by cpack.
-      
+
       If it is not set then this will default to the build dir determined by `CPACK_PACKAGE_DIRECTORY`,
-      which may be defined in CMakeLists.txt, a CPack config file or from the cpack command 
+      which may be defined in CMakeLists.txt, a CPack config file or from the cpack command
       line option `-B`. If `package-dir` is set, it overrides the value found in the config file.
-
     required: false
     default: ''
-
   package-vendor:
-    description: |
-      Override or define CPACK_PACKAGE_VENDOR.
-
+    description: Override or define CPACK_PACKAGE_VENDOR.
     required: false
     default: ''
-
   package-generators:
-    description: |
+    description: |-
       A semicolon-separated list of generator names used by cpack.
-      
+
       If not specified, the action will use the generators defined by the environment variable `CPACK_GENERATOR`.
-      
+
       If this variable is not set, the action will attempt to generate the package with all
       CPack generators available to CMake.
-
     required: false
     default: ''
-
   package-artifact:
-    description: |
+    description: |-
       Whether the packages generated with CPack should be stored as action artifacts.
-      
+
       If the input is not specified, the action will use the value defined by the environment variable `CMAKE_PACKAGE_ARTIFACT`.
-      
+
       If the environment variable is also not specified, the action will store the packages as artifacts.
-
     required: false
-    default: ''
-
+    default: 'true'
   package-retention-days:
-    description: |
-      The number of days to keep the packages generated with CPack as action artifacts.
+    description: The number of days to keep the packages generated with CPack as action artifacts.
     required: false
     default: '10'
-
-  # ======================================
-  # Annotation options
-  # ======================================
   create-annotations:
-    description: |
+    description: |-
       Create github annotations for errors and warnings at all steps.
-      
+
       If the input is not specified, the action will use the value defined by the environment variable `CMAKE_CREATE_ANNOTATIONS`.
-      
+
       If the environment variable is also not specified, the action will create annotations.
-
     required: false
-    default: ''
-
+    default: 'true'
   ref-source-dir:
-    description: |
-      A reference base directory for annotations. 
-      
+    description: |-
+      A reference base directory for annotations.
+
       For instance, if there is an error in the `/home/user/project/src/main.cpp` file, the action will create an
-      annotation referring to the repository path `src/main.cpp`. 
-      
+      annotation referring to the repository path `src/main.cpp`.
+
       If the reference source directory is /home/user/project/src, the action will create an annotation referring to
       `main.cpp` instead because any annotation filename will be relative to this directory.
-      
+
       If no value is provided, the environment variable `GITHUB_WORKSPACE` will be used as the reference source
       directory. This means all annotations will be relative to the repository root if `actions/checkout` has been
       called without specifying a custom `path` option.
-      
+
       Changing this value is typically useful when the repository being tested is not the workspace directory, in
       which we need to make annotations relative to some other directory.
-      
-      In most cases, the default option should be enough.
 
+      In most cases, the default option should be enough.
     required: false
     default: ''
-
-  trace-commands:
-    description: 'Trace commands executed by the workflow.'
-    required: false
-    default: 'false'
 
 runs:
   using: 'node20'
@@ -568,3 +471,4 @@ runs:
 branding:
   icon: 'code'
   color: 'yellow'
+outputs: {}

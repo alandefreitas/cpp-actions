@@ -4,19 +4,14 @@
  * @module types
  */
 
+import type { InferInputs } from 'action-schema';
+import type { inputsSchema } from './schema';
+
 /**
- * Configuration inputs for the setup-msvc action.
+ * Input configuration for the setup-msvc action.
+ * Inferred from the schema definition in schema.ts.
  */
-export interface Inputs {
-    version: string
-    arch: string
-    sdk: string
-    toolset: string
-    vsversion: string
-    uwp: boolean
-    spectre: boolean
-    trace_commands: boolean
-}
+export type Inputs = InferInputs<typeof inputsSchema>;
 
 /**
  * Output values produced by MSVC configuration.

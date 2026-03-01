@@ -7,8 +7,7 @@ import * as exec from '@actions/exec';
 import * as path from 'path';
 import * as httpm from '@actions/http-client';
 import * as trace_commands from 'trace-commands';
-import * as gh_inputs from 'gh-inputs';
-import { reportAndSetFailed } from 'pretty-errors';
+import { runAction } from 'action-schema';
 import gccDefaultTags from '../gcc-tags.json';
 import clangDefaultTags from '../clang-tags.json';
 import cmakeDefaultTags from '../cmake-tags.json';
@@ -23,6 +22,10 @@ import {
     CloneGitRepoOptions,
     AptPackageMatch
 } from './types';
+
+// Schema imports
+import { inputsSchema, outputsSchema } from './schema';
+export { inputsSchema, outputsSchema };
 
 import {
     escapeRegExp,
@@ -1082,41 +1085,16 @@ export async function install_program_from_url(
     return { output_version, output_path };
 }
 
-let lastInputsForErrors: SetupProgramInputs | undefined = undefined;
-
 /**
- * Main entry point for the setup-program GitHub Action.
+ * Main function that searches for and optionally installs a program.
  *
- * Parses inputs, searches for the program in various locations,
- * and optionally installs it from a URL if not found.
+ * @param inputs - Configuration inputs for the action
+ * @returns Object containing path, version, and found status
  */
-async function run(): Promise<void> {
+async function main(inputs: SetupProgramInputs): Promise<Record<string, unknown>> {
     function fnlog(msg: string): void {
         trace_commands.log('setup-program: ' + msg);
     }
-
-    const inputs: SetupProgramInputs = {
-        name: gh_inputs.getArray('name', / /, undefined, { required: true } as unknown as Record<string, unknown>),
-        version: gh_inputs.getInput('version', { defaultValue: '*' } as unknown as Record<string, unknown>),
-        paths: gh_inputs.getArray('path', /[:;]/),
-        check_latest: gh_inputs.getBoolean('check-latest'),
-        update_environment: gh_inputs.getBoolean('update-environment'),
-        url: gh_inputs.getInput('url') || null,
-        install_prefix: gh_inputs.getInput('install-prefix') || null,
-        fail_on_error: gh_inputs.getBoolean('fail-on-error'),
-        trace_commands: gh_inputs.getBoolean('trace-commands')
-    };
-
-    lastInputsForErrors = inputs;
-
-    // Get trace_commands input first
-    if (inputs.trace_commands) {
-        trace_commands.set_trace_commands(true);
-    }
-
-    core.startGroup('📥 Action Inputs');
-    gh_inputs.printInputObject(inputs as unknown as Record<string, unknown>);
-    core.endGroup();
 
     // Set cache directory
     if (process.platform === 'darwin') {
@@ -1131,10 +1109,10 @@ async function run(): Promise<void> {
     let output_version: string | null = null;
 
     // Setup path program
-    if (inputs.paths && inputs.paths.length > 0) {
+    if (inputs.path && inputs.path.length > 0) {
         core.startGroup('🔍 Searching in user provided paths');
-        core.info(`Searching for ${inputs.name} ${inputs.version} in paths [${inputs.paths.join(',')}]`);
-        const result = await find_program_in_path(inputs.paths, inputs.version, inputs.check_latest);
+        core.info(`Searching for ${inputs.name} ${inputs.version} in paths [${inputs.path.join(',')}]`);
+        const result = await find_program_in_path(inputs.path, inputs.version, inputs.check_latest);
         output_version = result.output_version;
         output_path = result.output_path;
         core.endGroup();
@@ -1144,7 +1122,7 @@ async function run(): Promise<void> {
     if (output_path === null) {
         core.startGroup('🔍 Searching in system paths');
         core.info(`Searching for ${inputs.name} ${inputs.version} in PATH`);
-        const result = await find_program_in_system_paths(inputs.paths, inputs.name, inputs.version, inputs.check_latest);
+        const result = await find_program_in_system_paths(inputs.path, inputs.name, inputs.version, inputs.check_latest);
         output_version = result.output_version;
         output_path = result.output_path;
         core.endGroup();
@@ -1167,35 +1145,36 @@ async function run(): Promise<void> {
     }
 
     // Install program
-    if (output_version === null && inputs.url !== null) {
+    const url = inputs.url || null;
+    const install_prefix = inputs.install_prefix || null;
+    if (output_version === null && url !== null) {
         core.startGroup('🚚 Downloading and Installing');
         core.info(`Fetching ${inputs.name} ${inputs.version} from URL`);
         const result = await install_program_from_url(
             inputs.name,
             inputs.version,
             inputs.check_latest,
-            inputs.url,
+            url,
             inputs.update_environment,
-            inputs.install_prefix);
+            install_prefix);
         output_version = result.output_version;
         output_path = result.output_path;
         core.endGroup();
     } else {
         if (output_version !== null) {
             fnlog(`Skipping download step because ${inputs.name} ${output_version} was already found in ${output_path}`);
-        } else if (inputs.url === null) {
-            fnlog(`Skipping download step because no URL was provided. URL: ${inputs.url}`);
+        } else if (url === null) {
+            fnlog(`Skipping download step because no URL was provided. URL: ${url}`);
         }
     }
 
     // Parse Final program / Setup version / Outputs
-    core.startGroup('📤 Return outputs');
     if (output_path) {
         const semverVersion = output_version !== null ?
             semver.coerce(output_version, { loose: true }) :
             semver.coerce('0.0.0', { loose: true });
         if (semverVersion) {
-            const outputs = {
+            return {
                 path: output_path,
                 dir: path.dirname(output_path),
                 version: semverVersion.toString(),
@@ -1204,37 +1183,30 @@ async function run(): Promise<void> {
                 version_patch: semverVersion.patch,
                 found: true
             };
-            core.startGroup('📤 Action Outputs');
-            gh_inputs.setOutputObject(outputs);
-            core.endGroup();
-        }
-    } else {
-        core.setOutput('found', false);
-        if (inputs.fail_on_error) {
-            core.setFailed('Cannot find program');
-        } else {
-            core.info('Cannot find program');
         }
     }
-    core.endGroup();
+
+    core.setOutput('found', false);
+    if (inputs.fail_on_error) {
+        core.setFailed('Cannot find program');
+    } else {
+        core.info('Cannot find program');
+    }
+    return { found: false };
 }
 
-if (require.main === module) {
-    (async () => {
-        try {
-            await run();
-        } catch (error) {
-            let hint = 'Tip: enable trace-commands (INPUT_TRACE_COMMANDS=true) for more logs. ';
-            if (lastInputsForErrors) {
-                const inputs = lastInputsForErrors as SetupProgramInputs;
-                if (inputs.trace_commands) {
-                    hint = 'Trace commands already enabled; if this looks like a bug, please open an issue at github.com/alandefreitas/cpp-actions with stack and logs.';
-                }
-            }
-            await reportAndSetFailed(error as Error, {
-                title: 'Setup program failed',
-                hint
-            });
-        }
-    })();
-}
+/**
+ * Action entry point using schema-driven runner.
+ *
+ * This replaces the previous manual input extraction and error handling
+ * with the standardized runAction wrapper.
+ */
+runAction({
+    inputsSchema,
+    outputsSchema,
+    title: 'Setup Program',
+    main: async (inputs: SetupProgramInputs) => {
+        return await main(inputs);
+    },
+    callerModule: module
+});
