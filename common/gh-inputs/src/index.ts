@@ -37,6 +37,25 @@ const defaultSplitRegex = /[,; ]/;
 const isNonEmptyStr: FilterFn = (s: string): boolean => s !== '';
 
 /**
+ * Checks whether the GitHub Actions runner set the INPUT_ env var for a given input.
+ *
+ * When running in GitHub Actions, the runner always sets INPUT_<NAME> for
+ * every input defined in action.yml — even if the user didn't provide a
+ * value (in which case the action.yml default is used). If the user
+ * explicitly provides an empty string, the env var exists but is empty.
+ *
+ * When running locally or in tests, these env vars typically don't exist,
+ * so the function returns false and programmatic defaults apply as before.
+ *
+ * @param name - The input name as passed to core.getInput (spaces to underscores, uppercased)
+ * @returns true if the INPUT_ env var is defined in the process environment
+ */
+function isInputEnvSet(name: string): boolean {
+    const envKey = `INPUT_${name.replace(/ /g, '_').toUpperCase()}`;
+    return envKey in process.env;
+}
+
+/**
  * Retrieves a GitHub Actions input value with enhanced features.
  *
  * This function extends @actions/core getInput with support for:
@@ -59,7 +78,7 @@ export function getInput(name: string | string[], options: InputOptions = {}): s
     for (const n of nameArr) {
         const coreOptions = { ...opts, required: false };
         const str = core.getInput(n, coreOptions);
-        if (str) {
+        if (str || isInputEnvSet(n)) {
             return str;
         }
     }
@@ -144,7 +163,10 @@ export function getMultilineInput(name: string | string[], options: InputOptions
     for (const n of nameArr) {
         const coreOptions = { ...opts, required: false };
         const lines = core.getMultilineInput(n, coreOptions);
-        if (lines && lines.length > 0) {
+        if (isInputEnvSet(n)) {
+            return filterLines(lines, opts);
+        }
+        if (lines.length > 0) {
             const filtered = filterLines(lines, opts);
             if (filtered.length > 0) {
                 return filtered;

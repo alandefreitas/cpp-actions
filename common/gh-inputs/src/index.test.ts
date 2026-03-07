@@ -18,6 +18,12 @@ describe('gh-inputs', () => {
         // Clear environment variables
         delete process.env.TEST_VAR;
         delete process.env.FALLBACK_VAR;
+        delete process.env.INPUT_TEST_NAME;
+        delete process.env['INPUT_TEST-NAME'];
+        delete process.env.INPUT_TEST;
+        delete process.env.INPUT_FIRST;
+        delete process.env.INPUT_SECOND;
+        delete process.env['INPUT_MODULES-EXCLUDE-PATHS'];
     });
 
     describe('getInput', () => {
@@ -62,6 +68,23 @@ describe('gh-inputs', () => {
             const result = ghInputs.getInput(['first', 'second']);
 
             expect(result).toBe('second-value');
+        });
+
+        it('should return empty string when INPUT_ env var is explicitly set to empty', () => {
+            process.env.INPUT_TEST_NAME = '';
+            mockedCore.getInput.mockReturnValue('');
+
+            const result = ghInputs.getInput('test_name', { defaultValue: 'default' });
+
+            expect(result).toBe('');
+        });
+
+        it('should still use default when INPUT_ env var is not set', () => {
+            mockedCore.getInput.mockReturnValue('');
+
+            const result = ghInputs.getInput('test_name', { defaultValue: 'default' });
+
+            expect(result).toBe('default');
         });
     });
 
@@ -227,6 +250,15 @@ describe('gh-inputs', () => {
 
             expect(result).toEqual([]);
         });
+
+        it('should return empty array when INPUT_ env var is explicitly set to empty', () => {
+            process.env.INPUT_TEST = '';
+            mockedCore.getMultilineInput.mockReturnValue([]);
+
+            const result = ghInputs.getMultilineInput('test', { defaultValue: ['default'] });
+
+            expect(result).toEqual([]);
+        });
     });
 
     describe('getArray', () => {
@@ -263,6 +295,34 @@ describe('gh-inputs', () => {
 
             expect(result).toBeInstanceOf(Set);
             expect(Array.from(result)).toEqual(['a', 'b', 'c']);
+        });
+
+        it('should return empty set when INPUT_ env var is explicitly set to empty', () => {
+            process.env.INPUT_TEST = '';
+            mockedCore.getInput.mockReturnValue('');
+
+            const result = ghInputs.getSet('test', undefined, undefined, { defaultValue: ['a', 'b'] });
+
+            expect(result).toBeInstanceOf(Set);
+            expect(result.size).toBe(0);
+        });
+
+        it('should return empty set for hyphenated name when env var is explicitly empty (issue #32)', () => {
+            // Exact scenario: user sets `modules-exclude-paths: ''` in their workflow.
+            // The runner sets INPUT_MODULES-EXCLUDE-PATHS=''.
+            // Without the fix, getSet falls through to defaultValue ['test', 'tests'].
+            process.env['INPUT_MODULES-EXCLUDE-PATHS'] = '';
+            mockedCore.getInput.mockReturnValue('');
+
+            const result = ghInputs.getSet(
+                'modules-exclude-paths',
+                undefined,
+                undefined,
+                { defaultValue: ['test', 'tests'] }
+            );
+
+            expect(result).toBeInstanceOf(Set);
+            expect(result.size).toBe(0);
         });
     });
 
