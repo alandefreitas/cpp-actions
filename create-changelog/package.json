@@ -21,10 +21,6 @@
     "action-schema": "*",
     "axios": "^1.13.5",
     "pretty-errors": "*",
-    "source-map-support": "^0.5.21",
     "trace-commands": "*"
-  },
-  "devDependencies": {
-    "esbuild": "^0.27.3"
   }
 }

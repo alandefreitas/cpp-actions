@@ -18,10 +18,6 @@
     "gh-inputs": "*",
     "trace-commands": "*",
     "pretty-errors": "*",
-    "yaml": "^2.8.2",
-    "source-map-support": "^0.5.21"
-  },
-  "devDependencies": {
-    "esbuild": "^0.27.3"
+    "yaml": "^2.8.2"
   }
 }

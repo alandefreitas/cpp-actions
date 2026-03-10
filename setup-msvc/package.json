@@ -16,14 +16,10 @@
     "@actions/exec": "^3.0.0",
     "@actions/io": "^3.0.2",
     "action-schema": "*",
-    "gh-inputs": "*",
     "semver": "^7.7.4",
-    "trace-commands": "*",
-    "pretty-errors": "*",
-    "source-map-support": "^0.5.21"
+    "pretty-errors": "*"
   },
   "devDependencies": {
-    "@types/semver": "^7.7.1",
-    "esbuild": "^0.27.3"
+    "@types/semver": "^7.7.1"
   }
 }

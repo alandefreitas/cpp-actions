@@ -18,10 +18,6 @@
     "action-schema": "*",
     "pretty-errors": "*",
     "setup-program": "*",
-    "source-map-support": "^0.5.21",
     "trace-commands": "*"
-  },
-  "devDependencies": {
-    "esbuild": "^0.27.3"
   }
 }

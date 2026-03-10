@@ -8,11 +8,7 @@
  * 1. **`initializeAllSubmodules`**: No specific modules requested. Initializes
  *    everything with `--init --recursive`. Simple but slow.
  *
- * 2. **`batchInitializeSubmodules`**: Uses precomputed transitive deps (from
- *    `boost-deps.json` or the journal) to initialize all needed modules in
- *    one pass. Fast and exact when the complete set is known.
- *
- * 3. **`initializeSubmodules`**: Layer-by-layer discovery. Initializes direct
+ * 2. **`initializeSubmodules`**: Layer-by-layer discovery. Initializes direct
  *    modules, scans their headers for deps, initializes those, repeats until
  *    convergence. Always correct but expensive.
  *
@@ -69,55 +65,6 @@ function makeSubmoduleUpdateArgs(gitFeatures: GitFeatures): string[] {
     const jobsArgs = gitFeatures.supportsJobs ? ['--jobs', `${numberOfCpus()}`] : [];
     const depthArgs = gitFeatures.supportsDepth ? ['--depth', '1'] : [];
     return jobsArgs.concat(depthArgs).concat(['-q']);
-}
-
-/**
- * Batch-initializes all specified modules at once using precomputed dependency data.
- * This is more efficient than layer-by-layer discovery.
- *
- * @param inputs - User inputs
- * @param allModules - Complete set of modules to initialize (including transitive deps)
- * @param gitFeatures - Git capabilities
- * @param patchNames - Names of patch modules already cloned by applyPatches (excluded from git submodule init)
- */
-export async function batchInitializeSubmodules(
-    inputs: Inputs,
-    allModules: Set<string>,
-    gitFeatures: GitFeatures,
-    patchNames: Set<string> = new Set()
-): Promise<void> {
-    const fnlog = trace_commands.scoped('batchInitializeSubmodules');
-
-    const gitArgs = makeSubmoduleUpdateArgs(gitFeatures);
-
-    // Seed patch names so they aren't re-cloned via git submodule update
-    const allModulesWithEssentials = new Set(allModules);
-    for (const mod of ESSENTIAL_MODULES) {
-        allModulesWithEssentials.add(mod);
-    }
-    for (const patchName of patchNames) {
-        allModulesWithEssentials.add(patchName);
-    }
-
-    // Build list of all submodule paths to initialize, excluding patches
-    // (they're already cloned by applyPatches and aren't registered submodules)
-    const submoduleInitPaths: string[] = [];
-    for (const mod of allModulesWithEssentials) {
-        if (!patchNames.has(mod)) {
-            submoduleInitPaths.push(`libs/${mod}`);
-        }
-    }
-    for (const tool of ESSENTIAL_TOOL_PATHS) {
-        submoduleInitPaths.push(tool);
-    }
-
-    fnlog(`Batch initializing ${submoduleInitPaths.length} submodules`);
-
-    // Initialize all submodules in one command with multiple paths
-    const args = ['submodule', 'update'].concat(gitArgs).concat(['--init']).concat(submoduleInitPaths);
-    await exec.exec(`"${gitFeatures.gitPath}"`, args, { cwd: inputs.boost_dir });
-
-    fnlog('Batch initialization complete');
 }
 
 /**

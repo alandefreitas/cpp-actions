@@ -15,10 +15,6 @@
     "@actions/core": "^3.0.0",
     "action-schema": "*",
     "pretty-errors": "*",
-    "source-map-support": "^0.5.21",
     "trace-commands": "*"
-  },
-  "devDependencies": {
-    "esbuild": "^0.27.3"
   }
 }

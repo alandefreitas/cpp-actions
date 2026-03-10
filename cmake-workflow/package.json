@@ -17,13 +17,10 @@
     "@actions/exec": "^3.0.0",
     "@actions/io": "^3.0.2",
     "action-schema": "*",
+    "gh-inputs": "*",
     "pretty-errors": "*",
     "setup-cmake": "*",
     "setup-program": "*",
-    "source-map-support": "^0.5.21",
     "trace-commands": "*"
-  },
-  "devDependencies": {
-    "esbuild": "^0.27.3"
   }
 }

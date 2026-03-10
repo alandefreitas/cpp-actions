@@ -20,13 +20,10 @@
     "action-schema": "*",
     "semver": "^7.7.4",
     "trace-commands": "*",
-    "gh-inputs": "*",
     "setup-program": "*",
-    "pretty-errors": "*",
-    "source-map-support": "^0.5.21"
+    "pretty-errors": "*"
   },
   "devDependencies": {
-    "@types/semver": "^7.7.1",
-    "esbuild": "^0.27.3"
+    "@types/semver": "^7.7.1"
   }
 }

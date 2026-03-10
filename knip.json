@@ -1,0 +1,35 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "exclude": [
+    "exports",
+    "nsExports",
+    "types",
+    "nsTypes",
+    "enumMembers",
+    "classMembers",
+    "duplicates"
+  ],
+  "ignore": [
+    "**/dist/**"
+  ],
+  "ignoreBinaries": [
+    "antora"
+  ],
+  "workspaces": {
+    "utils/esbuild": {
+      "entry": ["src/sourcemap-register.ts"]
+    },
+    "utils/update-data": {
+      "entry": ["src/action-yml.ts"]
+    },
+    "create-changelog": {
+      "entry": ["src/create-changelog.ts"]
+    },
+    "boost-clone": {
+      "entry": ["scripts/generate-deps.ts"]
+    },
+    "common/pretty-errors": {
+      "ignoreDependencies": ["trace-commands"]
+    }
+  }
+}
