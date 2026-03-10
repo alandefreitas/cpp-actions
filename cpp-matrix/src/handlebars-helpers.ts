@@ -59,6 +59,10 @@ import * as Handlebars from 'handlebars';
  * - **Utility (3)**: `default`, `coalesce`, `format`
  *
  * @throws Error if 'and' or 'or' helpers receive fewer than 2 arguments
+ *
+ * NOTE: When adding or removing helpers, update the helper tables in
+ * `cpp-matrix/action.yml` (under "Extra values in entries") so the
+ * documentation stays in sync.
  */
 export function registerHelpers(): void {
     // String operators

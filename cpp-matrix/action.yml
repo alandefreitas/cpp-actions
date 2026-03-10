@@ -177,11 +177,15 @@ description: |
   other values in the matrix. The handlebars expression can access previous values in the matrix, including
   other extra values. 
 
-  Besides referencing other values in the matrix, the handlebars expressions can also use the 
+  All fields described in the `matrix` output (see <<outputs>>) are directly accessible in templates
+  as `\{{ fieldName }}`. Extra values are processed in order, so previously injected values are also
+  available to subsequent templates.
+
+  Besides referencing entry fields, the handlebars expressions can also use the
   built-in https://handlebarsjs.com/guide/builtin-helpers.html[helpers] provided by Handlebars and the
   predefined helpers defined by the action:
 
-  === String Helpers for Extra Values
+  === String Helpers
 
   [cols="1,3"]
   |===
