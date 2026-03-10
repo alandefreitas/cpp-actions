@@ -553,23 +553,26 @@ The Boost modules required in files from this directory will be added to the <co
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>modules-scan-paths</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Additional module subdirectory to scan.</p>
-<p class="tableblock">For instance, by setting it to <code>test</code> the action will scan the <code>test</code> directory for boost dependencies.</p>
-<p class="tableblock">By default, the action scans the ['include', 'src', 'source', 'test', 'tests', 'example', 'examples'] directories.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Additional subdirectories within each <code>scan-modules-dir</code> entry to scan for <code>#include &lt;boost/&#8230;&#8203;&gt;</code> headers.</p>
+<p class="tableblock">For instance, by setting it to <code>test</code> the action will also scan the <code>test</code> subdirectory for boost dependencies.
+This only affects module discovery — it does not change which files are checked out.</p>
+<p class="tableblock">By default, the action scans the ['include', 'src', 'source', 'test', 'tests', 'example', 'examples'] subdirectories.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>modules-exclude-paths</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Module subdirectory to exclude from scanning.</p>
-<p class="tableblock">Directories that match any of the values in this list will be ignored.</p>
-<p class="tableblock">By default, the action excludes the ['test', 'tests'] directories.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Subdirectories within each <code>scan-modules-dir</code> entry to exclude from the header scan.</p>
+<p class="tableblock">Directories that match any of the values in this list will be skipped during module discovery.
+This only affects which headers are scanned — it does not change which files are checked out.</p>
+<p class="tableblock">By default, the action excludes the ['test', 'tests'] subdirectories.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>test</code></p>
 <p class="tableblock"><code>tests</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>scan-modules-ignore</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of modules that should be ignored in scan-modules.</p>
-<p class="tableblock">This if often useful to exclude the current project&#8217;s libraries from the scan.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">List of modules that should be ignored after scanning headers.</p>
+<p class="tableblock">Matching modules are removed from the discovered set before dependency resolution.
+This is often useful to exclude the current project&#8217;s own libraries from the scan results.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
