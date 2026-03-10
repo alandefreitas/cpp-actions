@@ -79,9 +79,7 @@ export async function downloadSourceCode(inputs: Inputs): Promise<void> {
  * @param inputs - Workflow inputs with patch file paths
  */
 export async function applyPatches(inputs: Inputs): Promise<void> {
-    function fnlog(msg: string): void {
-        trace_commands.log('applyPatches: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('applyPatches');
 
     if (!inputs.patches || inputs.patches.length === 0) {
         return;

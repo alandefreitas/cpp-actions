@@ -18,9 +18,7 @@ import * as trace_commands from 'trace-commands';
  * @returns Updated version requirement merged with CMake file requirements
  */
 export function updateCMakeVersionFromFile(cmake_file: string, version: string, allVersions: string[]): string {
-    function fnlog(msg: string): void {
-        trace_commands.log('updateCMakeVersionFromFile: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('updateCMakeVersionFromFile');
 
     if (!cmake_file) {
         fnlog('No CMake file specified');

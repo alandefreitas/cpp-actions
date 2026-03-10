@@ -1,6 +1,7 @@
 import * as main from './index';
 import * as fs from 'fs';
 import * as path from 'path';
+import { describePrettyErrors } from 'pretty-errors/test-helper';
 
 test('createReadmeFile', async () => {
     const readmePath = path.join(__dirname, '../testOutput', 'README.md');
@@ -40,20 +41,4 @@ test('combineTraces+Report+Flamegraph', async () => {
     expect(fs.existsSync(imagePath)).toBeTruthy();
 });
 
-describe('pretty errors', () => {
-    it('logs once and fails once', async () => {
-        let runPromise: Promise<void>;
-        jest.isolateModules(() => {
-            jest.resetModules();
-            jest.doMock('@actions/core', () => ({
-                error: jest.fn(),
-                setFailed: jest.fn()
-            }));
-            const { reportAndSetFailed } = require('../../common/pretty-errors/src/index');
-
-            runPromise = reportAndSetFailed(new Error('flamegraph boom'), { title: 'Flamegraph failed' });
-        });
-
-        await runPromise!;
-    });
-});
+describePrettyErrors('flamegraph boom', 'Flamegraph failed');

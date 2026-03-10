@@ -7,7 +7,7 @@
 import * as core from '@actions/core';
 import * as exec from '@actions/exec';
 import * as tc from '@actions/tool-cache';
-import * as fs from 'fs';
+import * as fsp from 'fs/promises';
 
 /**
  * Gets the CMake release archive URL for a Boost release tag.
@@ -34,7 +34,7 @@ export async function downloadAndExtractArchive(archiveUrl: string, targetDir: s
     core.info(`Downloaded to ${archivePath}`);
 
     // Create target directory
-    fs.mkdirSync(targetDir, { recursive: true });
+    await fsp.mkdir(targetDir, { recursive: true });
 
     // Extract the archive (tar.xz format)
     core.info(`Extracting to ${targetDir}...`);

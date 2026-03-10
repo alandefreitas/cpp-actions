@@ -10,17 +10,7 @@
             "throw_exception",
             "variant2",
             "winapi"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "mp11",
-            "predef",
-            "throw_exception",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 7
+          ]
         },
         "multi_array": {
           "direct_deps": [
@@ -34,36 +24,7 @@
             "mpl",
             "static_assert",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "array",
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "io",
-            "iterator",
-            "mp11",
-            "mpl",
-            "optional",
-            "predef",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "utility"
-          ],
-          "total_count": 26
+          ]
         },
         "math": {
           "direct_deps": [
@@ -77,34 +38,7 @@
             "random",
             "static_assert",
             "throw_exception"
-          ],
-          "transitive_deps": [
-            "assert",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "core",
-            "describe",
-            "dynamic_bitset",
-            "integer",
-            "intrusive",
-            "io",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "predef",
-            "preprocessor",
-            "random",
-            "static_assert",
-            "system",
-            "throw_exception",
-            "type_traits",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 24
+          ]
         },
         "smart_ptr": {
           "direct_deps": [
@@ -112,14 +46,7 @@
             "config",
             "core",
             "throw_exception"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "throw_exception"
-          ],
-          "total_count": 4
+          ]
         },
         "parameter": {
           "direct_deps": [
@@ -133,33 +60,7 @@
             "preprocessor",
             "type_traits",
             "utility"
-          ],
-          "transitive_deps": [
-            "assert",
-            "bind",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "io",
-            "mp11",
-            "mpl",
-            "optional",
-            "predef",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "utility"
-          ],
-          "total_count": 23
+          ]
         },
         "algorithm": {
           "direct_deps": [
@@ -180,42 +81,7 @@
             "tuple",
             "type_traits",
             "unordered"
-          ],
-          "transitive_deps": [
-            "array",
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container_hash",
-            "conversion",
-            "core",
-            "describe",
-            "detail",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "io",
-            "iterator",
-            "mp11",
-            "mpl",
-            "optional",
-            "predef",
-            "preprocessor",
-            "range",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility"
-          ],
-          "total_count": 32
+          ]
         },
         "any": {
           "direct_deps": [
@@ -223,17 +89,7 @@
             "config",
             "throw_exception",
             "type_index"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "container_hash",
-            "describe",
-            "mp11",
-            "throw_exception",
-            "type_index"
-          ],
-          "total_count": 7
+          ]
         },
         "concept_check": {
           "direct_deps": [
@@ -241,14 +97,7 @@
             "preprocessor",
             "static_assert",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "config",
-            "preprocessor",
-            "static_assert",
-            "type_traits"
-          ],
-          "total_count": 4
+          ]
         },
         "python": {
           "direct_deps": [
@@ -273,87 +122,7 @@
             "tuple",
             "type_traits",
             "utility"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "any",
-            "array",
-            "assert",
-            "atomic",
-            "bimap",
-            "bind",
-            "chrono",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "dynamic_bitset",
-            "endian",
-            "exception",
-            "foreach",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "geometry",
-            "graph",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lambda",
-            "lexical_cast",
-            "math",
-            "move",
-            "mp11",
-            "mpl",
-            "multi_index",
-            "multiprecision",
-            "numeric/conversion",
-            "optional",
-            "parameter",
-            "phoenix",
-            "polygon",
-            "pool",
-            "predef",
-            "preprocessor",
-            "property_map",
-            "property_tree",
-            "proto",
-            "qvm",
-            "random",
-            "range",
-            "ratio",
-            "rational",
-            "regex",
-            "serialization",
-            "smart_ptr",
-            "spirit",
-            "static_assert",
-            "system",
-            "test",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tti",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant",
-            "variant2",
-            "winapi",
-            "xpressive"
-          ],
-          "total_count": 77
+          ]
         },
         "tti": {
           "direct_deps": [
@@ -362,23 +131,7 @@
             "mpl",
             "preprocessor",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "detail",
-            "function_types",
-            "io",
-            "mpl",
-            "predef",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "type_traits",
-            "utility"
-          ],
-          "total_count": 13
+          ]
         },
         "functional": {
           "direct_deps": [
@@ -391,31 +144,10 @@
             "type_traits",
             "typeof",
             "utility"
-          ],
-          "transitive_deps": [
-            "assert",
-            "bind",
-            "config",
-            "core",
-            "detail",
-            "function",
-            "function_types",
-            "io",
-            "mpl",
-            "predef",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "type_traits",
-            "typeof",
-            "utility"
-          ],
-          "total_count": 16
+          ]
         },
         "config": {
-          "direct_deps": [],
-          "transitive_deps": [],
-          "total_count": 0
+          "direct_deps": []
         },
         "log": {
           "direct_deps": [
@@ -455,77 +187,7 @@
             "utility",
             "winapi",
             "xpressive"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "any",
-            "array",
-            "asio",
-            "assert",
-            "atomic",
-            "bind",
-            "chrono",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "context",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "endian",
-            "exception",
-            "filesystem",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "interprocess",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "multi_index",
-            "numeric/conversion",
-            "optional",
-            "parameter",
-            "phoenix",
-            "pool",
-            "predef",
-            "preprocessor",
-            "property_tree",
-            "proto",
-            "range",
-            "ratio",
-            "regex",
-            "scope",
-            "serialization",
-            "smart_ptr",
-            "spirit",
-            "static_assert",
-            "system",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant",
-            "variant2",
-            "winapi",
-            "xpressive"
-          ],
-          "total_count": 67
+          ]
         },
         "interprocess": {
           "direct_deps": [
@@ -535,17 +197,7 @@
             "intrusive",
             "move",
             "winapi"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "container",
-            "intrusive",
-            "move",
-            "predef",
-            "winapi"
-          ],
-          "total_count": 7
+          ]
         },
         "exception": {
           "direct_deps": [
@@ -556,18 +208,7 @@
             "throw_exception",
             "tuple",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "smart_ptr",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_traits"
-          ],
-          "total_count": 8
+          ]
         },
         "foreach": {
           "direct_deps": [
@@ -577,40 +218,7 @@
             "mpl",
             "range",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "array",
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container_hash",
-            "conversion",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "io",
-            "iterator",
-            "mp11",
-            "mpl",
-            "optional",
-            "predef",
-            "preprocessor",
-            "range",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "utility"
-          ],
-          "total_count": 30
+          ]
         },
         "spirit": {
           "direct_deps": [
@@ -643,74 +251,12 @@
             "unordered",
             "utility",
             "variant"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "array",
-            "assert",
-            "atomic",
-            "bind",
-            "chrono",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "endian",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "phoenix",
-            "pool",
-            "predef",
-            "preprocessor",
-            "proto",
-            "range",
-            "ratio",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "system",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 55
+          ]
         },
         "io": {
           "direct_deps": [
             "config"
-          ],
-          "transitive_deps": [
-            "config"
-          ],
-          "total_count": 1
+          ]
         },
         "units": {
           "direct_deps": [
@@ -726,52 +272,10 @@
             "static_assert",
             "type_traits",
             "typeof"
-          ],
-          "transitive_deps": [
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "dynamic_bitset",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lambda",
-            "lexical_cast",
-            "math",
-            "move",
-            "mp11",
-            "mpl",
-            "optional",
-            "predef",
-            "preprocessor",
-            "random",
-            "static_assert",
-            "system",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 37
+          ]
         },
         "preprocessor": {
-          "direct_deps": [],
-          "transitive_deps": [],
-          "total_count": 0
+          "direct_deps": []
         },
         "format": {
           "direct_deps": [
@@ -782,21 +286,7 @@
             "smart_ptr",
             "throw_exception",
             "utility"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "io",
-            "optional",
-            "preprocessor",
-            "smart_ptr",
-            "static_assert",
-            "throw_exception",
-            "type_traits",
-            "utility"
-          ],
-          "total_count": 11
+          ]
         },
         "xpressive": {
           "direct_deps": [
@@ -822,66 +312,7 @@
             "type_traits",
             "typeof",
             "utility"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "array",
-            "assert",
-            "atomic",
-            "bind",
-            "chrono",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "endian",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "phoenix",
-            "pool",
-            "predef",
-            "preprocessor",
-            "proto",
-            "range",
-            "ratio",
-            "regex",
-            "smart_ptr",
-            "spirit",
-            "static_assert",
-            "system",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 56
+          ]
         },
         "integer": {
           "direct_deps": [
@@ -891,16 +322,7 @@
             "static_assert",
             "throw_exception",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "static_assert",
-            "throw_exception",
-            "type_traits"
-          ],
-          "total_count": 6
+          ]
         },
         "thread": {
           "direct_deps": [
@@ -929,58 +351,7 @@
             "type_traits",
             "utility",
             "winapi"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "array",
-            "assert",
-            "atomic",
-            "bind",
-            "chrono",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "predef",
-            "preprocessor",
-            "range",
-            "ratio",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "system",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 48
+          ]
         },
         "tokenizer": {
           "direct_deps": [
@@ -989,48 +360,14 @@
             "iterator",
             "throw_exception",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "io",
-            "iterator",
-            "mp11",
-            "mpl",
-            "optional",
-            "predef",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "utility"
-          ],
-          "total_count": 25
+          ]
         },
         "timer": {
           "direct_deps": [
             "config",
             "io",
             "predef"
-          ],
-          "transitive_deps": [
-            "config",
-            "io",
-            "predef"
-          ],
-          "total_count": 3
+          ]
         },
         "regex": {
           "direct_deps": [
@@ -1042,24 +379,10 @@
             "static_assert",
             "throw_exception",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "assert",
-            "concept_check",
-            "config",
-            "core",
-            "predef",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "type_traits"
-          ],
-          "total_count": 9
+          ]
         },
         "crc": {
-          "direct_deps": [],
-          "transitive_deps": [],
-          "total_count": 0
+          "direct_deps": []
         },
         "random": {
           "direct_deps": [
@@ -1074,28 +397,7 @@
             "throw_exception",
             "type_traits",
             "utility"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "dynamic_bitset",
-            "integer",
-            "io",
-            "mp11",
-            "predef",
-            "preprocessor",
-            "static_assert",
-            "system",
-            "throw_exception",
-            "type_traits",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 18
+          ]
         },
         "serialization": {
           "direct_deps": [
@@ -1122,66 +424,7 @@
             "utility",
             "variant",
             "variant2"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "array",
-            "assert",
-            "atomic",
-            "bind",
-            "chrono",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "endian",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "phoenix",
-            "pool",
-            "predef",
-            "preprocessor",
-            "proto",
-            "range",
-            "ratio",
-            "regex",
-            "smart_ptr",
-            "spirit",
-            "static_assert",
-            "system",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 56
+          ]
         },
         "test": {
           "direct_deps": [
@@ -1203,44 +446,7 @@
             "static_assert",
             "type_traits",
             "utility"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "array",
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container_hash",
-            "conversion",
-            "core",
-            "describe",
-            "detail",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "io",
-            "iterator",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "predef",
-            "preprocessor",
-            "range",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility"
-          ],
-          "total_count": 34
+          ]
         },
         "date_time": {
           "direct_deps": [
@@ -1259,63 +465,13 @@
             "type_traits",
             "utility",
             "winapi"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "array",
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "describe",
-            "detail",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "predef",
-            "preprocessor",
-            "range",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "winapi"
-          ],
-          "total_count": 40
+          ]
         },
         "logic": {
           "direct_deps": [
             "config",
             "core"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "throw_exception"
-          ],
-          "total_count": 4
+          ]
         },
         "graph": {
           "direct_deps": [
@@ -1363,87 +519,7 @@
             "unordered",
             "utility",
             "xpressive"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "any",
-            "array",
-            "assert",
-            "atomic",
-            "bimap",
-            "bind",
-            "chrono",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "dynamic_bitset",
-            "endian",
-            "exception",
-            "foreach",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "geometry",
-            "graph",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lambda",
-            "lexical_cast",
-            "math",
-            "move",
-            "mp11",
-            "mpl",
-            "multi_index",
-            "multiprecision",
-            "numeric/conversion",
-            "optional",
-            "parameter",
-            "phoenix",
-            "polygon",
-            "pool",
-            "predef",
-            "preprocessor",
-            "property_map",
-            "property_tree",
-            "proto",
-            "qvm",
-            "random",
-            "range",
-            "ratio",
-            "rational",
-            "regex",
-            "serialization",
-            "smart_ptr",
-            "spirit",
-            "static_assert",
-            "system",
-            "test",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tti",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant",
-            "variant2",
-            "winapi",
-            "xpressive"
-          ],
-          "total_count": 77
+          ]
         },
         "numeric/conversion": {
           "direct_deps": [
@@ -1454,23 +530,7 @@
             "preprocessor",
             "throw_exception",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "conversion",
-            "core",
-            "io",
-            "mpl",
-            "predef",
-            "preprocessor",
-            "smart_ptr",
-            "static_assert",
-            "throw_exception",
-            "type_traits",
-            "utility"
-          ],
-          "total_count": 13
+          ]
         },
         "lambda": {
           "direct_deps": [
@@ -1484,35 +544,7 @@
             "tuple",
             "type_traits",
             "utility"
-          ],
-          "transitive_deps": [
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "io",
-            "iterator",
-            "mp11",
-            "mpl",
-            "optional",
-            "predef",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "utility"
-          ],
-          "total_count": 25
+          ]
         },
         "mpl": {
           "direct_deps": [
@@ -1523,29 +555,12 @@
             "static_assert",
             "type_traits",
             "utility"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "io",
-            "predef",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "type_traits",
-            "utility"
-          ],
-          "total_count": 10
+          ]
         },
         "typeof": {
           "direct_deps": [
             "config"
-          ],
-          "transitive_deps": [
-            "config"
-          ],
-          "total_count": 1
+          ]
         },
         "tuple": {
           "direct_deps": [
@@ -1553,16 +568,7 @@
             "core",
             "static_assert",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "static_assert",
-            "throw_exception",
-            "type_traits"
-          ],
-          "total_count": 6
+          ]
         },
         "utility": {
           "direct_deps": [
@@ -1573,18 +579,7 @@
             "preprocessor",
             "throw_exception",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "io",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "type_traits"
-          ],
-          "total_count": 8
+          ]
         },
         "dynamic_bitset": {
           "direct_deps": [
@@ -1593,17 +588,7 @@
             "container_hash",
             "core",
             "throw_exception"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "mp11",
-            "throw_exception"
-          ],
-          "total_count": 7
+          ]
         },
         "assign": {
           "direct_deps": [
@@ -1618,44 +603,7 @@
             "throw_exception",
             "tuple",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "array",
-            "assert",
-            "bind",
-            "circular_buffer",
-            "concept_check",
-            "config",
-            "container_hash",
-            "conversion",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "io",
-            "iterator",
-            "move",
-            "mp11",
-            "mpl",
-            "optional",
-            "predef",
-            "preprocessor",
-            "ptr_container",
-            "range",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility"
-          ],
-          "total_count": 34
+          ]
         },
         "filesystem": {
           "direct_deps": [
@@ -1673,42 +621,7 @@
             "system",
             "type_traits",
             "winapi"
-          ],
-          "transitive_deps": [
-            "align",
-            "assert",
-            "atomic",
-            "bind",
-            "concept_check",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "io",
-            "iterator",
-            "mp11",
-            "mpl",
-            "optional",
-            "predef",
-            "preprocessor",
-            "scope",
-            "smart_ptr",
-            "static_assert",
-            "system",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 32
+          ]
         },
         "function": {
           "direct_deps": [
@@ -1717,15 +630,7 @@
             "config",
             "core",
             "throw_exception"
-          ],
-          "transitive_deps": [
-            "assert",
-            "bind",
-            "config",
-            "core",
-            "throw_exception"
-          ],
-          "total_count": 5
+          ]
         },
         "conversion": {
           "direct_deps": [
@@ -1733,15 +638,7 @@
             "config",
             "smart_ptr",
             "throw_exception"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "smart_ptr",
-            "throw_exception"
-          ],
-          "total_count": 5
+          ]
         },
         "optional": {
           "direct_deps": [
@@ -1750,16 +647,7 @@
             "core",
             "throw_exception",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "static_assert",
-            "throw_exception",
-            "type_traits"
-          ],
-          "total_count": 6
+          ]
         },
         "property_tree": {
           "direct_deps": [
@@ -1777,69 +665,7 @@
             "static_assert",
             "throw_exception",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "any",
-            "array",
-            "assert",
-            "atomic",
-            "bind",
-            "chrono",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "endian",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "multi_index",
-            "numeric/conversion",
-            "optional",
-            "phoenix",
-            "pool",
-            "predef",
-            "preprocessor",
-            "proto",
-            "range",
-            "ratio",
-            "regex",
-            "serialization",
-            "smart_ptr",
-            "spirit",
-            "static_assert",
-            "system",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 59
+          ]
         },
         "bimap": {
           "direct_deps": [
@@ -1856,40 +682,7 @@
             "throw_exception",
             "type_traits",
             "utility"
-          ],
-          "transitive_deps": [
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "io",
-            "iterator",
-            "lambda",
-            "move",
-            "mp11",
-            "mpl",
-            "multi_index",
-            "optional",
-            "predef",
-            "preprocessor",
-            "smart_ptr",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "utility"
-          ],
-          "total_count": 30
+          ]
         },
         "variant": {
           "direct_deps": [
@@ -1906,27 +699,7 @@
             "type_index",
             "type_traits",
             "utility"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "integer",
-            "io",
-            "mp11",
-            "mpl",
-            "predef",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "type_index",
-            "type_traits",
-            "utility"
-          ],
-          "total_count": 17
+          ]
         },
         "array": {
           "direct_deps": [
@@ -1934,14 +707,7 @@
             "config",
             "static_assert",
             "throw_exception"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "static_assert",
-            "throw_exception"
-          ],
-          "total_count": 4
+          ]
         },
         "iostreams": {
           "direct_deps": [
@@ -1963,47 +729,7 @@
             "throw_exception",
             "type_traits",
             "utility"
-          ],
-          "transitive_deps": [
-            "array",
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container_hash",
-            "conversion",
-            "core",
-            "describe",
-            "detail",
-            "dynamic_bitset",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "io",
-            "iterator",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "predef",
-            "preprocessor",
-            "random",
-            "range",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "system",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 37
+          ]
         },
         "multi_index": {
           "direct_deps": [
@@ -2023,38 +749,7 @@
             "tuple",
             "type_traits",
             "utility"
-          ],
-          "transitive_deps": [
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "io",
-            "iterator",
-            "move",
-            "mp11",
-            "mpl",
-            "optional",
-            "predef",
-            "preprocessor",
-            "smart_ptr",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "utility"
-          ],
-          "total_count": 28
+          ]
         },
         "ptr_container": {
           "direct_deps": [
@@ -2071,43 +766,7 @@
             "type_traits",
             "unordered",
             "utility"
-          ],
-          "transitive_deps": [
-            "array",
-            "assert",
-            "bind",
-            "circular_buffer",
-            "concept_check",
-            "config",
-            "container_hash",
-            "conversion",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "io",
-            "iterator",
-            "move",
-            "mp11",
-            "mpl",
-            "optional",
-            "predef",
-            "preprocessor",
-            "range",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility"
-          ],
-          "total_count": 33
+          ]
         },
         "statechart": {
           "direct_deps": [
@@ -2123,68 +782,12 @@
             "static_assert",
             "thread",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "array",
-            "assert",
-            "atomic",
-            "bind",
-            "chrono",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "predef",
-            "preprocessor",
-            "range",
-            "ratio",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "system",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 49
+          ]
         },
         "static_assert": {
           "direct_deps": [
             "config"
-          ],
-          "transitive_deps": [
-            "config"
-          ],
-          "total_count": 1
+          ]
         },
         "range": {
           "direct_deps": [
@@ -2205,39 +808,7 @@
             "tuple",
             "type_traits",
             "utility"
-          ],
-          "transitive_deps": [
-            "array",
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container_hash",
-            "conversion",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "io",
-            "iterator",
-            "mp11",
-            "mpl",
-            "optional",
-            "predef",
-            "preprocessor",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "utility"
-          ],
-          "total_count": 29
+          ]
         },
         "rational": {
           "direct_deps": [
@@ -2249,20 +820,7 @@
             "throw_exception",
             "type_traits",
             "utility"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "integer",
-            "io",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "type_traits",
-            "utility"
-          ],
-          "total_count": 10
+          ]
         },
         "iterator": {
           "direct_deps": [
@@ -2276,34 +834,7 @@
             "optional",
             "type_traits",
             "utility"
-          ],
-          "transitive_deps": [
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "io",
-            "mp11",
-            "mpl",
-            "optional",
-            "predef",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "utility"
-          ],
-          "total_count": 24
+          ]
         },
         "graph_parallel": {
           "direct_deps": [
@@ -2333,92 +864,7 @@
             "tuple",
             "type_traits",
             "variant"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "any",
-            "array",
-            "assert",
-            "atomic",
-            "bimap",
-            "bind",
-            "chrono",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "dynamic_bitset",
-            "endian",
-            "exception",
-            "filesystem",
-            "foreach",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "geometry",
-            "graph",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lambda",
-            "lexical_cast",
-            "math",
-            "move",
-            "mp11",
-            "mpi",
-            "mpl",
-            "multi_index",
-            "multiprecision",
-            "numeric/conversion",
-            "optional",
-            "parameter",
-            "phoenix",
-            "polygon",
-            "pool",
-            "predef",
-            "preprocessor",
-            "property_map",
-            "property_map_parallel",
-            "property_tree",
-            "proto",
-            "python",
-            "qvm",
-            "random",
-            "range",
-            "ratio",
-            "rational",
-            "regex",
-            "scope",
-            "serialization",
-            "smart_ptr",
-            "spirit",
-            "static_assert",
-            "system",
-            "test",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tti",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant",
-            "variant2",
-            "winapi",
-            "xpressive"
-          ],
-          "total_count": 82
+          ]
         },
         "property_map": {
           "direct_deps": [
@@ -2437,42 +883,7 @@
             "type_index",
             "type_traits",
             "utility"
-          ],
-          "transitive_deps": [
-            "any",
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "optional",
-            "predef",
-            "preprocessor",
-            "smart_ptr",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "utility"
-          ],
-          "total_count": 32
+          ]
         },
         "program_options": {
           "direct_deps": [
@@ -2489,43 +900,7 @@
             "throw_exception",
             "tokenizer",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "any",
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "optional",
-            "predef",
-            "preprocessor",
-            "smart_ptr",
-            "static_assert",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "utility"
-          ],
-          "total_count": 33
+          ]
         },
         "detail": {
           "direct_deps": [
@@ -2534,36 +909,14 @@
             "preprocessor",
             "static_assert",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "type_traits"
-          ],
-          "total_count": 7
+          ]
         },
         "numeric/interval": {
           "direct_deps": [
             "config",
             "detail",
             "logic"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "detail",
-            "logic",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "type_traits"
-          ],
-          "total_count": 9
+          ]
         },
         "numeric/ublas": {
           "direct_deps": [
@@ -2580,76 +933,7 @@
             "static_assert",
             "type_traits",
             "typeof"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "any",
-            "array",
-            "assert",
-            "atomic",
-            "bind",
-            "chrono",
-            "compute",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "endian",
-            "exception",
-            "filesystem",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "logic",
-            "move",
-            "mp11",
-            "mpl",
-            "multi_index",
-            "numeric/conversion",
-            "numeric/interval",
-            "optional",
-            "phoenix",
-            "pool",
-            "predef",
-            "preprocessor",
-            "property_tree",
-            "proto",
-            "range",
-            "ratio",
-            "regex",
-            "scope",
-            "serialization",
-            "smart_ptr",
-            "spirit",
-            "static_assert",
-            "system",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "uuid",
-            "variant",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 66
+          ]
         },
         "wave": {
           "direct_deps": [
@@ -2672,95 +956,19 @@
             "static_assert",
             "throw_exception",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "array",
-            "assert",
-            "atomic",
-            "bind",
-            "chrono",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "endian",
-            "exception",
-            "filesystem",
-            "format",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "multi_index",
-            "numeric/conversion",
-            "optional",
-            "phoenix",
-            "pool",
-            "predef",
-            "preprocessor",
-            "proto",
-            "range",
-            "ratio",
-            "regex",
-            "scope",
-            "serialization",
-            "smart_ptr",
-            "spirit",
-            "static_assert",
-            "system",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 61
+          ]
         },
         "type_traits": {
           "direct_deps": [
             "config",
             "static_assert"
-          ],
-          "transitive_deps": [
-            "config",
-            "static_assert"
-          ],
-          "total_count": 2
+          ]
         },
         "bind": {
           "direct_deps": [
             "config",
             "core"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "throw_exception"
-          ],
-          "total_count": 4
+          ]
         },
         "pool": {
           "direct_deps": [
@@ -2770,19 +978,7 @@
             "throw_exception",
             "type_traits",
             "winapi"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "integer",
-            "predef",
-            "static_assert",
-            "throw_exception",
-            "type_traits",
-            "winapi"
-          ],
-          "total_count": 9
+          ]
         },
         "proto": {
           "direct_deps": [
@@ -2796,40 +992,7 @@
             "type_traits",
             "typeof",
             "utility"
-          ],
-          "transitive_deps": [
-            "array",
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container_hash",
-            "conversion",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "io",
-            "iterator",
-            "mp11",
-            "mpl",
-            "optional",
-            "predef",
-            "preprocessor",
-            "range",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "utility"
-          ],
-          "total_count": 30
+          ]
         },
         "fusion": {
           "direct_deps": [
@@ -2845,31 +1008,7 @@
             "type_traits",
             "typeof",
             "utility"
-          ],
-          "transitive_deps": [
-            "assert",
-            "bind",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "io",
-            "mp11",
-            "mpl",
-            "predef",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "utility"
-          ],
-          "total_count": 21
+          ]
         },
         "function_types": {
           "direct_deps": [
@@ -2879,22 +1018,7 @@
             "mpl",
             "preprocessor",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "detail",
-            "io",
-            "mpl",
-            "predef",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "type_traits",
-            "utility"
-          ],
-          "total_count": 12
+          ]
         },
         "gil": {
           "direct_deps": [
@@ -2910,57 +1034,14 @@
             "preprocessor",
             "type_traits",
             "variant2"
-          ],
-          "transitive_deps": [
-            "align",
-            "assert",
-            "atomic",
-            "bind",
-            "concept_check",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "filesystem",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "io",
-            "iterator",
-            "mp11",
-            "mpl",
-            "optional",
-            "predef",
-            "preprocessor",
-            "scope",
-            "smart_ptr",
-            "static_assert",
-            "system",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 34
+          ]
         },
         "intrusive": {
           "direct_deps": [
             "assert",
             "config",
             "move"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "move"
-          ],
-          "total_count": 3
+          ]
         },
         "asio": {
           "direct_deps": [
@@ -2971,57 +1052,7 @@
             "date_time",
             "system",
             "throw_exception"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "array",
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "context",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "pool",
-            "predef",
-            "preprocessor",
-            "range",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "system",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 47
+          ]
         },
         "uuid": {
           "direct_deps": [
@@ -3029,15 +1060,7 @@
             "config",
             "throw_exception",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "static_assert",
-            "throw_exception",
-            "type_traits"
-          ],
-          "total_count": 5
+          ]
         },
         "circular_buffer": {
           "direct_deps": [
@@ -3049,19 +1072,7 @@
             "static_assert",
             "throw_exception",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "assert",
-            "concept_check",
-            "config",
-            "core",
-            "move",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "type_traits"
-          ],
-          "total_count": 9
+          ]
         },
         "mpi": {
           "direct_deps": [
@@ -3083,88 +1094,7 @@
             "throw_exception",
             "type_traits",
             "utility"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "any",
-            "array",
-            "assert",
-            "atomic",
-            "bimap",
-            "bind",
-            "chrono",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "dynamic_bitset",
-            "endian",
-            "exception",
-            "foreach",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "geometry",
-            "graph",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lambda",
-            "lexical_cast",
-            "math",
-            "move",
-            "mp11",
-            "mpl",
-            "multi_index",
-            "multiprecision",
-            "numeric/conversion",
-            "optional",
-            "parameter",
-            "phoenix",
-            "polygon",
-            "pool",
-            "predef",
-            "preprocessor",
-            "property_map",
-            "property_tree",
-            "proto",
-            "python",
-            "qvm",
-            "random",
-            "range",
-            "ratio",
-            "rational",
-            "regex",
-            "serialization",
-            "smart_ptr",
-            "spirit",
-            "static_assert",
-            "system",
-            "test",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tti",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant",
-            "variant2",
-            "winapi",
-            "xpressive"
-          ],
-          "total_count": 78
+          ]
         },
         "unordered": {
           "direct_deps": [
@@ -3175,18 +1105,7 @@
             "mp11",
             "predef",
             "throw_exception"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "mp11",
-            "predef",
-            "throw_exception"
-          ],
-          "total_count": 8
+          ]
         },
         "signals2": {
           "direct_deps": [
@@ -3206,41 +1125,7 @@
             "tuple",
             "type_traits",
             "variant"
-          ],
-          "transitive_deps": [
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "io",
-            "iterator",
-            "move",
-            "mp11",
-            "mpl",
-            "optional",
-            "parameter",
-            "predef",
-            "preprocessor",
-            "smart_ptr",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "utility",
-            "variant"
-          ],
-          "total_count": 31
+          ]
         },
         "accumulators": {
           "direct_deps": [
@@ -3264,79 +1149,7 @@
             "tuple",
             "type_traits",
             "typeof"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "any",
-            "array",
-            "assert",
-            "atomic",
-            "bind",
-            "chrono",
-            "circular_buffer",
-            "compute",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "endian",
-            "exception",
-            "filesystem",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "logic",
-            "move",
-            "mp11",
-            "mpl",
-            "multi_index",
-            "numeric/conversion",
-            "numeric/interval",
-            "numeric/ublas",
-            "optional",
-            "parameter",
-            "phoenix",
-            "pool",
-            "predef",
-            "preprocessor",
-            "property_tree",
-            "proto",
-            "range",
-            "ratio",
-            "regex",
-            "scope",
-            "serialization",
-            "smart_ptr",
-            "spirit",
-            "static_assert",
-            "system",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "uuid",
-            "variant",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 69
+          ]
         },
         "atomic": {
           "direct_deps": [
@@ -3347,20 +1160,7 @@
             "preprocessor",
             "type_traits",
             "winapi"
-          ],
-          "transitive_deps": [
-            "align",
-            "assert",
-            "config",
-            "core",
-            "predef",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "type_traits",
-            "winapi"
-          ],
-          "total_count": 10
+          ]
         },
         "scope_exit": {
           "direct_deps": [
@@ -3369,20 +1169,7 @@
             "preprocessor",
             "type_traits",
             "typeof"
-          ],
-          "transitive_deps": [
-            "assert",
-            "bind",
-            "config",
-            "core",
-            "function",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "type_traits",
-            "typeof"
-          ],
-          "total_count": 10
+          ]
         },
         "flyweight": {
           "direct_deps": [
@@ -3400,45 +1187,7 @@
             "throw_exception",
             "type_traits",
             "unordered"
-          ],
-          "transitive_deps": [
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "interprocess",
-            "intrusive",
-            "io",
-            "iterator",
-            "move",
-            "mp11",
-            "mpl",
-            "multi_index",
-            "optional",
-            "parameter",
-            "predef",
-            "preprocessor",
-            "smart_ptr",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "winapi"
-          ],
-          "total_count": 35
+          ]
         },
         "icl": {
           "direct_deps": [
@@ -3457,58 +1206,10 @@
             "static_assert",
             "type_traits",
             "utility"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "array",
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "predef",
-            "preprocessor",
-            "range",
-            "rational",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "winapi"
-          ],
-          "total_count": 43
+          ]
         },
         "predef": {
-          "direct_deps": [],
-          "transitive_deps": [],
-          "total_count": 0
+          "direct_deps": []
         },
         "chrono": {
           "direct_deps": [
@@ -3527,38 +1228,12 @@
             "typeof",
             "utility",
             "winapi"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "integer",
-            "io",
-            "move",
-            "mp11",
-            "mpl",
-            "predef",
-            "preprocessor",
-            "ratio",
-            "static_assert",
-            "system",
-            "throw_exception",
-            "type_traits",
-            "typeof",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 19
+          ]
         },
         "polygon": {
           "direct_deps": [
             "config"
-          ],
-          "transitive_deps": [
-            "config"
-          ],
-          "total_count": 1
+          ]
         },
         "msm": {
           "direct_deps": [
@@ -3580,70 +1255,7 @@
             "type_index",
             "type_traits",
             "typeof"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "any",
-            "array",
-            "assert",
-            "atomic",
-            "bind",
-            "chrono",
-            "circular_buffer",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "endian",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "parameter",
-            "phoenix",
-            "pool",
-            "predef",
-            "preprocessor",
-            "proto",
-            "range",
-            "ratio",
-            "regex",
-            "serialization",
-            "smart_ptr",
-            "spirit",
-            "static_assert",
-            "system",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 60
+          ]
         },
         "heap": {
           "direct_deps": [
@@ -3657,38 +1269,7 @@
             "static_assert",
             "throw_exception",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "intrusive",
-            "io",
-            "iterator",
-            "move",
-            "mp11",
-            "mpl",
-            "optional",
-            "parameter",
-            "predef",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "utility"
-          ],
-          "total_count": 28
+          ]
         },
         "coroutine": {
           "direct_deps": [
@@ -3702,59 +1283,17 @@
             "throw_exception",
             "type_traits",
             "utility"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "context",
-            "core",
-            "exception",
-            "integer",
-            "io",
-            "move",
-            "mp11",
-            "pool",
-            "predef",
-            "preprocessor",
-            "smart_ptr",
-            "static_assert",
-            "system",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 21
+          ]
         },
         "coroutine2": {
           "direct_deps": [
             "assert",
             "config",
             "context"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "context",
-            "core",
-            "integer",
-            "mp11",
-            "pool",
-            "predef",
-            "smart_ptr",
-            "static_assert",
-            "throw_exception",
-            "type_traits",
-            "winapi"
-          ],
-          "total_count": 13
+          ]
         },
         "ratio": {
-          "direct_deps": [],
-          "transitive_deps": [],
-          "total_count": 0
+          "direct_deps": []
         },
         "numeric/odeint": {
           "direct_deps": [
@@ -3776,98 +1315,7 @@
             "type_traits",
             "units",
             "utility"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "any",
-            "array",
-            "assert",
-            "atomic",
-            "bimap",
-            "bind",
-            "chrono",
-            "compute",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "dynamic_bitset",
-            "endian",
-            "exception",
-            "filesystem",
-            "foreach",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "geometry",
-            "graph",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lambda",
-            "lexical_cast",
-            "logic",
-            "math",
-            "move",
-            "mp11",
-            "mpi",
-            "mpl",
-            "multi_array",
-            "multi_index",
-            "multiprecision",
-            "numeric/conversion",
-            "numeric/interval",
-            "numeric/ublas",
-            "optional",
-            "parameter",
-            "phoenix",
-            "polygon",
-            "pool",
-            "predef",
-            "preprocessor",
-            "property_map",
-            "property_tree",
-            "proto",
-            "python",
-            "qvm",
-            "random",
-            "range",
-            "ratio",
-            "rational",
-            "regex",
-            "scope",
-            "serialization",
-            "smart_ptr",
-            "spirit",
-            "static_assert",
-            "system",
-            "test",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tti",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "units",
-            "unordered",
-            "utility",
-            "uuid",
-            "variant",
-            "variant2",
-            "winapi",
-            "xpressive"
-          ],
-          "total_count": 88
+          ]
         },
         "geometry": {
           "direct_deps": [
@@ -3902,87 +1350,7 @@
             "type_traits",
             "variant",
             "variant2"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "any",
-            "array",
-            "assert",
-            "atomic",
-            "bimap",
-            "bind",
-            "chrono",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "dynamic_bitset",
-            "endian",
-            "exception",
-            "foreach",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "geometry",
-            "graph",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lambda",
-            "lexical_cast",
-            "math",
-            "move",
-            "mp11",
-            "mpl",
-            "multi_index",
-            "multiprecision",
-            "numeric/conversion",
-            "optional",
-            "parameter",
-            "phoenix",
-            "polygon",
-            "pool",
-            "predef",
-            "preprocessor",
-            "property_map",
-            "property_tree",
-            "proto",
-            "qvm",
-            "random",
-            "range",
-            "ratio",
-            "rational",
-            "regex",
-            "serialization",
-            "smart_ptr",
-            "spirit",
-            "static_assert",
-            "system",
-            "test",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tti",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant",
-            "variant2",
-            "winapi",
-            "xpressive"
-          ],
-          "total_count": 77
+          ]
         },
         "phoenix": {
           "direct_deps": [
@@ -4000,50 +1368,12 @@
             "smart_ptr",
             "type_traits",
             "utility"
-          ],
-          "transitive_deps": [
-            "array",
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container_hash",
-            "conversion",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "io",
-            "iterator",
-            "mp11",
-            "mpl",
-            "optional",
-            "predef",
-            "preprocessor",
-            "proto",
-            "range",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "utility"
-          ],
-          "total_count": 31
+          ]
         },
         "move": {
           "direct_deps": [
             "config"
-          ],
-          "transitive_deps": [
-            "config"
-          ],
-          "total_count": 1
+          ]
         },
         "locale": {
           "direct_deps": [
@@ -4054,60 +1384,7 @@
             "iterator",
             "predef",
             "thread"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "array",
-            "assert",
-            "atomic",
-            "bind",
-            "charconv",
-            "chrono",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "predef",
-            "preprocessor",
-            "range",
-            "ratio",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "system",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 50
+          ]
         },
         "container": {
           "direct_deps": [
@@ -4115,14 +1392,7 @@
             "config",
             "intrusive",
             "move"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "intrusive",
-            "move"
-          ],
-          "total_count": 4
+          ]
         },
         "local_function": {
           "direct_deps": [
@@ -4133,25 +1403,7 @@
             "type_traits",
             "typeof",
             "utility"
-          ],
-          "transitive_deps": [
-            "assert",
-            "bind",
-            "config",
-            "core",
-            "function",
-            "io",
-            "mpl",
-            "predef",
-            "preprocessor",
-            "scope_exit",
-            "static_assert",
-            "throw_exception",
-            "type_traits",
-            "typeof",
-            "utility"
-          ],
-          "total_count": 15
+          ]
         },
         "context": {
           "direct_deps": [
@@ -4162,22 +1414,7 @@
             "pool",
             "predef",
             "smart_ptr"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "integer",
-            "mp11",
-            "pool",
-            "predef",
-            "smart_ptr",
-            "static_assert",
-            "throw_exception",
-            "type_traits",
-            "winapi"
-          ],
-          "total_count": 12
+          ]
         },
         "type_erasure": {
           "direct_deps": [
@@ -4195,60 +1432,7 @@
             "type_traits",
             "typeof",
             "vmd"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "array",
-            "assert",
-            "atomic",
-            "bind",
-            "chrono",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "predef",
-            "preprocessor",
-            "range",
-            "ratio",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "system",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant2",
-            "vmd",
-            "winapi"
-          ],
-          "total_count": 50
+          ]
         },
         "multiprecision": {
           "direct_deps": [
@@ -4261,35 +1445,7 @@
             "predef",
             "random",
             "throw_exception"
-          ],
-          "transitive_deps": [
-            "assert",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "core",
-            "describe",
-            "dynamic_bitset",
-            "integer",
-            "intrusive",
-            "io",
-            "lexical_cast",
-            "math",
-            "move",
-            "mp11",
-            "predef",
-            "preprocessor",
-            "random",
-            "static_assert",
-            "system",
-            "throw_exception",
-            "type_traits",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 25
+          ]
         },
         "lockfree": {
           "direct_deps": [
@@ -4303,46 +1459,12 @@
             "static_assert",
             "throw_exception",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "align",
-            "assert",
-            "atomic",
-            "bind",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "io",
-            "mp11",
-            "mpl",
-            "optional",
-            "parameter",
-            "predef",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "utility",
-            "winapi"
-          ],
-          "total_count": 27
+          ]
         },
         "assert": {
           "direct_deps": [
             "config"
-          ],
-          "transitive_deps": [
-            "config"
-          ],
-          "total_count": 1
+          ]
         },
         "align": {
           "direct_deps": [
@@ -4350,66 +1472,33 @@
             "config",
             "core",
             "static_assert"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "static_assert",
-            "throw_exception"
-          ],
-          "total_count": 5
+          ]
         },
         "type_index": {
           "direct_deps": [
             "config",
             "container_hash",
             "throw_exception"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "container_hash",
-            "describe",
-            "mp11",
-            "throw_exception"
-          ],
-          "total_count": 6
+          ]
         },
         "core": {
           "direct_deps": [
             "assert",
             "config",
             "throw_exception"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "throw_exception"
-          ],
-          "total_count": 3
+          ]
         },
         "throw_exception": {
           "direct_deps": [
             "assert",
             "config"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config"
-          ],
-          "total_count": 2
+          ]
         },
         "winapi": {
           "direct_deps": [
             "config",
             "predef"
-          ],
-          "transitive_deps": [
-            "config",
-            "predef"
-          ],
-          "total_count": 2
+          ]
         },
         "lexical_cast": {
           "direct_deps": [
@@ -4417,17 +1506,7 @@
             "container",
             "core",
             "throw_exception"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "container",
-            "core",
-            "intrusive",
-            "move",
-            "throw_exception"
-          ],
-          "total_count": 7
+          ]
         },
         "sort": {
           "direct_deps": [
@@ -4436,40 +1515,7 @@
             "range",
             "static_assert",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "array",
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container_hash",
-            "conversion",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "io",
-            "iterator",
-            "mp11",
-            "mpl",
-            "optional",
-            "predef",
-            "preprocessor",
-            "range",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "utility"
-          ],
-          "total_count": 30
+          ]
         },
         "convert": {
           "direct_deps": [
@@ -4484,88 +1530,17 @@
             "range",
             "spirit",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "array",
-            "assert",
-            "atomic",
-            "bind",
-            "chrono",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "dynamic_bitset",
-            "endian",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "math",
-            "move",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "parameter",
-            "phoenix",
-            "pool",
-            "predef",
-            "preprocessor",
-            "proto",
-            "random",
-            "range",
-            "ratio",
-            "regex",
-            "smart_ptr",
-            "spirit",
-            "static_assert",
-            "system",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 60
+          ]
         },
         "endian": {
           "direct_deps": [
             "config"
-          ],
-          "transitive_deps": [
-            "config"
-          ],
-          "total_count": 1
+          ]
         },
         "vmd": {
           "direct_deps": [
             "preprocessor"
-          ],
-          "transitive_deps": [
-            "preprocessor"
-          ],
-          "total_count": 1
+          ]
         },
         "dll": {
           "direct_deps": [
@@ -4579,44 +1554,7 @@
             "throw_exception",
             "type_index",
             "winapi"
-          ],
-          "transitive_deps": [
-            "align",
-            "assert",
-            "atomic",
-            "bind",
-            "concept_check",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "filesystem",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "io",
-            "iterator",
-            "mp11",
-            "mpl",
-            "optional",
-            "predef",
-            "preprocessor",
-            "scope",
-            "smart_ptr",
-            "static_assert",
-            "system",
-            "throw_exception",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 34
+          ]
         },
         "compute": {
           "direct_deps": [
@@ -4648,73 +1586,7 @@
             "typeof",
             "utility",
             "uuid"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "any",
-            "array",
-            "assert",
-            "atomic",
-            "bind",
-            "chrono",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "endian",
-            "exception",
-            "filesystem",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "multi_index",
-            "numeric/conversion",
-            "optional",
-            "phoenix",
-            "pool",
-            "predef",
-            "preprocessor",
-            "property_tree",
-            "proto",
-            "range",
-            "ratio",
-            "regex",
-            "scope",
-            "serialization",
-            "smart_ptr",
-            "spirit",
-            "static_assert",
-            "system",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "uuid",
-            "variant",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 63
+          ]
         },
         "hana": {
           "direct_deps": [
@@ -4723,32 +1595,7 @@
             "fusion",
             "mpl",
             "tuple"
-          ],
-          "transitive_deps": [
-            "assert",
-            "bind",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "io",
-            "mp11",
-            "mpl",
-            "predef",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "utility"
-          ],
-          "total_count": 22
+          ]
         },
         "metaparse": {
           "direct_deps": [
@@ -4758,26 +1605,10 @@
             "preprocessor",
             "static_assert",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "io",
-            "mpl",
-            "predef",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "type_traits",
-            "utility"
-          ],
-          "total_count": 11
+          ]
         },
         "qvm": {
-          "direct_deps": [],
-          "transitive_deps": [],
-          "total_count": 0
+          "direct_deps": []
         },
         "fiber": {
           "direct_deps": [
@@ -4791,56 +1622,7 @@
             "intrusive",
             "predef",
             "smart_ptr"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "array",
-            "assert",
-            "atomic",
-            "bind",
-            "concept_check",
-            "config",
-            "container_hash",
-            "context",
-            "conversion",
-            "core",
-            "describe",
-            "detail",
-            "exception",
-            "filesystem",
-            "format",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "move",
-            "mp11",
-            "mpl",
-            "optional",
-            "pool",
-            "predef",
-            "preprocessor",
-            "range",
-            "regex",
-            "scope",
-            "smart_ptr",
-            "static_assert",
-            "system",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 46
+          ]
         },
         "process": {
           "direct_deps": [
@@ -4862,62 +1644,7 @@
             "type_traits",
             "utility",
             "winapi"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "array",
-            "asio",
-            "assert",
-            "atomic",
-            "bind",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "context",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "exception",
-            "filesystem",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "pool",
-            "predef",
-            "preprocessor",
-            "range",
-            "regex",
-            "scope",
-            "smart_ptr",
-            "static_assert",
-            "system",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 52
+          ]
         },
         "stacktrace": {
           "direct_deps": [
@@ -4927,19 +1654,7 @@
             "core",
             "predef",
             "winapi"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "mp11",
-            "predef",
-            "throw_exception",
-            "winapi"
-          ],
-          "total_count": 9
+          ]
         },
         "poly_collection": {
           "direct_deps": [
@@ -4951,61 +1666,7 @@
             "mpl",
             "type_erasure",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "array",
-            "assert",
-            "atomic",
-            "bind",
-            "chrono",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "predef",
-            "preprocessor",
-            "range",
-            "ratio",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "system",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_erasure",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant2",
-            "vmd",
-            "winapi"
-          ],
-          "total_count": 51
+          ]
         },
         "beast": {
           "direct_deps": [
@@ -5028,72 +1689,13 @@
             "type_index",
             "type_traits",
             "winapi"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "array",
-            "asio",
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "context",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "endian",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "logic",
-            "move",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "pool",
-            "predef",
-            "preprocessor",
-            "range",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "static_string",
-            "system",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 52
+          ]
         },
         "mp11": {
-          "direct_deps": [],
-          "transitive_deps": [],
-          "total_count": 0
+          "direct_deps": []
         },
         "callable_traits": {
-          "direct_deps": [],
-          "transitive_deps": [],
-          "total_count": 0
+          "direct_deps": []
         },
         "contract": {
           "direct_deps": [
@@ -5113,113 +1715,24 @@
             "type_traits",
             "typeof",
             "utility"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "any",
-            "array",
-            "assert",
-            "atomic",
-            "bind",
-            "chrono",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "predef",
-            "preprocessor",
-            "range",
-            "ratio",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "system",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 51
+          ]
         },
         "container_hash": {
           "direct_deps": [
             "config",
             "describe",
             "mp11"
-          ],
-          "transitive_deps": [
-            "config",
-            "describe",
-            "mp11"
-          ],
-          "total_count": 3
+          ]
         },
         "hof": {
-          "direct_deps": [],
-          "transitive_deps": [],
-          "total_count": 0
+          "direct_deps": []
         },
         "yap": {
           "direct_deps": [
             "hana",
             "preprocessor",
             "type_index"
-          ],
-          "transitive_deps": [
-            "assert",
-            "bind",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "hana",
-            "io",
-            "mp11",
-            "mpl",
-            "predef",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "utility"
-          ],
-          "total_count": 24
+          ]
         },
         "safe_numerics": {
           "direct_deps": [
@@ -5229,21 +1742,7 @@
             "integer",
             "logic",
             "mp11"
-          ],
-          "transitive_deps": [
-            "assert",
-            "concept_check",
-            "config",
-            "core",
-            "integer",
-            "logic",
-            "mp11",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "type_traits"
-          ],
-          "total_count": 11
+          ]
         },
         "parameter_python": {
           "direct_deps": [
@@ -5251,93 +1750,10 @@
             "parameter",
             "preprocessor",
             "python"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "any",
-            "array",
-            "assert",
-            "atomic",
-            "bimap",
-            "bind",
-            "chrono",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "dynamic_bitset",
-            "endian",
-            "exception",
-            "foreach",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "geometry",
-            "graph",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lambda",
-            "lexical_cast",
-            "math",
-            "move",
-            "mp11",
-            "mpl",
-            "multi_index",
-            "multiprecision",
-            "numeric/conversion",
-            "optional",
-            "parameter",
-            "phoenix",
-            "polygon",
-            "pool",
-            "predef",
-            "preprocessor",
-            "property_map",
-            "property_tree",
-            "proto",
-            "python",
-            "qvm",
-            "random",
-            "range",
-            "ratio",
-            "rational",
-            "regex",
-            "serialization",
-            "smart_ptr",
-            "spirit",
-            "static_assert",
-            "system",
-            "test",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tti",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant",
-            "variant2",
-            "winapi",
-            "xpressive"
-          ],
-          "total_count": 78
+          ]
         },
         "headers": {
-          "direct_deps": [],
-          "transitive_deps": [],
-          "total_count": 0
+          "direct_deps": []
         },
         "outcome": {
           "direct_deps": [
@@ -5346,24 +1762,7 @@
             "exception",
             "system",
             "throw_exception"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "exception",
-            "mp11",
-            "predef",
-            "smart_ptr",
-            "static_assert",
-            "system",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 14
+          ]
         },
         "histogram": {
           "direct_deps": [
@@ -5374,125 +1773,20 @@
             "serialization",
             "throw_exception",
             "variant2"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "array",
-            "assert",
-            "atomic",
-            "bind",
-            "chrono",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "dynamic_bitset",
-            "endian",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "math",
-            "move",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "phoenix",
-            "pool",
-            "predef",
-            "preprocessor",
-            "proto",
-            "random",
-            "range",
-            "ratio",
-            "regex",
-            "serialization",
-            "smart_ptr",
-            "spirit",
-            "static_assert",
-            "system",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 60
+          ]
         },
         "variant2": {
           "direct_deps": [
             "assert",
             "config",
             "mp11"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "mp11"
-          ],
-          "total_count": 3
+          ]
         },
         "nowide": {
           "direct_deps": [
             "config",
             "filesystem"
-          ],
-          "transitive_deps": [
-            "align",
-            "assert",
-            "atomic",
-            "bind",
-            "concept_check",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "filesystem",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "io",
-            "iterator",
-            "mp11",
-            "mpl",
-            "optional",
-            "predef",
-            "preprocessor",
-            "scope",
-            "smart_ptr",
-            "static_assert",
-            "system",
-            "throw_exception",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 33
+          ]
         },
         "static_string": {
           "direct_deps": [
@@ -5502,41 +1796,17 @@
             "core",
             "throw_exception",
             "utility"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "io",
-            "mp11",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "type_traits",
-            "utility"
-          ],
-          "total_count": 12
+          ]
         },
         "stl_interfaces": {
           "direct_deps": [
             "assert",
             "config",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "static_assert",
-            "type_traits"
-          ],
-          "total_count": 4
+          ]
         },
         "leaf": {
-          "direct_deps": [],
-          "transitive_deps": [],
-          "total_count": 0
+          "direct_deps": []
         },
         "json": {
           "direct_deps": [
@@ -5550,44 +1820,18 @@
             "mp11",
             "system",
             "throw_exception"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "container",
-            "container_hash",
-            "core",
-            "describe",
-            "endian",
-            "intrusive",
-            "move",
-            "mp11",
-            "predef",
-            "system",
-            "throw_exception",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 15
+          ]
         },
         "pfr": {
-          "direct_deps": [],
-          "transitive_deps": [],
-          "total_count": 0
+          "direct_deps": []
         },
         "describe": {
           "direct_deps": [
             "mp11"
-          ],
-          "transitive_deps": [
-            "mp11"
-          ],
-          "total_count": 1
+          ]
         },
         "lambda2": {
-          "direct_deps": [],
-          "transitive_deps": [],
-          "total_count": 0
+          "direct_deps": []
         },
         "property_map_parallel": {
           "direct_deps": [
@@ -5604,89 +1848,7 @@
             "smart_ptr",
             "static_assert",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "any",
-            "array",
-            "assert",
-            "atomic",
-            "bimap",
-            "bind",
-            "chrono",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "dynamic_bitset",
-            "endian",
-            "exception",
-            "foreach",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "geometry",
-            "graph",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lambda",
-            "lexical_cast",
-            "math",
-            "move",
-            "mp11",
-            "mpi",
-            "mpl",
-            "multi_index",
-            "multiprecision",
-            "numeric/conversion",
-            "optional",
-            "parameter",
-            "phoenix",
-            "polygon",
-            "pool",
-            "predef",
-            "preprocessor",
-            "property_map",
-            "property_tree",
-            "proto",
-            "python",
-            "qvm",
-            "random",
-            "range",
-            "ratio",
-            "rational",
-            "regex",
-            "serialization",
-            "smart_ptr",
-            "spirit",
-            "static_assert",
-            "system",
-            "test",
-            "thread",
-            "throw_exception",
-            "tokenizer",
-            "tti",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant",
-            "variant2",
-            "winapi",
-            "xpressive"
-          ],
-          "total_count": 79
+          ]
         },
         "url": {
           "direct_deps": [
@@ -5700,23 +1862,7 @@
             "throw_exception",
             "type_traits",
             "variant2"
-          ],
-          "transitive_deps": [
-            "align",
-            "assert",
-            "config",
-            "core",
-            "mp11",
-            "optional",
-            "predef",
-            "static_assert",
-            "system",
-            "throw_exception",
-            "type_traits",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 13
+          ]
         },
         "mysql": {
           "direct_deps": [
@@ -5736,75 +1882,14 @@
             "system",
             "throw_exception",
             "variant2"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "array",
-            "asio",
-            "assert",
-            "bind",
-            "charconv",
-            "compat",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "context",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "endian",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "pfr",
-            "pool",
-            "predef",
-            "preprocessor",
-            "range",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "system",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 52
+          ]
         },
         "compat": {
           "direct_deps": [
             "assert",
             "config",
             "throw_exception"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "throw_exception"
-          ],
-          "total_count": 3
+          ]
         },
         "redis": {
           "direct_deps": [
@@ -5815,58 +1900,7 @@
             "mp11",
             "system",
             "throw_exception"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "array",
-            "asio",
-            "assert",
-            "bind",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "context",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "pool",
-            "predef",
-            "preprocessor",
-            "range",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "system",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 48
+          ]
         },
         "cobalt": {
           "direct_deps": [
@@ -5886,76 +1920,14 @@
             "system",
             "throw_exception",
             "variant2"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "array",
-            "asio",
-            "assert",
-            "bind",
-            "callable_traits",
-            "circular_buffer",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "context",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "endian",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "move",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "pool",
-            "predef",
-            "preprocessor",
-            "range",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "static_string",
-            "system",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 52
+          ]
         },
         "charconv": {
           "direct_deps": [
             "assert",
             "config",
             "core"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "throw_exception"
-          ],
-          "total_count": 4
+          ]
         },
         "scope": {
           "direct_deps": [
@@ -5963,16 +1935,7 @@
             "config",
             "core",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "core",
-            "static_assert",
-            "throw_exception",
-            "type_traits"
-          ],
-          "total_count": 6
+          ]
         },
         "parser": {
           "direct_deps": [
@@ -5980,35 +1943,7 @@
             "charconv",
             "hana",
             "type_index"
-          ],
-          "transitive_deps": [
-            "assert",
-            "bind",
-            "charconv",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "detail",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "hana",
-            "io",
-            "mp11",
-            "mpl",
-            "predef",
-            "preprocessor",
-            "static_assert",
-            "throw_exception",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "utility"
-          ],
-          "total_count": 25
+          ]
         },
         "mqtt5": {
           "direct_deps": [
@@ -6023,65 +1958,7 @@
             "smart_ptr",
             "system",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "algorithm",
-            "align",
-            "array",
-            "asio",
-            "assert",
-            "beast",
-            "bind",
-            "concept_check",
-            "config",
-            "container",
-            "container_hash",
-            "context",
-            "conversion",
-            "core",
-            "date_time",
-            "describe",
-            "detail",
-            "dynamic_bitset",
-            "endian",
-            "exception",
-            "function",
-            "function_types",
-            "functional",
-            "fusion",
-            "integer",
-            "intrusive",
-            "io",
-            "iterator",
-            "lexical_cast",
-            "logic",
-            "move",
-            "mp11",
-            "mpl",
-            "numeric/conversion",
-            "optional",
-            "pool",
-            "predef",
-            "preprocessor",
-            "random",
-            "range",
-            "regex",
-            "smart_ptr",
-            "static_assert",
-            "static_string",
-            "system",
-            "throw_exception",
-            "tokenizer",
-            "tuple",
-            "type_index",
-            "type_traits",
-            "typeof",
-            "unordered",
-            "utility",
-            "variant2",
-            "winapi"
-          ],
-          "total_count": 55
+          ]
         },
         "hash2": {
           "direct_deps": [
@@ -6090,15 +1967,7 @@
             "container_hash",
             "describe",
             "mp11"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "container_hash",
-            "describe",
-            "mp11"
-          ],
-          "total_count": 5
+          ]
         },
         "bloom": {
           "direct_deps": [
@@ -6108,19 +1977,7 @@
             "core",
             "throw_exception",
             "type_traits"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "mp11",
-            "static_assert",
-            "throw_exception",
-            "type_traits"
-          ],
-          "total_count": 9
+          ]
         },
         "openmethod": {
           "direct_deps": [
@@ -6130,19 +1987,7 @@
             "dynamic_bitset",
             "mp11",
             "preprocessor"
-          ],
-          "transitive_deps": [
-            "assert",
-            "config",
-            "container_hash",
-            "core",
-            "describe",
-            "dynamic_bitset",
-            "mp11",
-            "preprocessor",
-            "throw_exception"
-          ],
-          "total_count": 9
+          ]
         }
       }
     }

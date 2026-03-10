@@ -99,29 +99,32 @@ inputs:
     default: .
   modules-scan-paths:
     description: |-
-      Additional module subdirectory to scan.
+      Additional subdirectories within each `scan-modules-dir` entry to scan for `#include <boost/...>` headers.
 
-      For instance, by setting it to `test` the action will scan the `test` directory for boost dependencies.
+      For instance, by setting it to `test` the action will also scan the `test` subdirectory for boost dependencies.
+      This only affects module discovery — it does not change which files are checked out.
 
-      By default, the action scans the ['include', 'src', 'source', 'test', 'tests', 'example', 'examples'] directories.
+      By default, the action scans the ['include', 'src', 'source', 'test', 'tests', 'example', 'examples'] subdirectories.
     required: false
     default: ''
   modules-exclude-paths:
     description: |-
-      Module subdirectory to exclude from scanning.
+      Subdirectories within each `scan-modules-dir` entry to exclude from the header scan.
 
-      Directories that match any of the values in this list will be ignored.
+      Directories that match any of the values in this list will be skipped during module discovery.
+      This only affects which headers are scanned — it does not change which files are checked out.
 
-      By default, the action excludes the ['test', 'tests'] directories.
+      By default, the action excludes the ['test', 'tests'] subdirectories.
     required: false
     default: |-
       test
       tests
   scan-modules-ignore:
     description: |-
-      List of modules that should be ignored in scan-modules.
+      List of modules that should be ignored after scanning headers.
 
-      This if often useful to exclude the current project's libraries from the scan.
+      Matching modules are removed from the discovered set before dependency resolution.
+      This is often useful to exclude the current project's own libraries from the scan results.
     required: false
     default: ''
   cache:

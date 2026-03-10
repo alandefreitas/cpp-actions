@@ -18,12 +18,14 @@ jest.mock('@actions/io', () => ({
 
 jest.mock('trace-commands', () => ({
     log: jest.fn(),
+    scoped: jest.fn(() => jest.fn()),
     set_trace_commands: jest.fn()
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const exec = require('@actions/exec');
 import { main } from './index';
+import { describePrettyErrors } from 'pretty-errors/test-helper';
 
 interface InputOverrides {
     modules?: string[];
@@ -192,32 +194,4 @@ test('derives address model and architecture from arch input when unspecified', 
     expect(buildArgs).toContain('architecture=arm');
 });
 
-describe('pretty errors', () => {
-    it('logs once and fails once', async () => {
-        let runPromise: Promise<void>;
-        jest.isolateModules(() => {
-            jest.doMock('pretty-errors', () => {
-                const mockCore = {
-                    error: jest.fn(),
-                    setFailed: jest.fn()
-                };
-                return {
-                    reportAndSetFailed: async (error: Error) => {
-                        mockCore.error(error.message);
-                        mockCore.setFailed(error.message);
-                    },
-                    __mockCore: mockCore
-                };
-            });
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const prettyErrors = require('pretty-errors');
-
-            runPromise = prettyErrors.reportAndSetFailed(new Error('b2 boom'), { title: 'B2 workflow failed' }).then(() => {
-                expect(prettyErrors.__mockCore.error).toHaveBeenCalledTimes(1);
-                expect(prettyErrors.__mockCore.setFailed).toHaveBeenCalledWith('b2 boom');
-            });
-        });
-
-        await runPromise!;
-    });
-});
+describePrettyErrors('b2 boom', 'B2 workflow failed');

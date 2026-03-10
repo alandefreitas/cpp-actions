@@ -99,9 +99,7 @@ function isSubpath(childPath: string, parentPath: string): boolean {
  * @param buildDir - Build directory path
  */
 function adjustEventDetailFilename(event: TraceEvent, includePaths: Set<string>, sourceDir: string, buildDir: string): void {
-    function fnlog(msg: string) {
-        trace_commands.log(`adjustEventDetailFilename: ${msg}`);
-    }
+    const fnlog = trace_commands.scoped('adjustEventDetailFilename');
 
     fnlog(`Adjust event detail filename`);
     const eventDetailIsExistingFile =
@@ -242,9 +240,7 @@ class TimestampRanges {
  * @param displayFilename - Display filename for the event
  */
 function updateReportData(event: TraceEvent, reportData: ReportData, parsingRegions: TimestampRanges, instantiationRegions: TimestampRanges, displayFilename: string): void {
-    function fnlog(msg: string) {
-        trace_commands.log(`adjustEventDetailFilename: ${msg}`);
-    }
+    const fnlog = trace_commands.scoped('adjustEventDetailFilename');
 
     if (event.name === 'Source') {
         fnlog(`Adding source event ${event.name} (${event.ph}) with duration ${event.dur}`);
@@ -339,9 +335,7 @@ interface CombineTracesResult {
  * @returns Combined trace data and aggregate report statistics
  */
 async function combineTraces(sourceDir: string, buildDir: string): Promise<CombineTracesResult> {
-    function fnlog(msg: string) {
-        trace_commands.log(`combineTraces: ${msg}`);
-    }
+    const fnlog = trace_commands.scoped('combineTraces');
 
     const traceFiles = await findTraceFiles(buildDir);
     fnlog(`Found ${traceFiles.size} trace files`);
@@ -443,9 +437,7 @@ async function combineTraces(sourceDir: string, buildDir: string): Promise<Combi
  * @returns Stack identifiers for the flame graph and the SVG content string
  */
 async function generateSVGFlameGraph(combinedTrace: Trace): Promise<GenerateSVGFlameGraphResult> {
-    function fnlog(msg: string) {
-        trace_commands.log(`generateSVGFlameGraph: ${msg}`);
-    }
+    const fnlog = trace_commands.scoped('generateSVGFlameGraph');
 
     fnlog('Generating Flame Graph');
     fnlog(`combinedTrace: ${combinedTrace}`);
@@ -485,9 +477,7 @@ async function uploadArtifacts(inputs: UploadArtifactsInputs, extraFiles: string
  * @returns Paths to the generated trace file and SVG visualization
  */
 async function main(inputs: MainInputs): Promise<MainOutputs> {
-    function fnlog(msg: string) {
-        trace_commands.log(`main: ${msg}`);
-    }
+    const fnlog = trace_commands.scoped('main');
 
     core.startGroup('📊 Combine Time Traces');
     const { combinedTrace, reportData } = await combineTraces(inputs.source_dir, inputs.build_dir);

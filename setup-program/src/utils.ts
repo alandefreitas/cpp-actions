@@ -70,3 +70,32 @@ export function get_runner_os(): string {
 export function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+/**
+ * Normalizes an architecture string to a standard format.
+ *
+ * Maps various architecture names (x86, win32, ia32, amd64, x86_64, etc.)
+ * to their canonical forms (x86, x64, arm, arm64).
+ *
+ * @param arch - Architecture string to normalize
+ * @returns Normalized architecture: 'x86', 'x64', 'arm', 'arm64', or original
+ */
+export function normalizeArchitectureInput(arch: string): string {
+    if (!arch) {
+        return '';
+    }
+    const token = arch.toLowerCase();
+    if (['x86', 'win32', 'ia32', 'i386', 'i486', 'i586', 'i686'].includes(token)) {
+        return 'x86';
+    }
+    if (['x64', 'amd64', 'x86_64', 'x86-64'].includes(token)) {
+        return 'x64';
+    }
+    if (['arm', 'arm32'].includes(token)) {
+        return 'arm';
+    }
+    if (['arm64', 'aarch64'].includes(token)) {
+        return 'arm64';
+    }
+    return arch;
+}

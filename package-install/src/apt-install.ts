@@ -26,9 +26,7 @@ const setup_program = require('setup-program');
  * @throws Error if package installation fails and ignore_missing is false
  */
 export async function apt_get_main(inputs: Inputs): Promise<void> {
-    function fnlog(msg: string): void {
-        trace_commands.log('apt_get_main: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('apt_get_main');
 
     core.startGroup('🔍 Find apt-get');
     fnlog(`Check if apt-get is installed`);

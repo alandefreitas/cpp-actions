@@ -57,7 +57,7 @@ export interface TraceableInputs {
 export function createActionRunner<
     S extends ActionInputsSchema,
     I extends InferInputs<S> & TraceableInputs,
-    O extends Record<string, unknown>
+    O extends object
 >(
     options: RunnerOptions<I, O> & { inputsSchema: S }
 ): () => Promise<void> {
@@ -99,7 +99,7 @@ export function createActionRunner<
 export interface RunActionOptions<
     S extends ActionInputsSchema,
     I extends InferInputs<S> & TraceableInputs,
-    O extends Record<string, unknown>
+    O extends object
 > extends RunnerOptions<I, O> {
     /** The inputs schema */
     inputsSchema: S;
@@ -143,7 +143,7 @@ export interface RunActionOptions<
 export function runAction<
     S extends ActionInputsSchema,
     I extends InferInputs<S> & TraceableInputs,
-    O extends Record<string, unknown>
+    O extends object
 >(
     options: RunActionOptions<S, I, O>
 ): void {
@@ -192,7 +192,7 @@ export function runAction<
 export function createActionMain<
     S extends ActionInputsSchema,
     I extends InferInputs<S> & TraceableInputs,
-    O extends Record<string, unknown>
+    O extends object
 >(
     options: Omit<RunActionOptions<S, I, O>, 'callerModule'>
 ): () => Promise<void> {

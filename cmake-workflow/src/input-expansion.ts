@@ -22,9 +22,7 @@ import { Inputs, ResolvedInputs } from './types';
  * @returns Parsed arguments as array or map
  */
 export function parseExtraArgs(extra_args: string[]): string[] | Record<string, string[]> {
-    function fnlog(msg: string): void {
-        trace_commands.log('parseExtraArgs: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('parseExtraArgs');
 
     if (extra_args.length === 0) {
         return [];
@@ -165,9 +163,7 @@ export function makeFactorPath(basePath: string, suffix: string): string {
  * @returns Array of resolved inputs, one per factor combination
  */
 export function expandInputs(inputs: Inputs): ResolvedInputs[] {
-    function fnlog(msg: string): void {
-        trace_commands.log('expandInputs: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('expandInputs');
 
     const results: ResolvedInputs[] = [];
 

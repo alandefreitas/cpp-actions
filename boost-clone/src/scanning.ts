@@ -4,7 +4,7 @@
  * Used by both the main action and the dependency generator script.
  */
 
-import * as fs from 'fs';
+import * as fsp from 'fs/promises';
 import * as path from 'path';
 
 /**
@@ -143,28 +143,30 @@ export function scanHeaderDependencies(
  * @param submodulePaths - Set of valid submodule paths
  * @returns Set of Boost module names found in the directory
  */
-export function scanSubdirectoryDependencies(
+export async function scanSubdirectoryDependencies(
     dir: string,
     exceptions: ExceptionsMap,
     submodulePaths: SubmodulePaths
-): Set<string> {
+): Promise<Set<string>> {
     const modules = new Set<string>();
 
-    if (!fs.existsSync(dir)) {
+    try {
+        await fsp.access(dir);
+    } catch {
         return modules;
     }
 
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    const entries = await fsp.readdir(dir, { withFileTypes: true });
     for (const entry of entries) {
         const entryPath = path.join(dir, entry.name);
         if (entry.isDirectory()) {
-            const subdirModules = scanSubdirectoryDependencies(entryPath, exceptions, submodulePaths);
+            const subdirModules = await scanSubdirectoryDependencies(entryPath, exceptions, submodulePaths);
             subdirModules.forEach(module => modules.add(module));
         } else if (entry.isFile()) {
             const ext = path.extname(entry.name).toLowerCase();
             if (['.hpp', '.h', '.cpp', '.cc', '.cxx', '.ipp'].includes(ext)) {
                 try {
-                    const fileContents = fs.readFileSync(entryPath, 'utf-8');
+                    const fileContents = await fsp.readFile(entryPath, 'utf-8');
                     const fileModules = scanHeaderDependencies(fileContents, exceptions, submodulePaths);
                     fileModules.forEach(module => modules.add(module));
                 } catch {
@@ -185,20 +187,23 @@ export function scanSubdirectoryDependencies(
  * @param submodulePaths - Valid submodule paths
  * @returns Set of direct dependency module names
  */
-export function scanModuleDependencies(
+export async function scanModuleDependencies(
     modulePath: string,
     moduleName: string,
     exceptions: ExceptionsMap,
     submodulePaths: SubmodulePaths
-): Set<string> {
+): Promise<Set<string>> {
     const modules = new Set<string>();
     const dirsToScan = ['include', 'src'];
 
     for (const subdir of dirsToScan) {
         const subdirPath = path.join(modulePath, subdir);
-        if (fs.existsSync(subdirPath)) {
-            const subdirModules = scanSubdirectoryDependencies(subdirPath, exceptions, submodulePaths);
+        try {
+            await fsp.access(subdirPath);
+            const subdirModules = await scanSubdirectoryDependencies(subdirPath, exceptions, submodulePaths);
             subdirModules.forEach(module => modules.add(module));
+        } catch {
+            // Directory doesn't exist, skip
         }
     }
 

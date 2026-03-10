@@ -1,4 +1,5 @@
 import { main } from './index';
+import { describePrettyErrors } from 'pretty-errors/test-helper';
 
 // Mock @actions/core for pretty-errors test
 jest.mock('@actions/core', () => ({
@@ -24,25 +25,4 @@ describe('setup-clang', () => {
     });
 });
 
-describe('pretty errors integration', () => {
-    it('logs once and fails once', async () => {
-        let runPromise: Promise<void> | undefined;
-        jest.isolateModules(() => {
-            jest.resetModules();
-            jest.doMock('@actions/core', () => ({
-                error: jest.fn(),
-                setFailed: jest.fn()
-            }));
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const { reportAndSetFailed } = require('../../common/pretty-errors/src/index');
-
-            runPromise = reportAndSetFailed(new Error('clang boom'), {
-                title: 'Setup Clang failed'
-            });
-        });
-
-        if (runPromise) {
-            await runPromise;
-        }
-    });
-});
+describePrettyErrors('clang boom', 'Setup Clang failed');

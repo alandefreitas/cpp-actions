@@ -9,6 +9,7 @@ jest.mock('gh-inputs', () => ({
     getBoolean: jest.fn(),
     getInt: jest.fn(),
     getArray: jest.fn(),
+    getSet: jest.fn(),
     getNormalizedPath: jest.fn(),
     getMultilineInput: jest.fn(),
     getTribool: jest.fn(),
@@ -301,6 +302,99 @@ describe('action-schema', () => {
 
             expect(result.config).toEqual({ key: 'value' });
         });
+
+        it('should parse set inputs', () => {
+            mockedGhInputs.getSet.mockReturnValue(new Set(['a', 'b', 'c']));
+
+            const schema = {
+                items: {
+                    type: 'set' as const,
+                    default: new Set<string>(),
+                    description: 'Unique items'
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = parseInputs(schema);
+
+            expect(result.items).toEqual(new Set(['a', 'b', 'c']));
+            expect(mockedGhInputs.getSet).toHaveBeenCalledWith(
+                'items',
+                undefined,
+                undefined,
+                expect.objectContaining({ defaultValue: [] })
+            );
+        });
+
+        it('should parse multilineSet inputs', () => {
+            mockedGhInputs.getMultilineInput.mockReturnValue(['x', 'y', 'x']);
+
+            const schema = {
+                dirs: {
+                    type: 'multilineSet' as const,
+                    default: new Set(['.']) as Set<string>,
+                    description: 'Directories'
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = parseInputs(schema);
+
+            expect(result.dirs).toEqual(new Set(['x', 'y']));
+            expect(mockedGhInputs.getMultilineInput).toHaveBeenCalledWith(
+                'dirs',
+                expect.objectContaining({ defaultValue: ['.'] })
+            );
+        });
+
+        it('should apply transform to set inputs', () => {
+            mockedGhInputs.getSet.mockReturnValue(new Set(['  A  ', 'B']));
+
+            const schema: ActionInputsSchema = {
+                tags: {
+                    type: 'set',
+                    default: new Set<string>(),
+                    description: 'Tags',
+                    transform: (s) => new Set([...(s as Set<string>)].map(v => v.trim().toLowerCase()))
+                }
+            };
+
+            const result = parseInputs(schema);
+
+            expect(result.tags).toEqual(new Set(['a', 'b']));
+        });
+
+        it('should pass through valid values with validValues', () => {
+            mockedGhInputs.getInput.mockReturnValue('git');
+
+            const schema = {
+                strategy: {
+                    type: 'string' as const,
+                    default: 'auto' as const,
+                    validValues: ['auto', 'git', 'archive'] as const,
+                    description: 'Strategy'
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = parseInputs(schema);
+
+            expect(result.strategy).toBe('git');
+        });
+
+        it('should fall back to default for invalid validValues', () => {
+            mockedGhInputs.getInput.mockReturnValue('invalid');
+
+            const schema = {
+                strategy: {
+                    type: 'string' as const,
+                    default: 'auto' as const,
+                    validValues: ['auto', 'git', 'archive'] as const,
+                    description: 'Strategy'
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = parseInputs(schema);
+
+            expect(result.strategy).toBe('auto');
+        });
     });
 
     describe('generateInputsSection', () => {
@@ -376,6 +470,34 @@ describe('action-schema', () => {
             const result = generateInputsSection(schema);
 
             expect(result.items.default).toBe('a\nb');
+        });
+
+        it('should handle set defaults', () => {
+            const schema = {
+                items: {
+                    type: 'set' as const,
+                    default: new Set(['x', 'y']),
+                    description: 'Set items'
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = generateInputsSection(schema);
+
+            expect(result.items.default).toBe('x\ny');
+        });
+
+        it('should handle empty set defaults', () => {
+            const schema = {
+                items: {
+                    type: 'multilineSet' as const,
+                    default: new Set<string>(),
+                    description: 'Multiline set'
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = generateInputsSection(schema);
+
+            expect(result.items.default).toBe('');
         });
     });
 
@@ -457,6 +579,41 @@ describe('action-schema', () => {
             expect(example.enabled).toBe(true);
             expect(example.count).toBe(42);
             expect(example.items).toEqual(['a', 'b']);
+        });
+
+        it('should infer set and multilineSet types', () => {
+            const schema = {
+                tags: { type: 'set' as const, default: new Set<string>(), description: '' },
+                dirs: { type: 'multilineSet' as const, default: new Set(['.']) as Set<string>, description: '' }
+            } satisfies ActionInputsSchema;
+
+            type Inputs = InferInputs<typeof schema>;
+
+            const example: Inputs = {
+                tags: new Set(['a']),
+                dirs: new Set(['.', 'src'])
+            };
+
+            expect(example.tags).toBeInstanceOf(Set);
+            expect(example.dirs).toBeInstanceOf(Set);
+        });
+
+        it('should narrow types with validValues as const', () => {
+            const schema = {
+                strategy: {
+                    type: 'string' as const,
+                    default: 'auto' as const,
+                    validValues: ['auto', 'git', 'archive'] as const,
+                    description: ''
+                }
+            } satisfies ActionInputsSchema;
+
+            type Inputs = InferInputs<typeof schema>;
+
+            // Compile-time: strategy is 'auto' | 'git' | 'archive', not string
+            const example: Inputs = { strategy: 'git' };
+
+            expect(example.strategy).toBe('git');
         });
     });
 });

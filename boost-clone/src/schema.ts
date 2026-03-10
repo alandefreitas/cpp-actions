@@ -7,8 +7,10 @@
  * @module schema
  */
 
+import * as path from 'path';
 import {
     baseInputs,
+    type InferInputs,
     type ActionInputsSchema,
     type ActionOutputsSchema
 } from 'action-schema';
@@ -16,7 +18,12 @@ import {
 /**
  * Valid clone strategies for obtaining Boost source files.
  */
-export type CloneStrategy = 'auto' | 'git' | 'archive';
+export const cloneStrategies = ['auto', 'git', 'archive'] as const;
+
+/**
+ * Valid clone strategies for obtaining Boost source files.
+ */
+export type CloneStrategy = typeof cloneStrategies[number];
 
 /**
  * Input schema for the boost-clone action.
@@ -42,8 +49,8 @@ to the project branch they are working on.`
     },
 
     patches: {
-        type: 'string[]' as const,
-        default: [] as string[],
+        type: 'set' as const,
+        default: new Set<string>(),
         description: `A list of patches to apply to the boost super-project.
 
 A patch is a module intended as a Boost library that is not yet part of the super-project.
@@ -52,16 +59,19 @@ Each path will be cloned in the \`libs\` directory of the super-project.`
     },
 
     modules: {
-        type: 'string[]' as const,
-        default: [] as string[],
+        type: 'set' as const,
+        default: new Set<string>(),
         description: `The boost submodules we need to clone.
 
 This field is optional. If not set, the action will scan the modules found in \`scan-modules-dir\`.`
     },
 
     scan_modules_dir: {
-        type: 'multiline' as const,
-        default: ['.'] as string[],
+        type: 'multilineSet' as const,
+        default: new Set(['.']) as Set<string>,
+        transform: (dirs) => new Set(
+            [...(dirs as Set<string>)].filter(d => d.trim() !== '').map(d => path.resolve(d))
+        ),
         description: `An independent directory we should scan for boost dependencies to clone.
 This option also accepts a multi-line string with multiple directories.
 
@@ -72,31 +82,34 @@ Only the subdirectories of this directory specified by \`modules-scan-paths\` wi
     },
 
     modules_scan_paths: {
-        type: 'string[]' as const,
-        default: [] as string[],
-        description: `Additional module subdirectory to scan.
+        type: 'set' as const,
+        default: new Set<string>(),
+        description: `Additional subdirectories within each \`scan-modules-dir\` entry to scan for \`#include <boost/...>\` headers.
 
-For instance, by setting it to \`test\` the action will scan the \`test\` directory for boost dependencies.
+For instance, by setting it to \`test\` the action will also scan the \`test\` subdirectory for boost dependencies.
+This only affects module discovery — it does not change which files are checked out.
 
-By default, the action scans the ['include', 'src', 'source', 'test', 'tests', 'example', 'examples'] directories.`
+By default, the action scans the ['include', 'src', 'source', 'test', 'tests', 'example', 'examples'] subdirectories.`
     },
 
     modules_exclude_paths: {
-        type: 'string[]' as const,
-        default: ['test', 'tests'] as string[],
-        description: `Module subdirectory to exclude from scanning.
+        type: 'set' as const,
+        default: new Set(['test', 'tests']),
+        description: `Subdirectories within each \`scan-modules-dir\` entry to exclude from the header scan.
 
-Directories that match any of the values in this list will be ignored.
+Directories that match any of the values in this list will be skipped during module discovery.
+This only affects which headers are scanned — it does not change which files are checked out.
 
-By default, the action excludes the ['test', 'tests'] directories.`
+By default, the action excludes the ['test', 'tests'] subdirectories.`
     },
 
     scan_modules_ignore: {
-        type: 'string[]' as const,
-        default: [] as string[],
-        description: `List of modules that should be ignored in scan-modules.
+        type: 'set' as const,
+        default: new Set<string>(),
+        description: `List of modules that should be ignored after scanning headers.
 
-This if often useful to exclude the current project's libraries from the scan.`
+Matching modules are removed from the discovered set before dependency resolution.
+This is often useful to exclude the current project's own libraries from the scan results.`
     },
 
     cache: {
@@ -141,7 +154,8 @@ most users should consider the possibility of setting this option to \`true\`, c
 
     clone_strategy: {
         type: 'string' as const,
-        default: 'auto',
+        default: 'auto' as const,
+        validValues: cloneStrategies,
         description: `Strategy for obtaining Boost source files.
 
 - \`auto\`: Automatically select the best strategy based on branch type and module count.
@@ -180,3 +194,8 @@ export const outputsSchema = {
         description: 'The absolute path to the boost source files.'
     }
 } satisfies ActionOutputsSchema;
+
+/**
+ * Configuration inputs for the boost-clone action, inferred from the schema.
+ */
+export type Inputs = InferInputs<typeof inputsSchema>;

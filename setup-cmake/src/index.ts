@@ -42,9 +42,7 @@ export { ensureGit } from './system-utils';
  * @throws Error if the specified version is invalid or CMake cannot be installed
  */
 export async function main(inputs: Inputs, subgroups = true): Promise<Partial<Outputs>> {
-    function fnlog(msg: string): void {
-        trace_commands.log('setup-cmake: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('setup-cmake');
 
     let {
         version,
@@ -284,7 +282,7 @@ runAction({
             core.setFailed('Cannot setup CMake');
         }
 
-        return outputs as unknown as Record<string, unknown>;
+        return outputs;
     },
     callerModule: module
 });

@@ -41,9 +41,7 @@ import { FailureRates, MatrixEntry, WorkflowJob, WorkflowRun } from './types';
  * @returns Map of job names to failure rates (0.0 to 1.0), or null if unavailable
  */
 export async function fetchFailureRates(numRuns: number, token: string): Promise<FailureRates | null> {
-    function fnlog(msg: string): void {
-        trace_commands.log('fetchFailureRates: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('fetchFailureRates');
 
     const effectiveToken = token || process.env.GITHUB_TOKEN;
     if (!effectiveToken) {
@@ -172,9 +170,7 @@ export async function fetchFailureRates(numRuns: number, token: string): Promise
  * @param failureRates - Map of job names to failure rates
  */
 export function sortByFailureRate(matrix: MatrixEntry[], failureRates: FailureRates): void {
-    function fnlog(msg: string): void {
-        trace_commands.log('sortByFailureRate: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('sortByFailureRate');
 
     if (Object.keys(failureRates).length === 0) {
         fnlog('No failure rate data available, skipping sort');

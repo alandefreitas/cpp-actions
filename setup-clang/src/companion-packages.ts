@@ -142,9 +142,7 @@ export function hasSanitizerRuntimes(majorVersion: number): boolean {
  * @returns Object containing the symbolizer path if found
  */
 export async function installCompanionPackages(installedVersion: string, installedAptPackage: string | null, installedFromUrl: boolean): Promise<CompanionPackageResult> {
-    function fnlog(msg: string): void {
-        trace_commands.log('installCompanionPackages: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('installCompanionPackages');
 
     let symbolizerPath: string | null = null;
 

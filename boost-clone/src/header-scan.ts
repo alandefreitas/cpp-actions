@@ -5,11 +5,12 @@
  */
 
 import * as core from '@actions/core';
-import * as fs from 'fs';
+import * as tc from '@actions/tool-cache';
+import * as fsp from 'fs/promises';
 import * as path from 'path';
 import * as trace_commands from 'trace-commands';
 import * as gh_inputs from 'gh-inputs';
-import { Inputs } from './types';
+import type { Inputs } from './schema';
 import { parseExceptions, parseGitmodules } from './scanning';
 
 /**
@@ -19,12 +20,14 @@ import { parseExceptions, parseGitmodules } from './scanning';
  * @returns Map of header path to module name
  * @throws Error if the file does not exist
  */
-export function readExceptions(exceptionsPath: string): Record<string, string> {
+export async function readExceptions(exceptionsPath: string): Promise<Record<string, string>> {
     trace_commands.log(`readExceptions: Reading exceptions from ${exceptionsPath}`);
-    if (!fs.existsSync(exceptionsPath)) {
+    try {
+        await fsp.access(exceptionsPath);
+    } catch {
         throw new Error(`Exceptions file not found: ${exceptionsPath}`);
     }
-    const content = fs.readFileSync(exceptionsPath, 'utf-8');
+    const content = await fsp.readFile(exceptionsPath, 'utf-8');
     return parseExceptions(content);
 }
 
@@ -35,12 +38,43 @@ export function readExceptions(exceptionsPath: string): Record<string, string> {
  * @returns Set of submodule paths (e.g., "libs/algorithm")
  * @throws Error if the file does not exist
  */
-export function readGitmodules(gitmodulesPath: string): Set<string> {
-    if (!fs.existsSync(gitmodulesPath)) {
+export async function readGitmodules(gitmodulesPath: string): Promise<Set<string>> {
+    try {
+        await fsp.access(gitmodulesPath);
+    } catch {
         throw new Error(`.gitmodules file not found: ${gitmodulesPath}`);
     }
-    const content = fs.readFileSync(gitmodulesPath, 'utf-8');
+    const content = await fsp.readFile(gitmodulesPath, 'utf-8');
     return parseGitmodules(content);
+}
+
+/**
+ * Downloads and parses `.gitmodules` and `exceptions.txt` from the Boost
+ * repository at the given branch.
+ *
+ * @param branch - Boost branch or tag to fetch metadata from
+ * @returns Parsed submodule paths and header-to-module exception map
+ */
+export async function fetchBoostMetadata(branch: string): Promise<{ submodulePaths: Set<string>; exceptions: Record<string, string> }> {
+    const fnlog = trace_commands.scoped('fetchBoostMetadata');
+
+    const gitmodulesUrl = `https://raw.githubusercontent.com/boostorg/boost/${branch}/.gitmodules`;
+    const exceptionsUrl = `https://raw.githubusercontent.com/boostorg/boostdep/${branch}/depinst/exceptions.txt`;
+
+    const [gitmodulesPath, exceptionsPath] = await Promise.all([
+        tc.downloadTool(gitmodulesUrl).then(p => path.resolve(p)),
+        tc.downloadTool(exceptionsUrl).then(p => path.resolve(p))
+    ]);
+
+    core.info(`Downloaded ${gitmodulesUrl} to ${gitmodulesPath}`);
+    const submodulePaths = await readGitmodules(gitmodulesPath);
+    fnlog(`Submodule Paths: ${JSON.stringify([...submodulePaths])}`);
+
+    core.info(`Downloaded ${exceptionsUrl} to ${exceptionsPath}`);
+    const exceptions = await readExceptions(exceptionsPath);
+    fnlog(`Exceptions: ${JSON.stringify(exceptions)}`);
+
+    return { submodulePaths, exceptions };
 }
 
 /**
@@ -65,9 +99,7 @@ const loggedHeaders = new Set<string>();
  * @returns The module name or null if not found
  */
 export function moduleForHeader(header: string, exceptions: Record<string, string>, submodulePaths: Set<string>): string | null {
-    function fnlog(msg: string): void {
-        trace_commands.log(`moduleForHeader: ${msg}`);
-    }
+    const fnlog = trace_commands.scoped('moduleForHeader');
 
     if (header in exceptions) {
         return exceptions[header];
@@ -131,22 +163,20 @@ export async function scanHeaderDependencies(fileContents: string, exceptions: R
  * @returns Set of Boost module names found in the directory
  */
 export async function scanSubdirectoryDependencies(dir: string, exceptions: Record<string, string>, submodulePaths: Set<string>): Promise<Set<string>> {
-    function fnlog(msg: string): void {
-        trace_commands.log(`scanSubdirectoryDependencies: ${msg}`);
-    }
+    const fnlog = trace_commands.scoped('scanSubdirectoryDependencies');
 
     fnlog(`Scanning directory: ${dir}`);
     const modules = new Set<string>();
-    const files = fs.readdirSync(dir);
+    const files = await fsp.readdir(dir);
     for (const file of files) {
         const filePath = path.resolve(path.join(dir, file));
-        const stat = fs.statSync(filePath);
+        const stat = await fsp.stat(filePath);
         if (stat.isDirectory()) {
             fnlog(`Scanning subdir: ${filePath}`);
             const subdirModules = await scanSubdirectoryDependencies(filePath, exceptions, submodulePaths);
             subdirModules.forEach(module => modules.add(module));
         } else {
-            const fileContents = fs.readFileSync(filePath, 'utf-8');
+            const fileContents = await fsp.readFile(filePath, 'utf-8');
             const fileModules = await scanHeaderDependencies(fileContents, exceptions, submodulePaths);
             fileModules.forEach(module => modules.add(module));
         }
@@ -168,7 +198,9 @@ export async function listBoostDependencies(dir: string, subdirs: string[], exce
     const modules = new Set<string>();
     for (const subdir of subdirs) {
         const subdirPath = path.resolve(path.join(dir, subdir));
-        if (!fs.existsSync(subdirPath)) {
+        try {
+            await fsp.access(subdirPath);
+        } catch {
             continue;
         }
         trace_commands.log(`listBoostDependencies: Scanning subdir: ${subdirPath} for Boost dependencies`);

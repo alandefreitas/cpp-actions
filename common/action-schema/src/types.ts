@@ -25,6 +25,8 @@
  * | `'multiline'` | `getMultilineInput()` | `string[]` |
  * | `'tribool'` | `getTribool()` | `boolean \| undefined` |
  * | `'map'` | `getMap()` | `Record<string, string>` |
+ * | `'set'` | `getSet()` | `Set<string>` |
+ * | `'multilineSet'` | `new Set(getMultilineInput())` | `Set<string>` |
  */
 export type InputType =
     | 'string'
@@ -34,7 +36,9 @@ export type InputType =
     | 'path'
     | 'multiline'
     | 'tribool'
-    | 'map';
+    | 'map'
+    | 'set'
+    | 'multilineSet';
 
 /**
  * Maps InputType to its corresponding TypeScript type.
@@ -51,6 +55,8 @@ export type InputTypeToTS = {
     multiline: string[];
     tribool: boolean | undefined;
     map: Record<string, string>;
+    set: Set<string>;
+    multilineSet: Set<string>;
 };
 
 /**
@@ -110,7 +116,14 @@ export interface InputSchema<T extends InputType = InputType> {
     /** Environment variable(s) to check as fallback */
     fallbackEnv?: string | string[];
 
-    /** For 'string[]' type: regex pattern to split the input */
+    /**
+     * Allowed values for this input. If the extracted value is not in this
+     * list, the default is used instead. Use `as const` for type narrowing:
+     * `validValues: ['a', 'b'] as const` infers `'a' | 'b'` instead of `string`.
+     */
+    validValues?: readonly InputTypeToTS[T][];
+
+    /** For 'string[]' and 'set' types: regex pattern to split the input */
     splitter?: RegExp;
 
     /**
@@ -162,10 +175,16 @@ export type ActionOutputsSchema = Record<string, OutputSchema>;
 
 /**
  * Infers the TypeScript type for a single input schema.
+ *
+ * When `validValues` is specified with `as const`, the type narrows to
+ * the union of those values instead of the full base type.
  */
-export type InferInputType<S extends InputSchema> = S extends InputSchema<infer T>
-    ? InputTypeToTS[T]
-    : never;
+export type InferInputType<S extends InputSchema> =
+    S extends { validValues: readonly (infer V)[] }
+        ? V
+        : S extends InputSchema<infer T>
+            ? InputTypeToTS[T]
+            : never;
 
 /**
  * Infers the TypeScript interface for an entire inputs schema.

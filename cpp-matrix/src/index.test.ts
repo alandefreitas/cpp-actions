@@ -20,8 +20,53 @@ import {
     SubrangePolicies,
     registerHelpers
 } from './index';
+import type { Inputs } from './types';
 import * as Handlebars from 'handlebars';
 import * as core from '@actions/core';
+import { describePrettyErrors } from 'pretty-errors/test-helper';
+
+/**
+ * Creates a matrix inputs object with sensible defaults, overriding only specified fields.
+ *
+ * @param overrides - Fields to override in the default inputs
+ * @returns Complete matrix inputs object
+ */
+function makeDefaultMatrixInputs(overrides: Partial<Inputs> = {}): Inputs {
+    return ({
+        compiler_versions: {},
+        standards: '',
+        subrange_policy: { '': 'one-per-major' },
+        max_standards: 2,
+        latest_factors: {},
+        factors: {},
+        combinatorial_factors: {},
+        force_factors: [],
+        extra_values: [],
+        runs_on: [],
+        containers: [],
+        generators: [],
+        generator_toolsets: [],
+        b2_toolsets: [],
+        ccflags: [],
+        cxxflags: [],
+        install: [],
+        triplets: [],
+        build_types: [],
+        default_build_type: 'Release',
+        sanitizer_build_type: 'Release',
+        x86_build_type: 'Release',
+        use_containers: false,
+        warn_no_matches: false,
+        output_file: undefined,
+        log_matrix: false,
+        generate_summary: false,
+        trace_commands: false,
+        sort_by_failure_rate: false,
+        failure_rate_runs: 20,
+        github_token: '',
+        ...overrides
+    }) as Inputs;
+}
 
 test('parseCompilerRequirements', async () => {
     const input = `gcc >=4.8
@@ -120,35 +165,7 @@ describe('splitRanges', () => {
     });
 });
 
-describe('pretty errors', () => {
-    it('logs once and fails once', async () => {
-        let runPromise: Promise<void>;
-        jest.isolateModules(() => {
-            jest.doMock('pretty-errors', () => {
-                const mockCore = {
-                    error: jest.fn(),
-                    setFailed: jest.fn()
-                };
-                return {
-                    reportAndSetFailed: async (error: Error) => {
-                        mockCore.error(error.message);
-                        mockCore.setFailed(error.message);
-                    },
-                    __mockCore: mockCore
-                };
-            });
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const prettyErrors = require('pretty-errors');
-
-            runPromise = prettyErrors.reportAndSetFailed(new Error('matrix boom'), { title: 'CPP matrix failed' }).then(() => {
-                expect(prettyErrors.__mockCore.error).toHaveBeenCalledTimes(1);
-                expect(prettyErrors.__mockCore.setFailed).toHaveBeenCalledWith('matrix boom');
-            });
-        });
-
-        await runPromise!;
-    });
-});
+describePrettyErrors('matrix boom', 'CPP matrix failed');
 
 describe('generateMatrix', () => {
     test('should generate matrix correctly', async () => {
@@ -158,43 +175,13 @@ describe('generateMatrix', () => {
             msvc: '>=14.2.0',
             'apple-clang': '*'
         };
-        const standards = normalizeCppVersionRequirement('>=11');
-        const max_standards = 2;
-        const latest_factors = { gcc: ['Coverage', 'TSan', 'UBSan'] };
-        const factors = { gcc: ['Asan', 'Shared'], msvc: ['Shared', 'x86'] };
-        const inputs = {
+        const inputs = makeDefaultMatrixInputs({
             compiler_versions: compilerVersions,
-            standards: standards,
-            subrange_policy: { '': 'one-per-major' },
-            max_standards: max_standards,
-            latest_factors: latest_factors,
-            factors: factors,
-            combinatorial_factors: {},
-            force_factors: [],
-            extra_values: [],
-            runs_on: [],
-            containers: [],
-            generators: [],
-            generator_toolsets: [],
-            b2_toolsets: [],
-            ccflags: [],
-            cxxflags: parseCompilerSuggestions(['gcc >=10 <12: -static'], Object.keys(compilerVersions)),
-            install: [],
-            triplets: [],
-            build_types: [],
-            default_build_type: 'Release',
-            sanitizer_build_type: 'Release',
-            x86_build_type: 'Release',
-            use_containers: false,
-            warn_no_matches: false,
-            output_file: undefined,
-            log_matrix: false,
-            generate_summary: false,
-            trace_commands: false,
-            sort_by_failure_rate: false,
-            failure_rate_runs: 20,
-            github_token: ''
-        };
+            standards: normalizeCppVersionRequirement('>=11'),
+            latest_factors: { gcc: ['Coverage', 'TSan', 'UBSan'] },
+            factors: { gcc: ['Asan', 'Shared'], msvc: ['Shared', 'x86'] },
+            cxxflags: parseCompilerSuggestions(['gcc >=10 <12: -static'], Object.keys(compilerVersions))
+        });
         const matrix = await generateMatrix(inputs);
         expect(matrix.length === 0).toBe(false);
         const table = await generateTable(matrix, inputs);
@@ -203,38 +190,11 @@ describe('generateMatrix', () => {
 
     test('warns when compiler has no compatible entries', async () => {
         const warnSpy = jest.spyOn(core, 'warning').mockImplementation(() => { });
-        const inputs = {
+        const inputs = makeDefaultMatrixInputs({
             compiler_versions: { msvc: '>=14.0.0' },
-            subrange_policy: { '': 'one-per-major' },
             standards: normalizeCppVersionRequirement('>=26'),
-            latest_factors: {},
-            factors: {},
-            combinatorial_factors: {},
-            force_factors: [],
-            extra_values: [],
-            runs_on: [],
-            containers: [],
-            generators: [],
-            generator_toolsets: [],
-            b2_toolsets: [],
-            ccflags: [],
-            cxxflags: [],
-            install: [],
-            triplets: [],
-            build_types: [],
-            default_build_type: 'Release',
-            sanitizer_build_type: 'Release',
-            x86_build_type: 'Release',
-            use_containers: false,
-            warn_no_matches: true,
-            output_file: undefined,
-            log_matrix: false,
-            generate_summary: false,
-            trace_commands: false,
-            sort_by_failure_rate: false,
-            failure_rate_runs: 20,
-            github_token: ''
-        };
+            warn_no_matches: true
+        });
         try {
             await generateMatrix(inputs);
             expect(warnSpy).toHaveBeenCalled();
@@ -245,42 +205,12 @@ describe('generateMatrix', () => {
 });
 
 test('msvc x86 entries prefer arch metadata over /m32 flags', async () => {
-    const compilerVersions = {
-        msvc: '>=14.0.0'
-    };
-    const inputs = {
-        compiler_versions: compilerVersions,
+    const inputs = makeDefaultMatrixInputs({
+        compiler_versions: { msvc: '>=14.0.0' },
         standards: normalizeCppVersionRequirement('>=11'),
-        subrange_policy: { '': 'one-per-major' },
         max_standards: 1,
-        latest_factors: {},
-        factors: { msvc: ['x86'] },
-        combinatorial_factors: {},
-        force_factors: [],
-        extra_values: [],
-        runs_on: [],
-        containers: [],
-        generators: [],
-        generator_toolsets: [],
-        b2_toolsets: [],
-        ccflags: [],
-        cxxflags: [],
-        install: [],
-        triplets: [],
-        build_types: [],
-        default_build_type: 'Release',
-        sanitizer_build_type: 'Release',
-        x86_build_type: 'Release',
-        use_containers: false,
-        warn_no_matches: false,
-        output_file: undefined,
-        log_matrix: false,
-        generate_summary: false,
-        trace_commands: false,
-        sort_by_failure_rate: false,
-        failure_rate_runs: 20,
-        github_token: ''
-    };
+        factors: { msvc: ['x86'] }
+    });
     const matrix = await generateMatrix(inputs);
     const msvcX86Entry = matrix.find(entry => entry.compiler === 'msvc' && entry.x86 === true);
     expect(msvcX86Entry).toBeDefined();
@@ -290,42 +220,11 @@ test('msvc x86 entries prefer arch metadata over /m32 flags', async () => {
 });
 
 test('non-x86 entries default arch to x64 unless overridden', async () => {
-    const compilerVersions = {
-        gcc: '>=10'
-    };
-    const inputs = {
-        compiler_versions: compilerVersions,
+    const inputs = makeDefaultMatrixInputs({
+        compiler_versions: { gcc: '>=10' },
         standards: normalizeCppVersionRequirement('>=17'),
-        subrange_policy: { '': 'one-per-major' },
-        max_standards: 1,
-        latest_factors: {},
-        factors: {},
-        combinatorial_factors: {},
-        force_factors: [],
-        extra_values: [],
-        runs_on: [],
-        containers: [],
-        generators: [],
-        generator_toolsets: [],
-        b2_toolsets: [],
-        ccflags: [],
-        cxxflags: [],
-        install: [],
-        triplets: [],
-        build_types: [],
-        default_build_type: 'Release',
-        sanitizer_build_type: 'Release',
-        x86_build_type: 'Release',
-        use_containers: false,
-        warn_no_matches: false,
-        output_file: undefined,
-        log_matrix: false,
-        generate_summary: false,
-        trace_commands: false,
-        sort_by_failure_rate: false,
-        failure_rate_runs: 20,
-        github_token: ''
-    };
+        max_standards: 1
+    });
     const matrix = await generateMatrix(inputs);
     const gccEntry = matrix.find(entry => entry.compiler === 'gcc');
     expect(gccEntry?.arch).toBe('x64');
@@ -334,44 +233,11 @@ test('non-x86 entries default arch to x64 unless overridden', async () => {
 test('generates entries for compilers with no known versions', async () => {
     // This test verifies that apple-clang, mingw, and clang-cl (which have no
     // version tracking) still generate matrix entries with version "*"
-    const compilerVersions = {
-        'apple-clang': '*',
-        'mingw': '*',
-        'clang-cl': '*'
-    };
-    const inputs = {
-        compiler_versions: compilerVersions,
+    const inputs = makeDefaultMatrixInputs({
+        compiler_versions: { 'apple-clang': '*', 'mingw': '*', 'clang-cl': '*' },
         standards: normalizeCppVersionRequirement('>=14'),
-        subrange_policy: { '': 'one-per-major' },
-        max_standards: 2,
-        latest_factors: {},
-        factors: {},
-        combinatorial_factors: {},
-        force_factors: [],
-        extra_values: [],
-        runs_on: [],
-        containers: [],
-        generators: [],
-        generator_toolsets: [],
-        b2_toolsets: [],
-        ccflags: [],
-        cxxflags: [],
-        install: [],
-        triplets: [],
-        build_types: [],
-        default_build_type: 'Release',
-        sanitizer_build_type: 'Release',
-        x86_build_type: 'Release',
-        use_containers: false,
-        warn_no_matches: true, // Should NOT warn because entries should be generated
-        output_file: undefined,
-        log_matrix: false,
-        generate_summary: false,
-        trace_commands: false,
-        sort_by_failure_rate: false,
-        failure_rate_runs: 20,
-        github_token: ''
-    };
+        warn_no_matches: true // Should NOT warn because entries should be generated
+    });
     const warnSpy = jest.spyOn(core, 'warning').mockImplementation(() => { });
     try {
         const matrix = await generateMatrix(inputs);

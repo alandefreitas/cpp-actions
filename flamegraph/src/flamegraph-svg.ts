@@ -56,9 +56,7 @@ function cantorPairing(a: number, b: number): number {
  * @param eventsDict - Dictionary to populate with events
  */
 function getTraceEvents(combinedTrace: Trace, eventsDict: Record<string, Event[]>): void {
-    function fnlog(msg: string) {
-        trace_commands.log(`getTraceEvents: ${msg}`);
-    }
+    const fnlog = trace_commands.scoped('getTraceEvents');
     fnlog(`combinedTrace: ${combinedTrace}`);
     fnlog(`Get ${combinedTrace.traceEvents.length} trace events as {Event}`);
 
@@ -79,9 +77,7 @@ function getTraceEvents(combinedTrace: Trace, eventsDict: Record<string, Event[]
  * @returns Dictionary mapping cantor values to event arrays
  */
 function loadEvents(combinedTrace: Trace): Record<string, Event[]> {
-    function fnlog(msg: string) {
-        trace_commands.log(`loadEvents: ${msg}`);
-    }
+    const fnlog = trace_commands.scoped('loadEvents');
 
     fnlog(`Load events from combined trace`);
     fnlog(`combinedTrace: ${combinedTrace}`);
@@ -273,9 +269,7 @@ function loadStackIdentifiers(events: Event[], stackIdentifiers: ArrayMap): void
  */
 export function stackCollapseChromeTracing(combinedTrace: Trace): ArrayMap {
     // Adapted from https://github.com/brendangregg/FlameGraph/blob/master/stackcollapse-chrome-tracing.py
-    function fnlog(msg: string) {
-        trace_commands.log(`stackCollapseChromeTracing: ${msg}`);
-    }
+    const fnlog = trace_commands.scoped('stackCollapseChromeTracing');
 
     fnlog(`Generate stack collapse from combined trace`);
     fnlog(`combinedTrace: ${combinedTrace}`);
@@ -739,9 +733,7 @@ function flow(last: string[], thisStack: string[], v: number, d: number | undefi
  * @throws Error if there are too few samples for the flame graph
  */
 export function generateFlameGraph(stackIdentifiers: ArrayMap): string {
-    function fnlog(msg: string) {
-        trace_commands.log(`generateFlameGraph: ${msg}`);
-    }
+    const fnlog = trace_commands.scoped('generateFlameGraph');
 
     const interactive = true;
 

@@ -48,7 +48,15 @@ jobs:
         run: npm install
 
       - name: Run tests
-        run: npm test
+        run: npm test -- ${{ matrix.os == 'ubuntu-latest' && '--coverage' || '' }}
+
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage/lcov.info
+          flags: typescript
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Lint
         run: npm run lint

@@ -5,11 +5,27 @@
  */
 
 import * as exec from '@actions/exec';
-import * as fs from 'fs';
+import * as fsp from 'fs/promises';
 import * as path from 'path';
 import * as semver from 'semver';
 import * as trace_commands from 'trace-commands';
-import { Inputs, GitFeatures } from './types';
+import type { Inputs } from './schema';
+
+/**
+ * Detected git executable capabilities.
+ */
+export interface GitFeatures {
+    /** Path to the git executable */
+    gitPath: string;
+    /** Parsed git version */
+    version: semver.SemVer;
+    /** Whether git supports --jobs for parallel submodule fetches */
+    supportsJobs: boolean;
+    /** Whether git supports fsmonitor/scan scripts */
+    supportsScanScripts: boolean;
+    /** Whether git supports --depth for shallow submodule clones */
+    supportsDepth: boolean;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const setup_program = require('setup-program');
@@ -34,6 +50,17 @@ export async function findGitFeatures(_inputs: Inputs): Promise<GitFeatures> {
     const supportsScanScripts = semver.gte(version, '3.5.0');
     const supportsDepth = semver.gte(version, '2.17.0');
     return { gitPath, version, supportsJobs, supportsScanScripts, supportsDepth };
+}
+
+/**
+ * Clones a git repository to a local directory at the given branch.
+ *
+ * @param url - Repository URL to clone
+ * @param dest - Local directory to clone into
+ * @param branch - Branch or tag to check out
+ */
+export async function cloneRepo(url: string, dest: string, branch: string): Promise<void> {
+    await setup_program.cloneGitRepo(url, dest, branch);
 }
 
 /**
@@ -62,20 +89,43 @@ export function getRepoName(url: string): string {
 /**
  * Applies patch repositories by cloning them into the Boost libs directory.
  *
+ * When `preScannedDirs` contains a temp directory for a patch (from dependency
+ * pre-scanning), the directory is moved into place instead of re-cloning.
+ *
  * @param inputs - Action inputs containing patches and directory settings
+ * @param preScannedDirs - Map of patch name to temp directory from pre-scanning
  */
-export async function applyPatches(inputs: Inputs): Promise<void> {
-    function fnlog(msg: string): void {
-        trace_commands.log(`applyPatches: ${msg}`);
-    }
+export async function applyPatches(inputs: Inputs, preScannedDirs?: Map<string, string>): Promise<void> {
+    const fnlog = trace_commands.scoped('applyPatches');
 
-    for (const patch of inputs.patches) {
+    await Promise.all([...inputs.patches].map(async (patch) => {
         const patchName = getRepoName(patch);
         const patchDir = path.join(inputs.boost_dir, 'libs', patchName);
-        if (fs.existsSync(patchDir)) {
+        try {
+            await fsp.access(patchDir);
             fnlog(`Removing existing directory: ${patchDir}`);
-            fs.rmdirSync(patchDir, { recursive: true });
+            await fsp.rm(patchDir, { recursive: true });
+        } catch {
+            // Directory doesn't exist, no need to remove
         }
-        await setup_program.cloneGitRepo(patch, patchDir, inputs.branch);
-    }
+
+        const preScannedDir = preScannedDirs?.get(patchName);
+        if (preScannedDir) {
+            fnlog(`Reusing pre-scanned clone: ${preScannedDir} → ${patchDir}`);
+            // Remove from the map so cleanupPatchCloneDirs doesn't try
+            // to delete an already-moved directory.
+            preScannedDirs!.delete(patchName);
+            try {
+                await fsp.mkdir(path.dirname(patchDir), { recursive: true });
+                await fsp.rename(preScannedDir, patchDir);
+            } catch {
+                // rename can fail across filesystems; fall back to clone
+                fnlog(`Rename failed, falling back to clone`);
+                await setup_program.cloneGitRepo(patch, patchDir, inputs.branch);
+                await fsp.rm(preScannedDir, { recursive: true, force: true }).catch(() => {});
+            }
+        } else {
+            await setup_program.cloneGitRepo(patch, patchDir, inputs.branch);
+        }
+    }));
 }

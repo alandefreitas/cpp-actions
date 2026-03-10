@@ -34,9 +34,7 @@ import { numberOfCpus, normalizeArchitectureInput, deriveB2ArchConfig } from './
  * @throws Error if B2 bootstrap, headers, or build fails
  */
 export async function main(inputs: Inputs): Promise<void> {
-    function fnlog(msg: string): void {
-        trace_commands.log('b2-workflow: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('b2-workflow');
     const archConfig = deriveB2ArchConfig(inputs.arch);
     if (archConfig.normalizedArch) {
         inputs.arch = archConfig.normalizedArch;

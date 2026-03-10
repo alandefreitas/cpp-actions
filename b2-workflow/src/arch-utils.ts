@@ -8,6 +8,10 @@ import * as os from 'os';
 
 import { ArchConfig } from './types';
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { normalizeArchitectureInput } = require('setup-program');
+export { normalizeArchitectureInput };
+
 /**
  * Returns the number of available CPU cores.
  *
@@ -21,32 +25,6 @@ export function numberOfCpus(): number {
         return 1;
     }
     return result;
-}
-
-/**
- * Normalizes an architecture string to a standard format.
- *
- * @param arch - Architecture string to normalize
- * @returns Normalized architecture: 'x86', 'x64', 'arm', 'arm64', or original
- */
-export function normalizeArchitectureInput(arch: string): string {
-    if (!arch) {
-        return '';
-    }
-    const token = arch.toLowerCase();
-    if (['x86', 'win32', 'ia32', 'i386', 'i486', 'i586', 'i686'].includes(token)) {
-        return 'x86';
-    }
-    if (['x64', 'amd64', 'x86_64', 'x86-64'].includes(token)) {
-        return 'x64';
-    }
-    if (['arm', 'arm32'].includes(token)) {
-        return 'arm';
-    }
-    if (['arm64', 'aarch64'].includes(token)) {
-        return 'arm64';
-    }
-    return arch;
 }
 
 /**

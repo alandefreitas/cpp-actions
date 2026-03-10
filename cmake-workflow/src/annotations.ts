@@ -11,6 +11,88 @@ import * as trace_commands from 'trace-commands';
 import { Message, ResolvedInputs } from './types';
 
 /**
+ * Fields extracted from a compiler diagnostic regex match.
+ */
+interface BuildMatchFields {
+    /** Raw file path from regex match (may be undefined) */
+    file: string | undefined;
+    /** Raw line number string from regex match */
+    lineStr: string | undefined;
+    /** Parsed column number (undefined for MSVC) */
+    column: number | undefined;
+    /** Raw severity string (e.g. 'warning', 'error') */
+    severity: string | undefined;
+    /** Error description text */
+    errorMsg: string | undefined;
+    /** Compiler-specific error code (e.g. C4996, -Wdeprecated) */
+    errorCode: string | undefined;
+}
+
+/**
+ * Constructs a build annotation Message from parsed regex match fields.
+ *
+ * Resolves file paths relative to the source and reference directories,
+ * capitalizes severity, and builds title/message strings with compiler info.
+ *
+ * @param fields - Extracted regex match fields
+ * @param inputs - Workflow inputs for path resolution and compiler info
+ * @param fnlog - Trace logging function
+ * @returns Constructed Message object
+ */
+function constructBuildMessage(
+    fields: BuildMatchFields,
+    inputs: ResolvedInputs,
+    fnlog: (msg: string) => void
+): Message {
+    let { file } = fields;
+    fnlog(`File: ${file}`);
+    if (file) {
+        file = path.resolve(inputs.source_dir, file);
+        fnlog(`Absolute file: ${file}`);
+        file = path.relative(inputs.ref_source_dir, file);
+        fnlog(`File relative to repository: ${file}`);
+    }
+
+    const lineNum = fields.lineStr ? parseInt(fields.lineStr) : undefined;
+    fnlog(`Line: ${lineNum}`);
+    if (lineNum) {
+        fnlog(`Line (int): ${lineNum}`);
+    }
+
+    let severity = fields.severity;
+    if (severity) {
+        severity = severity.charAt(0).toUpperCase() + severity.slice(1);
+    }
+
+    const cxx_basename = path.basename(inputs.cxx);
+    let title = `Build ${severity}`;
+    if (inputs.cxx) {
+        title += ` - ${cxx_basename}`;
+    }
+
+    let msg = '';
+    if (inputs.cxx) {
+        msg = `${cxx_basename} - ${fields.errorMsg}`;
+    } else {
+        msg = fields.errorMsg || '';
+    }
+
+    if (fields.errorCode) {
+        title += ` - ${fields.errorCode}`;
+        msg += ` (${fields.errorCode})`;
+    }
+
+    return {
+        title,
+        file,
+        line: lineNum,
+        column: fields.column,
+        severity: severity || '',
+        message: msg
+    };
+}
+
+/**
  * Creates GitHub annotations from CMake configure output.
  *
  * Parses CMake warning and error messages and creates corresponding
@@ -20,9 +102,7 @@ import { Message, ResolvedInputs } from './types';
  * @param inputs - Workflow inputs for path resolution
  */
 export function createCMakeConfigureAnnotations(output: string, inputs: ResolvedInputs): void {
-    function fnlog(msg: string): void {
-        trace_commands.log('createCMakeConfigureAnnotations: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('createCMakeConfigureAnnotations');
 
     // A CMake configure warning/error message looks like this regex followed
     // by optional line breaks, then more lines with the message.
@@ -94,9 +174,7 @@ export function createCMakeConfigureAnnotations(output: string, inputs: Resolved
  * @param inputs - Workflow inputs for path resolution
  */
 export function createCMakeBuildAnnotations(output: string, inputs: ResolvedInputs): void {
-    function fnlog(msg: string): void {
-        trace_commands.log('createCMakeBuildAnnotations: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('createCMakeBuildAnnotations');
 
     // A CMake build warning/error message is actually a warning/error
     // message from the compiler
@@ -111,59 +189,19 @@ export function createCMakeBuildAnnotations(output: string, inputs: ResolvedInpu
         match = line.match(gccClangRegex);
         if (match) {
             fnlog(`Matched: ${match[0]}`);
-            // The file in the message is always relative
-            // to the source directory. Make it relative to
-            // the workspace directory.
-            let file: string | undefined = match[1] || undefined;
-            fnlog(`File: ${file}`);
-            if (file) {
-                file = path.resolve(inputs.source_dir, file);
-                fnlog(`Absolute file: ${file}`);
-                file = path.relative(inputs.ref_source_dir, file);
-                fnlog(`File relative to repository: ${file}`);
-            }
-            // Get line and attempt to convert to integer
-            let lineNum: number | undefined = match[2] ? parseInt(match[2]) : undefined;
-            fnlog(`Line: ${lineNum}`);
-            if (lineNum) {
-                fnlog(`Line (int): ${lineNum}`);
-            }
-            // Get column and attempt to convert to integer
-            let column: number | undefined = match[3] ? parseInt(match[3]) : undefined;
-            fnlog(`Column: ${column}`);
+            const column = match[3] ? parseInt(match[3]) : undefined;
             if (column) {
+                fnlog(`Column: ${column}`);
                 fnlog(`Column (int): ${column}`);
             }
-            // Capitalized severity
-            let severity: string | undefined = match[4] || undefined;
-            if (severity) {
-                severity = severity.charAt(0).toUpperCase() + severity.slice(1);
-            }
-            const cxx_basename = path.basename(inputs.cxx);
-            let title = `Build ${severity}`;
-            if (inputs.cxx) {
-                title += ` - ${cxx_basename}`;
-            }
-            const error_msg = match[5] || undefined;
-            let msg = '';
-            if (inputs.cxx) {
-                msg = `${cxx_basename} - ${error_msg}`;
-            } else {
-                msg = error_msg || '';
-            }
-            const error_code = match[6] || undefined;
-            if (error_code) {
-                title += ` - ${error_code}`;
-                msg += ` (${error_code})`;
-            }
-            const curMessage: Message = {
-                title: title,
-                file: file,
-                line: lineNum,
-                column: column,
-                severity: severity || '',
-                message: msg
-            };
+            const curMessage = constructBuildMessage({
+                file: match[1] || undefined,
+                lineStr: match[2],
+                column,
+                severity: match[4] || undefined,
+                errorMsg: match[5] || undefined,
+                errorCode: match[6] || undefined
+            }, inputs, fnlog);
             fnlog(`Appending message: ${JSON.stringify(curMessage)}`);
             messages.push(curMessage);
             continue;
@@ -171,49 +209,14 @@ export function createCMakeBuildAnnotations(output: string, inputs: ResolvedInpu
         match = line.match(msvcRegex);
         if (match) {
             fnlog(`Matched: ${match[0]}`);
-            let file: string | undefined = match[1] || undefined;
-            fnlog(`File: ${file}`);
-            if (file) {
-                file = path.resolve(inputs.source_dir, file);
-                fnlog(`Absolute file: ${file}`);
-                file = path.relative(inputs.ref_source_dir, file);
-                fnlog(`File relative to repository: ${file}`);
-            }
-            let lineNum: number | undefined = match[2] ? parseInt(match[2]) : undefined;
-            fnlog(`Line: ${lineNum}`);
-            if (lineNum) {
-                fnlog(`Line (int): ${lineNum}`);
-            }
-            const column: number | undefined = undefined;
-            let severity: string | undefined = match[3] || undefined;
-            if (severity) {
-                severity = severity.charAt(0).toUpperCase() + severity.slice(1);
-            }
-            const error_code = match[4] || undefined;
-            const error_message = match[5] || undefined;
-            const cxx_basename = path.basename(inputs.cxx);
-            let title = `Build ${severity}`;
-            if (inputs.cxx) {
-                title += ` - ${cxx_basename}`;
-            }
-            let msg = '';
-            if (inputs.cxx) {
-                msg = `${cxx_basename} - ${error_message}`;
-            } else {
-                msg = error_message || '';
-            }
-            if (error_code) {
-                title += ` - ${error_code}`;
-                msg += ` (${error_code})`;
-            }
-            const curMessage: Message = {
-                title: title,
-                file: file,
-                line: lineNum,
-                column: column,
-                severity: severity || '',
-                message: msg
-            };
+            const curMessage = constructBuildMessage({
+                file: match[1] || undefined,
+                lineStr: match[2],
+                column: undefined,
+                severity: match[3] || undefined,
+                errorMsg: match[5] || undefined,
+                errorCode: match[4] || undefined
+            }, inputs, fnlog);
             fnlog(`Appending message: ${JSON.stringify(curMessage)}`);
             messages.push(curMessage);
         }
@@ -229,9 +232,7 @@ export function createCMakeBuildAnnotations(output: string, inputs: ResolvedInpu
  * @param messages - Array of parsed messages to create annotations from
  */
 export function createAnnotationsFromMessage(messages: Message[]): void {
-    function fnlog(msg: string): void {
-        trace_commands.log('createAnnotationsFromMessage: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('createAnnotationsFromMessage');
 
     for (const message of messages) {
         fnlog(`Creating annotation: ${JSON.stringify(message)}`);
@@ -262,9 +263,7 @@ export function createAnnotationsFromMessage(messages: Message[]): void {
  * @param inputs - Workflow inputs for path resolution
  */
 export function createCMakeTestAnnotations(output: string, inputs: ResolvedInputs): void {
-    function fnlog(msg: string): void {
-        trace_commands.log('createCMakeTestAnnotations: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('createCMakeTestAnnotations');
 
     // A CMake test warning/error message is actually an error message
     // from whatever test framework is being used. The only supported format

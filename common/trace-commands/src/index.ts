@@ -22,6 +22,19 @@ export function log(...args: unknown[]): void {
 }
 
 /**
+ * Creates a scoped logging function that prepends a fixed prefix to each message.
+ *
+ * Useful for tagging debug output with the originating function or module name
+ * without repeating the prefix at every call site.
+ *
+ * @param name - Prefix to prepend before each message (e.g., "fetchMetadata")
+ * @returns A function that logs `"name: msg"` through {@link log}
+ */
+export function scoped(name: string): (msg: string) => void {
+    return (msg: string) => log(`${name}: ${msg}`);
+}
+
+/**
  * Enables or disables trace command output for the action.
  *
  * When enabled, log() calls will output to info level (visible in workflow logs).

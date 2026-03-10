@@ -344,7 +344,7 @@ runAction({
             core.setFailed('Cannot setup Clang');
         }
 
-        return outputs as unknown as Record<string, unknown>;
+        return outputs;
     },
     callerModule: module
 });

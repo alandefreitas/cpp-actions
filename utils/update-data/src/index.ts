@@ -8,6 +8,10 @@ import { fetchAllTags } from './tags';
 import { generateUbuntuVersionsJson } from './ubuntu-versions';
 import { generateBoostDeps } from './boost-deps';
 
+// Re-export runner utilities for consumers (e.g. utils/docs)
+export { runCommand } from './runner';
+export type { CommandResult, RunOptions } from './runner';
+
 /**
  * Main entry point for the update-data utility.
  */

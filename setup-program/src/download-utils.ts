@@ -27,9 +27,7 @@ import { ExecOutput } from './types';
  * @throws Error if extraction fails
  */
 export async function extractTar(tarPath: string, destPath: string | undefined, flags: string | undefined = undefined): Promise<string> {
-    function fnlog(msg: string): void {
-        trace_commands.log('extractTar: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('extractTar');
 
     const IS_WINDOWS = process.platform === 'win32';
     if (!IS_WINDOWS) {
@@ -130,9 +128,7 @@ export async function extractTar(tarPath: string, destPath: string | undefined, 
  * @returns Path to the extracted contents, or undefined if extraction failed
  */
 export async function downloadAndExtract(url: string, destPath: string | undefined = undefined): Promise<string | undefined> {
-    function fnlog(msg: string): void {
-        trace_commands.log('downloadAndExtract: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('downloadAndExtract');
 
     let extPath: string | undefined = undefined;
     try {
@@ -211,9 +207,7 @@ export async function downloadAndExtract(url: string, destPath: string | undefin
  * @returns True if a directory was stripped, false otherwise
  */
 export async function stripSingleDirectoryFromPath(dirPath: string): Promise<boolean> {
-    function fnlog(msg: string): void {
-        trace_commands.log('stripSingleDirectoryFromPath: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('stripSingleDirectoryFromPath');
 
     fnlog(`Checking if ${dirPath} contains a single directory`);
     const files = fs.readdirSync(dirPath);

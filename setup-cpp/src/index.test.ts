@@ -1,4 +1,5 @@
 import { normalizeCompiler, resolveMSVCArch } from './index';
+import { describePrettyErrors } from 'pretty-errors/test-helper';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const msvc = require('setup-msvc');
@@ -50,32 +51,4 @@ test('build MSVC outputs falls back when metadata is missing', () => {
     expect(outputs.version_major).toEqual(14);
 });
 
-describe('pretty errors', () => {
-    it('logs once and fails once', async () => {
-        let runPromise: Promise<void>;
-        jest.isolateModules(() => {
-            jest.doMock('pretty-errors', () => {
-                const mockCore = {
-                    error: jest.fn(),
-                    setFailed: jest.fn()
-                };
-                return {
-                    reportAndSetFailed: async (error: Error) => {
-                        mockCore.error(error.message);
-                        mockCore.setFailed(error.message);
-                    },
-                    __mockCore: mockCore
-                };
-            });
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const prettyErrors = require('pretty-errors');
-
-            runPromise = prettyErrors.reportAndSetFailed(new Error('cpp boom'), { title: 'Setup C++ failed' }).then(() => {
-                expect(prettyErrors.__mockCore.error).toHaveBeenCalledTimes(1);
-                expect(prettyErrors.__mockCore.setFailed).toHaveBeenCalledWith('cpp boom');
-            });
-        });
-
-        await runPromise!;
-    });
-});
+describePrettyErrors('cpp boom', 'Setup C++ failed');

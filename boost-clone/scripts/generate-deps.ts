@@ -150,11 +150,11 @@ function buildTransitiveClosures(
  * @param submodulePaths - Valid submodule paths
  * @returns Dependency data for all modules
  */
-function scanAllModules(
+async function scanAllModules(
     boostDir: string,
     exceptions: ExceptionsMap,
     submodulePaths: SubmodulePaths
-): ReleaseDeps {
+): Promise<ReleaseDeps> {
     const libsDir = path.join(boostDir, 'libs');
     const directDeps = new Map<string, Set<string>>();
 
@@ -171,7 +171,7 @@ function scanAllModules(
     for (const moduleName of moduleNames) {
         const modulePath = path.join(libsDir, moduleName);
         if (fs.existsSync(modulePath)) {
-            const deps = scanModuleDependencies(modulePath, moduleName, exceptions, submodulePaths);
+            const deps = await scanModuleDependencies(modulePath, moduleName, exceptions, submodulePaths);
             directDeps.set(moduleName, deps);
         }
     }
@@ -288,7 +288,7 @@ async function processRelease(tag: string): Promise<ReleaseDeps> {
     try {
         cloneBoostRelease(tag, tempDir);
         const { exceptions, submodulePaths } = await downloadMetadata(tag);
-        const releaseDeps = scanAllModules(tempDir, exceptions, submodulePaths);
+        const releaseDeps = await scanAllModules(tempDir, exceptions, submodulePaths);
         return releaseDeps;
     } finally {
         console.log(`Cleaning up ${tempDir}...`);

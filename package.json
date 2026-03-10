@@ -34,7 +34,9 @@
     "build": "npm run prepare",
     "test": "jest",
     "test:coverage": "jest --coverage",
-    "lint": "node utils/jsdoc-linter/dist/index.js",
+    "lint": "node utils/jsdoc-linter/dist/index.js && jscpd .",
+    "lint:jsdoc": "node utils/jsdoc-linter/dist/index.js",
+    "lint:duplication": "jscpd .",
     "docs": "node utils/docs/dist/index.js",
     "validate": "npm run update-data && npm run build && npm test && npm run lint",
     "depcheck": "npm exec --workspaces -- depcheck",
@@ -46,6 +48,7 @@
     "@types/jest": "^29.5.0",
     "@types/node": "^20.0.0",
     "jest": "^29.7.0",
+    "jscpd": "^4.0.8",
     "ts-jest": "^29.2.0",
     "typescript": "^5.6.0"
   }

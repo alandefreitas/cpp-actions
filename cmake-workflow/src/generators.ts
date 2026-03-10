@@ -10,34 +10,9 @@ import * as trace_commands from 'trace-commands';
 
 import { Inputs } from './types';
 
-/**
- * Normalizes architecture input strings to standard identifiers.
- *
- * Maps various architecture names (x86, win32, ia32, amd64, x86_64, etc.)
- * to their canonical forms (x86, x64, arm, arm64).
- *
- * @param arch - Raw architecture input string
- * @returns Normalized architecture identifier, or original if not recognized
- */
-export function normalizeArchitectureInput(arch: string): string {
-    if (!arch) {
-        return '';
-    }
-    const token = arch.toLowerCase();
-    if (['x86', 'win32', 'ia32', 'i386', 'i486', 'i586', 'i686'].includes(token)) {
-        return 'x86';
-    }
-    if (['x64', 'amd64', 'x86_64', 'x86-64'].includes(token)) {
-        return 'x64';
-    }
-    if (['arm', 'arm32'].includes(token)) {
-        return 'arm';
-    }
-    if (['arm64', 'aarch64'].includes(token)) {
-        return 'arm64';
-    }
-    return arch;
-}
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { normalizeArchitectureInput } = require('setup-program');
+export { normalizeArchitectureInput };
 
 /**
  * Derives the CMake generator architecture from the target architecture.
@@ -75,9 +50,7 @@ export function deriveGeneratorArchitectureFromArch(arch: string, generator: str
  * @param inputs - Workflow inputs to update with generator info
  */
 export async function setupDefaultGenerator(inputs: Inputs): Promise<void> {
-    function fnlog(msg: string): void {
-        trace_commands.log('setupDefaultGenerator: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('setupDefaultGenerator');
 
     // Execute and get the output of:
     fnlog(`Identifying default generator`);

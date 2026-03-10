@@ -49,6 +49,12 @@ function defaultToString(schema: InputSchema): string | undefined {
             return arr.length > 0 ? arr.join('\n') : '';
         }
 
+        case 'set':
+        case 'multilineSet': {
+            const set = schema.default as Set<string>;
+            return set.size > 0 ? [...set].join('\n') : '';
+        }
+
         case 'map': {
             const map = schema.default as Record<string, string>;
             return Object.entries(map)

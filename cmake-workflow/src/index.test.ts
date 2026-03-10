@@ -26,6 +26,7 @@ jest.mock('fs', () => ({
 }));
 
 import * as fs from 'fs';
+import { describePrettyErrors } from 'pretty-errors/test-helper';
 
 test('parseExtraArgsEntry', async () => {
     // const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
@@ -108,35 +109,7 @@ test('deriveGeneratorArchitectureFromArch maps Visual Studio targets', () => {
     expect(main._deriveGeneratorArchitectureFromArch('x64', 'Ninja')).toBe('');
 });
 
-describe('pretty errors', () => {
-    it('logs once and fails once', async () => {
-        let runPromise: Promise<void>;
-        jest.isolateModules(() => {
-            jest.doMock('pretty-errors', () => {
-                const mockCore = {
-                    error: jest.fn(),
-                    setFailed: jest.fn()
-                };
-                return {
-                    reportAndSetFailed: async (error: Error) => {
-                        mockCore.error(error.message);
-                        mockCore.setFailed(error.message);
-                    },
-                    __mockCore: mockCore
-                };
-            });
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const prettyErrors = require('pretty-errors');
-
-            runPromise = prettyErrors.reportAndSetFailed(new Error('workflow boom'), { title: 'CMake workflow failed' }).then(() => {
-                expect(prettyErrors.__mockCore.error).toHaveBeenCalledTimes(1);
-                expect(prettyErrors.__mockCore.setFailed).toHaveBeenCalledWith('workflow boom');
-            });
-        });
-
-        await runPromise!;
-    });
-});
+describePrettyErrors('workflow boom', 'CMake workflow failed');
 
 describe('applyPatches', () => {
     const mockIoCp = io.cp as jest.MockedFunction<typeof io.cp>;

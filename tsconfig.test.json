@@ -4,7 +4,14 @@
     "declaration": false,
     "declarationMap": false,
     "composite": false,
-    "noEmit": true
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "pretty-errors": ["common/pretty-errors/src/index"],
+      "trace-commands": ["common/trace-commands/src/index"],
+      "gh-inputs": ["common/gh-inputs/src/index"],
+      "action-schema": ["common/action-schema/src/index"]
+    }
   },
   "include": [
     "*/src/**/*.ts",

@@ -1,42 +1,22 @@
 /**
- * Caching utilities for boost-clone action.
+ * Cache I/O utilities for boost-clone action.
+ *
+ * This module handles source cache restore/save operations and provides
+ * the batched `git ls-remote` utility used during dependency resolution.
+ *
+ * Cache key computation is delegated to `cache-key.ts` — this module
+ * does not compute keys independently.
  *
  * @module cache
  */
 
 import * as core from '@actions/core';
 import * as cache from '@actions/cache';
-import * as crypto from 'crypto';
 import * as trace_commands from 'trace-commands';
-import { Inputs, GitFeatures, CacheKeyResult, GenerateCacheKeyOptions } from './types';
+import type { Inputs } from './schema';
+import type { GitFeatures } from './git-utils';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const setup_program = require('setup-program');
-
-const boostSuperProjectRepo = 'https://github.com/boostorg/boost.git';
-
-/**
- * Converts an iterable to a sorted array of strings.
- *
- * @param iterable - The iterable to convert, or null/undefined
- * @returns Sorted array of strings, or empty array if input is null/undefined
- */
-export function toSortedArray(iterable: Iterable<string> | null | undefined): string[] {
-    if (!iterable) {
-        return [];
-    }
-    return Array.from(iterable).map((value) => value).sort();
-}
-
-/**
- * Creates a SHA-1 hash of a JSON-serialized value.
- *
- * @param value - The value to hash
- * @returns Hexadecimal hash string
- */
-export function hashObject(value: unknown): string {
-    return crypto.createHash('sha1').update(JSON.stringify(value)).digest('hex');
-}
+const HASH_BATCH_SIZE = 20;
 
 /**
  * Retrieves the git commit hash for a repository at a given branch.
@@ -63,101 +43,64 @@ export async function getGitHash(repoUrl: string, branch: string, gitFeatures: G
  * @param module - Module name (e.g., "algorithm" or "numeric/conversion")
  * @returns The GitHub repository URL
  */
-export function getModuleRepoUrl(module: string): string {
+function getModuleRepoUrl(module: string): string {
     return `https://github.com/boostorg/${module.replace('/', '_')}.git`;
 }
 
 /**
- * Generates a unique cache key for the Boost installation based on configuration.
+ * Fetches commit hashes for multiple modules in parallel batches.
  *
- * Computes hashes from module versions, patches, and configuration settings to
- * create a deterministic cache key for GitHub Actions caching.
+ * Calls `git ls-remote` for each module's repository, batching requests
+ * in groups of ~20 to balance speed with GitHub API friendliness.
+ * On failure (e.g., alias modules whose repo doesn't exist), warns and
+ * falls back to an empty string hash.
  *
- * @param inputs - Boost clone inputs including branch, modules, and patches
- * @param allModules - Complete set of modules to include (direct and transitive dependencies)
- * @param gitFeatures - Git capabilities detected on the system
- * @param options - Cache key generation options (logging, fragments)
- * @returns Cache key string or object with key and fragments
+ * @param modules - Module names to fetch hashes for
+ * @param branch - Branch or tag to query
+ * @param gitFeatures - Git executable capabilities
+ * @param repoUrlOverrides - Optional map of module name to repo URL for non-boostorg repos (e.g. patches)
+ * @returns Map of module name to commit hash
  */
-export async function generateCacheKey(inputs: Inputs, allModules: Set<string>, gitFeatures: GitFeatures, options: GenerateCacheKeyOptions = {}): Promise<string | CacheKeyResult> {
-    function fnlog(msg: string): void {
-        trace_commands.log(`generateCacheKey: ${msg}`);
+export async function fetchModuleHashes(
+    modules: Iterable<string>,
+    branch: string,
+    gitFeatures: GitFeatures,
+    repoUrlOverrides?: Map<string, string>
+): Promise<Map<string, string>> {
+    const fnlog = trace_commands.scoped('fetchModuleHashes');
+
+    const moduleList = [...modules];
+    const result = new Map<string, string>();
+
+    if (moduleList.length === 0) {
+        return result;
     }
 
-    const allModulesSorted = toSortedArray(allModules);
-    const patchesSorted = toSortedArray(inputs.patches);
+    fnlog(`Fetching hashes for ${moduleList.length} modules in batches of ${HASH_BATCH_SIZE}`);
 
-    const boostHash = await getGitHash(boostSuperProjectRepo, inputs.branch, gitFeatures);
-    fnlog(`Boost hash at ${inputs.branch}: ${boostHash}`);
+    for (let i = 0; i < moduleList.length; i += HASH_BATCH_SIZE) {
+        const batch = moduleList.slice(i, i + HASH_BATCH_SIZE);
+        fnlog(`Batch ${Math.floor(i / HASH_BATCH_SIZE) + 1}: ${batch.join(', ')}`);
 
-    const moduleHashes: Record<string, string> = {};
-    if (inputs.optimistic_caching) {
-        // Optimistic caching: only modules and patches define the key
-        // Pessimistic caching: we'll clone all modules, so we only need the
-        // hash of the super-project
-        for (const module of allModulesSorted) {
-            const moduleRepoUrl = getModuleRepoUrl(module);
-            const moduleRepoExists = await setup_program.urlExists(moduleRepoUrl);
-            if (moduleRepoExists) {
-                const moduleHash = await getGitHash(moduleRepoUrl, inputs.branch, gitFeatures);
-                fnlog(`Hash for module ${module}: ${moduleHash}`);
-                moduleHashes[module] = moduleHash;
-            } else {
-                moduleHashes[module] = boostHash;
+        const promises = batch.map(async (mod): Promise<[string, string]> => {
+            const repoUrl = repoUrlOverrides?.get(mod) ?? getModuleRepoUrl(mod);
+            try {
+                const hash = await getGitHash(repoUrl, branch, gitFeatures);
+                return [mod, hash];
+            } catch (error) {
+                core.warning(`Failed to fetch hash for ${mod}: ${error}`);
+                return [mod, ''];
             }
+        });
+
+        const batchResults = await Promise.all(promises);
+        for (const [mod, hash] of batchResults) {
+            result.set(mod, hash);
         }
     }
 
-    const patchHashes: Record<string, string> = {};
-    for (const patch of patchesSorted) {
-        const patchHash = await getGitHash(patch, inputs.branch, gitFeatures);
-        fnlog(`Hash for patch ${patch}: ${patchHash}`);
-        patchHashes[patch] = patchHash;
-    }
-
-    const concatenatedHashes = Object.values(moduleHashes).join('') + Object.values(patchHashes).join('');
-    const modulesAndPatchesHash = crypto.createHash('sha1').update(concatenatedHashes).digest('hex');
-    fnlog(`Modules hash (direct dependencies and patches): ${modulesAndPatchesHash}`);
-
-    const configHash = hashObject({
-        branch: inputs.branch,
-        modules: allModulesSorted,
-        modules_scan_paths: toSortedArray(inputs.modules_scan_paths),
-        modules_exclude_paths: toSortedArray(inputs.modules_exclude_paths),
-        scan_modules_dir: toSortedArray(inputs.scan_modules_dir),
-        scan_modules_ignore: toSortedArray(inputs.scan_modules_ignore),
-        optimistic_caching: inputs.optimistic_caching
-    });
-    fnlog(`Configuration hash: ${configHash}`);
-
-    // The cache key is composed of distinct SHA-1 fragments:
-    // - boostHash: captures changes in the Boost super-project.
-    // - modulesAndPatchesHash: captures hashes of explicitly requested modules and patches.
-    // - configHash: captures every configuration knob that influences scanning behavior.
-    // Each fragment encodes disjoint information so that changes in any dimension invalidate the key.
-    const cacheKey =
-        // No modules or patches specified, we'll clone all modules
-        allModulesSorted.length === 0 && patchesSorted.length === 0 ?
-            `boost-source-${boostHash}-${configHash}` :
-            inputs.optimistic_caching ?
-                // Optimistic caching: only modules and patches define the key
-                `boost-source-${modulesAndPatchesHash}-${configHash}` :
-                // Pessimistic caching with no patches: we'll clone all modules
-                patchesSorted.length === 0 ?
-                    `boost-source-${boostHash}-${configHash}` :
-                    // Pessimistic caching with patches: invalidate cache
-                    // when any module or patch changes
-                    `boost-source-${boostHash}-${modulesAndPatchesHash}-${configHash}`;
-    fnlog(`Cache key: ${cacheKey}`);
-
-    if (options.logInfo) {
-        core.info(`Caching mode: ${inputs.optimistic_caching ? 'optimistic' : 'pessimistic'}`);
-        core.info(`Cache key fragments -> boost: ${boostHash}, modules+patches: ${modulesAndPatchesHash}, config: ${configHash}`);
-        core.info(`Cache key: ${cacheKey}`);
-    }
-
-    const result: CacheKeyResult = { cacheKey, fragments: { boostHash, modulesAndPatchesHash, configHash } };
-    return options.withFragments ? result : cacheKey;
+    fnlog(`Fetched ${result.size} hashes`);
+    return result;
 }
 
 /**
@@ -171,9 +114,9 @@ export async function getCachedBoost(inputs: Inputs, cacheKey: string): Promise<
     core.info(`Checking cache for key: ${cacheKey}`);
     const hit = await cache.restoreCache([inputs.boost_dir], cacheKey, []) !== undefined;
     if (hit) {
-        core.info(`Cache hit! 🙂`);
+        core.info(`Cache hit!`);
     } else {
-        core.info(`Cache miss! 😔`);
+        core.info(`Cache miss!`);
     }
     return hit;
 }

@@ -32,8 +32,12 @@ import {
     removeSemverLeadingZeros,
     renderTemplate,
     get_runner_os,
-    sleep
+    sleep,
+    normalizeArchitectureInput
 } from './utils';
+
+// Re-export for consumers (b2-workflow, cmake-workflow)
+export { normalizeArchitectureInput };
 
 import {
     readVersionsFromFile,
@@ -190,9 +194,7 @@ export async function search_apt_packages(
     version: string,
     check_latest: boolean
 ): Promise<AptPackageMatch | null> {
-    function fnlog(msg: string): void {
-        trace_commands.log('search_apt_packages: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('search_apt_packages');
 
     // Search for matching package names
     const package_names: string[] = [];
@@ -322,9 +324,7 @@ export async function install_program_with_apt(
     alternatives: string[] = [],
     options: AptInstallOptions = {}
 ): Promise<string | null> {
-    function fnlog(msg: string): void {
-        trace_commands.log('install_program_with_apt: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('install_program_with_apt');
 
     const { tryAptitude = true, tryAlternatives = true } = options;
 
@@ -427,9 +427,7 @@ export async function updateAptPackageLists(): Promise<void> {
  * @returns Object containing the found executable path and version, or nulls if not found
  */
 export async function find_program_with_apt(names: string[], version: string, check_latest: boolean): Promise<ProgramResult> {
-    function fnlog(msg: string): void {
-        trace_commands.log('find_program_with_apt: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('find_program_with_apt');
 
     let output_version: string | null = null;
     let output_path: string | null = null;
@@ -806,9 +804,7 @@ export function getCurrentUbuntuName(): string | null {
  * @throws Error if a nested move operation fails
  */
 export async function moveWithPermissions(source: string, destination: string, copyInstead = false, level = 0): Promise<boolean> {
-    function fnlog(msg: string): void {
-        trace_commands.log('moveWithPermissions: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('moveWithPermissions');
 
     const levelPrefix = '  '.repeat(level);
     try {
@@ -865,9 +861,7 @@ export async function moveWithPermissions(source: string, destination: string, c
  * @throws Error if sudo cannot be found or installed
  */
 export async function ensureSudoIsAvailable(): Promise<void> {
-    function fnlog(msg: string): void {
-        trace_commands.log('ensureSudoIsAvailable: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('ensureSudoIsAvailable');
 
     let sudo_path: string | null = null;
     try {
@@ -891,9 +885,7 @@ export async function ensureSudoIsAvailable(): Promise<void> {
  * @throws Error if add-apt-repository cannot be found or installed
  */
 export async function ensureAddAptRepositoryIsAvailable(): Promise<void> {
-    function fnlog(msg: string): void {
-        trace_commands.log('ensureAddAptRepositoryIsAvailable: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('ensureAddAptRepositoryIsAvailable');
 
     let add_apt_repository_path: string | null = null;
     try {
@@ -924,9 +916,7 @@ export async function ensureAddAptRepositoryIsAvailable(): Promise<void> {
  * @returns True if successful, false if operation failed
  */
 async function moveWithSudo(source: string, destination: string, copyInstead = false, level: number): Promise<boolean> {
-    function fnlog(msg: string): void {
-        trace_commands.log('moveWithSudo: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('moveWithSudo');
 
     await ensureSudoIsAvailable();
     const levelPrefix = '  '.repeat(level);
@@ -991,9 +981,7 @@ export async function install_program_from_url(
     url_template: string,
     update_environment: boolean,
     install_prefix: string | null): Promise<ProgramResult> {
-    function fnlog(msg: string): void {
-        trace_commands.log('install_program_from_url: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('install_program_from_url');
 
     let output_version: string | null = null;
     let output_path: string | null = null;
@@ -1092,9 +1080,7 @@ export async function install_program_from_url(
  * @returns Object containing path, version, and found status
  */
 async function main(inputs: SetupProgramInputs): Promise<Record<string, unknown>> {
-    function fnlog(msg: string): void {
-        trace_commands.log('setup-program: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('setup-program');
 
     // Set cache directory
     if (process.platform === 'darwin') {

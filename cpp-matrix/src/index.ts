@@ -186,9 +186,7 @@ function setOS(matrix: MatrixEntry[]): void {
  * @returns Array of matrix entries ready for use in GitHub Actions workflows
  */
 export async function generateMatrix(inputs: Inputs): Promise<MatrixEntry[]> {
-    function fnlog(msg: string): void {
-        trace_commands.log('generateMatrix: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('generateMatrix');
 
     let matrix: MatrixEntry[] = [];
     const allcxxstds = ['1998.0.0', '2003.0.0', '2011.0.0', '2014.0.0', '2017.0.0', '2020.0.0', '2023.0.0', '2026.0.0'];
@@ -519,9 +517,7 @@ function getAllFactors(latest_factors: CompilerFactors, factors: CompilerFactors
  *          and cells can be strings or header objects with data and header properties
  */
 export function generateTable(matrix: MatrixEntry[], inputs: Inputs): Array<Array<string | { data: string; header: boolean }>> {
-    function fnlog(msg: string): void {
-        trace_commands.log('generateTable: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('generateTable');
 
     const { latest_factors, factors } = inputs;
     if (matrix.length === 0) {

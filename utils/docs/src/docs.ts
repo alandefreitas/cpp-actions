@@ -4,7 +4,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { runCommand } from './runner';
+import { runCommand } from 'update-data';
 
 /**
  * Ensures Python dependencies are installed for docs generation.

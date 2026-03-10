@@ -61,9 +61,7 @@ export function isExecutable(filePath: string): boolean {
  * @returns The version string if satisfied, "0.0.0" if unparseable, null if not satisfied
  */
 export async function program_satisfies(execPath: string, semverRequirements: string): Promise<string | null> {
-    function fnlog(msg: string): void {
-        trace_commands.log('program_satisfies: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('program_satisfies');
 
     // Try to run the program and get the version string
     fnlog(`Checking if program ${execPath} version satisfies ${semverRequirements}`);
@@ -124,9 +122,7 @@ export async function program_satisfies(execPath: string, semverRequirements: st
  * @returns Object containing the found executable path and version, or nulls if not found
  */
 export async function find_program_in_paths(paths: string[], names: string[], version: string, check_latest: boolean, stop_at_first: boolean): Promise<ProgramResult> {
-    function fnlog(msg: string): void {
-        trace_commands.log('find_program_in_paths: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('find_program_in_paths');
 
     let output_version: string | null = null;
     let output_path: string | null = null;
@@ -223,9 +219,7 @@ export async function find_program_in_paths(paths: string[], names: string[], ve
  * @returns Object containing the found executable path and version, or nulls if not found
  */
 export async function find_program_in_system_paths(extra_paths: string[], names: string[], version: string, check_latest: boolean): Promise<ProgramResult> {
-    function fnlog(msg: string): void {
-        trace_commands.log('find_program_in_system_paths: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('find_program_in_system_paths');
 
     // Append directories from PATH environment variable to paths
     // Get system PATHs with core
@@ -296,9 +290,7 @@ export async function find_program_in_system_paths(extra_paths: string[], names:
  * @returns Object containing the found executable path and version, or nulls if not found
  */
 export async function find_program_in_path(paths: string[], version: string, check_latest: boolean): Promise<ProgramResult> {
-    function fnlog(msg: string): void {
-        trace_commands.log('find_program_in_path: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('find_program_in_path');
 
     let output_version: string | null = null;
     let output_path: string | null = null;

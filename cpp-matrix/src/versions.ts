@@ -179,9 +179,7 @@ export function getSubrangePolicyStr(policy: SubrangePolicy): string {
  * @returns Array of specific version strings selected from the range
  */
 export function splitRanges(range: string, versions: string[], policy: SubrangePolicy = SubrangePolicies.ONE_PER_MAJOR): string[] {
-    function fnlog(msg: string): void {
-        trace_commands.log('splitRanges: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('splitRanges');
 
     if (versions.length === 0) {
         // We know nothing about the available versions for that compiler, so we just return "*"

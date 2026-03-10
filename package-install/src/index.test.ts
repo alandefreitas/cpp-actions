@@ -1,4 +1,5 @@
 import { main, semverGteLoose } from './index';
+import { describePrettyErrors } from 'pretty-errors/test-helper';
 
 // Mock @actions/core for pretty-errors test
 jest.mock('@actions/core', () => ({
@@ -37,25 +38,4 @@ describe('package-install', () => {
     });
 });
 
-describe('pretty errors integration', () => {
-    it('logs once and fails once', async () => {
-        let runPromise: Promise<void> | undefined;
-        jest.isolateModules(() => {
-            jest.resetModules();
-            jest.doMock('@actions/core', () => ({
-                error: jest.fn(),
-                setFailed: jest.fn()
-            }));
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const { reportAndSetFailed } = require('../../common/pretty-errors/src/index');
-
-            runPromise = reportAndSetFailed(new Error('pkg boom'), {
-                title: 'Package install failed'
-            });
-        });
-
-        if (runPromise) {
-            await runPromise;
-        }
-    });
-});
+describePrettyErrors('pkg boom', 'Package install failed');

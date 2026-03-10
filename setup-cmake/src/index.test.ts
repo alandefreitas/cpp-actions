@@ -31,6 +31,7 @@ import * as fs from 'fs';
 const setup_program = require('setup-program');
 
 import { ensureGit } from './index';
+import { describePrettyErrors } from 'pretty-errors/test-helper';
 
 describe('ensureGit', () => {
     const runnerOS = process.env.RUNNER_OS;
@@ -79,33 +80,4 @@ describe('ensureGit', () => {
     });
 });
 
-describe('pretty errors', () => {
-    it('logs once and fails once', async () => {
-        let runPromise: Promise<void>;
-        jest.isolateModules(() => {
-            jest.doMock('pretty-errors', () => {
-                const mockCore = {
-                    error: jest.fn(),
-                    setFailed: jest.fn()
-                };
-                return {
-                    reportAndSetFailed: async (error: Error) => {
-                        mockCore.error(error.message);
-                        mockCore.setFailed(error.message);
-                    },
-                    __mockCore: mockCore
-                };
-            });
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const prettyErrors = require('pretty-errors');
-
-            runPromise = prettyErrors.reportAndSetFailed(new Error('cmake boom'), { title: 'Setup CMake failed' }).then(() => {
-                expect(prettyErrors.__mockCore.error).toHaveBeenCalledTimes(1);
-                const failedArg = prettyErrors.__mockCore.setFailed.mock.calls[0][0];
-                expect(failedArg).toContain('cmake boom');
-            });
-        });
-
-        await runPromise!;
-    });
-});
+describePrettyErrors('cmake boom', 'Setup CMake failed');

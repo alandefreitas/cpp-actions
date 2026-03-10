@@ -1,10 +1,25 @@
 import * as main from './index';
+import { describePrettyErrors } from 'pretty-errors/test-helper';
 
 beforeEach(() => {
     main.featureSubjectIcon.count = 0;
 });
 
 describe('filterChangesByType', () => {
+    /**
+     * Asserts that `filtered` contains exactly feat and fix (no chore, style, docs).
+     *
+     * @param filtered - The filtered changes to verify
+     */
+    function expectOnlyFeatAndFix(filtered: main.Changes): void {
+        expect(Object.keys(filtered)).toHaveLength(2);
+        expect(filtered).toHaveProperty('feat');
+        expect(filtered).toHaveProperty('fix');
+        expect(filtered).not.toHaveProperty('chore');
+        expect(filtered).not.toHaveProperty('style');
+        expect(filtered).not.toHaveProperty('docs');
+    }
+
     function createTestChanges(): main.Changes {
         const featCommit = new main.Commit();
         featCommit.type = 'feat';
@@ -60,12 +75,7 @@ describe('filterChangesByType', () => {
             new Set()
         );
 
-        expect(Object.keys(filtered)).toHaveLength(2);
-        expect(filtered).toHaveProperty('feat');
-        expect(filtered).toHaveProperty('fix');
-        expect(filtered).not.toHaveProperty('chore');
-        expect(filtered).not.toHaveProperty('style');
-        expect(filtered).not.toHaveProperty('docs');
+        expectOnlyFeatAndFix(filtered);
     });
 
     it('should exclude specified types', () => {
@@ -93,12 +103,7 @@ describe('filterChangesByType', () => {
             new Set(['chore'])
         );
 
-        expect(Object.keys(filtered)).toHaveLength(2);
-        expect(filtered).toHaveProperty('feat');
-        expect(filtered).toHaveProperty('fix');
-        expect(filtered).not.toHaveProperty('chore');
-        expect(filtered).not.toHaveProperty('style');
-        expect(filtered).not.toHaveProperty('docs');
+        expectOnlyFeatAndFix(filtered);
     });
 
     it('should handle other type filtering', () => {
@@ -349,32 +354,4 @@ test('generateOutput avoids duplicating scope for multiline entries', () => {
     expect(output).not.toContain('setup-cmake: Enhance cmake path descriptions.');
 });
 
-describe('pretty errors', () => {
-    it('logs once and fails once', async () => {
-        let runPromise: Promise<void>;
-        jest.isolateModules(() => {
-            jest.doMock('pretty-errors', () => {
-                const mockCore = {
-                    error: jest.fn(),
-                    setFailed: jest.fn()
-                };
-                return {
-                    reportAndSetFailed: async (error: Error) => {
-                        mockCore.error(error.message);
-                        mockCore.setFailed(error.message);
-                    },
-                    __mockCore: mockCore
-                };
-            });
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const prettyErrors = require('pretty-errors');
-
-            runPromise = prettyErrors.reportAndSetFailed(new Error('changelog boom'), { title: 'Create changelog failed' }).then(() => {
-                expect(prettyErrors.__mockCore.error).toHaveBeenCalledTimes(1);
-                expect(prettyErrors.__mockCore.setFailed).toHaveBeenCalledWith('changelog boom');
-            });
-        });
-
-        await runPromise!;
-    });
-});
+describePrettyErrors('changelog boom', 'Create changelog failed');

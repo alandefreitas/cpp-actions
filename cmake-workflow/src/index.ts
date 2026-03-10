@@ -84,9 +84,7 @@ function makeArgsString(args: string[]): string {
  * @returns Resolved parameters ready for the CMake workflow execution
  */
 async function resolveInputParameters(inputs: Inputs, setupCMakeOutputs: SetupCMakeOutputs): Promise<ResolvedParameters> {
-    function fnlog(msg: string): void {
-        trace_commands.log('resolveInputParameters: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('resolveInputParameters');
 
     // ----------------------------------------------
     // Identify and apply preset to input args
@@ -241,9 +239,7 @@ async function processEntry(
     setupCMakeOutputs: SetupCMakeOutputs,
     resolvedParams: ResolvedParameters
 ): Promise<void> {
-    function fnlog(msg: string): void {
-        trace_commands.log('processEntry: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('processEntry');
 
     const { generator_is_multi_config, ctest_path, cpack_path } = resolvedParams;
     const factorDesc = makeFactorDescription(entry);
@@ -872,6 +868,7 @@ function convertRawInputs(raw: RawInputs): Inputs {
  * for each factor combination.
  *
  * @param inputs - Converted input parameters
+ * @throws Error if any CMake step (configure, build, test, install) fails
  */
 export async function main(inputs: Inputs): Promise<void> {
     // ==============================================

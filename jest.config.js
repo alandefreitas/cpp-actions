@@ -8,7 +8,8 @@ const commonModuleMapper = {
     '^action-schema$': path.join(rootDir, 'common/action-schema/src/index.ts'),
     '^trace-commands$': path.join(rootDir, 'common/trace-commands/src/index.ts'),
     '^gh-inputs$': path.join(rootDir, 'common/gh-inputs/src/index.ts'),
-    '^pretty-errors$': path.join(rootDir, 'common/pretty-errors/src/index.ts')
+    '^pretty-errors$': path.join(rootDir, 'common/pretty-errors/src/index.ts'),
+    '^pretty-errors/test-helper$': path.join(rootDir, 'common/pretty-errors/src/test-helper.ts')
 };
 
 // Transform config for TypeScript source files

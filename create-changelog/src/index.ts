@@ -259,9 +259,7 @@ function removeTagDuplicates(tags: Tag[], comparisonFields: (keyof Tag)[]): Tag[
  * @returns Array of unique tags
  */
 async function processTags(projectPath: string, tagPattern: RegExp, repoUrl: string | undefined, accessToken: string): Promise<Tag[]> {
-    function fnlog(msg: string): void {
-        trace_commands.log('processTags: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('processTags');
 
     let tags = await getLocalTags(projectPath, tagPattern);
     fnlog(`${tags.length} local tags`);
@@ -691,9 +689,7 @@ async function getGithubCommits(repoUrl: string | undefined, branch: string | un
  * @returns Array of processed commits
  */
 async function processCommits(projectPath: string, repoUrl: string | undefined, versionPattern: RegExp, tags: Tag[], repoBranch: string | undefined, accessToken: string, checkUnconventional: CheckUnconventionalMode): Promise<Commit[]> {
-    function fnlog(msg: string): void {
-        trace_commands.log('processCommits: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('processCommits');
 
     let commits = await getLocalCommits(projectPath, repoUrl, versionPattern, tags);
 
@@ -897,9 +893,7 @@ export function sortChanges(changes: Changes, sortBy: SortByOption): Changes {
  * @returns Object with changes map, type priority list, and parent release commit
  */
 function categorizeCommits(commits: Commit[]): { changes: Changes; changeTypePriority: string[]; parentRelease: Commit | null } {
-    function fnlog(msg: string): void {
-        trace_commands.log('categorizeCommits: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('categorizeCommits');
 
     let parentRelease: Commit | null = null;
     const changes: Changes = {};
@@ -950,9 +944,7 @@ function categorizeCommits(commits: Commit[]): { changes: Changes; changeTypePri
  * @returns Formatted Markdown changelog string
  */
 export function generateOutput(changes: Changes, changeTypePriority: string[], args: Inputs, repoUrl: string | undefined, authors: Record<string, GitHubUser>, parentRelease: Commit | null): string {
-    function fnlog(msg: string): void {
-        trace_commands.log('generateOutput: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('generateOutput');
 
     let output = '';
     let footnotesOutput = '';
@@ -1106,9 +1098,7 @@ function writeChangelog(outputPath: string, output: string): void {
  *                 including version patterns, output paths, and formatting options
  */
 export async function main(inputs: Inputs): Promise<void> {
-    function fnlog(msg: string): void {
-        trace_commands.log('create-changelog: ' + msg);
-    }
+    const fnlog = trace_commands.scoped('create-changelog');
 
     core.startGroup('🧩 Adjusting parameters');
     await adjustParameters(inputs);

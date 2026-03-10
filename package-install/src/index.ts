@@ -86,7 +86,7 @@ runAction({
         }
 
         const outputs = await main(effectiveInputs);
-        return outputs as unknown as Record<string, unknown>;
+        return outputs;
     },
     callerModule: module
 });

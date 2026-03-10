@@ -29,14 +29,22 @@ export function toKebabCase(key: string): string {
  * @param inputName - The kebab-case input name
  * @param schema - The schema definition for this input
  * @returns The extracted and optionally transformed value
+ * @throws Error if the input schema type is unknown
  */
 function extractInput<T extends InputSchema>(
     inputName: string,
     schema: T
 ): InputTypeToTS[T['type']] {
+    // Convert Set defaults to arrays for gh-inputs
+    let defaultValue: string | string[] | undefined;
+    if (schema.default instanceof Set) {
+        defaultValue = [...schema.default];
+    } else {
+        defaultValue = schema.default as string | string[] | undefined;
+    }
     const options: gh_inputs.InputOptions = {
         required: schema.required,
-        defaultValue: schema.default as string | string[] | undefined,
+        defaultValue,
         fallbackEnv: schema.fallbackEnv
     };
 
@@ -80,10 +88,26 @@ function extractInput<T extends InputSchema>(
             value = gh_inputs.getMap(inputName, ':', options);
             break;
 
+        case 'set':
+            value = gh_inputs.getSet(inputName, schema.splitter, undefined, options);
+            break;
+
+        case 'multilineSet':
+            value = new Set(gh_inputs.getMultilineInput(inputName, options));
+            break;
+
         default: {
             // Exhaustive check - TypeScript will error if a type is missing
             const _exhaustive: never = schema.type;
             throw new Error(`Unknown input type: ${_exhaustive}`);
+        }
+    }
+
+    // Validate against allowed values
+    if (schema.validValues && value !== undefined) {
+        const allowed = schema.validValues as readonly unknown[];
+        if (!allowed.includes(value)) {
+            value = schema.default;
         }
     }
 

@@ -1,0 +1,10 @@
+{
+  "threshold": 3,
+  "reporters": ["console"],
+  "format": ["typescript"],
+  "pattern": ["**/src/**/*.ts"],
+  "ignore": ["**/node_modules/**", "**/dist/**", "**/lib/**"],
+  "minLines": 10,
+  "minTokens": 70,
+  "absolute": true
+}

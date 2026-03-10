@@ -247,7 +247,7 @@ runAction({
             inputs.visual_studio_version
         )
 
-        return outputs as unknown as Record<string, unknown>
+        return outputs
     },
     callerModule: module
 })
