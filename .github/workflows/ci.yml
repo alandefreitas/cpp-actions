@@ -117,9 +117,9 @@ jobs:
             gcc Coverage TSan UBSan Fetch-Content
             clang Fetch-Content
           factors: |
-            gcc ASan Shared No-Deps
+            gcc ASan IntSan BoundSan LSan Shared No-Deps
             msvc Shared x86
-            clang Time-Trace ASan+UBSan
+            clang Time-Trace ASan+UBSan IntSan BoundSan LSan CFI
             mingw Shared
           force-factors: |
             mingw: No-Deps

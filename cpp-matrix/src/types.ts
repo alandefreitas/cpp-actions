@@ -139,6 +139,10 @@ export interface MatrixEntry {
     ubsan?: boolean;
     msan?: boolean;
     tsan?: boolean;
+    intsan?: boolean;
+    boundsan?: boolean;
+    lsan?: boolean;
+    cfi?: boolean;
     coverage?: boolean;
     'time-trace'?: boolean;
     'has-factors'?: boolean;

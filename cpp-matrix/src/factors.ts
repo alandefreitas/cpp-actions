@@ -168,10 +168,10 @@ export async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): P
 
     // Flags for ubsan
     let supportsSanitizers = ['gcc', 'clang'].includes(entry['compiler']);
+    let needsUbsanOptions = false;
     if ('ubsan' in entry && entry['ubsan'] === true && supportsSanitizers) {
         sanitizers.push('undefined');
-        // https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#stack-traces-and-report-symbolization
-        entry['env'] = { 'UBSAN_OPTIONS': 'print_stacktrace=1' };
+        needsUbsanOptions = true;
     }
 
     // Flags for msan
@@ -184,13 +184,72 @@ export async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): P
         sanitizers.push('thread');
     }
 
-    if (sanitizers.length !== 0) {
-        const sanitizers_str = sanitizers.join(',');
-        const sanitizer_flags = entry['compiler'] === 'msvc' ?
-            ` /fsanitize=${sanitizers_str}` :
-            ` -fsanitize=${sanitizers_str} -fno-sanitize-recover=${sanitizers_str} -fno-omit-frame-pointer`;
-        entry['cxxflags'] += sanitizer_flags;
-        entry['ccflags'] += sanitizer_flags;
+    // Flags for intsan (integer sanitizer)
+    // Clang supports -fsanitize=integer as a group; GCC only supports
+    // the individual checks that overlap with that group.
+    if ('intsan' in entry && entry['intsan'] === true && supportsSanitizers) {
+        if (entry['compiler'] === 'clang') {
+            sanitizers.push('integer');
+        } else {
+            sanitizers.push('signed-integer-overflow', 'integer-divide-by-zero', 'shift');
+        }
+        needsUbsanOptions = true;
+    }
+
+    // Flags for boundsan (bounds sanitizer)
+    // Both Clang and GCC support -fsanitize=bounds.
+    if ('boundsan' in entry && entry['boundsan'] === true && supportsSanitizers) {
+        sanitizers.push('bounds');
+        needsUbsanOptions = true;
+    }
+
+    // Flags for lsan (leak sanitizer)
+    // GCC does not support -fno-sanitize-recover=leak, so leak is added
+    // separately outside the sanitizers array for GCC.
+    let lsanExtraFlags = '';
+    if ('lsan' in entry && entry['lsan'] === true && supportsSanitizers) {
+        if (entry['compiler'] === 'clang') {
+            sanitizers.push('leak');
+        } else {
+            lsanExtraFlags = ' -fsanitize=leak';
+        }
+        entry['env'] = {
+            ...entry['env'],
+            'LSAN_OPTIONS': 'detect_leaks=1:print_suppressions=0:report_objects=1:exitcode=1'
+        };
+    }
+
+    // Flags for cfi (control flow integrity) — Clang only, requires full
+    // LTO and visibility flags for virtual call / cast checks to work.
+    // Full LTO (-flto) is used instead of thin LTO (-flto=thin) because
+    // thin LTO produces relocations incompatible with PIE on some versions.
+    // -fno-sanitize-trap=cfi is needed to get diagnostic output instead
+    // of silent traps.
+    let cfiExtraFlags = '';
+    if ('cfi' in entry && entry['cfi'] === true && entry['compiler'] === 'clang') {
+        sanitizers.push('cfi');
+        cfiExtraFlags = ' -flto -fvisibility=hidden -fno-sanitize-trap=cfi';
+        needsUbsanOptions = true;
+    }
+
+    // Set UBSAN_OPTIONS for any UBSan-family sanitizer (ubsan, intsan,
+    // boundsan, cfi in diagnostic mode)
+    // https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#stack-traces-and-report-symbolization
+    if (needsUbsanOptions) {
+        entry['env'] = { ...entry['env'], 'UBSAN_OPTIONS': 'print_stacktrace=1' };
+    }
+
+    if (sanitizers.length !== 0 || lsanExtraFlags !== '') {
+        const hasSanitizers = sanitizers.length !== 0;
+        let sanitizer_flags = '';
+        if (hasSanitizers) {
+            const sanitizers_str = sanitizers.join(',');
+            sanitizer_flags = entry['compiler'] === 'msvc' ?
+                ` /fsanitize=${sanitizers_str}` :
+                ` -fsanitize=${sanitizers_str} -fno-sanitize-recover=${sanitizers_str} -fno-omit-frame-pointer`;
+        }
+        entry['cxxflags'] += sanitizer_flags + lsanExtraFlags + cfiExtraFlags;
+        entry['ccflags'] += sanitizer_flags + lsanExtraFlags + cfiExtraFlags;
         entry['build-type'] = inputs.sanitizer_build_type || 'Release';
     }
 

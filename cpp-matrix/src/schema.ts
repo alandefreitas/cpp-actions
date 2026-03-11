@@ -83,7 +83,7 @@ For instance, if 'max-standards' is 2 and the compiler supports '11,14,17,20,23'
 
 Other entries will also include this factor as false.
 
-The following factors are considered special: 'asan', 'ubsan', 'msan', 'tsan', and 'coverage'. When these factors are defined in an entry, its 'ccflags', 'cxxflags', and 'linkflags' value are also modified to include the suggested flags for factor.`
+The following factors are considered special: 'asan', 'ubsan', 'msan', 'tsan', 'intsan', 'boundsan', 'lsan', 'cfi', and 'coverage'. When these factors are defined in an entry, its 'ccflags', 'cxxflags', and 'linkflags' value are also modified to include the suggested flags for factor.`
     },
 
     factors: {
