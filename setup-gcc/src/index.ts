@@ -4,7 +4,6 @@ import * as semver from 'semver';
 import * as fs from 'fs';
 import * as exec from '@actions/exec';
 import * as path from 'path';
-import * as httpm from '@actions/http-client';
 import * as traceCommands from 'trace-commands';
 import { runAction } from 'action-schema';
 
@@ -18,77 +17,147 @@ export { inputsSchema, outputsSchema };
 export { removeGCCPrefix } from './schema';
 
 // Type imports and re-exports
-import { type Inputs, type MainOutputs, type ProgramResult } from './types';
-export type { Inputs, MainOutputs, ProgramResult };
+import { type Inputs } from './schema';
+import { type ProgramResult } from './gcc-download';
+import { downloadGccFromUrl } from './gcc-download';
+export type { Inputs };
+export type { ProgramResult };
 
 /**
- * Sets up GCC compiler on the runner with the specified version.
- *
- * This function locates or installs GCC with the requested version, searching
- * the provided paths first, then falling back to apt-get installation on Linux.
- * It can optionally update environment variables to make the compiler available.
- *
- * @param version - The GCC version to set up (e.g., "10", "10.2", ">=10"). Supports
- *                  semver ranges for flexible version matching.
- * @param paths - Array of paths to search for existing GCC installations before
- *                attempting installation
- * @param checkLatest - If true, checks for the latest available version matching
- *                       the version constraint
- * @param updateEnvironment - If true, updates PATH and environment variables to
- *                             make the compiler available for subsequent steps
- * @returns Object containing paths to gcc/g++, version info, and environment changes
+ * Output values produced by GCC setup.
  */
-export async function main(
-    version: string,
-    paths: string[],
-    checkLatest: boolean,
-    updateEnvironment: boolean
-): Promise<MainOutputs> {
-    core.startGroup('🔎 Find GCC versions');
-    if (process.platform === 'darwin') {
-        process.env['AGENT_TOOLSDIRECTORY'] = '/Users/runner/hostedtoolcache';
+export interface MainOutputs {
+    outputPath: string | null;
+    cc: string | null;
+    cxx: string | null;
+    bindir: string;
+    dir: string;
+    version: string;
+    versionMajor: number;
+    versionMinor: number;
+    versionPatch: number;
+}
+
+// ─── SetupGccRunner ─────────────────────────────────────────────────
+
+/**
+ * Orchestrates GCC compiler setup on the runner.
+ *
+ * Pipeline phases:
+ * 1. Discover available GCC versions
+ * 2. Search user-provided paths
+ * 3. Search system paths
+ * 4. Search via APT package manager
+ * 5. Download from release binaries
+ * 6. Build output values (cc, cxx, bindir, etc.)
+ */
+class SetupGccRunner {
+    /** Frozen copy of action inputs */
+    private readonly inputs: Inputs;
+
+    /** All known GCC versions fetched from version data */
+    private allVersions: string[] = [];
+
+    /** Resolved path to the gcc/g++ binary, set progressively by search phases */
+    private outputPath: string | null = null;
+
+    /** Resolved version string, set progressively by search phases */
+    private outputVersion: string | null = null;
+
+    /** Program names to search for — prefer g++ so libstdc++ headers come along */
+    private readonly names = ['g++', 'gcc'];
+
+    constructor(inputs: Inputs) {
+        this.inputs = { ...inputs };
     }
 
-    if (process.env.AGENT_TOOLSDIRECTORY?.trim()) {
-        process.env['RUNNER_TOOL_CACHE'] = process.env['AGENT_TOOLSDIRECTORY'];
+    /**
+     * Runs the full GCC setup pipeline and returns output values.
+     *
+     * @returns Object containing paths to gcc/g++, version info, and environment changes
+     */
+    async run(): Promise<MainOutputs> {
+        await this.discoverVersions();
+        await this.searchUserPaths();
+        await this.searchSystemPaths();
+        await this.searchApt();
+        await this.downloadFromUrl();
+        return this.buildOutputs();
     }
 
-    if (process.platform !== 'linux') {
-        core.setFailed('This action is only supported on Linux');
-    }
+    /**
+     * Discovers all available GCC versions and configures platform-specific
+     * environment variables.
+     */
+    private async discoverVersions(): Promise<void> {
+        core.startGroup('🔎 Find GCC versions');
+        if (process.platform === 'darwin') {
+            process.env['AGENT_TOOLSDIRECTORY'] = '/Users/runner/hostedtoolcache';
+        }
 
-    const allVersions: string[] = await setup_program.findGCCVersions();
-    core.endGroup();
+        if (process.env.AGENT_TOOLSDIRECTORY?.trim()) {
+            process.env['RUNNER_TOOL_CACHE'] = process.env['AGENT_TOOLSDIRECTORY'];
+        }
 
-    // Path program version
-    let outputPath: string | null = null;
-    let outputVersion: string | null = null;
+        if (process.platform !== 'linux') {
+            core.setFailed('This action is only supported on Linux');
+        }
 
-    // Setup path program
-    core.startGroup('🔍 Find GCC in specified paths');
-    core.info(`Searching for GCC ${version} in paths [${paths.join(',')}]`);
-    const pathResult: ProgramResult = await setup_program.findProgramInPath(paths, version, checkLatest);
-    outputVersion = pathResult.outputVersion;
-    outputPath = pathResult.outputPath;
-    core.endGroup();
-
-    // Setup system program
-    // Prefer g++ packages so libstdc++ headers come along, but keep gcc in the
-    // search list so we still pick up preinstalled C-only toolchains.
-    const names = ['g++', 'gcc'];
-    if (outputPath === null) {
-        core.startGroup('📁 Find GCC in system paths');
-        core.info(`Searching for GCC ${version} in PATH`);
-        const systemResult: ProgramResult = await setup_program.findProgramInSystemPaths(paths, names, version, checkLatest);
-        outputVersion = systemResult.outputVersion;
-        outputPath = systemResult.outputPath;
+        this.allVersions = await setup_program.findGCCVersions();
         core.endGroup();
     }
 
-    // Setup APT program
-    if (outputVersion === null && process.platform === 'linux') {
+    /**
+     * Searches for GCC in the user-provided paths.
+     */
+    private async searchUserPaths(): Promise<void> {
+        core.startGroup('🔍 Find GCC in specified paths');
+        core.info(`Searching for GCC ${this.inputs.version} in paths [${this.inputs.path.join(',')}]`);
+        const pathResult: ProgramResult = await setup_program.findProgramInPath(
+            this.inputs.path, this.inputs.version, this.inputs.checkLatest
+        );
+        this.outputVersion = pathResult.outputVersion;
+        this.outputPath = pathResult.outputPath;
+        core.endGroup();
+    }
+
+    /**
+     * Searches for GCC in standard system paths (PATH).
+     * Skipped if a binary was already found in user-provided paths.
+     */
+    private async searchSystemPaths(): Promise<void> {
+        if (this.outputPath !== null) {
+            return;
+        }
+        core.startGroup('📁 Find GCC in system paths');
+        core.info(`Searching for GCC ${this.inputs.version} in PATH`);
+        const systemResult: ProgramResult = await setup_program.findProgramInSystemPaths(
+            this.inputs.path, this.names, this.inputs.version, this.inputs.checkLatest
+        );
+        this.outputVersion = systemResult.outputVersion;
+        this.outputPath = systemResult.outputPath;
+        core.endGroup();
+    }
+
+    /**
+     * Searches for GCC via APT package manager on Linux.
+     * Adds the ubuntu-toolchain-r PPA if available.
+     * Skipped if a binary was already found or if not on Linux.
+     */
+    private async searchApt(): Promise<void> {
+        if (this.outputVersion !== null && process.platform === 'linux') {
+            traceCommands.log(
+                `Skipping APT step because GCC ${this.outputVersion} was already found in ${this.outputPath}`
+            );
+            return;
+        }
+        if (process.platform !== 'linux') {
+            traceCommands.log(`Skipping APT step because platform is ${process.platform}`);
+            return;
+        }
+        // outputVersion === null && process.platform === 'linux'
         core.startGroup('📦 Find GCC with APT');
-        core.info(`Searching for GCC ${version} with APT`);
+        core.info(`Searching for GCC ${this.inputs.version} with APT`);
 
         // Add APT repository
         await setup_program.findProgramWithApt(['software-properties-common'], '*', true);
@@ -109,206 +178,154 @@ export async function main(
             }
         }
 
-        const aptResult: ProgramResult = await setup_program.findProgramWithApt(names, version, checkLatest);
-        outputVersion = aptResult.outputVersion;
-        outputPath = aptResult.outputPath;
+        const aptResult: ProgramResult = await setup_program.findProgramWithApt(
+            this.names, this.inputs.version, this.inputs.checkLatest
+        );
+        this.outputVersion = aptResult.outputVersion;
+        this.outputPath = aptResult.outputPath;
         core.endGroup();
-    } else {
-        if (outputVersion !== null) {
-            traceCommands.log(`Skipping APT step because GCC ${outputVersion} was already found in ${outputPath}`);
-        } else if (process.platform !== 'linux') {
-            traceCommands.log(`Skipping APT step because platform is ${process.platform}`);
-        }
     }
 
-    // Install program from a valid URL
-    if (outputVersion === null) {
+    /**
+     * Downloads GCC from release binaries as a last resort.
+     * Tries Ubuntu-versioned binaries first, then generic Linux binaries.
+     * Skipped if a binary was already found.
+     */
+    private async downloadFromUrl(): Promise<void> {
+        if (this.outputVersion !== null) {
+            traceCommands.log(
+                `Skipping download step because GCC ${this.outputVersion} was already found in ${this.outputPath}`
+            );
+            return;
+        }
+
         core.startGroup('⬇️ Download GCC from release binaries');
-        core.info(`Fetching GCC ${version} from release binaries`);
-        // Determine the release to install and version candidates to fallback to
-        traceCommands.log('All GCC versions: ' + allVersions);
-        const maxV = semver.maxSatisfying(allVersions, version);
-        traceCommands.log(`Max version in requirement "${version}": ` + maxV);
-        const minV = semver.minSatisfying(allVersions, version);
-        traceCommands.log(`Min version in requirement "${version}": ` + minV);
-        const release = checkLatest ? maxV : minV;
-        traceCommands.log(`Target release ${release} (check latest: ${checkLatest})`);
-        const semverRelease = semver.parse(release);
-        if (semverRelease) {
-            traceCommands.log(`Parsed release "${release}" is "${semverRelease.toString()}"`);
-            const major = semverRelease.major;
-            const minor = semverRelease.minor;
-            const patch = semverRelease.patch;
-            const versionCandidates: string[] = [release!];
-            for (const v of allVersions) {
-                const sv = semver.parse(v);
-                if (sv && sv.major === major && sv.minor === minor && sv.patch !== patch) {
-                    versionCandidates.push(v);
-                }
-            }
-            for (const v of allVersions) {
-                const sv = semver.parse(v);
-                if (sv && sv.major === major && sv.minor !== minor) {
-                    versionCandidates.push(v);
-                }
-            }
-            traceCommands.log(`Version candidates: [${versionCandidates.join(', ')}]`);
+        core.info(`Fetching GCC ${this.inputs.version} from release binaries`);
 
-            // Determine ubuntu version
-            const curUbuntuVersion = setup_program.getCurrentUbuntuVersion();
-            traceCommands.log(`Ubuntu version: ${curUbuntuVersion}`);
-            let ubuntuVersions: string[];
-            if (curUbuntuVersion === '20.04') {
-                ubuntuVersions = ['20.04', '22.04', '18.04', '16.04', '14.04', '12.04', '10.04'];
-            } else if (curUbuntuVersion === '18.04') {
-                ubuntuVersions = ['18.04', '20.04', '16.04', '22.04', '14.04', '12.04', '10.04'];
-            } else if (curUbuntuVersion === '16.04') {
-                ubuntuVersions = ['16.04', '18.04', '14.04', '20.04', '12.04', '22.04', '10.04'];
-            } else if (curUbuntuVersion === '12.04') {
-                ubuntuVersions = ['12.04', '14.04', '10.04', '16.04', '18.04', '20.04', '22.04'];
-            } else if (curUbuntuVersion === '10.04') {
-                ubuntuVersions = ['10.04', '12.04', '14.04', '16.04', '18.04', '20.04', '22.04'];
-            } else {
-                ubuntuVersions = ['22.04', '20.04', '18.04', '16.04', '14.04', '12.04', '10.04'];
-            }
-            traceCommands.log(`Ubuntu version binaries: [${ubuntuVersions.join(', ')}]`);
+        const result = await downloadGccFromUrl({
+            version: this.inputs.version,
+            checkLatest: this.inputs.checkLatest,
+            updateEnvironment: this.inputs.updateEnvironment,
+            allVersions: this.allVersions
+        });
+        this.outputVersion = result.outputVersion;
+        this.outputPath = result.outputPath;
 
-            // Try URLs considering ubuntu versions
-            const httpClient = new httpm.HttpClient('setup-gcc', [], {
-                allowRetries: true, maxRetries: 3
-            });
+        core.endGroup();
+    }
 
-            for (const ubuntuVersion of ubuntuVersions) {
-                for (const versionCandidate of versionCandidates) {
-                    traceCommands.log(`Trying to fetch GCC ${versionCandidate} for Ubuntu ${ubuntuVersion}`);
-                    const ubuntuImage = `ubuntu-${ubuntuVersion}`;
-                    traceCommands.log(`Ubuntu image: ${ubuntuImage}`);
-                    const gccBasename = `gcc-${versionCandidate}-x86_64-linux-gnu-${ubuntuImage}`;
-                    traceCommands.log(`GCC basename: ${gccBasename}`);
-                    const gccFilename = `${gccBasename}.tar.gz`;
-                    traceCommands.log(`GCC filename: ${gccFilename}`);
-                    const gccUrl = `https://github.com/alandefreitas/cpp-actions/releases/download/gcc-binaries/${gccFilename}`;
-                    const res = await httpClient.head(gccUrl);
-                    if (res.message.statusCode !== 200) {
-                        traceCommands.log(`Skipping ${gccUrl} because it does not exist`);
-                        continue;
-                    }
-                    const urlResult: ProgramResult = await setup_program.installProgramFromUrl(['gcc'], version, checkLatest, gccUrl, updateEnvironment, '/usr/local');
-                    outputVersion = urlResult.outputVersion;
-                    outputPath = urlResult.outputPath;
-                    if (outputVersion !== null) {
-                        break;
-                    }
-                }
-                if (outputVersion !== null) {
-                    break;
-                }
+    /**
+     * Builds final output values from the resolved compiler path and version.
+     * Derives cc/cxx paths, installs g++ package if needed, and parses version components.
+     *
+     * @returns The complete set of action outputs
+     */
+    private async buildOutputs(): Promise<MainOutputs> {
+        core.startGroup('📤 Set outputs');
+        let cc: string | null = this.outputPath;
+        let cxx: string | null = this.outputPath;
+        let bindir = '';
+        let dir = '';
+        let releaseStr = '0.0.0';
+        let versionMajor = 0;
+        let versionMinor = 0;
+        let versionPatch = 0;
+        if (this.outputPath !== null && this.outputPath !== undefined) {
+            const pathBasename = path.basename(this.outputPath);
+            if (pathBasename.startsWith('gcc')) {
+                cxx = path.join(path.dirname(this.outputPath), pathBasename.replace('gcc', 'g++'));
+            } else if (pathBasename.startsWith('g++')) {
+                cc = path.join(path.dirname(this.outputPath), pathBasename.replace('g++', 'gcc'));
             }
 
-            if (outputVersion === null) {
-                // Find a URL for binaries (no ubuntu version)
-                for (const versionCandidate of versionCandidates) {
-                    traceCommands.log(`Trying to fetch GCC ${versionCandidate} for Linux`);
-                    const gccBasename = `gcc-${versionCandidate}-Linux-x86_64`;
-                    traceCommands.log(`GCC basename: ${gccBasename}`);
-                    const gccFilename = `${gccBasename}.tar.gz`;
-                    traceCommands.log(`GCC filename: ${gccFilename}`);
-                    const gccUrl = `https://github.com/alandefreitas/cpp-actions/releases/download/gcc-binaries/${gccFilename}`;
-                    const res = await httpClient.head(gccUrl);
-                    if (res.message.statusCode !== 200) {
-                        traceCommands.log(`Skipping ${gccUrl} because it does not exist`);
-                        continue;
-                    }
-                    const urlResult: ProgramResult = await setup_program.installProgramFromUrl(['gcc'], version, checkLatest, gccUrl, updateEnvironment, '/usr/local');
-                    outputVersion = urlResult.outputVersion;
-                    outputPath = urlResult.outputPath;
-                    if (outputVersion !== null) {
-                        break;
-                    }
-                }
+            if (cc && !fs.existsSync(cc)) {
+                traceCommands.log(`Could not find ${cc}, using ${this.outputPath} as cc instead`);
+                cc = this.outputPath;
+            }
+
+            if (cxx && !fs.existsSync(cxx)) {
+                traceCommands.log(`Could not find ${cxx}, using ${this.outputPath} as cxx instead`);
+                cxx = this.outputPath;
+            }
+
+            // If we still don't have a working cxx (cc1plus missing), try installing the matching g++ package
+            const cxxMissing = !cxx || !fs.existsSync(cxx);
+            const cxxLooksLikeGcc = cxx ? /(?:^|\/|\b)gcc(?:-\d+)?$/.test(cxx) : false;
+            if (process.platform === 'linux' && (cxxMissing || cxxLooksLikeGcc)) {
+                cxx = await this.tryInstallGPlusPlus(cxx);
+            }
+
+            bindir = path.dirname(this.outputPath);
+            if (this.inputs.updateEnvironment) {
+                core.addPath(bindir);
+            }
+            dir = path.dirname(bindir);
+
+            const semverV = this.outputVersion !== null
+                ? semver.parse(this.outputVersion, { loose: true })
+                : semver.parse('0.0.0', { loose: true });
+            if (semverV) {
+                releaseStr = semverV.toString();
+                versionMajor = semverV.major;
+                versionMinor = semverV.minor;
+                versionPatch = semverV.patch;
             }
         }
         core.endGroup();
-    } else {
-        if (outputVersion !== null) {
-            traceCommands.log(`Skipping download step because GCC ${outputVersion} was already found in ${outputPath}`);
-        }
+        return {
+            outputPath: this.outputPath, cc, cxx, bindir, dir,
+            version: releaseStr, versionMajor, versionMinor, versionPatch
+        };
     }
 
-    // Create outputs
-    core.startGroup('📤 Set outputs');
-    let cc: string | null = outputPath;
-    let cxx: string | null = outputPath;
-    let bindir = '';
-    let dir = '';
-    let releaseStr = '0.0.0';
-    let versionMajor = 0;
-    let versionMinor = 0;
-    let versionPatch = 0;
-    if (outputPath !== null && outputPath !== undefined) {
-        const pathBasename = path.basename(outputPath);
-        if (pathBasename.startsWith('gcc')) {
-            cxx = path.join(path.dirname(outputPath), pathBasename.replace('gcc', 'g++'));
-        } else if (pathBasename.startsWith('g++')) {
-            cc = path.join(path.dirname(outputPath), pathBasename.replace('g++', 'gcc'));
-        }
-
-        if (cc && !fs.existsSync(cc)) {
-            traceCommands.log(`Could not find ${cc}, using ${outputPath} as cc instead`);
-            cc = outputPath;
-        }
-
-        if (cxx && !fs.existsSync(cxx)) {
-            traceCommands.log(`Could not find ${cxx}, using ${outputPath} as cxx instead`);
-            cxx = outputPath;
-        }
-
-        // If we still don't have a working cxx (cc1plus missing), try installing the matching g++ package
-        const cxxMissing = !cxx || !fs.existsSync(cxx);
-        const cxxLooksLikeGcc = cxx ? /(?:^|\/|\b)gcc(?:-\d+)?$/.test(cxx) : false;
-        if (process.platform === 'linux' && (cxxMissing || cxxLooksLikeGcc)) {
-            try {
-                const parsed = outputVersion ? semver.parse(outputVersion, { loose: true }) : null;
-                const gccMajor = parsed?.major ?? null;
-                const pkg = gccMajor ? `g++-${gccMajor}` : 'g++';
-                traceCommands.log(`Attempting to install ${pkg} because g++ for ${outputVersion} was not found`);
-                const installArgs = ['install', '-y', pkg];
-                const opts = { env: { DEBIAN_FRONTEND: 'noninteractive', TZ: 'Etc/UTC' }, ignoreReturnCode: true };
-                if (setup_program.isSudoRequired()) {
-                    await exec.exec('sudo', ['-n', 'apt-get', 'update'], opts);
-                    await exec.exec('sudo', ['-n', 'apt-get', ...installArgs], opts);
-                } else {
-                    await exec.exec('apt-get', ['update'], opts);
-                    await exec.exec('apt-get', installArgs, opts);
-                }
-                const guessed = gccMajor ? `/usr/bin/g++-${gccMajor}` : await io.which('g++', false).catch(() => null);
-                if (guessed && fs.existsSync(guessed)) {
-                    cxx = guessed;
-                    traceCommands.log(`Using ${cxx} as C++ compiler`);
-                }
-            } catch (err) {
-                traceCommands.log(`Unable to auto-install g++: ${(err as Error).message}`);
+    /**
+     * Attempts to install the matching g++ APT package when cxx is missing or
+     * points to a gcc binary instead of g++.
+     *
+     * @param currentCxx - Current cxx path that may need replacement
+     * @returns Updated cxx path, or the original if installation fails
+     */
+    private async tryInstallGPlusPlus(currentCxx: string | null): Promise<string | null> {
+        try {
+            const parsed = this.outputVersion ? semver.parse(this.outputVersion, { loose: true }) : null;
+            const gccMajor = parsed?.major ?? null;
+            const pkg = gccMajor ? `g++-${gccMajor}` : 'g++';
+            traceCommands.log(`Attempting to install ${pkg} because g++ for ${this.outputVersion} was not found`);
+            const installArgs = ['install', '-y', pkg];
+            const opts = { env: { DEBIAN_FRONTEND: 'noninteractive', TZ: 'Etc/UTC' }, ignoreReturnCode: true };
+            if (setup_program.isSudoRequired()) {
+                await exec.exec('sudo', ['-n', 'apt-get', 'update'], opts);
+                await exec.exec('sudo', ['-n', 'apt-get', ...installArgs], opts);
+            } else {
+                await exec.exec('apt-get', ['update'], opts);
+                await exec.exec('apt-get', installArgs, opts);
             }
+            const guessed = gccMajor ? `/usr/bin/g++-${gccMajor}` : await io.which('g++', false).catch(() => null);
+            if (guessed && fs.existsSync(guessed)) {
+                traceCommands.log(`Using ${guessed} as C++ compiler`);
+                return guessed;
+            }
+        } catch (err) {
+            traceCommands.log(`Unable to auto-install g++: ${(err as Error).message}`);
         }
-
-        bindir = path.dirname(outputPath);
-        if (updateEnvironment) {
-            core.addPath(bindir);
-        }
-        dir = path.dirname(bindir);
-
-        const semverV = outputVersion !== null
-            ? semver.parse(outputVersion, { loose: true })
-            : semver.parse('0.0.0', { loose: true });
-        if (semverV) {
-            releaseStr = semverV.toString();
-            versionMajor = semverV.major;
-            versionMinor = semverV.minor;
-            versionPatch = semverV.patch;
-        }
+        return currentCxx;
     }
-    core.endGroup();
-    return { outputPath, cc, cxx, bindir, dir, version: releaseStr, versionMajor, versionMinor, versionPatch };
+}
+
+// ─── Exported API ───────────────────────────────────────────────────
+
+/**
+ * Sets up GCC compiler on the runner with the specified version.
+ *
+ * This function locates or installs GCC with the requested version, searching
+ * the provided paths first, then falling back to apt-get installation on Linux.
+ * It can optionally update environment variables to make the compiler available.
+ *
+ * @param inputs - Configuration inputs for the GCC setup
+ * @returns Object containing paths to gcc/g++, version info, and environment changes
+ */
+export async function main(inputs: Inputs): Promise<MainOutputs> {
+    return new SetupGccRunner(inputs).run();
 }
 
 /**
@@ -322,12 +339,7 @@ runAction({
     outputsSchema,
     title: 'Setup GCC',
     main: async (inputs: Inputs) => {
-        const outputs = await main(
-            inputs.version,
-            inputs.path,
-            inputs.checkLatest,
-            inputs.updateEnvironment
-        );
+        const outputs = await main(inputs);
 
         // Validate that GCC was found
         if (!outputs.outputPath) {

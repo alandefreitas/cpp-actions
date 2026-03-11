@@ -4,7 +4,8 @@
  * @module sorting
  */
 
-import { type Inputs, type MatrixEntry } from './types';
+import { type MatrixEntry } from './types';
+import { type Inputs } from './schema';
 
 /**
  * Sorts the matrix entries by priority order.

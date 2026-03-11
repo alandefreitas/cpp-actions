@@ -27,6 +27,7 @@
  * | `'map'` | `getMap()` | `Record<string, string>` |
  * | `'set'` | `getSet()` | `Set<string>` |
  * | `'multilineSet'` | `new Set(getMultilineInput())` | `Set<string>` |
+ * | `'regex'` | `new RegExp(getInput())` | `RegExp` |
  */
 export type InputType =
     | 'string'
@@ -38,7 +39,8 @@ export type InputType =
     | 'tribool'
     | 'map'
     | 'set'
-    | 'multilineSet';
+    | 'multilineSet'
+    | 'regex';
 
 /**
  * Maps InputType to its corresponding TypeScript type.
@@ -57,6 +59,7 @@ export type InputTypeToTS = {
     map: Record<string, string>;
     set: Set<string>;
     multilineSet: Set<string>;
+    regex: RegExp;
 };
 
 /**
@@ -128,9 +131,26 @@ export interface InputSchema<T extends InputType = InputType> {
 
     /**
      * Transform function applied after extraction.
-     * Useful for normalizing values (e.g., removing prefixes).
+     *
+     * May return the same type (e.g., trimming a string) or a different type
+     * (e.g., converting a string to a RegExp). When a different type is returned,
+     * {@link InferInputType} infers the transformed type for the inputs object.
      */
-    transform?: (value: InputTypeToTS[T]) => InputTypeToTS[T];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    transform?: (value: InputTypeToTS[T]) => any;
+
+    /**
+     * Cross-field transform applied after all per-field transforms.
+     *
+     * Receives the current field's transformed value and the full inputs object
+     * (after per-field transforms). Useful for derivations that depend on other
+     * inputs, e.g., resolving a path relative to another input's directory.
+     *
+     * @param value - The current field's value after per-field transform
+     * @param allInputs - All inputs after per-field transforms (before cross-transforms)
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    crossTransform?: (value: any, allInputs: Record<string, unknown>) => any;
 
     /**
      * Description for documentation and action.yml generation.
@@ -176,15 +196,24 @@ export type ActionOutputsSchema = Record<string, OutputSchema>;
 /**
  * Infers the TypeScript type for a single input schema.
  *
- * When `validValues` is specified with `as const`, the type narrows to
- * the union of those values instead of the full base type.
+ * Priority order:
+ * 1. If `crossTransform` exists, its return type is used
+ * 2. If `transform` exists, its return type is used
+ * 3. If `validValues` is specified with `as const`, narrows to the union of those values
+ * 4. Otherwise, the base type from `InputTypeToTS` is used
  */
 export type InferInputType<S extends InputSchema> =
-    S extends { validValues: readonly (infer V)[] }
-        ? V
-        : S extends InputSchema<infer T>
-            ? InputTypeToTS[T]
-            : never;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    S extends { crossTransform: (...args: any[]) => infer R }
+        ? R
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        : S extends { transform: (...args: any[]) => infer R }
+            ? R
+            : S extends { validValues: readonly (infer V)[] }
+                ? V
+                : S extends InputSchema<infer T>
+                    ? InputTypeToTS[T]
+                    : never;
 
 /**
  * Infers the TypeScript interface for an entire inputs schema.

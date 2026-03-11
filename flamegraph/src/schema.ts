@@ -7,10 +7,12 @@
  * @module schema
  */
 
+import * as path from 'path';
 import {
     baseInputs,
     type ActionInputsSchema,
-    type ActionOutputsSchema
+    type ActionOutputsSchema,
+    type InferInputs
 } from 'action-schema';
 
 /**
@@ -22,6 +24,7 @@ export const inputsSchema = {
     sourceDir: {
         type: 'path' as const,
         default: '.',
+        transform: (v) => path.resolve(v as string),
         description: `The source directory used to generate time-traces.
 
 Relative paths in the report will be relative to the current working directory.`
@@ -30,6 +33,7 @@ Relative paths in the report will be relative to the current working directory.`
     buildDir: {
         type: 'path' as const,
         default: '.',
+        transform: (v) => path.resolve(v as string),
         description: `The directory with the time-traces.
 
 This should usually be your \`build\` directory, if any.
@@ -43,6 +47,8 @@ If this is a relative path, it will be made relative to the current working dire
     outputPath: {
         type: 'path' as const,
         default: 'combined-traces.json',
+        crossTransform: (v: unknown, inputs: Record<string, unknown>) =>
+            path.resolve(inputs.buildDir as string, v as string),
         description: `The path where the combined traces will be stored.
 
 If this is a relative path, it will be made relative to the build-dir.`
@@ -51,6 +57,8 @@ If this is a relative path, it will be made relative to the build-dir.`
     reportPath: {
         type: 'path' as const,
         default: 'time-trace-report.md',
+        crossTransform: (v: unknown, inputs: Record<string, unknown>) =>
+            path.resolve(inputs.buildDir as string, v as string),
         description: `The path where the report will be stored.
 
 If this is a relative path, it will be made relative to the build-dir.`
@@ -111,3 +119,8 @@ export const outputsSchema = {
         description: 'The absolute path to svg file.'
     }
 } satisfies ActionOutputsSchema;
+
+/**
+ * Configuration inputs for the flamegraph action, inferred from the schema.
+ */
+export type Inputs = InferInputs<typeof inputsSchema>;

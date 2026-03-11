@@ -8,7 +8,15 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
-import { type Trace, type CompileCommand } from './types';
+import { type Trace } from './types';
+
+/**
+ * A single compile command entry from compile_commands.json.
+ */
+export interface CompileCommand {
+    command: string;
+    file: string;
+}
 
 /**
  * Creates a README file explaining the time-trace artifact contents.

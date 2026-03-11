@@ -12,7 +12,8 @@ import {
     createCompilerOutputs,
     createCompilerPrefixRemover,
     type ActionInputsSchema,
-    type ActionOutputsSchema
+    type ActionOutputsSchema,
+    type InferInputs
 } from 'action-schema';
 
 /**
@@ -54,3 +55,9 @@ export const inputsSchema = {
 export const outputsSchema = {
     ...createCompilerOutputs('GCC', 'gcc', 'g++')
 } satisfies ActionOutputsSchema;
+
+/**
+ * Input configuration for the setup-gcc action.
+ * Inferred from the schema definition.
+ */
+export type Inputs = InferInputs<typeof inputsSchema>;

@@ -8,7 +8,7 @@ import * as core from '@actions/core';
 import * as exec from '@actions/exec';
 import * as traceCommands from 'trace-commands';
 
-import { type Inputs } from './types';
+import { type Inputs } from './schema';
 
 import { normalizeArchitectureInput } from 'setup-program';
 export { normalizeArchitectureInput };

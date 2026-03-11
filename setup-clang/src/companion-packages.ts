@@ -11,7 +11,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as semver from 'semver';
 import * as traceCommands from 'trace-commands';
-import { type CompanionPackageResult } from './types';
+/**
+ * Result of companion package installation.
+ */
+export interface CompanionPackageResult {
+    /** Path to llvm-symbolizer if found, null otherwise */
+    symbolizerPath: string | null;
+}
 
 import * as setup_program from 'setup-program';
 

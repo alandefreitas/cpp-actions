@@ -10,8 +10,32 @@ import * as exec from '@actions/exec'
 import * as path from 'path'
 import * as semver from 'semver'
 
-import { type Outputs, type BuildOutputsMetadata } from './types'
 import { productVersionToReleaseYear, inferToolsetVersionFromPath } from './version-utils'
+
+/**
+ * Output values produced by MSVC configuration.
+ */
+export interface Outputs {
+    cc: string
+    cxx: string
+    bindir: string
+    dir: string
+    release: string
+    versionMajor: number
+    versionMinor: number
+    versionPatch: number
+    msvcToolsetVersion: string
+    msvcProductVersion: string
+    msvcReleaseYear: string
+    msvcCompilerVersion: string
+}
+
+/**
+ * Metadata used when building MSVC output values.
+ */
+export interface BuildOutputsMetadata {
+    compilerVersion?: string
+}
 
 /**
  * Searches the PATH for cl.exe, accounting for different executable spellings.

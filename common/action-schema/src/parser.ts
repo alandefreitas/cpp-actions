@@ -100,6 +100,10 @@ function extractInput<T extends InputSchema>(
             value = new Set(gh_inputs.getMultilineInput(inputName, options));
             break;
 
+        case 'regex':
+            value = new RegExp(gh_inputs.getInput(inputName, options));
+            break;
+
         default: {
             // Exhaustive check - TypeScript will error if a type is missing
             const _exhaustive: never = schema.type;
@@ -161,9 +165,17 @@ function extractInput<T extends InputSchema>(
 export function parseInputs<S extends ActionInputsSchema>(schema: S): InferInputs<S> {
     const result: Record<string, unknown> = {};
 
+    // Pass 1: Extract all values with per-field transforms
     for (const [key, inputSchema] of Object.entries(schema)) {
         const inputName = toKebabCase(key);
         result[key] = extractInput(inputName, inputSchema);
+    }
+
+    // Pass 2: Apply cross-field transforms
+    for (const [key, inputSchema] of Object.entries(schema)) {
+        if (inputSchema.crossTransform) {
+            result[key] = inputSchema.crossTransform(result[key], result);
+        }
     }
 
     return result as InferInputs<S>;

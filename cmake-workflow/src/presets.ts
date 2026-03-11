@@ -9,7 +9,20 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as traceCommands from 'trace-commands';
 
-import { type Inputs, type SetupCMakeOutputs, type PresetFileResult } from './types';
+import { type Inputs } from './schema';
+import { type SetupCMakeOutputs } from './types';
+
+/**
+ * Result of reading and validating a CMake preset file.
+ */
+export interface PresetFileResult {
+    /** Whether the preset file exists */
+    exists: boolean;
+    /** Whether the preset version is supported */
+    supported: boolean;
+    /** Parsed preset JSON content */
+    presetJson: Record<string, unknown>;
+}
 
 /**
  * Reads and validates a CMake preset file.

@@ -62,6 +62,9 @@ function defaultToString(schema: InputSchema): string | undefined {
                 .join('\n');
         }
 
+        case 'regex':
+            return (schema.default as RegExp).source;
+
         default:
             return String(schema.default);
     }

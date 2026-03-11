@@ -7,11 +7,14 @@
  * @module schema
  */
 
+import * as path from 'path';
 import {
     baseInputs,
     type ActionInputsSchema,
-    type ActionOutputsSchema
+    type ActionOutputsSchema,
+    type InferInputs
 } from 'action-schema';
+import { normalizeArchitectureInput, numberOfCpus } from './arch-utils';
 
 /**
  * Input schema for the b2-workflow action.
@@ -25,6 +28,7 @@ export const inputsSchema = {
     sourceDir: {
         type: 'path' as const,
         default: '.',
+        transform: (v) => path.resolve(v as string),
         description: `The boost source directory.
 
 This path will be used to build and install \`B2\` for the workflow
@@ -118,6 +122,7 @@ If the environment variable is not specified, the action will use the default to
     arch: {
         type: 'string' as const,
         default: '',
+        transform: (v) => normalizeArchitectureInput(v as string),
         description: `Target architecture hint (for example \`x86\`, \`x64\`, \`arm64\`). When provided, the action derives sensible defaults
 for the B2 \`address-model\` and \`architecture\` properties unless they are explicitly set.`
     },
@@ -146,6 +151,8 @@ If the environment variable is not specified, the action will use the value from
         type: 'string' as const,
         default: '',
         fallbackEnv: 'B2_BUILD_TYPE',
+        crossTransform: (v: unknown, inputs: Record<string, unknown>) =>
+            ((inputs.buildVariant as string) || (v as string)).toLowerCase(),
         description: `An alternative to \`build-variant\`, for compatibility with CMake workflows. When \`build-variant\` is not provided,
 this input is used to set the build variant.
 
@@ -407,6 +414,7 @@ Determines if shared or static version of C and C++ runtimes should be used.`
         type: 'number' as const,
         default: 0,
         fallbackEnv: 'B2_JOBS',
+        transform: (v) => (v as number) || numberOfCpus(),
         description: `Number of jobs to use in parallel builds.
 
 If the input is not specified, the action will use the value defined by the environment variable \`B2_JOBS\`.
@@ -415,6 +423,11 @@ If the environment variable is also not specified, the action will use the numbe
 system.`
     }
 } satisfies ActionInputsSchema;
+
+/**
+ * Configuration inputs for the b2-workflow action, inferred from the schema.
+ */
+export type Inputs = InferInputs<typeof inputsSchema>;
 
 /**
  * Output schema for the b2-workflow action.

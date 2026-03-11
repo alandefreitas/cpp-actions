@@ -7,7 +7,30 @@
 import * as core from '@actions/core';
 import * as semver from 'semver';
 import * as traceCommands from 'trace-commands';
-import { type ClangDownloadCandidates, type ClangUrls, type ProgramResult } from './types';
+/**
+ * Candidate versions and Ubuntu releases for Clang download attempts.
+ */
+export interface ClangDownloadCandidates {
+    versionCandidates: string[];
+    ubuntuVersions: string[];
+}
+
+/**
+ * LLVM project URLs for downloading Clang releases.
+ */
+export interface ClangUrls {
+    llvmProjectUrl: string;
+    llvmReleasesUrl: string;
+    oldLlvmReleasesUrl: string;
+}
+
+/**
+ * Result of a program search operation.
+ */
+export interface ProgramResult {
+    outputVersion: string | null;
+    outputPath: string | null;
+}
 
 import * as path from 'path';
 import * as setup_program from 'setup-program';

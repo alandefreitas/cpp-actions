@@ -33,51 +33,9 @@ interface InputOverrides {
     [key: string]: unknown;
 }
 
-// Helper to build the minimum set of inputs that exercise the module targeting logic without touching the filesystem.
-function createInputs(overrides: InputOverrides = {}): {
-    sourceDir: string;
-    buildDir: string;
-    cxx: string;
-    ccflags: string;
-    cxxflags: string;
-    cxxstd: string;
-    shared: undefined;
-    toolset: string;
-    arch: string;
-    buildType: string;
-    modules: string[];
-    moduleTarget: string[];
-    extraArgs: string[];
-    warningsAsErrors: undefined;
-    addressModel: undefined;
-    asan: undefined;
-    ubsan: undefined;
-    msan: undefined;
-    tsan: undefined;
-    coverage: undefined;
-    linkflags: undefined;
-    threading: undefined;
-    rtti: undefined;
-    clean: undefined;
-    cleanAll: undefined;
-    abbreviatePaths: undefined;
-    hash: undefined;
-    rebuildAll: undefined;
-    dryRun: undefined;
-    stopOnError: undefined;
-    config: string;
-    siteConfig: string;
-    userConfig: string;
-    projectConfig: string;
-    debugConfiguration: undefined;
-    debugBuilding: undefined;
-    debugGenerators: undefined;
-    include: string;
-    define: undefined;
-    runtimeLink: undefined;
-    jobs: number;
-    traceCommands: boolean;
-} {
+// Helper to build the minimum set of inputs (matching Inputs schema shape)
+// that exercise the module targeting logic without touching the filesystem.
+function createInputs(overrides: InputOverrides = {}) {
     return {
         sourceDir: '/tmp/boost',
         buildDir: '',
@@ -85,40 +43,41 @@ function createInputs(overrides: InputOverrides = {}): {
         ccflags: '',
         cxxflags: '',
         cxxstd: '',
-        shared: undefined,
+        shared: undefined as boolean | undefined,
         toolset: '',
         arch: '',
+        buildVariant: '',
         buildType: '',
         modules: ['filesystem'],
-        moduleTarget: [],
-        extraArgs: [],
-        warningsAsErrors: undefined,
-        addressModel: undefined,
-        asan: undefined,
-        ubsan: undefined,
-        msan: undefined,
-        tsan: undefined,
-        coverage: undefined,
-        linkflags: undefined,
-        threading: undefined,
-        rtti: undefined,
-        clean: undefined,
-        cleanAll: undefined,
-        abbreviatePaths: undefined,
-        hash: undefined,
-        rebuildAll: undefined,
-        dryRun: undefined,
-        stopOnError: undefined,
+        moduleTarget: ['test'],
+        extraArgs: [] as string[],
+        warningsAsErrors: '',
+        addressModel: '',
+        asan: '',
+        ubsan: '',
+        msan: '',
+        tsan: '',
+        coverage: '',
+        linkflags: '',
+        threading: '',
+        rtti: '',
+        clean: false,
+        cleanAll: false,
+        abbreviatePaths: true,
+        hash: false,
+        rebuildAll: false,
+        dryRun: false,
+        stopOnError: false,
         config: '',
         siteConfig: '',
         userConfig: '',
         projectConfig: '',
-        debugConfiguration: undefined,
-        debugBuilding: undefined,
-        debugGenerators: undefined,
+        debugConfiguration: undefined as boolean | undefined,
+        debugBuilding: undefined as boolean | undefined,
+        debugGenerators: undefined as boolean | undefined,
         include: '',
-        define: undefined,
-        runtimeLink: undefined,
+        define: '',
+        runtimeLink: '',
         jobs: 2,
         traceCommands: false,
         ...overrides

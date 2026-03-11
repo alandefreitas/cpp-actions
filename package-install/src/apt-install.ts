@@ -10,7 +10,7 @@ import * as tc from '@actions/tool-cache';
 import * as io from '@actions/io';
 import * as traceCommands from 'trace-commands';
 
-import { type Inputs } from './types';
+import { type Inputs } from './schema';
 import { formatTime, semverGteLoose } from './utils';
 
 import * as setup_program from 'setup-program';

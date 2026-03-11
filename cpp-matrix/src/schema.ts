@@ -10,8 +10,62 @@
 import {
     baseInputs,
     type ActionInputsSchema,
-    type ActionOutputsSchema
+    type ActionOutputsSchema,
+    type InferInputs
 } from 'action-schema';
+
+import {
+    type CompilerVersions,
+    type CompilerFactors,
+    type CompilerSuggestion
+} from './types';
+
+import {
+    normalizeCppVersionRequirement,
+    parseCompilerRequirements,
+    parseCompilerFactors,
+    parseCompilerSuggestions
+} from './parsing';
+
+import {
+    normalizeCompilerNameKeys,
+    normalizeCompilerNameSuggestions,
+    parseKeyValues
+} from './input-normalization';
+
+/**
+ * Cross-transform helper that parses multiline compiler factors.
+ *
+ * Joins multiline input, parses into CompilerFactors using compiler keys
+ * from the already-parsed compilers field, and normalizes compiler names.
+ *
+ * @param v - Raw multiline string array value
+ * @param inputs - All inputs after per-field transforms
+ * @returns Parsed and normalized compiler factors
+ */
+function parseFactorsCross(v: unknown, inputs: Record<string, unknown>): CompilerFactors {
+    const compilerKeys = Object.keys(inputs.compilers as CompilerVersions);
+    const factors = parseCompilerFactors((v as string[]).join('\n'), compilerKeys);
+    normalizeCompilerNameKeys(factors as unknown as Record<string, unknown>);
+    return factors;
+}
+
+/**
+ * Cross-transform helper that parses multiline compiler suggestions.
+ *
+ * Parses suggestion lines using compiler keys from the already-parsed
+ * compilers field, and normalizes compiler names in the results.
+ *
+ * @param v - Raw multiline string array value
+ * @param inputs - All inputs after per-field transforms
+ * @returns Parsed and normalized compiler suggestions
+ */
+function parseSuggestionsCross(v: unknown, inputs: Record<string, unknown>): CompilerSuggestion[] {
+    const compilerKeys = Object.keys(inputs.compilers as CompilerVersions);
+    const suggestions = parseCompilerSuggestions(v as string[], compilerKeys);
+    normalizeCompilerNameSuggestions(suggestions);
+    return suggestions;
+}
 
 /**
  * Input schema for the cpp-matrix action.
@@ -32,6 +86,11 @@ export const inputsSchema = {
             'mingw *',
             'clang-cl *'
         ] as string[],
+        transform: (v) => {
+            const versions = parseCompilerRequirements((v as string[]).join('\n'));
+            normalizeCompilerNameKeys(versions as unknown as Record<string, unknown>);
+            return versions;
+        },
         description: `A list of compilers to be tested. Each compiler can be complemented with its semver version requirements to be tested.
 
 When the compiler version requirements are provided, the action will break the requirements into subsets of major versions to be tested. When no version is provided, the '*' semver requirement is assumed. The action can identifies subsets of compiler versions for GCC, Clang, and MSVC. For any other compilers, the version requirements will passthrough to the output.`
@@ -40,6 +99,10 @@ When the compiler version requirements are provided, the action will break the r
     subrangePolicy: {
         type: 'map' as const,
         default: { '': 'one-per-major' } as Record<string, string>,
+        transform: (v) => {
+            normalizeCompilerNameKeys(v as Record<string, unknown>);
+            return v as Record<string, string>;
+        },
         description: `The policy to be used to break the compiler version requirements into sub-ranges of versions.
 
 For instance, if the compiler requirements are \`gcc >=4.8\`, the action will typically generate entries that satisfy \`gcc >=4.8 <5\`, \`gcc >=5 <6\`, \`gcc >=6 <7\`, and so on, because the default policy is \`one-per-major\`.
@@ -54,6 +117,7 @@ Another policy is to break into major versions when the range contains multiple 
     standards: {
         type: 'string' as const,
         default: '>=11',
+        transform: (v) => normalizeCppVersionRequirement(v as string),
         description: `A semver range describing what C++ standards should be tested. For instance, \`>=11\` indicates that the library should be tested with C++11 and later standards.
 
 These requirements can include C++ standards as 2 or 4 digits versions, such as 11, 2011, 98, or 1998. 2 digit versions are normalized into the 4 digits form so that 11 > 98 (2011 > 1998).
@@ -68,6 +132,7 @@ It's very common for compilers to not fully comply with the standards they claim
     maxStandards: {
         type: 'number' as const,
         default: 2,
+        transform: (v) => (v as number) || undefined,
         description: `The maximum number of standards to be tested with each compiler.
 
 For instance, if 'max-standards' is 2 and the compiler supports '11,14,17,20,23' given the in the standard requirements, the standards 20,23 will be tested by this compiler.`
@@ -79,6 +144,7 @@ For instance, if 'max-standards' is 2 and the compiler supports '11,14,17,20,23'
     latestFactors: {
         type: 'multiline' as const,
         default: ['gcc Coverage TSan UBSan'] as string[],
+        crossTransform: parseFactorsCross,
         description: `The factors to be tested with the latest versions of each compiler. For each factor in this list, the entry with the latest version of a compiler will be duplicated with an entry that sets this factor to true.
 
 Other entries will also include this factor as false.
@@ -94,6 +160,7 @@ The following factors are considered special: 'asan', 'ubsan', 'msan', 'tsan', '
             'clang Time-Trace',
             'mingw Shared'
         ] as string[],
+        crossTransform: parseFactorsCross,
         description: `The factors to be tested with other versions of each compiler. Each factor in this list will be injected into a version of the compiler that is not the latest version. An entry with the latest version of the compiler will be duplicated with this factor if there are no entries left to inject the factor.
 
 Other entries will also include this factor as false.`
@@ -102,6 +169,7 @@ Other entries will also include this factor as false.`
     combinatorialFactors: {
         type: 'multiline' as const,
         default: [] as string[],
+        crossTransform: parseFactorsCross,
         description: `The factors to be tested with all combinations of other factors. When combinatorial factors are defined, for each entry in the matrix, a new entry will be created with the factors in this list set to \`true\`.
 
 For instance, if the library can be built both in "Standalone" mode and with dependencies, the factor 'Standalone' can be added to this list to duplicate all entries. Each copy would include a "Standalone" factor set to \`true\` or \`false\`.
@@ -114,6 +182,7 @@ For instance, if the library can be built both in "Standalone" mode and with dep
     forceFactors: {
         type: 'multiline' as const,
         default: [] as string[],
+        crossTransform: parseSuggestionsCross,
         description: `A multi-line list of factor flags to be injected with each range of compiler version even if the entry doesn't have the usual requirements to have that factor.
 
 Each line has the format:
@@ -130,6 +199,7 @@ When the build type is unspecified, the action will infer the build type from th
     extraValues: {
         type: 'multiline' as const,
         default: [] as string[],
+        transform: (v) => parseKeyValues(v as string[]),
         description: `A multi-line list of key-value pairs to be injected in each entry of the matrix.
 
 Each line has the format:
@@ -153,6 +223,7 @@ would generate a hash-key with the value \`gcc-11.1\` for an entry with the comp
     runsOn: {
         type: 'multiline' as const,
         default: [] as string[],
+        crossTransform: parseSuggestionsCross,
         description: `A multi-line list of github runner images to be used with each range of compiler version. Each line has the format:
 
 \`<compiler-name>[ <compiler-range|compiler-factor>]: <github-runner-image>\`
@@ -169,6 +240,7 @@ When the runner image is unspecified, the action will infer the runner image and
     containers: {
         type: 'multiline' as const,
         default: [] as string[],
+        crossTransform: parseSuggestionsCross,
         description: `A multi-line list of docker containers to be used with each range of compiler version. Each line has the format:
 
 \`<compiler-name>[ <compiler-range|compiler-factor>]: <docker-container>\`
@@ -185,6 +257,7 @@ When the container is unspecified, the action can still infer a container for th
     generators: {
         type: 'multiline' as const,
         default: [] as string[],
+        crossTransform: parseSuggestionsCross,
         description: `A multi-line list of cmake generators to be used with each range of compiler version. Each line has the format:
 
 \`<compiler-name>[ <compiler-range|compiler-factor>]: <cmake-generator>\`
@@ -199,6 +272,7 @@ When the generator is unspecified, the action will infer the generator from the 
     generatorToolsets: {
         type: 'multiline' as const,
         default: [] as string[],
+        crossTransform: parseSuggestionsCross,
         description: `A multi-line list of cmake generator toolsets to be used with each range of compiler version. Each line has the format:
 
 \`<compiler-name>[ <compiler-range|compiler-factor>]: <cmake-generator-toolset>\`
@@ -213,6 +287,7 @@ When the generator toolset is unspecified, the action will infer the generator t
     b2Toolsets: {
         type: 'multiline' as const,
         default: [] as string[],
+        crossTransform: parseSuggestionsCross,
         description: `A multi-line list of b2 toolsets to be used with each range of compiler version. Each line has the format:
 
 \`<compiler-name>[ <compiler-range|compiler-factor>]: <b2-toolset>\`
@@ -227,6 +302,7 @@ When the toolset is unspecified, the action will infer the toolset from the comp
     ccflags: {
         type: 'multiline' as const,
         default: [] as string[],
+        crossTransform: parseSuggestionsCross,
         description: `A multi-line list of C compiler flags to be used with each range of compiler version. Each line has the format:
 
 \`<compiler-name>[ <compiler-range|compiler-factor>]: <ccflags>\`
@@ -241,6 +317,7 @@ When the flag is unspecified, the action will infer the flag from the compiler n
     cxxflags: {
         type: 'multiline' as const,
         default: [] as string[],
+        crossTransform: parseSuggestionsCross,
         description: `A multi-line list of C++ compiler flags to be used with each range of compiler version. Each line has the format:
 
 \`<compiler-name>[ <compiler-range|compiler-factor>]: <cxxflags>\`
@@ -255,6 +332,7 @@ When the flag is unspecified, the action will infer the flag from the compiler n
     install: {
         type: 'multiline' as const,
         default: [] as string[],
+        crossTransform: parseSuggestionsCross,
         description: `A multi-line list of packages to be installed with each range of compiler version. Each line has the format:
 
 \`<compiler-name>[ <compiler-range|compiler-factor>]: <packages>\`
@@ -269,6 +347,7 @@ When the package is unspecified, the action will infer the package from the comp
     appendInstall: {
         type: 'multiline' as const,
         default: [] as string[],
+        crossTransform: parseSuggestionsCross,
         description: `A multi-line list of packages to append to the install list for each range of compiler version. Unlike \`install\`, which replaces the entire install list, this option appends to the values already generated by the action (e.g. \`build-essential\` for containers, \`lcov\` for coverage).
 
 Each line has the format:
@@ -283,6 +362,7 @@ Omitting \`<compiler-range|compiler-factor>\` is equivalent to it being set to \
     appendCcflags: {
         type: 'multiline' as const,
         default: [] as string[],
+        crossTransform: parseSuggestionsCross,
         description: `A multi-line list of C compiler flags to append for each range of compiler version. Unlike \`ccflags\`, which replaces the entire flag string, this option appends to the flags already generated by the action (e.g. sanitizer flags, coverage flags).
 
 Each line has the format:
@@ -297,6 +377,7 @@ Omitting \`<compiler-range|compiler-factor>\` is equivalent to it being set to \
     appendCxxflags: {
         type: 'multiline' as const,
         default: [] as string[],
+        crossTransform: parseSuggestionsCross,
         description: `A multi-line list of C++ compiler flags to append for each range of compiler version. Unlike \`cxxflags\`, which replaces the entire flag string, this option appends to the flags already generated by the action (e.g. sanitizer flags, coverage flags).
 
 Each line has the format:
@@ -311,6 +392,7 @@ Omitting \`<compiler-range|compiler-factor>\` is equivalent to it being set to \
     triplets: {
         type: 'multiline' as const,
         default: [] as string[],
+        crossTransform: parseSuggestionsCross,
         description: `A multi-line list of triplets to be used with each range of compiler version. Each line has the format:
 
 \`<compiler-name>[ <compiler-range|compiler-factor>]: <triplet>\`
@@ -325,6 +407,7 @@ When the triplet is unspecified, the action will infer the triplet from the comp
     buildTypes: {
         type: 'multiline' as const,
         default: [] as string[],
+        crossTransform: parseSuggestionsCross,
         description: `A multi-line list of build types to be used with each range of compiler version. Each line has the format:
 
 \`<compiler-name>[ <compiler-range|compiler-factor>]: <build-type>\`
@@ -342,18 +425,21 @@ When the build type is unspecified, the action will infer the build type from th
     defaultBuildType: {
         type: 'string' as const,
         default: 'Release',
+        transform: (v) => (v as string).trim() || 'Release',
         description: 'The default build type to suggest for entries without a specific build type.'
     },
 
     sanitizerBuildType: {
         type: 'string' as const,
         default: 'RelWithDebInfo',
+        transform: (v) => (v as string).trim() || 'Release',
         description: 'Determine the default build type to suggest when testing with sanitizers.'
     },
 
     x86BuildType: {
         type: 'string' as const,
         default: 'Release',
+        transform: (v) => (v as string).trim() || 'Release',
         description: 'Determine the default build type to suggest when testing with x86.'
     },
 
@@ -511,3 +597,8 @@ Each entry in the test matrix dictionary contains key-value pairs in the followi
 - \`install\`: The recommended packages to be installed before running the workflow. This includes packages such as build-essential for ubuntu containers and lcov for coverage entries.`
     }
 } satisfies ActionOutputsSchema;
+
+/**
+ * Input type inferred from the schema, with transforms applied.
+ */
+export type Inputs = InferInputs<typeof inputsSchema>;

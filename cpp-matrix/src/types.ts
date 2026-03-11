@@ -1,17 +1,11 @@
 /**
- * Type definitions for cpp-matrix action.
+ * Shared type definitions for cpp-matrix action.
+ *
+ * Types used across 3+ modules are kept here; types used by 1-2 modules
+ * are co-located with the owning module.
  *
  * @module types
  */
-
-import type { InferInputs } from 'action-schema';
-import type { inputsSchema } from './schema';
-
-/**
- * Raw input type as parsed from the schema.
- * Uses simple types that are later converted to internal types.
- */
-export type RawInputs = InferInputs<typeof inputsSchema>;
 
 /**
  * Maps compiler names to their version range strings.
@@ -56,50 +50,6 @@ export interface KeyValue {
  */
 export interface SubrangePolicyMap {
     [compiler: string]: string;
-}
-
-/**
- * Configuration inputs for the cpp-matrix action.
- */
-export interface Inputs {
-    /** Compiler version requirements */
-    compiler_versions: CompilerVersions;
-    subrangePolicy: SubrangePolicyMap;
-    standards: string;
-    maxStandards?: number;
-    latestFactors: CompilerFactors;
-    factors: CompilerFactors;
-    combinatorialFactors: CompilerFactors;
-    forceFactors: CompilerSuggestion[];
-    extraValues?: KeyValue[];
-    runsOn: CompilerSuggestion[];
-    containers: CompilerSuggestion[];
-    generators: CompilerSuggestion[];
-    generatorToolsets: CompilerSuggestion[];
-    b2Toolsets: CompilerSuggestion[];
-    ccflags: CompilerSuggestion[];
-    cxxflags: CompilerSuggestion[];
-    install: CompilerSuggestion[];
-    appendCcflags: CompilerSuggestion[];
-    appendCxxflags: CompilerSuggestion[];
-    appendInstall: CompilerSuggestion[];
-    triplets: CompilerSuggestion[];
-    buildTypes: CompilerSuggestion[];
-    defaultBuildType: string;
-    sanitizerBuildType: string;
-    x86BuildType: string;
-    useContainers: boolean;
-    warnNoMatches: boolean;
-    outputFile?: string;
-    logMatrix: boolean;
-    generateSummary: boolean;
-    traceCommands: boolean;
-    /** Enable sorting by historical failure rate */
-    sortByFailureRate: boolean;
-    /** Number of recent workflow runs to analyze for failure rates */
-    failureRateRuns: number;
-    /** GitHub token for API access */
-    githubToken: string;
 }
 
 /**
@@ -164,45 +114,4 @@ export interface ContainerConfig {
     image: string;
     /** Volume mounts for the container */
     volumes?: string[];
-}
-
-/**
- * Policies for selecting versions from a semver range when generating matrix entries.
- *
- * These policies control which specific versions are selected when a version range
- * would match multiple available versions (e.g., what to do with ">=10" when 10, 11, 12 exist).
- */
-export const SubrangePolicies = {
-    ONE_PER_MAJOR: 0,
-    ONE_PER_MINOR: 1,
-    ONE_PER_MAJOR_OR_MINOR: 2
-} as const;
-
-/**
- * A policy for handling version subranges in the matrix.
- */
-export type SubrangePolicy = typeof SubrangePolicies[keyof typeof SubrangePolicies];
-
-/**
- * Maps job names to their failure rates.
- */
-export interface FailureRates {
-    [jobName: string]: number;
-}
-
-/**
- * Represents a job from GitHub's workflow run API.
- */
-export interface WorkflowJob {
-    name: string;
-    conclusion: string | null;
-}
-
-/**
- * Represents a workflow run from GitHub's API.
- */
-export interface WorkflowRun {
-    id: number;
-    status: string;
-    conclusion: string | null;
 }

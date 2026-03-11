@@ -6,10 +6,20 @@
 
 import * as os from 'os';
 
-import { type ArchConfig } from './types';
-
 import { normalizeArchitectureInput } from 'setup-program';
 export { normalizeArchitectureInput };
+
+/**
+ * Configuration for B2 architecture settings.
+ */
+export interface ArchConfig {
+    /** Normalized architecture identifier (x86, x64, arm, arm64) */
+    normalizedArch: string;
+    /** B2 address model (32 or 64 bit) */
+    addressModel?: string;
+    /** B2 architecture family (x86 or arm) */
+    architecture?: string;
+}
 
 /**
  * Returns the number of available CPU cores.

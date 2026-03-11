@@ -1,97 +1,11 @@
 /**
- * Type definitions for cmake-workflow action.
+ * Shared type definitions for cmake-workflow action.
+ *
+ * Contains types used across 3+ modules. Types used by fewer modules
+ * are co-located with their owning module.
  *
  * @module types
  */
-
-import type { InferInputs } from 'action-schema';
-import type { inputsSchema } from './schema';
-
-/**
- * Raw input type as parsed from the schema.
- * Uses simple types that are later converted to internal types.
- */
-export type RawInputs = InferInputs<typeof inputsSchema>;
-
-/**
- * Represents a compiler or CMake message for annotation creation.
- */
-export interface Message {
-    /** Message title for the annotation */
-    title: string;
-    /** Source file path */
-    file?: string;
-    /** Line number in the file */
-    line?: number;
-    /** Column number in the file */
-    column?: number;
-    /** Message severity (warning, error) */
-    severity: string;
-    /** The message content */
-    message: string;
-}
-
-/**
- * Configuration inputs for the CMake workflow action.
- *
- * This interface represents the raw inputs from the action, where some fields
- * are arrays/maps representing combinatorial factors. These are expanded into
- * individual `ResolvedInputs` entries by the `expandInputs()` function.
- */
-export interface Inputs {
-    /** Path to the CMake executable */
-    cmakePath: string;
-    /** CMake version to use */
-    cmakeVersion: string;
-    /** Path to the source directory */
-    sourceDir: string;
-    url: string;
-    gitRepository: string;
-    gitTag: string;
-    downloadDir: string;
-    patches: string[];
-    /** Base build directory (suffixes added for non-main factor combinations) */
-    buildDir: string;
-    preset: string;
-    cc: string;
-    ccflags: string;
-    cxx: string;
-    cxxflags: string;
-    /** C++ standard versions to build (combinatorial factor) */
-    cxxstd: (string | null)[];
-    shared: boolean | undefined;
-    toolchain: string;
-    generator: string;
-    generatorToolset: string;
-    generatorArchitecture: string;
-    arch: string;
-    buildType: string;
-    buildTarget: (string | null)[];
-    /** Extra CMake arguments - array for single config, map for combinatorial factor */
-    extraArgs: string[] | Record<string, string[]>;
-    exportCompileCommands: boolean | undefined;
-    jobs: number;
-    runTests: boolean | undefined;
-    configureTestsFlag: string;
-    testAllCxxstd: boolean;
-    ctestTimeout: number | undefined;
-    install: boolean | undefined;
-    installAllCxxstd: boolean | undefined;
-    /** Base install prefix (suffixes added for non-main factor combinations) */
-    installPrefix: string;
-    package: boolean | undefined;
-    packageAllCxxstd: boolean;
-    packageName: string;
-    /** Base package directory (suffixes added for non-main factor combinations) */
-    packageDir: string;
-    packageVendor: string;
-    packageGenerators: string[];
-    packageArtifact: boolean | undefined;
-    packageRetentionDays: number;
-    createAnnotations: boolean | undefined;
-    refSourceDir: string;
-    traceCommands: boolean;
-}
 
 /**
  * Resolved inputs for a single workflow entry after expanding combinatorial factors.
@@ -196,16 +110,4 @@ export interface ResolvedParameters {
     ctestPath: string;
     /** Path to the CPack executable */
     cpackPath: string;
-}
-
-/**
- * Result of reading and validating a CMake preset file.
- */
-export interface PresetFileResult {
-    /** Whether the preset file exists */
-    exists: boolean;
-    /** Whether the preset version is supported */
-    supported: boolean;
-    /** Parsed preset JSON content */
-    presetJson: Record<string, unknown>;
 }

@@ -13,7 +13,15 @@ import * as cache from '@actions/cache';
 import * as io from '@actions/io';
 import * as os from 'os';
 
-import { type Inputs, type VcpkgOutputs } from './types';
+import { type Inputs } from './schema';
+
+/**
+ * Output values from vcpkg installation.
+ */
+export interface VcpkgOutputs {
+    vcpkgExecutable?: string;
+    vcpkgToolchain?: string;
+}
 import { uuidV4, sha1sum, escapePath, readCompilerVersion } from './utils';
 
 /**

@@ -9,6 +9,7 @@
 
 import {
     baseInputs,
+    type InferInputs,
     type ActionInputsSchema,
     type ActionOutputsSchema
 } from 'action-schema';
@@ -200,3 +201,9 @@ This output value can be used to configure CMake to use vcpkg.`
         description: 'vcpkg executable file'
     }
 } satisfies ActionOutputsSchema;
+
+/**
+ * Input configuration for the package-install action.
+ * Inferred from the schema definition.
+ */
+export type Inputs = InferInputs<typeof inputsSchema>;

@@ -7,11 +7,32 @@
  * @module schema
  */
 
+import * as os from 'os';
+import * as path from 'path';
 import {
     baseInputs,
     type ActionInputsSchema,
-    type ActionOutputsSchema
+    type ActionOutputsSchema,
+    type InferInputs
 } from 'action-schema';
+
+import { normalizeArchitectureInput } from 'setup-program';
+import { parseExtraArgs } from './input-expansion';
+
+/**
+ * Returns the number of available CPU cores.
+ *
+ * @returns Number of available CPUs, minimum 1
+ */
+function numberOfCpus(): number {
+    const result = typeof os.availableParallelism === 'function'
+        ? os.availableParallelism()
+        : os.cpus().length;
+    if (!result || result === 0) {
+        return 1;
+    }
+    return result;
+}
 
 /**
  * Input schema for the cmake-workflow action.
@@ -52,6 +73,7 @@ This should usually match the \`cmake_minimum_required\` defined in your CMakeLi
     sourceDir: {
         type: 'path' as const,
         default: '.',
+        transform: (v) => path.resolve(v as string),
         description: 'Directory for the source files.'
     },
 
@@ -188,6 +210,7 @@ If the environment variable is not specified, the action will use the default fl
         type: 'string[]' as const,
         default: [] as string[],
         fallbackEnv: 'CXXSTD',
+        transform: (v) => v as (string | null)[],
         description: `Comma-separated list of standards with which cmake will build and test the program.
 
 If the input is not specified, the action will use the standards defined by the environment variable \`CXXSTD\`.
@@ -261,6 +284,7 @@ If the environment variable is not specified, the action will use the default to
     arch: {
         type: 'string' as const,
         default: '',
+        transform: (v) => normalizeArchitectureInput(v as string),
         description: `Target architecture hint (for example \`x86\`, \`x64\`, \`arm64\`). When \`generator-architecture\` is not set and the
 chosen generator is Visual Studio, the action derives the appropriate \`-A\` switch from this value. Other
 generators ignore this input.`
@@ -285,6 +309,7 @@ instead of \`CMAKE_BUILD_TYPE\`.`
     buildTarget: {
         type: 'string[]' as const,
         default: [] as string[],
+        transform: (v) => v as (string | null)[],
         description: `Targets to build instead of the default target.
 
 This can be a single target or a list of targets separated by a \`,\`, \`;\` or space.`
@@ -293,6 +318,7 @@ This can be a single target or a list of targets separated by a \`,\`, \`;\` or 
     extraArgs: {
         type: 'multiline' as const,
         default: [] as string[],
+        transform: (v) => parseExtraArgs(v as string[]),
         description: 'Extra arguments to cmake configure command.'
     },
 
@@ -328,6 +354,7 @@ If the environment variable is not specified, the action will use the default pa
         type: 'number' as const,
         default: 0,
         fallbackEnv: 'CMAKE_JOBS',
+        transform: (v) => (v as number) || numberOfCpus(),
         description: `Number of jobs to use in parallel builds.
 
 If the input is not specified, the action will use the value defined by the environment variable \`CMAKE_JOBS\`.
@@ -376,6 +403,7 @@ If the input is not specified, the action will only run the tests with the last 
         type: 'number' as const,
         default: 0,
         fallbackEnv: 'CTEST_TEST_TIMEOUT',
+        transform: (v) => (v as number) || undefined,
         description: `Maximum time in seconds allowed for each test to run.
 
 If a test runs longer than this value, it will be killed and marked as failed.
@@ -501,6 +529,7 @@ If the environment variable is also not specified, the action will create annota
         type: 'path' as const,
         default: '',
         fallbackEnv: 'GITHUB_WORKSPACE',
+        transform: (v) => path.resolve((v as string) || '.'),
         description: `A reference base directory for annotations.
 
 For instance, if there is an error in the \`/home/user/project/src/main.cpp\` file, the action will create an
@@ -524,3 +553,8 @@ In most cases, the default option should be enough.`
  * Output schema for the cmake-workflow action.
  */
 export const outputsSchema = {} satisfies ActionOutputsSchema;
+
+/**
+ * Input type inferred from the schema, with transforms applied.
+ */
+export type Inputs = InferInputs<typeof inputsSchema>;

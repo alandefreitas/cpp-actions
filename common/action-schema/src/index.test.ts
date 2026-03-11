@@ -109,6 +109,87 @@ describe('action-schema', () => {
             );
         });
 
+        it('should parse regex inputs', () => {
+            mockedGhInputs.getInput.mockReturnValue('foo.*bar');
+
+            const schema = {
+                pattern: {
+                    type: 'regex' as const,
+                    default: /(?:)/,
+                    description: 'Regex pattern'
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = parseInputs(schema);
+
+            expect(result.pattern).toBeInstanceOf(RegExp);
+            expect(result.pattern.source).toBe('foo.*bar');
+            expect(mockedGhInputs.getInput).toHaveBeenCalledWith(
+                'pattern',
+                expect.objectContaining({ defaultValue: /(?:)/ })
+            );
+        });
+
+        it('should parse regex inputs with empty string default', () => {
+            mockedGhInputs.getInput.mockReturnValue('');
+
+            const schema = {
+                filter: {
+                    type: 'regex' as const,
+                    default: new RegExp(''),
+                    description: 'Filter pattern'
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = parseInputs(schema);
+
+            expect(result.filter).toBeInstanceOf(RegExp);
+            expect(result.filter.source).toBe('(?:)');
+            expect('anything'.match(result.filter)).toBeTruthy();
+        });
+
+        it('should apply type-changing transform (string → RegExp)', () => {
+            mockedGhInputs.getInput.mockReturnValue('foo.*bar');
+
+            const schema = {
+                pattern: {
+                    type: 'string' as const,
+                    default: '',
+                    description: 'Pattern',
+                    transform: (v) => new RegExp(v as string)
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = parseInputs(schema);
+
+            expect(result.pattern).toBeInstanceOf(RegExp);
+            expect(result.pattern.source).toBe('foo.*bar');
+        });
+
+        it('should apply type-changing transform (string[] → Record)', () => {
+            mockedGhInputs.getArray.mockReturnValue(['a:1', 'b:2']);
+
+            const schema = {
+                pairs: {
+                    type: 'string[]' as const,
+                    default: [] as string[],
+                    description: 'Key-value pairs',
+                    transform: (v) => {
+                        const record: Record<string, string> = {};
+                        for (const item of v as string[]) {
+                            const [key, val] = item.split(':');
+                            record[key] = val;
+                        }
+                        return record;
+                    }
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = parseInputs(schema);
+
+            expect(result.pairs).toEqual({ a: '1', b: '2' });
+        });
+
         it('should apply transform function', () => {
             mockedGhInputs.getInput.mockReturnValue('gcc-12');
 
@@ -216,6 +297,63 @@ describe('action-schema', () => {
             const result = parseInputs(schema);
 
             expect(result.version).toBe('12');
+        });
+
+        it('should apply cross-field transform (path resolution)', () => {
+            mockedGhInputs.getInput.mockImplementation(((name: string) => {
+                if (name === 'source-dir') return '/home/user/project';
+                if (name === 'output-path') return 'dist/output.txt';
+                return '';
+            }) as typeof mockedGhInputs.getInput);
+
+            const schema = {
+                sourceDir: {
+                    type: 'string' as const,
+                    default: '.',
+                    description: 'Source directory'
+                },
+                outputPath: {
+                    type: 'string' as const,
+                    default: 'output.txt',
+                    description: 'Output path',
+                    crossTransform: (v: unknown, inputs: Record<string, unknown>) => {
+                        const path = require('path');
+                        return path.posix.resolve(inputs.sourceDir as string, v as string);
+                    }
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = parseInputs(schema);
+
+            expect(result.sourceDir).toBe('/home/user/project');
+            expect(result.outputPath).toBe('/home/user/project/dist/output.txt');
+        });
+
+        it('should apply cross-field conditional transform', () => {
+            mockedGhInputs.getInput.mockImplementation(((name: string) => {
+                if (name === 'build-variant') return 'release';
+                if (name === 'build-type') return 'debug';
+                return '';
+            }) as typeof mockedGhInputs.getInput);
+
+            const schema = {
+                buildVariant: {
+                    type: 'string' as const,
+                    default: '',
+                    description: 'Build variant (preferred)'
+                },
+                buildType: {
+                    type: 'string' as const,
+                    default: '',
+                    description: 'Build type (fallback)',
+                    crossTransform: (v: unknown, inputs: Record<string, unknown>) =>
+                        ((inputs.buildVariant as string) || (v as string)).toLowerCase()
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = parseInputs(schema);
+
+            expect(result.buildType).toBe('release');
         });
 
         it('should convert snake_case to kebab-case', () => {
@@ -486,6 +624,20 @@ describe('action-schema', () => {
             expect(result.items.default).toBe('x\ny');
         });
 
+        it('should handle regex defaults', () => {
+            const schema = {
+                pattern: {
+                    type: 'regex' as const,
+                    default: /v\d+\.\d+/,
+                    description: 'Version pattern'
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = generateInputsSection(schema);
+
+            expect(result.pattern.default).toBe('v\\d+\\.\\d+');
+        });
+
         it('should handle empty set defaults', () => {
             const schema = {
                 items: {
@@ -596,6 +748,96 @@ describe('action-schema', () => {
 
             expect(example.tags).toBeInstanceOf(Set);
             expect(example.dirs).toBeInstanceOf(Set);
+        });
+
+        it('should infer regex type', () => {
+            const _schema = {
+                pattern: { type: 'regex' as const, default: /.*/, description: '' }
+            } satisfies ActionInputsSchema;
+
+            type Inputs = InferInputs<typeof _schema>;
+
+            const example: Inputs = { pattern: /test/ };
+            expect(example.pattern).toBeInstanceOf(RegExp);
+        });
+
+        it('should infer transformed types from type-changing transforms', () => {
+            const _schema = {
+                pattern: {
+                    type: 'string' as const,
+                    default: '',
+                    description: '',
+                    transform: (v) => new RegExp(v as string)
+                },
+                pairs: {
+                    type: 'string[]' as const,
+                    default: [] as string[],
+                    description: '',
+                    transform: (v) => {
+                        const record: Record<string, string> = {};
+                        for (const item of v as string[]) {
+                            const [key, val] = item.split(':');
+                            record[key] = val;
+                        }
+                        return record;
+                    }
+                },
+                name: {
+                    type: 'string' as const,
+                    default: '',
+                    description: '',
+                    transform: (v) => (v as string).trim()
+                }
+            } satisfies ActionInputsSchema;
+
+            // Compile-time check: pattern is RegExp, pairs is Record, name is string
+            type Inputs = InferInputs<typeof _schema>;
+
+            const example: Inputs = {
+                pattern: /test/,
+                pairs: { key: 'value' },
+                name: 'hello'
+            };
+
+            expect(example.pattern).toBeInstanceOf(RegExp);
+            expect(example.pairs).toEqual({ key: 'value' });
+            expect(example.name).toBe('hello');
+        });
+
+        it('should infer cross-transform return types', () => {
+            const _schema = {
+                sourceDir: {
+                    type: 'string' as const,
+                    default: '.',
+                    description: ''
+                },
+                outputPath: {
+                    type: 'string' as const,
+                    default: 'out',
+                    description: '',
+                    crossTransform: (v: unknown, inputs: Record<string, unknown>) =>
+                        require('path').resolve(inputs.sourceDir as string, v as string) as string
+                },
+                pattern: {
+                    type: 'string' as const,
+                    default: '',
+                    description: '',
+                    crossTransform: (v: unknown) => new RegExp(v as string)
+                }
+            } satisfies ActionInputsSchema;
+
+            type Inputs = InferInputs<typeof _schema>;
+
+            // Compile-time: sourceDir is string, outputPath is string, pattern is RegExp
+            const example: Inputs = {
+                sourceDir: '/home',
+                outputPath: '/home/out',
+                pattern: /test/
+            };
+
+            expect(example.sourceDir).toBe('/home');
+            expect(example.outputPath).toBe('/home/out');
+            expect(example.pattern).toBeInstanceOf(RegExp);
         });
 
         it('should narrow types with validValues as const', () => {

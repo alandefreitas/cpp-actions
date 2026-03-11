@@ -10,7 +10,8 @@
 import {
     baseInputs,
     type ActionInputsSchema,
-    type ActionOutputsSchema
+    type ActionOutputsSchema,
+    type InferInputs
 } from 'action-schema';
 
 /**
@@ -126,3 +127,9 @@ export const outputsSchema = {
         description: 'Whether CMake supports the cmake --install'
     }
 } satisfies ActionOutputsSchema;
+
+/**
+ * Input configuration for the setup-cmake action.
+ * Inferred from the schema definition.
+ */
+export type Inputs = InferInputs<typeof inputsSchema>;

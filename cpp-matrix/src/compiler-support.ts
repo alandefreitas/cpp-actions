@@ -7,7 +7,8 @@
 import * as core from '@actions/core';
 import * as semver from 'semver';
 
-import { type Inputs, type MatrixEntry } from './types';
+import { type MatrixEntry } from './types';
+import { type Inputs } from './schema';
 
 /*
     It's very common for compilers to not fully comply with the standards they claim to support, even

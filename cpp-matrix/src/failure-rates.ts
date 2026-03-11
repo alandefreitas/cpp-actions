@@ -7,7 +7,31 @@
 import * as traceCommands from 'trace-commands';
 import * as httpClient from '@actions/http-client';
 
-import { type FailureRates, type MatrixEntry, type WorkflowJob, type WorkflowRun } from './types';
+import { type MatrixEntry } from './types';
+
+/**
+ * Maps job names to their failure rates.
+ */
+export interface FailureRates {
+    [jobName: string]: number;
+}
+
+/**
+ * Represents a job from GitHub's workflow run API.
+ */
+export interface WorkflowJob {
+    name: string;
+    conclusion: string | null;
+}
+
+/**
+ * Represents a workflow run from GitHub's API.
+ */
+export interface WorkflowRun {
+    id: number;
+    status: string;
+    conclusion: string | null;
+}
 
 /**
  * API Design Note (Dec 2025):

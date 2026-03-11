@@ -10,7 +10,8 @@
 import {
     baseInputs,
     type ActionInputsSchema,
-    type ActionOutputsSchema
+    type ActionOutputsSchema,
+    type InferInputs
 } from 'action-schema';
 
 /**
@@ -104,3 +105,9 @@ export const outputsSchema = {
         description: 'When using MSVC, the cl.exe front-end version reported by \`cl /Bv\` (for example 19.44.35219).'
     }
 } satisfies ActionOutputsSchema;
+
+/**
+ * Input configuration for the setup-cpp action.
+ * Inferred from the schema definition.
+ */
+export type Inputs = InferInputs<typeof inputsSchema>;

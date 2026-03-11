@@ -7,15 +7,12 @@ import { runAction } from 'action-schema';
 
 import {
     type TraceEvent,
-    type Trace,
-    type CompileCommand,
-    type UploadArtifactsInputs,
-    type MainInputs,
-    type MainOutputs,
-    type RawInputs
+    type Trace
 } from './types';
 
-import { inputsSchema, outputsSchema } from './schema';
+import { type CompileCommand } from './trace-files';
+
+import { inputsSchema, outputsSchema, type Inputs } from './schema';
 
 import {
     createReadmeFile,
@@ -36,6 +33,30 @@ import {
     generateFlameGraph,
     type GenerateSVGFlameGraphResult
 } from './flamegraph-svg';
+
+/**
+ * Inputs for artifact upload.
+ */
+interface UploadArtifactsInputs {
+    /** Path to the output file */
+    outputPath: string;
+    /** Path to the report file */
+    reportPath: string;
+    /** Build directory containing the traces */
+    buildDir: string;
+    /** Number of days to retain the artifacts */
+    packageRetentionDays?: number;
+}
+
+/**
+ * Outputs from the main flamegraph action.
+ */
+interface MainOutputs {
+    /** Path to the combined traces file */
+    tracesPath: string;
+    /** Path to the generated SVG file */
+    svgPath: string;
+}
 
 /**
  * Gets a display-friendly filename for a trace file.
@@ -456,7 +477,7 @@ async function generateSVGFlameGraph(combinedTrace: Trace): Promise<GenerateSVGF
  * @param inputs - Upload configuration including paths
  * @param extraFiles - Additional files to include
  */
-async function uploadArtifacts(inputs: UploadArtifactsInputs, extraFiles: string[]): Promise<void> {
+async function uploadArtifactsToGitHub(inputs: UploadArtifactsInputs, extraFiles: string[]): Promise<void> {
     const artifact = new DefaultArtifactClient();
     const { id, size } = await artifact.uploadArtifact(
         'time-traces',
@@ -468,6 +489,129 @@ async function uploadArtifacts(inputs: UploadArtifactsInputs, extraFiles: string
 }
 
 /**
+ * Orchestrates the flamegraph action pipeline.
+ *
+ * Combines time-trace files, generates reports and SVG visualizations,
+ * and optionally uploads artifacts to GitHub Actions.
+ */
+class FlamegraphRunner {
+    /** Frozen action inputs */
+    private readonly inputs: Inputs;
+
+    /** Combined trace data from all compilation units */
+    private combinedTrace!: Trace;
+
+    /** Aggregate report statistics collected during trace combination */
+    private reportData!: ReportData;
+
+    /** Path to the generated SVG flamegraph */
+    private imagePath!: string;
+
+    /** Content of the generated report */
+    private reportContent!: string;
+
+    /**
+     * Creates a new FlamegraphRunner instance.
+     *
+     * @param inputs - Configuration inputs including paths and output options
+     */
+    constructor(inputs: Inputs) {
+        this.inputs = Object.freeze({ ...inputs });
+    }
+
+    /**
+     * Runs the full flamegraph pipeline.
+     *
+     * @returns Paths to the generated trace file and SVG visualization
+     */
+    async run(): Promise<MainOutputs> {
+        await this.combineAndSaveTraces();
+        this.generateAndSaveReport();
+        this.updateSummary();
+        await this.generateAndSaveSVG();
+        await this.uploadArtifacts();
+        return { tracesPath: this.inputs.outputPath, svgPath: this.imagePath };
+    }
+
+    /**
+     * Combines all time-trace files and saves the combined trace to disk.
+     */
+    private async combineAndSaveTraces(): Promise<void> {
+        const fnlog = traceCommands.scoped('main');
+        core.startGroup('📊 Combine Time Traces');
+        const { combinedTrace, reportData } = await combineTraces(this.inputs.sourceDir, this.inputs.buildDir);
+        this.combinedTrace = combinedTrace;
+        this.reportData = reportData;
+        fnlog(`Combined trace with ${this.combinedTrace.traceEvents.length} events`);
+        fs.writeFileSync(this.inputs.outputPath, JSON.stringify(this.combinedTrace, null, 2));
+        core.info(`Saved combined trace to ${this.inputs.outputPath}`);
+        core.endGroup();
+    }
+
+    /**
+     * Generates the markdown report and saves it to disk.
+     */
+    private generateAndSaveReport(): void {
+        core.startGroup('📄 Generate Time Trace Report');
+        this.reportContent = generateReport(this.reportData);
+        fs.writeFileSync(this.inputs.reportPath, this.reportContent);
+        core.info(`Saved report to ${this.inputs.reportPath}`);
+        core.endGroup();
+    }
+
+    /**
+     * Updates the GitHub Actions job summary with the report, if enabled.
+     */
+    private updateSummary(): void {
+        if (!this.inputs.updateSummary) {
+            return;
+        }
+        core.startGroup('📄 Time Trace Report Summary');
+        core.summary.addRaw(this.reportContent);
+        if (this.inputs.uploadArtifact) {
+            core.summary.addRaw('\n\n[For more information and graphics, see the time-trace artifacts](#artifacts)\n\n');
+        }
+        core.endGroup();
+    }
+
+    /**
+     * Generates the SVG flamegraph and saves it to disk.
+     */
+    private async generateAndSaveSVG(): Promise<void> {
+        core.startGroup('🖼️ Generate SVG Time Trace');
+        this.imagePath = this.inputs.outputPath + '.svg';
+        const { SVGContent } = await generateSVGFlameGraph(this.combinedTrace);
+        fs.writeFileSync(this.imagePath, SVGContent);
+        core.endGroup();
+    }
+
+    /**
+     * Creates a readme file and uploads all artifacts, if enabled.
+     */
+    private async uploadArtifacts(): Promise<void> {
+        if (!this.inputs.uploadArtifact) {
+            return;
+        }
+        core.startGroup('📄 Artifact Readme File');
+        const readmePath = path.join(path.dirname(this.inputs.reportPath), 'time-trace-readme.md');
+        await createReadmeFile(readmePath);
+        core.info(`Saved readme to ${readmePath}`);
+        core.endGroup();
+
+        core.startGroup('⬆️ Upload Time Trace Artifacts');
+        await uploadArtifactsToGitHub(
+            {
+                outputPath: this.inputs.outputPath,
+                reportPath: this.inputs.reportPath,
+                buildDir: this.inputs.buildDir
+            },
+            [readmePath, this.imagePath, this.inputs.outputPath]
+        );
+        core.endGroup();
+    }
+}
+
+/**
  * Main entry point for the flamegraph action.
  *
  * Combines time-trace files, generates reports and SVG visualizations,
@@ -476,70 +620,8 @@ async function uploadArtifacts(inputs: UploadArtifactsInputs, extraFiles: string
  * @param inputs - Configuration inputs including paths and output options
  * @returns Paths to the generated trace file and SVG visualization
  */
-async function main(inputs: MainInputs): Promise<MainOutputs> {
-    const fnlog = traceCommands.scoped('main');
-
-    core.startGroup('📊 Combine Time Traces');
-    const { combinedTrace, reportData } = await combineTraces(inputs.sourceDir, inputs.buildDir);
-    fnlog(`Combined trace with ${combinedTrace.traceEvents.length} events`);
-    const combinedTracePath = inputs.outputPath;
-    fs.writeFileSync(combinedTracePath, JSON.stringify(combinedTrace, null, 2));
-    core.info(`Saved combined trace to ${combinedTracePath}`);
-    core.endGroup();
-
-    core.startGroup('📄 Generate Time Trace Report');
-    const reportContent = generateReport(reportData);
-    fs.writeFileSync(inputs.reportPath, reportContent);
-    core.info(`Saved report to ${inputs.reportPath}`);
-    core.endGroup();
-
-    if (inputs.updateSummary) {
-        core.startGroup('📄 Time Trace Report Summary');
-        core.summary.addRaw(reportContent);
-        if (inputs.uploadArtifact) {
-            core.summary.addRaw('\n\n[For more information and graphics, see the time-trace artifacts](#artifacts)\n\n');
-        }
-        core.endGroup();
-    }
-
-    core.startGroup('🖼️ Generate SVG Time Trace');
-    const imagePath = inputs.outputPath + '.svg';
-    const { SVGContent } = await generateSVGFlameGraph(combinedTrace);
-    fs.writeFileSync(imagePath, SVGContent);
-    core.endGroup();
-
-    if (inputs.uploadArtifact) {
-        core.startGroup('📄 Artifact Readme File');
-        const readmePath = path.join(path.dirname(inputs.reportPath), 'time-trace-readme.md');
-        await createReadmeFile(readmePath);
-        core.info(`Saved readme to ${readmePath}`);
-        core.endGroup();
-
-        core.startGroup('⬆️ Upload Time Trace Artifacts');
-        await uploadArtifacts(inputs, [readmePath, imagePath, combinedTracePath]);
-        core.endGroup();
-    }
-
-    return { tracesPath: combinedTracePath, svgPath: imagePath };
-}
-
-/**
- * Converts raw schema inputs to the internal MainInputs format.
- *
- * @param raw - Raw inputs from schema parsing
- * @returns Converted inputs for the main function
- */
-function convertRawInputs(raw: RawInputs): MainInputs {
-    const sourceDir = path.resolve(raw.sourceDir);
-    const buildDir = path.resolve(raw.buildDir);
-    return {
-        sourceDir,
-        buildDir,
-        outputPath: path.resolve(buildDir, raw.outputPath),
-        reportPath: path.resolve(buildDir, raw.reportPath),
-        updateSummary: raw.updateSummary,
-        uploadArtifact: raw.uploadArtifact
-    };
+async function main(inputs: Inputs): Promise<MainOutputs> {
+    return new FlamegraphRunner(inputs).run();
 }
 
 /**
@@ -549,8 +631,7 @@ runAction({
     inputsSchema,
     outputsSchema,
     title: 'Flamegraph',
-    main: async (rawInputs: RawInputs) => {
-        const inputs = convertRawInputs(rawInputs);
+    main: async (inputs: Inputs) => {
         const outputs = await main(inputs);
         return {
             tracesPath: outputs.tracesPath,

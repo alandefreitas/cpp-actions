@@ -6,7 +6,8 @@
 
 import * as semver from 'semver';
 
-import { type Inputs, type MatrixEntry } from './types';
+import { type MatrixEntry } from './types';
+import { type Inputs } from './schema';
 
 import * as setup_program from 'setup-program';
 

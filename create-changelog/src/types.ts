@@ -4,15 +4,6 @@
  * @module types
  */
 
-import type { InferInputs } from 'action-schema';
-import type { inputsSchema } from './schema';
-
-/**
- * Raw input type as parsed from the schema.
- * Uses simple types that are later converted to internal types.
- */
-export type RawInputs = InferInputs<typeof inputsSchema>;
-
 /**
  * Represents a parsed git commit with conventional commit information.
  *
@@ -118,34 +109,6 @@ export function parseSortByOption(value: string): SortByOption {
         return normalized as SortByOption;
     }
     return 'most-changes-first';
-}
-
-/**
- * Configuration inputs for the create-changelog action.
- */
-export interface Inputs {
-    /** Path to the source repository */
-    sourceDir: string;
-    /** Pattern to match version strings in commit messages */
-    versionPattern: RegExp;
-    /** Pattern to match version tags */
-    tagPattern: RegExp;
-    /** Path where the changelog will be written */
-    outputPath: string;
-    limit: number;
-    thankNonRegular: boolean;
-    checkUnconventional: CheckUnconventionalMode;
-    linkCommits: boolean;
-    githubToken: string;
-    updateSummary: boolean;
-    traceCommands: boolean;
-    includeTypes: Set<string>;
-    excludeTypes: Set<string>;
-    sortBy: SortByOption;
-    repoBranch?: string;
-    repoUrl?: string;
-    repoOwner?: string;
-    repoName?: string;
 }
 
 /**

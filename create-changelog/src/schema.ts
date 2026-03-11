@@ -7,10 +7,12 @@
  * @module schema
  */
 
+import * as path from 'path';
 import {
     baseInputs,
     type ActionInputsSchema,
-    type ActionOutputsSchema
+    type ActionOutputsSchema,
+    type InferInputs
 } from 'action-schema';
 
 /**
@@ -22,12 +24,13 @@ export const inputsSchema = {
     sourceDir: {
         type: 'path' as const,
         default: '.',
-        description: 'The source directory from whose commits will be analyzed'
+        description: 'The source directory from whose commits will be analyzed',
+        transform: (v) => path.resolve(v as string)
     },
 
     versionPattern: {
-        type: 'string' as const,
-        default: '(Bump|Set)\\s+version',
+        type: 'regex' as const,
+        default: /(Bump|Set)\s+version/,
         description: `A regex pattern used to identify if a commit is a version delimiter.
 
 When a commit has a message that matches this pattern, the list of
@@ -41,8 +44,8 @@ This constraint does not apply to the current and latest commit.`
     },
 
     tagPattern: {
-        type: 'string' as const,
-        default: 'v.*\\..*\\..*',
+        type: 'regex' as const,
+        default: /v.*\..*\..*/,
         description: `A regex pattern used to identify if a commit is a tagged delimiter.
 
 When a commit has the same hash has the commit associated with a
@@ -63,6 +66,8 @@ This constraint does not apply to the current and latest commit.`
     outputPath: {
         type: 'string' as const,
         default: 'CHANGELOG.md',
+        crossTransform: (v: unknown, inputs: Record<string, unknown>) =>
+            path.resolve(inputs.sourceDir as string, v as string),
         description: `The path where the changelog will be stored.
 
 Relative paths are resolved from the source directory.`
@@ -99,7 +104,8 @@ thank you message.`
 
     checkUnconventional: {
         type: 'string' as const,
-        default: 'warn',
+        default: 'warn' as const,
+        validValues: ['false', 'warn', 'error'] as const,
         description: `Check for commits that do not follow the conventional commit format.
 
 This input controls the behavior when unconventional commits are detected:
@@ -169,8 +175,8 @@ with the current changelog.`
     },
 
     includeTypes: {
-        type: 'string[]' as const,
-        default: [] as string[],
+        type: 'set' as const,
+        default: new Set<string>(),
         description: `Comma-separated list of commit types to include in the changelog.
 
 When specified, only commits with these types will appear in the changelog.
@@ -184,8 +190,8 @@ Note: The 'other' type represents commits that don't follow conventional commit 
     },
 
     excludeTypes: {
-        type: 'string[]' as const,
-        default: ['chore', 'style'] as string[],
+        type: 'set' as const,
+        default: new Set(['chore', 'style']),
         description: `Comma-separated list of commit types to exclude from the changelog.
 
 Commits with these types will be filtered out from the changelog output.
@@ -200,7 +206,8 @@ Tip: Use this to create cleaner changelogs by excluding routine maintenance comm
 
     sortBy: {
         type: 'string' as const,
-        default: 'most-changes-first',
+        default: 'most-changes-first' as const,
+        validValues: ['most-changes-first', 'latest-first', 'oldest-first'] as const,
         description: `Specifies how commits should be sorted within each scope in the changelog.
 
 Available options:
@@ -225,3 +232,8 @@ Example: Sort by newest commits first:
  * Output schema for the create-changelog action.
  */
 export const outputsSchema = {} satisfies ActionOutputsSchema;
+
+/**
+ * Input type inferred from the schema.
+ */
+export type Inputs = InferInputs<typeof inputsSchema>;

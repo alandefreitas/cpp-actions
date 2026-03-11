@@ -46,8 +46,7 @@ const baseConfig = {
     // Custom resolver to handle ESM-only @actions/* v3+ package exports
     resolver: path.join(rootDir, 'jest-resolver.js'),
     // Allow transforming ESM-only node_modules (many deps are now ESM-only)
-    transformIgnorePatterns: [],
-    verbose: true
+    transformIgnorePatterns: []
 };
 
 // Action packages (need moduleNameMapper)
@@ -83,6 +82,12 @@ const utilsPackages = [
     'utils/release'
 ];
 
+// Resolve all workspace packages to TypeScript source to avoid ts-jest
+// trying to compile lib/*.js without allowJs
+const workspaceModuleMapper = Object.fromEntries(
+    actionPackages.map(pkg => [`^${pkg}$`, path.join(rootDir, pkg, 'src/index.ts')])
+);
+
 // Generate project configs for actions
 const actionProjects = actionPackages.map(pkg => ({
     ...baseConfig,
@@ -90,7 +95,7 @@ const actionProjects = actionPackages.map(pkg => ({
     rootDir: path.join(rootDir, pkg),
     roots: ['<rootDir>/src'],
     transform: { ...tsTransform, ...esmJsTransform },
-    moduleNameMapper: commonModuleMapper
+    moduleNameMapper: { ...commonModuleMapper, ...workspaceModuleMapper }
 }));
 
 // Generate project configs for common modules
@@ -113,5 +118,6 @@ const utilsProjects = utilsPackages.map(pkg => ({
 
 module.exports = {
     projects: [...actionProjects, ...commonProjects, ...utilsProjects],
-    coverageDirectory: path.join(rootDir, 'coverage')
+    coverageDirectory: path.join(rootDir, 'coverage'),
+    verbose: true
 };

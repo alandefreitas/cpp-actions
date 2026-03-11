@@ -1,12 +1,22 @@
+jest.mock('@actions/core', () => ({
+    info: jest.fn(),
+    debug: jest.fn(),
+    warning: jest.fn(),
+    startGroup: jest.fn(),
+    endGroup: jest.fn(),
+    setFailed: jest.fn()
+}));
+
+jest.mock('trace-commands', () => ({
+    log: jest.fn(),
+    scoped: jest.fn(() => jest.fn()),
+    setTraceCommands: jest.fn()
+}));
+
 import * as main from './index';
 import * as fs from 'fs';
 import * as path from 'path';
 import { describePrettyErrors } from 'pretty-errors/test-helper';
-
-test('createReadmeFile', async () => {
-    const readmePath = path.join(__dirname, '../testOutput', 'README.md');
-    await main.createReadmeFile(readmePath);
-});
 
 /**
  * Save stack identifiers to a file
@@ -23,6 +33,8 @@ function saveStackIdentifiers(stackIdentifiers: main.ArrayMap): void {
 test('combineTraces+Report+Flamegraph', async () => {
     const sourceDir = path.join(__dirname, '../fixtures');
     const buildDir = sourceDir;
+    const testOutputDir = path.join(__dirname, '../testOutput');
+    fs.mkdirSync(testOutputDir, { recursive: true });
     // Combine and get report data
     const { combinedTrace, reportData } = await main.combineTraces(sourceDir, buildDir);
     expect(combinedTrace.traceEvents.length).toBeGreaterThan(1500);

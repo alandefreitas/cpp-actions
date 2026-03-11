@@ -11,7 +11,8 @@ import * as path from 'path';
 import * as traceCommands from 'trace-commands';
 import * as gh_inputs from 'gh-inputs';
 
-import { type Inputs, type ResolvedInputs } from './types';
+import { type Inputs } from './schema';
+import { type ResolvedInputs } from './types';
 
 /**
  * Parses extra arguments into a list or map of arguments.

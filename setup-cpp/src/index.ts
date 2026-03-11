@@ -11,13 +11,33 @@ import * as setup_gcc from 'setup-gcc';
 import * as setup_clang from 'setup-clang';
 import * as setup_msvc from 'setup-msvc';
 
-// Type imports and re-exports
-import { type NormalizedCompiler, type Inputs, type SetupResult } from './types';
-export type { NormalizedCompiler, Inputs, SetupResult }
-
 // Schema imports
-import { inputsSchema, outputsSchema } from './schema';
+import { type Inputs, inputsSchema, outputsSchema } from './schema';
+export type { Inputs };
 export { inputsSchema, outputsSchema };
+
+/**
+ * Result of normalizing a compiler name and version.
+ */
+export interface NormalizedCompiler {
+    compiler: string;
+    version: string;
+}
+
+/**
+ * Result of setting up a C++ compiler.
+ */
+export interface SetupResult {
+    outputPath?: string | null;
+    cc: string | null;
+    cxx: string | null;
+    bindir: string | null;
+    dir: string | null;
+    release?: string | null;
+    versionMajor: number | null;
+    versionMinor: number | null;
+    versionPatch: number | null;
+}
 
 /**
  * Normalizes a compiler name and extracts version information.
@@ -119,101 +139,161 @@ export function resolveMSVCArch(requestedArch: string, envArch: string | undefin
 }
 
 /**
- * Main function that sets up the C++ compiler.
+ * Runner class for the setup-cpp action.
  *
- * @param inputs - Configuration inputs for the action
- * @returns Object containing compiler paths and version info
+ * Orchestrates compiler setup by delegating to the appropriate setup action
+ * (setup-gcc, setup-clang, setup-msvc) or searching PATH for the compiler.
  */
-async function main(inputs: Inputs): Promise<Record<string, unknown>> {
-    // Normalize architecture
-    const normalizedArch = normalizeMSVCArchToken(inputs.arch);
+class SetupCppRunner {
+    /** Frozen action inputs */
+    private readonly inputs: Inputs;
 
-    // Normalize compiler and version
-    const { compiler, version } = normalizeCompiler(inputs.compiler, inputs.version);
+    /** Normalized compiler name (gcc, clang, clang-cl, msvc, mingw, etc.) */
+    private compiler!: string;
 
-    let outputPath: string | null = null;
-    let cc: string | null = null;
-    let cxx: string | null = null;
-    let bindir: string | null = null;
-    let dir: string | null = null;
-    let release: string | null = null;
-    let versionMajor: number | null = null;
-    let versionMinor: number | null = null;
-    let versionPatch: number | null = null;
+    /** Resolved compiler version */
+    private version!: string;
 
-    if (['clang', 'gcc'].includes(compiler) && process.platform === 'linux') {
-        traceCommands.log(`compiler: ${compiler}... forwarding to setup ${compiler} action.`);
+    /** Normalized architecture for MSVC */
+    private normalizedArch!: string;
+
+    /** Absolute path to the C compiler executable */
+    private cc: string | null = null;
+
+    /** Absolute path to the C++ compiler executable */
+    private cxx: string | null = null;
+
+    /** Absolute path to the directory containing the executable */
+    private bindir: string | null = null;
+
+    /** Absolute path to the directory containing the installation */
+    private dir: string | null = null;
+
+    /** Path to the compiler output (typically same as cc) */
+    private outputPath: string | null = null;
+
+    /** Resolved compiler version string (e.g., "14.2.0") */
+    private release: string | null = null;
+
+    /** Resolved version major component */
+    private versionMajor: number | null = null;
+
+    /** Resolved version minor component */
+    private versionMinor: number | null = null;
+
+    /** Resolved version patch component */
+    private versionPatch: number | null = null;
+
+    /**
+     * Creates a new SetupCppRunner instance.
+     *
+     * @param inputs - Action inputs frozen at construction time
+     */
+    constructor(inputs: Inputs) {
+        this.inputs = { ...inputs };
+    }
+
+    /**
+     * Executes the compiler setup pipeline.
+     *
+     * @returns Output map with compiler paths and version info, or empty on failure
+     */
+    async run(): Promise<Record<string, unknown>> {
+        this.normalizedArch = normalizeMSVCArchToken(this.inputs.arch);
+        const normalized = normalizeCompiler(this.inputs.compiler, this.inputs.version);
+        this.compiler = normalized.compiler;
+        this.version = normalized.version;
+
+        if (['clang', 'gcc'].includes(this.compiler) && process.platform === 'linux') {
+            await this.setupLinuxCompiler();
+        } else if (this.compiler === 'msvc') {
+            const success = await this.setupMsvc();
+            if (!success) {
+                return {};
+            }
+        } else if (['mingw', 'mingw32', 'mingw64', 'gcc', 'clang', 'clang-cl'].includes(this.compiler)) {
+            await this.searchPathCompiler();
+        }
+
+        return this.buildOutputs();
+    }
+
+    /**
+     * Sets up GCC or Clang on Linux by delegating to the respective setup action.
+     */
+    private async setupLinuxCompiler(): Promise<void> {
+        traceCommands.log(`compiler: ${this.compiler}... forwarding to setup ${this.compiler} action.`);
         let setupResult: SetupResult | null = null;
-        if (compiler === 'clang') {
-            setupResult = await setup_clang.main(
-                version,
-                inputs.path,
-                inputs.checkLatest,
-                inputs.updateEnvironment
-            );
-        } else if (compiler === 'gcc') {
-            setupResult = await setup_gcc.main(
-                version,
-                inputs.path,
-                inputs.checkLatest,
-                inputs.updateEnvironment
-            );
+        if (this.compiler === 'clang') {
+            setupResult = await setup_clang.main({
+                version: this.version,
+                path: this.inputs.path,
+                checkLatest: this.inputs.checkLatest,
+                updateEnvironment: this.inputs.updateEnvironment,
+                traceCommands: this.inputs.traceCommands
+            });
+        } else if (this.compiler === 'gcc') {
+            setupResult = await setup_gcc.main({
+                version: this.version,
+                path: this.inputs.path,
+                checkLatest: this.inputs.checkLatest,
+                updateEnvironment: this.inputs.updateEnvironment,
+                traceCommands: this.inputs.traceCommands
+            });
         }
         if (setupResult !== null) {
-            outputPath = setupResult.outputPath ?? null;
-            cc = setupResult.cc;
-            cxx = setupResult.cxx;
-            bindir = setupResult.bindir;
-            dir = setupResult.dir;
-            release = setupResult.release ?? null;
-            versionMajor = setupResult.versionMajor;
-            versionMinor = setupResult.versionMinor;
-            versionPatch = setupResult.versionPatch;
+            this.applySetupResult(setupResult);
         }
-    } else if (compiler === 'msvc') {
-        traceCommands.log(`compiler: ${compiler}... forwarding to setup-msvc.`);
-        const arch = resolveMSVCArch(normalizedArch, process.env['PROCESSOR_ARCHITECTURE']);
+    }
+
+    /**
+     * Sets up MSVC by delegating to the setup-msvc action.
+     *
+     * @returns true if setup succeeded, false if it failed
+     */
+    private async setupMsvc(): Promise<boolean> {
+        traceCommands.log(`compiler: ${this.compiler}... forwarding to setup-msvc.`);
+        const arch = resolveMSVCArch(this.normalizedArch, process.env['PROCESSOR_ARCHITECTURE']);
         let msvcOutputs: SetupResult;
         try {
-            msvcOutputs = await setup_msvc.main(
-                version,
+            msvcOutputs = await setup_msvc.main({
+                version: this.version,
                 arch,
-                '',
-                '',
-                false,
-                false,
-                ''
-            );
+                sdk: '',
+                toolset: '',
+                uwp: false,
+                spectre: false,
+                visualStudioVersion: '',
+                traceCommands: this.inputs.traceCommands
+            });
         } catch (error) {
             core.setFailed((error as Error).message);
-            return {};
+            return false;
         }
         core.startGroup('📗 MSVC Environment Variables');
         for (const [key, value] of Object.entries(process.env)) {
             traceCommands.log(`${key}: ${value}`);
         }
         core.endGroup();
-        outputPath = msvcOutputs.cc;
-        cc = msvcOutputs.cc;
-        cxx = msvcOutputs.cxx;
-        bindir = msvcOutputs.bindir;
-        dir = msvcOutputs.dir;
-        release = msvcOutputs.release ?? null;
-        versionMajor = msvcOutputs.versionMajor;
-        versionMinor = msvcOutputs.versionMinor;
-        versionPatch = msvcOutputs.versionPatch;
-    } else if (['mingw', 'mingw32', 'mingw64', 'gcc', 'clang', 'clang-cl'].includes(compiler)) {
-        core.startGroup(`🔍 Searching for ${compiler}`);
-        traceCommands.log(`compiler: ${compiler}... looking for compiler in PATH.`);
+        this.applySetupResult(msvcOutputs);
+        this.outputPath = msvcOutputs.cc;
+        return true;
+    }
+
+    /**
+     * Searches PATH for a compiler executable (mingw, gcc, clang on non-Linux).
+     */
+    private async searchPathCompiler(): Promise<void> {
+        core.startGroup(`🔍 Searching for ${this.compiler}`);
+        traceCommands.log(`compiler: ${this.compiler}... looking for compiler in PATH.`);
         let whichArg: string;
-        if (['mingw', 'mingw32', 'mingw64', 'gcc'].includes(compiler)) {
+        if (['mingw', 'mingw32', 'mingw64', 'gcc'].includes(this.compiler)) {
             whichArg = 'gcc';
-        } else if (compiler === 'clang' && process.platform === 'win32') {
+        } else if (this.compiler === 'clang' && process.platform === 'win32') {
             whichArg = 'clang-cl';
         } else {
-            whichArg = compiler;
+            whichArg = this.compiler;
         }
-        // Check if executable exists
         let compilerPath: string | null;
         try {
             compilerPath = await io.which(whichArg);
@@ -223,63 +303,99 @@ async function main(inputs: Inputs): Promise<Record<string, unknown>> {
         if (compilerPath === null || compilerPath === '') {
             core.setFailed(`Cannot find ${whichArg}`);
         } else {
-            // Set outputs
-            outputPath = compilerPath;
-            cc = compilerPath;
-            cxx = compilerPath.replace(/gcc/g, 'g++').replace(/clang/g, 'clang++');
-            if (!fs.existsSync(cxx)) {
-                cxx = cc;
+            this.outputPath = compilerPath;
+            this.cc = compilerPath;
+            this.cxx = compilerPath.replace(/gcc/g, 'g++').replace(/clang/g, 'clang++');
+            if (!fs.existsSync(this.cxx)) {
+                this.cxx = this.cc;
             }
-            bindir = path.dirname(outputPath);
-            dir = path.dirname(bindir);
-
-            // Get version
-            const { exitCode, stdout } = await exec.getExecOutput(`"${outputPath}"`, ['--version']);
-            const versionOutput = stdout.trim();
-            if (exitCode !== 0) {
-                traceCommands.log(`Path program ${outputPath} --version exited with code ${exitCode}`);
-                release = '0.0.0';
-                versionMajor = 0;
-                versionMinor = 0;
-                versionPatch = 0;
-            } else {
-                const versionRegexes = [/(\d+\.\d+\.\d+)/, /(\d+\.\d+)/, /(\d+)/];
-                for (const versionRegex of versionRegexes) {
-                    const versionMatches = versionOutput.match(versionRegex);
-                    if (versionMatches !== null) {
-                        const versionStr = versionMatches[1];
-                        const parsedVersion = semver.coerce(versionStr, { loose: true });
-                        if (parsedVersion === null) {
-                            continue;
-                        }
-                        release = parsedVersion.toString();
-                        versionMajor = parsedVersion.major;
-                        versionMinor = parsedVersion.minor;
-                        versionPatch = parsedVersion.patch;
-                        break;
-                    }
-                }
-            }
+            this.bindir = path.dirname(this.outputPath);
+            this.dir = path.dirname(this.bindir);
+            await this.detectVersionFromPath();
         }
         core.endGroup();
     }
 
-    // Return outputs
-    if (outputPath !== null && outputPath !== undefined) {
-        return {
-            cc,
-            cxx,
-            bindir,
-            dir,
-            version: release,
-            versionMajor,
-            versionMinor,
-            versionPatch
-        };
+    /**
+     * Detects the compiler version by running `--version` on the output path.
+     */
+    private async detectVersionFromPath(): Promise<void> {
+        const { exitCode, stdout } = await exec.getExecOutput(`"${this.outputPath}"`, ['--version']);
+        const versionOutput = stdout.trim();
+        if (exitCode !== 0) {
+            traceCommands.log(`Path program ${this.outputPath} --version exited with code ${exitCode}`);
+            this.release = '0.0.0';
+            this.versionMajor = 0;
+            this.versionMinor = 0;
+            this.versionPatch = 0;
+        } else {
+            const versionRegexes = [/(\d+\.\d+\.\d+)/, /(\d+\.\d+)/, /(\d+)/];
+            for (const versionRegex of versionRegexes) {
+                const versionMatches = versionOutput.match(versionRegex);
+                if (versionMatches !== null) {
+                    const versionStr = versionMatches[1];
+                    const parsedVersion = semver.coerce(versionStr, { loose: true });
+                    if (parsedVersion === null) {
+                        continue;
+                    }
+                    this.release = parsedVersion.toString();
+                    this.versionMajor = parsedVersion.major;
+                    this.versionMinor = parsedVersion.minor;
+                    this.versionPatch = parsedVersion.patch;
+                    break;
+                }
+            }
+        }
     }
 
-    core.setFailed(`Cannot setup ${compiler}`);
-    return {};
+    /**
+     * Applies a setup result from a delegated action to class members.
+     *
+     * @param result - The setup result to apply
+     */
+    private applySetupResult(result: SetupResult): void {
+        this.outputPath = result.outputPath ?? null;
+        this.cc = result.cc;
+        this.cxx = result.cxx;
+        this.bindir = result.bindir;
+        this.dir = result.dir;
+        this.release = result.release ?? null;
+        this.versionMajor = result.versionMajor;
+        this.versionMinor = result.versionMinor;
+        this.versionPatch = result.versionPatch;
+    }
+
+    /**
+     * Builds the output map from accumulated state.
+     *
+     * @returns Output map with compiler paths and version, or empty on failure
+     */
+    private buildOutputs(): Record<string, unknown> {
+        if (this.outputPath !== null && this.outputPath !== undefined) {
+            return {
+                cc: this.cc,
+                cxx: this.cxx,
+                bindir: this.bindir,
+                dir: this.dir,
+                version: this.release,
+                versionMajor: this.versionMajor,
+                versionMinor: this.versionMinor,
+                versionPatch: this.versionPatch
+            };
+        }
+        core.setFailed(`Cannot setup ${this.compiler}`);
+        return {};
+    }
+}
+
+/**
+ * Main function that sets up the C++ compiler.
+ *
+ * @param inputs - Configuration inputs for the action
+ * @returns Object containing compiler paths and version info
+ */
+async function main(inputs: Inputs): Promise<Record<string, unknown>> {
+    return new SetupCppRunner(inputs).run();
 }
 
 /**

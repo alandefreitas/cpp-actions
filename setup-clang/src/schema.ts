@@ -12,7 +12,8 @@ import {
     createCompilerOutputs,
     createCompilerPrefixRemover,
     type ActionInputsSchema,
-    type ActionOutputsSchema
+    type ActionOutputsSchema,
+    type InferInputs
 } from 'action-schema';
 
 /**
@@ -61,3 +62,9 @@ TSAN_SYMBOLIZER_PATH, and UBSAN_SYMBOLIZER_PATH environment variables
 when update-environment is true.`
     }
 } satisfies ActionOutputsSchema;
+
+/**
+ * Input configuration for the setup-clang action.
+ * Inferred from the schema definition.
+ */
+export type Inputs = InferInputs<typeof inputsSchema>;

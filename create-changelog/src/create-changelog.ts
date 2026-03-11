@@ -1,35 +1,8 @@
 import * as fs from 'fs';
-import { main, type SortByOption, parseSortByOption } from './index';
+import { main } from './index';
 import * as traceCommands from 'trace-commands';
 
-/**
- * Valid modes for the check-unconventional input.
- *
- * - 'false': Disable checking (no warnings or errors)
- * - 'warn': Emit warnings for unconventional commits
- * - 'error': Fail the action if unconventional commits are found
- */
-type CheckUnconventionalMode = 'false' | 'warn' | 'error';
-
-/**
- * CLI input options for the create-changelog tool.
- */
-interface CliInputs {
-    sourceDir: string;
-    versionPattern: RegExp;
-    tagPattern: RegExp;
-    outputPath: string;
-    limit: number;
-    thankNonRegular: boolean;
-    checkUnconventional: CheckUnconventionalMode;
-    linkCommits: boolean;
-    githubToken: string;
-    updateSummary: boolean;
-    traceCommands: boolean;
-    includeTypes: Set<string>;
-    excludeTypes: Set<string>;
-    sortBy: SortByOption;
-}
+import type { Inputs } from './schema';
 
 /**
  * Normalizes a file path by expanding ~ and converting backslashes.
@@ -63,34 +36,13 @@ function toIntegerInput(value: string): number | undefined {
 }
 
 /**
- * Parses a check-unconventional CLI argument value into its mode.
- *
- * Handles backwards compatibility with boolean values ('true'/'false')
- * and the new mode values ('warn'/'error').
- *
- * @param value - The CLI argument value to parse
- * @returns The normalized CheckUnconventionalMode
- */
-function parseCheckUnconventionalMode(value: string): CheckUnconventionalMode {
-    const normalized = value.toLowerCase().trim();
-    if (normalized === 'false') {
-        return 'false';
-    }
-    if (normalized === 'error') {
-        return 'error';
-    }
-    // 'true', 'warn', or any other value defaults to 'warn'
-    return 'warn';
-}
-
-/**
  * Parses command line arguments into CLI input options.
  *
  * @returns Parsed CLI input configuration
  */
-function parseArgs(): CliInputs {
+function parseArgs(): Inputs {
     const args = process.argv.slice(2);
-    const inputs: CliInputs = {
+    const inputs: Inputs = {
         sourceDir: normalizePath(process.cwd()),
         versionPattern: /^v\d+\.\d+\.\d+$/,
         tagPattern: /^v\d+\.\d+\.\d+$/,
@@ -130,7 +82,7 @@ function parseArgs(): CliInputs {
                 inputs.thankNonRegular = args[++i] === 'true';
                 break;
             case '--checkUnconventional':
-                inputs.checkUnconventional = parseCheckUnconventionalMode(args[++i]);
+                inputs.checkUnconventional = args[++i] as typeof inputs.checkUnconventional;
                 break;
             case '--linkCommits':
                 inputs.linkCommits = args[++i] === 'true';
@@ -151,7 +103,7 @@ function parseArgs(): CliInputs {
                 inputs.excludeTypes = new Set(args[++i].split(',').map(t => t.trim()).filter(t => t));
                 break;
             case '--sortBy':
-                inputs.sortBy = parseSortByOption(args[++i]);
+                inputs.sortBy = args[++i] as typeof inputs.sortBy;
                 break;
             default:
                 sink.push(args[i]);

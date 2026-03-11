@@ -6,7 +6,8 @@
 
 import * as semver from 'semver';
 
-import { type CompilerSuggestion, type Inputs, type MatrixEntry } from './types';
+import { type CompilerSuggestion, type MatrixEntry } from './types';
+import { type Inputs } from './schema';
 import { getVisualCppYear } from './versions';
 import { humanizeCompilerName } from './compiler-support';
 

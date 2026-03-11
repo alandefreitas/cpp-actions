@@ -1,7 +1,6 @@
 import * as core from '@actions/core';
 import * as semver from 'semver';
- 
-import { execSync as _execSync } from 'child_process';
+
 import * as Handlebars from 'handlebars';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -9,24 +8,15 @@ import * as traceCommands from 'trace-commands';
 import { runAction } from 'action-schema';
 
 import {
-    type RawInputs,
-    type CompilerFactors,
-    type CompilerSuggestion,
     type KeyValue,
-    type SubrangePolicyMap,
-    type Inputs,
     type MatrixEntry
 } from './types';
 
 // Schema imports
-import { inputsSchema, outputsSchema } from './schema';
+import { inputsSchema, outputsSchema, type Inputs } from './schema';
 export { inputsSchema, outputsSchema };
 
 import {
-    parseCompilerRequirements,
-    parseCompilerFactors,
-    parseCompilerSuggestions,
-    normalizeCppVersionRequirement,
     normalizeCompilerName
 } from './parsing';
 
@@ -38,7 +28,6 @@ import {
 
 import {
     humanizeCompilerName,
-    compilerEmoji,
     warnEmptyCompilerEntries,
     getCompilerCxxStds
 } from './compiler-support';
@@ -48,7 +37,6 @@ import {
     setCompilerExecutableNames,
     setCompilerExecutableNamesNoVersion,
     setCompilerContainerNoVersion,
-    isArrayOfObjects,
     setSuggestion,
     appendSuggestion,
     applyForcedFactors,
@@ -75,8 +63,16 @@ import { sortMatrix } from './sorting';
 
 import { registerHelpers } from './handlebars-helpers';
 
+import { generateTable } from './summary-table';
+
 // Re-export handlebars helpers
 export { registerHelpers } from './handlebars-helpers';
+
+// Re-export summary table functions
+export { generateTable, getAllFactors } from './summary-table';
+
+// Re-export input normalization functions
+export { parseKeyValues } from './input-normalization';
 
 // Re-export types for external consumers
 export {
@@ -85,17 +81,14 @@ export {
     CompilerSuggestion,
     KeyValue,
     SubrangePolicyMap,
-    Inputs,
     MatrixEntry,
-    ContainerConfig,
-    SubrangePolicy,
-    FailureRates,
-    WorkflowJob,
-    WorkflowRun
+    ContainerConfig
 } from './types';
 
-// Re-export SubrangePolicies constant
-export { SubrangePolicies } from './types';
+// Re-export co-located types
+export { SubrangePolicies, type SubrangePolicy } from './versions';
+export { type FailureRates, type WorkflowJob, type WorkflowRun } from './failure-rates';
+export { type Inputs } from './schema';
 
 // Re-export parsing functions
 export {
@@ -176,7 +169,329 @@ function setOS(matrix: MatrixEntry[]): void {
 }
 
 /**
- * Generates the complete CI/CD test matrix based on input configuration.
+ * Orchestrates the full matrix generation pipeline.
+ *
+ * Wraps the matrix generation logic in a class with frozen inputs
+ * and pipeline state as class members. Pipeline phases (generate entries,
+ * apply factors, set OS, sort) are organized as private methods.
+ */
+class CppMatrixRunner {
+    /** Frozen input configuration */
+    private readonly inputs: Inputs;
+
+    /** Accumulated matrix entries */
+    private matrix: MatrixEntry[] = [];
+
+    /** Filtered C++ standard versions matching the standards requirement */
+    private cxxstds: number[] = [];
+
+    /**
+     * Creates a new CppMatrixRunner.
+     *
+     * @param inputs - Configuration inputs for matrix generation
+     */
+    constructor(inputs: Inputs) {
+        this.inputs = inputs;
+    }
+
+    /**
+     * Runs the full matrix generation pipeline.
+     *
+     * @returns Array of matrix entries ready for use in GitHub Actions workflows
+     */
+    async run(): Promise<MatrixEntry[]> {
+        this.resolveCxxStandards();
+        await this.generateEntries();
+        await this.applyRecommendedFlags();
+        this.applyCustomValues();
+        this.applyOS();
+        this.applyExtraValues();
+        this.sortEntries();
+        await this.applySortByFailureRate();
+        this.logFinalMatrix();
+        this.generateSummaryTable();
+        this.writeOutputFile();
+        return this.matrix;
+    }
+
+    /**
+     * Resolves C++ standard versions from the standards requirement string.
+     */
+    private resolveCxxStandards(): void {
+        const allcxxstds = ['1998.0.0', '2003.0.0', '2011.0.0', '2014.0.0', '2017.0.0', '2020.0.0', '2023.0.0', '2026.0.0'];
+        this.cxxstds = allcxxstds.filter(v => semver.satisfies(v, this.inputs.standards)).map(v => {
+            const parsed = semver.parse(v);
+            return parsed ? parsed.major : 0;
+        }).filter(v => v !== 0);
+    }
+
+    /**
+     * Generates matrix entries for all compiler/version combinations.
+     * Iterates over compilers, resolves version subranges, creates entries,
+     * and applies latest/variant/combinatorial factors per compiler.
+     */
+    private async generateEntries(): Promise<void> {
+        const fnlog = traceCommands.scoped('generateMatrix');
+
+        core.startGroup('🔄 Generating matrix entries');
+        const compilers = Object.entries(this.inputs.compilers);
+
+        for (const [compilerName0, range] of compilers) {
+            fnlog(`Generating entries for ${compilerName0} version ${range}`);
+            const earliestIdx = this.matrix.length;
+            const compilerName = normalizeCompilerName(compilerName0);
+            fnlog(`Find versions for ${compilerName}`);
+            const allCompilerVersions = await findCompilerVersions(compilerName);
+            const subrangePolicyStr = this.inputs.subrangePolicy[compilerName] || this.inputs.subrangePolicy[''] || 'one-per-major';
+            fnlog(`Subrange policy for ${compilerName}: ${subrangePolicyStr}`);
+            const subranges = splitRanges(range, allCompilerVersions, getSubrangePolicy(subrangePolicyStr));
+            fnlog(`${compilerName} sub-ranges: ${JSON.stringify(subranges)}`);
+
+            // Iterate over subranges and generate an entry for each
+            for (let i = 0; i < subranges.length; i++) {
+                fnlog(`Generating entry for ${compilerName} subrange ${subranges[i]}`);
+                const subrange = subranges[i];
+                const entry: MatrixEntry = {
+                    'name': `${humanizeCompilerName(compilerName)}`,
+                    'compiler': compilerName,
+                    'version': subrange,
+                    'env': {},
+                    'is-latest': false,
+                    'is-main': false,
+                    'is-earliest': false,
+                    'is-intermediary': false,
+                    'has-major': false,
+                    'has-minor': false,
+                    'has-patch': false,
+                    'subrange-policy': ''
+                };
+
+                // The standards we should test with this compiler
+                const minSubrangeVersion = semver.parse(semver.minSatisfying(allCompilerVersions, subrange) || '');
+                const maxSubrangeVersion = semver.parse(semver.maxSatisfying(allCompilerVersions, subrange) || '');
+
+                // Handle the case when no versions are known for this compiler.
+                // We still generate an entry with version "*" so downstream jobs
+                // can test with whatever version is available on the runner.
+                const noKnownVersions = allCompilerVersions.length === 0;
+
+                if (!noKnownVersions && (!minSubrangeVersion || !maxSubrangeVersion)) {
+                    // We have known versions but none match the subrange - skip
+                    continue;
+                }
+
+                let compilerCxxstds: string[] = [];
+                if (noKnownVersions) {
+                    // No known versions - we can't filter by C++ standard support,
+                    // so we don't set cxxstd fields. The entry will test whatever
+                    // standards the runner's compiler supports.
+                } else {
+                    const result = getCompilerCxxStds(
+                        entry, this.inputs, allCompilerVersions, this.cxxstds, compilerName, minSubrangeVersion!);
+                    if (result === undefined) {
+                        // This compiler version does not support any of the standards
+                        // we want to test. Skip it.
+                        continue;
+                    }
+                    compilerCxxstds = result;
+                }
+
+                setEntrySemverComponents(entry, minSubrangeVersion, maxSubrangeVersion);
+                if (minSubrangeVersion) {
+                    setCompilerExecutableNames(entry, compilerName, minSubrangeVersion);
+                    setCompilerContainer(entry, this.inputs, compilerName, minSubrangeVersion, subrange);
+                    setCompilerCMakeGenerator(entry, this.inputs, compilerName, minSubrangeVersion, maxSubrangeVersion!, subrange);
+                } else {
+                    // No known versions - set defaults based on compiler name
+                    setCompilerExecutableNamesNoVersion(entry, compilerName);
+                    setCompilerContainerNoVersion(entry, compilerName);
+                }
+                setCompilerB2Toolset(entry, this.inputs, compilerName, subrange);
+                setEntryVersionFlags(entry, i, subranges, minSubrangeVersion, maxSubrangeVersion);
+                setEntryName(entry, compilerName, subrange, compilerCxxstds);
+                this.matrix.push(entry);
+                fnlog(`Entry: ${JSON.stringify(entry)}`);
+            }
+            if (earliestIdx === this.matrix.length) {
+                fnlog(`${compilerName}: 0 basic entries`);
+                if (this.inputs.warnNoMatches) {
+                    warnEmptyCompilerEntries(compilerName, range, allCompilerVersions, this.cxxstds, this.inputs.standards);
+                }
+                continue;
+            }
+
+            fnlog(`Apply factors for ${compilerName}`);
+            const latestIdx = this.matrix.length - 1;
+            fnlog(`${compilerName}: ${latestIdx - earliestIdx} basic entries`);
+            applyLatestFactors(this.matrix, this.inputs, latestIdx, earliestIdx, compilerName);
+            applyVariantFactors(this.matrix, this.inputs, latestIdx, earliestIdx, compilerName);
+            applyCombinatorialFactors(this.matrix, this.inputs, latestIdx, earliestIdx, compilerName);
+            for (let i = earliestIdx; i < this.matrix.length; i++) {
+                if (!('has-factors' in this.matrix[i])) {
+                    this.matrix[i]['has-factors'] = false;
+                }
+                this.matrix[i]['is-no-factor-intermediary'] = this.matrix[i]['is-intermediary'] && !this.matrix[i]['has-factors'];
+                this.matrix[i]['is-container'] = 'container' in this.matrix[i];
+            }
+            fnlog(`${compilerName}: ${this.matrix.length - earliestIdx} total entries`);
+        }
+
+        this.printMatrix();
+        core.endGroup();
+    }
+
+    /**
+     * Applies recommended compiler/sanitizer flags to each matrix entry.
+     */
+    private async applyRecommendedFlags(): Promise<void> {
+        core.startGroup('⚙️ Set recommended flags');
+        for (const entry of this.matrix) {
+            await setRecommendedFlags(entry, this.inputs);
+        }
+        this.printMatrix();
+        core.endGroup();
+    }
+
+    /**
+     * Applies user-provided custom values (suggestions) to each matrix entry.
+     * Handles containers, generators, toolsets, flags, install packages, etc.
+     */
+    private applyCustomValues(): void {
+        core.startGroup('👤 Set custom values');
+        for (const entry of this.matrix) {
+            if (setSuggestion(entry, 'container', this.inputs.containers, entry.version)) {
+                entry['runs-on'] = 'ubuntu-22.04';
+            }
+            setSuggestion(entry, 'b2-toolset', this.inputs.generators, entry.version);
+            setSuggestion(entry, 'generator', this.inputs.generators, entry.version);
+            setSuggestion(entry, 'generator-toolset', this.inputs.generatorToolsets, entry.version);
+            setSuggestion(entry, 'runs-on', this.inputs.runsOn, entry.version);
+            setSuggestion(entry, 'ccflags', this.inputs.ccflags, entry.version);
+            setSuggestion(entry, 'cxxflags', this.inputs.cxxflags, entry.version);
+            setSuggestion(entry, 'install', this.inputs.install, entry.version);
+            setSuggestion(entry, 'triplet', this.inputs.triplets, entry.version);
+            setSuggestion(entry, 'build-type', this.inputs.buildTypes, entry.version);
+            appendSuggestion(entry, 'ccflags', this.inputs.appendCcflags, entry.version);
+            appendSuggestion(entry, 'cxxflags', this.inputs.appendCxxflags, entry.version);
+            appendSuggestion(entry, 'install', this.inputs.appendInstall, entry.version);
+            applyForcedFactors(entry, this.inputs.forceFactors, entry.version);
+        }
+        this.printMatrix();
+        core.endGroup();
+    }
+
+    /**
+     * Sets the OS field for each matrix entry based on runs-on configuration.
+     */
+    private applyOS(): void {
+        core.startGroup('🖥️ Set OS');
+        setOS(this.matrix);
+        core.endGroup();
+    }
+
+    /**
+     * Injects extra key-value pairs into all matrix entries using Handlebars templates.
+     */
+    private applyExtraValues(): void {
+        if (this.inputs.extraValues) {
+            core.startGroup('🔧 Add extra values');
+            injectExtraValues(this.matrix, this.inputs.extraValues);
+            core.endGroup();
+        }
+    }
+
+    /**
+     * Sorts matrix entries by compiler, version, and factors.
+     */
+    private sortEntries(): void {
+        core.startGroup('🔀 Sort matrix');
+        sortMatrix(this.matrix, this.inputs);
+        this.printMatrix();
+        core.endGroup();
+    }
+
+    /**
+     * Sorts matrix entries by historical failure rate if enabled.
+     */
+    private async applySortByFailureRate(): Promise<void> {
+        if (!this.inputs.sortByFailureRate) {
+            return;
+        }
+        core.startGroup('📊 Sort by failure rate');
+        core.info(`Fetching failure rates from last ${this.inputs.failureRateRuns} workflow runs...`);
+        const failureRates = await fetchFailureRates(this.inputs.failureRateRuns, this.inputs.githubToken);
+        if (failureRates) {
+            sortByFailureRate(this.matrix, failureRates);
+            core.info('Matrix sorted by failure rate (high to low)');
+            this.printMatrix();
+        } else {
+            core.info('Could not fetch failure rates, keeping existing order');
+        }
+        core.endGroup();
+    }
+
+    /**
+     * Logs the final matrix to the action output.
+     */
+    private logFinalMatrix(): void {
+        core.startGroup('🏁 Final matrix');
+        if (this.inputs.logMatrix) {
+            core.info(`Matrix (${this.matrix.length} entries):`);
+            this.matrix.forEach((obj) => {
+                core.info(`- ${JSON.stringify(obj)}`);
+            });
+        } else {
+            this.printMatrix();
+        }
+        core.endGroup();
+    }
+
+    /**
+     * Generates a summary table if enabled.
+     */
+    private generateSummaryTable(): void {
+        if (!this.inputs.generateSummary) {
+            return;
+        }
+        core.startGroup('📋 C++ Matrix Summary');
+        const table = generateTable(this.matrix, this.inputs);
+        core.summary.addHeading('C++ Test Matrix').addTable(table).write().then(result => {
+            traceCommands.log('Table generated' + JSON.stringify(result));
+        }).catch(error => {
+            traceCommands.log('An error occurred generating the table:' + JSON.stringify(error));
+        });
+        core.info('Summary table generated');
+        core.endGroup();
+    }
+
+    /**
+     * Writes the matrix to a file if an output file is specified.
+     */
+    private writeOutputFile(): void {
+        if (!this.inputs.outputFile) {
+            return;
+        }
+        core.startGroup('📄 Write matrix to file');
+        const filename = path.resolve(this.inputs.outputFile);
+        const content = JSON.stringify(this.matrix, null, 2);
+        fs.writeFileSync(filename, content);
+        core.info(`Matrix written to ${filename}`);
+        core.endGroup();
+    }
+
+    /**
+     * Logs the current matrix state to trace output.
+     */
+    private printMatrix(): void {
+        traceCommands.log(`Matrix (${this.matrix.length} entries):`);
+        this.matrix.forEach(obj => {
+            traceCommands.log(`- ${JSON.stringify(obj)}`);
+        });
+    }
+}
+
+/**
+ * Generates the complete CI/CD test matrix based on parsed input configuration.
  *
  * This function creates an array of matrix entries representing all combinations
  * of compilers, versions, C++ standards, and build factors to test. It handles
@@ -187,671 +502,16 @@ function setOS(matrix: MatrixEntry[]): void {
  * @returns Array of matrix entries ready for use in GitHub Actions workflows
  */
 export async function generateMatrix(inputs: Inputs): Promise<MatrixEntry[]> {
-    const fnlog = traceCommands.scoped('generateMatrix');
-
-    const matrix: MatrixEntry[] = [];
-    const allcxxstds = ['1998.0.0', '2003.0.0', '2011.0.0', '2014.0.0', '2017.0.0', '2020.0.0', '2023.0.0', '2026.0.0'];
-    const cxxstds = allcxxstds.filter(v => semver.satisfies(v, inputs.standards)).map(v => {
-        const parsed = semver.parse(v);
-        return parsed ? parsed.major : 0;
-    }).filter(v => v !== 0);
-
-    core.startGroup('🔄 Generating matrix entries');
-    const compilers = Object.entries(inputs.compiler_versions);
-
-    for (const [compilerName0, range] of compilers) {
-        fnlog(`Generating entries for ${compilerName0} version ${range}`);
-        const earliestIdx = matrix.length;
-        const compilerName = normalizeCompilerName(compilerName0);
-        fnlog(`Find versions for ${compilerName}`);
-        const allCompilerVersions = await findCompilerVersions(compilerName);
-        const subrangePolicyStr = inputs.subrangePolicy[compilerName] || inputs.subrangePolicy[''] || 'one-per-major';
-        fnlog(`Subrange policy for ${compilerName}: ${subrangePolicyStr}`);
-        const subranges = splitRanges(range, allCompilerVersions, getSubrangePolicy(subrangePolicyStr));
-        fnlog(`${compilerName} sub-ranges: ${JSON.stringify(subranges)}`);
-
-        // Iterate over subranges and generate an entry for each
-        for (let i = 0; i < subranges.length; i++) {
-            fnlog(`Generating entry for ${compilerName} subrange ${subranges[i]}`);
-            const subrange = subranges[i];
-            const entry: MatrixEntry = {
-                'name': `${humanizeCompilerName(compilerName)}`,
-                'compiler': compilerName,
-                'version': subrange,
-                'env': {},
-                'is-latest': false,
-                'is-main': false,
-                'is-earliest': false,
-                'is-intermediary': false,
-                'has-major': false,
-                'has-minor': false,
-                'has-patch': false,
-                'subrange-policy': ''
-            };
-
-            // The standards we should test with this compiler
-            const minSubrangeVersion = semver.parse(semver.minSatisfying(allCompilerVersions, subrange) || '');
-            const maxSubrangeVersion = semver.parse(semver.maxSatisfying(allCompilerVersions, subrange) || '');
-
-            // Handle the case when no versions are known for this compiler.
-            // We still generate an entry with version "*" so downstream jobs
-            // can test with whatever version is available on the runner.
-            const noKnownVersions = allCompilerVersions.length === 0;
-
-            if (!noKnownVersions && (!minSubrangeVersion || !maxSubrangeVersion)) {
-                // We have known versions but none match the subrange - skip
-                continue;
-            }
-
-            let compilerCxxstds: string[] = [];
-            if (noKnownVersions) {
-                // No known versions - we can't filter by C++ standard support,
-                // so we don't set cxxstd fields. The entry will test whatever
-                // standards the runner's compiler supports.
-            } else {
-                const result = getCompilerCxxStds(
-                    entry, inputs, allCompilerVersions, cxxstds, compilerName, minSubrangeVersion!);
-                if (result === undefined) {
-                    // This compiler version does not support any of the standards
-                    // we want to test. Skip it.
-                    continue;
-                }
-                compilerCxxstds = result;
-            }
-
-            setEntrySemverComponents(entry, minSubrangeVersion, maxSubrangeVersion);
-            if (minSubrangeVersion) {
-                setCompilerExecutableNames(entry, compilerName, minSubrangeVersion);
-                setCompilerContainer(entry, inputs, compilerName, minSubrangeVersion, subrange);
-                setCompilerCMakeGenerator(entry, inputs, compilerName, minSubrangeVersion, maxSubrangeVersion!, subrange);
-            } else {
-                // No known versions - set defaults based on compiler name
-                setCompilerExecutableNamesNoVersion(entry, compilerName);
-                setCompilerContainerNoVersion(entry, compilerName);
-            }
-            setCompilerB2Toolset(entry, inputs, compilerName, subrange);
-            setEntryVersionFlags(entry, i, subranges, minSubrangeVersion, maxSubrangeVersion);
-            setEntryName(entry, compilerName, subrange, compilerCxxstds);
-            matrix.push(entry);
-            fnlog(`Entry: ${JSON.stringify(entry)}`);
-        }
-        if (earliestIdx === matrix.length) {
-            fnlog(`${compilerName}: 0 basic entries`);
-            if (inputs.warnNoMatches) {
-                warnEmptyCompilerEntries(compilerName, range, allCompilerVersions, cxxstds, inputs.standards);
-            }
-            continue;
-        }
-
-        fnlog(`Apply factors for ${compilerName}`);
-        const latestIdx = matrix.length - 1;
-        fnlog(`${compilerName}: ${latestIdx - earliestIdx} basic entries`);
-        applyLatestFactors(matrix, inputs, latestIdx, earliestIdx, compilerName);
-        applyVariantFactors(matrix, inputs, latestIdx, earliestIdx, compilerName);
-        applyCombinatorialFactors(matrix, inputs, latestIdx, earliestIdx, compilerName);
-        for (let i = earliestIdx; i < matrix.length; i++) {
-            if (!('has-factors' in matrix[i])) {
-                matrix[i]['has-factors'] = false;
-            }
-            matrix[i]['is-no-factor-intermediary'] = matrix[i]['is-intermediary'] && !matrix[i]['has-factors'];
-            matrix[i]['is-container'] = 'container' in matrix[i];
-        }
-        fnlog(`${compilerName}: ${matrix.length - earliestIdx} total entries`);
-    }
-
-    function printMatrix(): void {
-        traceCommands.log(`Matrix (${matrix.length} entries):`);
-        matrix.forEach(obj => {
-            traceCommands.log(`- ${JSON.stringify(obj)}`);
-        });
-    }
-
-    printMatrix();
-    core.endGroup();
-
-    core.startGroup('⚙️ Set recommended flags');
-    // Patch each entry with recommended flags for special factors
-    for (const entry of matrix) {
-        await setRecommendedFlags(entry, inputs);
-    }
-    printMatrix();
-    core.endGroup();
-
-    core.startGroup('👤 Set custom values');
-    for (const entry of matrix) {
-        if (setSuggestion(entry, 'container', inputs.containers, entry.version)) {
-            entry['runs-on'] = 'ubuntu-22.04';
-        }
-        setSuggestion(entry, 'b2-toolset', inputs.generators, entry.version);
-        setSuggestion(entry, 'generator', inputs.generators, entry.version);
-        setSuggestion(entry, 'generator-toolset', inputs.generatorToolsets, entry.version);
-        setSuggestion(entry, 'runs-on', inputs.runsOn, entry.version);
-        setSuggestion(entry, 'ccflags', inputs.ccflags, entry.version);
-        setSuggestion(entry, 'cxxflags', inputs.cxxflags, entry.version);
-        setSuggestion(entry, 'install', inputs.install, entry.version);
-        setSuggestion(entry, 'triplet', inputs.triplets, entry.version);
-        setSuggestion(entry, 'build-type', inputs.buildTypes, entry.version);
-        appendSuggestion(entry, 'ccflags', inputs.appendCcflags, entry.version);
-        appendSuggestion(entry, 'cxxflags', inputs.appendCxxflags, entry.version);
-        appendSuggestion(entry, 'install', inputs.appendInstall, entry.version);
-        applyForcedFactors(entry, inputs.forceFactors, entry.version);
-    }
-    printMatrix();
-    core.endGroup();
-
-    // Set entry OS
-    core.startGroup('🖥️ Set OS');
-    setOS(matrix);
-    core.endGroup();
-
-    if (inputs.extraValues) {
-        core.startGroup('🔧 Add extra values');
-        injectExtraValues(matrix, inputs.extraValues);
-        core.endGroup();
-    }
-
-    core.startGroup('🔀 Sort matrix');
-    sortMatrix(matrix, inputs);
-    printMatrix();
-    core.endGroup();
-
-    // Apply failure rate sorting if enabled
-    if (inputs.sortByFailureRate) {
-        core.startGroup('📊 Sort by failure rate');
-        core.info(`Fetching failure rates from last ${inputs.failureRateRuns} workflow runs...`);
-        const failureRates = await fetchFailureRates(inputs.failureRateRuns, inputs.githubToken);
-        if (failureRates) {
-            sortByFailureRate(matrix, failureRates);
-            core.info('Matrix sorted by failure rate (high to low)');
-            printMatrix();
-        } else {
-            core.info('Could not fetch failure rates, keeping existing order');
-        }
-        core.endGroup();
-    }
-
-    core.startGroup('🏁 Final matrix');
-    if (inputs.logMatrix) {
-        core.info(`Matrix (${matrix.length} entries):`);
-        matrix.forEach((obj) => {
-            core.info(`- ${JSON.stringify(obj)}`);
-        });
-    } else {
-        printMatrix();
-    }
-    core.endGroup();
-
-    if (inputs.generateSummary) {
-        core.startGroup('📋 C++ Matrix Summary');
-        const table = generateTable(matrix, inputs);
-        core.summary.addHeading('C++ Test Matrix').addTable(table).write().then(result => {
-            traceCommands.log('Table generated' + JSON.stringify(result));
-        }).catch(error => {
-            traceCommands.log('An error occurred generating the table:' + JSON.stringify(error));
-        });
-        core.info('Summary table generated');
-        core.endGroup();
-    }
-
-    if (inputs.outputFile) {
-        core.startGroup('📄 Write matrix to file');
-        const filename = path.resolve(inputs.outputFile);
-        const content = JSON.stringify(matrix, null, 2);
-        fs.writeFileSync(filename, content);
-        core.info(`Matrix written to ${filename}`);
-        core.endGroup();
-    }
-
-    return matrix;
+    return new CppMatrixRunner(inputs).run();
 }
 
 /**
- * Returns an emoji representing a matrix factor.
+ * Generates the matrix from schema-inferred inputs.
  *
- * @param factor - Factor name
- * @returns Emoji for the factor
- */
-function factorEmoji(factor: string): string {
-    const factorEmojis: Record<string, string> = {
-        'x86': '💻',
-        'shared': '📚',
-        'ubsan': '🔬',
-        'msan': '🧹',
-        'tsan': '🕵️‍♂️',
-        'intsan': '🧮',
-        'boundsan': '📏',
-        'lsan': '💧',
-        'cfi': '🔒',
-        'coverage': '📊',
-        'asan': '🛡️',
-        'time-trace': '⏱️',
-        'fuzz': '🔀'
-    };
-    if (factor in factorEmojis) {
-        return factorEmojis[factor];
-    }
-    // Check if factor contains '+'
-    if (factor.includes('+')) {
-        for (const compositeFactor of factor.split('+')) {
-            if (compositeFactor in factorEmojis) {
-                return factorEmojis[compositeFactor];
-            }
-        }
-    }
-    return '🔢';
-}
-
-/**
- * Returns an emoji representing a build type.
- *
- * @param buildType - Build type name
- * @returns Emoji for the build type
- */
-function buildTypeEmoji(buildType: string): string {
-    const buildTypeEmojis: Record<string, string> = {
-        'debug': '🐞',
-        'release': '🚀',
-        'relwithdebinfo': '🔍',
-        'minsizerel': '💡'
-    };
-    const lcBuildType = buildType.toLowerCase();
-    if (lcBuildType in buildTypeEmojis) {
-        return buildTypeEmojis[lcBuildType];
-    }
-    return '🏗️';
-}
-
-/**
- * Returns an emoji representing an operating system.
- *
- * @param os - Operating system name
- * @returns Emoji for the OS
- */
-function osEmoji(os: string): string {
-    const osEmojis: Record<string, string> = {
-        'windows': '🪟',
-        'macos': '🍎',
-        'linux': '🐧',
-        'ubuntu': '🐧',
-        'android': '🤖',
-        'ios': '📱'
-    };
-    const lcOs = os.toLowerCase();
-    for (const [key, value] of Object.entries(osEmojis)) {
-        if (lcOs.startsWith(key)) {
-            return value;
-        }
-    }
-    return '🖥️';
-}
-
-/**
- * Gets all unique factors from latest and variant factors.
- *
- * @param latestFactors - Latest factors by compiler
- * @param factors - Variant factors by compiler
- * @returns Array of all unique factor names
- */
-function getAllFactors(latestFactors: CompilerFactors, factors: CompilerFactors): string[] {
-    const allFactors: string[] = [];
-    Object.values(latestFactors).forEach(factors => {
-        for (const factor of factors) {
-            for (const compositeFactor of factor.split('+')) {
-                allFactors.push(compositeFactor);
-            }
-        }
-    });
-    Object.values(factors).forEach(factors => {
-        for (const factor of factors) {
-            for (const compositeFactor of factor.split('+')) {
-                allFactors.push(compositeFactor);
-            }
-        }
-    });
-    return [...new Set(allFactors)];
-}
-
-/**
- * Generates a human-readable table representation of the test matrix.
- *
- * Creates a formatted table with columns for name, environment, compiler,
- * C++ standard, build type, factors/flags/install, and generator/toolset/triplet.
- * Each row represents one matrix entry with appropriate emojis and HTML formatting
- * for display in markdown or GitHub Actions summaries.
- *
- * @param matrix - Array of matrix entries to display in the table
- * @param inputs - Configuration inputs containing factors and latestFactors settings
- * @returns Two-dimensional array representing the table, where each inner array is a row
- *          and cells can be strings or header objects with data and header properties
- */
-export function generateTable(matrix: MatrixEntry[], inputs: Inputs): Array<Array<string | { data: string; header: boolean }>> {
-    const fnlog = traceCommands.scoped('generateTable');
-
-    const { latestFactors, factors } = inputs;
-    if (matrix.length === 0) {
-        return [];
-    }
-
-    const allFactors = getAllFactors(latestFactors, factors);
-    const allFactorKeys = allFactors.map(v => v.toLowerCase());
-
-    // Check if any entry has failure rate data
-    const hasFailureRates = matrix.some(entry => 'failure-rate' in entry);
-
-    const headerValues = [
-        '📋 Name',
-        '🖥️ Environment',
-        '🔧 Compiler',
-        '📚 C++ Standard',
-        '🏗️ Build Type',
-        '🔢 Factors<br/>🚩 Flags<br/>🔧 Install',
-        '🔨 Generator<br/>🛠️ Toolset<br/>💻 Triplet'];
-    if (hasFailureRates) {
-        headerValues.push('📊 Failure<br/>Rate');
-    }
-    const table: Array<Array<string | { data: string; header: boolean }>> = [headerValues.map(key => ({ data: key, header: true }))];
-
-    function transformStdString(inputString: string | undefined): string {
-        if (inputString === undefined || inputString === null || inputString === '') {
-            return 'System Default';
-        }
-        const versions = inputString.split(',');
-        const transformedString = versions.map((version, index) => {
-            if (index === versions.length - 1) {
-                return `C++${version}`;
-            } else {
-                return `C++${version},`;
-            }
-        }).join(' ');
-        const lastIndex = transformedString.lastIndexOf(',');
-        if (lastIndex !== -1) {
-            return transformedString.substring(0, lastIndex) + ' and' + transformedString.substring(lastIndex + 1);
-        }
-        return transformedString;
-    }
-
-    for (const entry of matrix) {
-        const row: string[] = [];
-        const nameEmojis: string[] = [];
-
-        // Name
-        row.push(`${entry['name']}`);
-
-        // Environment
-        if ('container' in entry) {
-            // Check if it's a string
-            if (typeof entry['container'] === 'string') {
-                row.push(`${osEmoji(entry['container'])} <code>${entry['container']}</code><br/>on <code>${entry['runs-on']}</code>`);
-            }
-            // Check if it's an object with the "image" key
-            else if (typeof entry['container'] === 'object' && entry['container'] !== null && 'image' in entry['container']) {
-                row.push(`${osEmoji(entry['container']['image'])} <code>${entry['container']['image']}</code><br/>on <code>${entry['runs-on']}</code>`);
-            }
-        } else {
-            // No container: directly on runner image
-            row.push(`${osEmoji(String(entry['runs-on']))} <code>${entry['runs-on']}</code>`);
-        }
-
-        // Compiler
-        nameEmojis.push(compilerEmoji(entry['compiler']));
-        row.push(`${compilerEmoji(entry['compiler'])} ${humanizeCompilerName(entry['compiler'])} <i>${entry['version']}</i>`);
-        // Standards
-        row.push(`${transformStdString(entry['cxxstd'])}`);
-
-        // Build type
-        if ('build-type' in entry && entry['build-type']) {
-            row.push(`${buildTypeEmoji(entry['build-type'])} ${entry['build-type']}`);
-        } else {
-            row.push('');
-        }
-
-        // Description/Factors
-        const descriptionStrs: string[] = [];
-
-        // - Factors
-        const entryFactors: string[] = [];
-        for (let i = 0; i < allFactors.length && i < allFactorKeys.length; i++) {
-            const fact = allFactors[i];
-            const key = allFactorKeys[i];
-            if (entry[key] === true) {
-                entryFactors.push(`${factorEmoji(key)} ${fact}`);
-                nameEmojis.push(factorEmoji(key));
-            }
-        }
-        if (entryFactors.length !== 0) {
-            descriptionStrs.push(entryFactors.join(', '));
-        }
-
-        // - Latest/Main/Unique/Earliest
-        if (entry['is-main'] === true) {
-            if (entry['is-earliest'] === true) {
-                // This is latest, earliest, and main
-                if (entry['version'] === '*') {
-                    // Version is *, so any version: the system compiler
-                    descriptionStrs.push(`🧰 System ${humanizeCompilerName(entry['compiler'])} version`);
-                    nameEmojis.push('🧰');
-                } else {
-                    // Both main/latest and earliest, so this is a unique version
-                    descriptionStrs.push(`🎩 Unique ${humanizeCompilerName(entry['compiler'])} version`);
-                    nameEmojis.push('🎩');
-                }
-            } else {
-                // Main but not earliest: latest
-                descriptionStrs.push(`🆕 Latest ${humanizeCompilerName(entry['compiler'])} version`);
-                nameEmojis.push('🆕');
-            }
-        } else if (entry['is-earliest'] === true) {
-            // Earliest but not main: describe as earliest
-            descriptionStrs.push(`🕰️ Earliest ${humanizeCompilerName(entry['compiler'])} version`);
-            nameEmojis.push('🕰️');
-        } else if (entryFactors.length === 0) {
-            // No factors, not main/latest/early: Just an intermediary compiler version
-            descriptionStrs.push(`(Intermediary ${humanizeCompilerName(entry['compiler'])} version)`);
-        }
-
-        // - C++ Flags
-        let cxxflags = '';
-        if (entry['cxxflags'] === entry['ccflags']) {
-            if (entry['cxxflags'] && entry['cxxflags'].length !== 0) {
-                // Split entry['cxxflags'] on whitespaces and join with <code> tags around it
-                cxxflags = `<code>${entry['cxxflags'].split(' ').join('</code> <code>')}</code>`;
-            } else {
-                cxxflags = '';
-            }
-        } else {
-            if ((entry['cxxflags'] && entry['cxxflags'].length !== 0) || (entry['ccflags'] && entry['ccflags'].length !== 0)) {
-                cxxflags = `C++: <code>${(entry['cxxflags'] || '').split(' ').join('</code> <code>')}</code>, C: <code>${(entry['ccflags'] || '').split(' ').join('</code> <code>')}</code>`;
-            } else {
-                cxxflags = '';
-            }
-        }
-        if (cxxflags !== '') {
-            descriptionStrs.push(`🚩 ${cxxflags}`);
-        }
-
-        // - Install
-        if ('install' in entry && entry['install'] !== '') {
-            descriptionStrs.push(`🔧 <code>${entry['install']?.split(' ').join('</code> <code>')}</code>`);
-        }
-        row.push(descriptionStrs.join('<br/>'));
-
-        // Generator/Toolset/Triplet
-        let generatorStr = '';
-        if ('generator' in entry) {
-            generatorStr += `<code>${entry['generator']}</code>`;
-            if ('generator-toolset' in entry) {
-                generatorStr += ` (<code>${entry['generator-toolset']}</code>)`;
-            }
-        } else {
-            generatorStr += 'System Default';
-        }
-        if ('b2-toolset' in entry) {
-            generatorStr += `<br/><code>${entry['b2-toolset']}</code>`;
-        }
-        if ('triplet' in entry) {
-            generatorStr += `<br/><code>${entry['triplet']}</code>`;
-        }
-        row.push(generatorStr);
-
-        // Failure rate (if available)
-        if (hasFailureRates) {
-            if ('failure-rate' in entry && typeof entry['failure-rate'] === 'number') {
-                const rate = entry['failure-rate'] as number;
-                const pct = (rate * 100).toFixed(1);
-                row.push(`${pct}%`);
-            } else {
-                row.push('N/A');
-            }
-        }
-
-        // Apply emojis to name
-        row[0] = `${nameEmojis.join('')} ${row[0]}`;
-
-        table.push(row);
-
-        fnlog(`- ${JSON.stringify(row)}`);
-    }
-
-    return table;
-}
-
-/**
- * Normalizes compiler names in object keys.
- *
- * @param obj - Object with compiler name keys to normalize
- */
-function normalizeCompilerNameKeys(obj: Record<string, unknown>): void {
-    for (const [name, value] of Object.entries(obj)) {
-        const newName = normalizeCompilerName(name);
-        if (newName !== name) {
-            obj[newName] = value;
-            delete obj[name];
-        }
-    }
-}
-
-/**
- * Normalizes compiler names in suggestion arrays.
- *
- * @param suggestionMap - Array of suggestions to normalize
- */
-function normalizeCompilerNameSuggestions(suggestionMap: CompilerSuggestion[]): void {
-    if (isArrayOfObjects(suggestionMap)) {
-        suggestionMap.forEach(obj => {
-            obj['compiler'] = normalizeCompilerName(obj['compiler']);
-        });
-    }
-}
-
-/**
- * Parses key-value pairs from an array of strings.
- *
- * @param lines - Array of strings in format "key: value"
- * @returns Array of KeyValue objects
- */
-function parseKeyValues(lines: string[]): KeyValue[] | undefined {
-    const result: KeyValue[] = [];
-    for (const line of lines) {
-        const colonIndex = line.indexOf(':');
-        if (colonIndex > 0) {
-            result.push({
-                key: line.slice(0, colonIndex).trim(),
-                value: line.slice(colonIndex + 1).trim()
-            });
-        }
-    }
-    return result.length > 0 ? result : undefined;
-}
-
-/**
- * Converts raw parsed inputs to the internal Inputs type.
- *
- * @param raw - Raw inputs from schema parsing
- * @returns Converted Inputs object
- */
-function convertRawInputs(raw: RawInputs): Inputs {
-    const compilerVersions = parseCompilerRequirements(raw.compilers.join('\n'));
-    const compilerKeys = Object.keys(compilerVersions);
-
-    return {
-        // Compilers
-        compiler_versions: compilerVersions,
-        subrangePolicy: raw.subrangePolicy as SubrangePolicyMap,
-        standards: normalizeCppVersionRequirement(raw.standards),
-        maxStandards: raw.maxStandards || undefined,
-
-        // Factors
-        latestFactors: parseCompilerFactors(raw.latestFactors.join('\n'), compilerKeys),
-        factors: parseCompilerFactors(raw.factors.join('\n'), compilerKeys),
-        combinatorialFactors: parseCompilerFactors(raw.combinatorialFactors.join('\n'), compilerKeys),
-        forceFactors: parseCompilerSuggestions(raw.forceFactors, compilerKeys),
-        extraValues: parseKeyValues(raw.extraValues),
-
-        // Customize suggestions
-        runsOn: parseCompilerSuggestions(raw.runsOn, compilerKeys),
-        containers: parseCompilerSuggestions(raw.containers, compilerKeys),
-        generators: parseCompilerSuggestions(raw.generators, compilerKeys),
-        generatorToolsets: parseCompilerSuggestions(raw.generatorToolsets, compilerKeys),
-        b2Toolsets: parseCompilerSuggestions(raw.b2Toolsets, compilerKeys),
-        ccflags: parseCompilerSuggestions(raw.ccflags, compilerKeys),
-        cxxflags: parseCompilerSuggestions(raw.cxxflags, compilerKeys),
-        install: parseCompilerSuggestions(raw.install, compilerKeys),
-        appendCcflags: parseCompilerSuggestions(raw.appendCcflags, compilerKeys),
-        appendCxxflags: parseCompilerSuggestions(raw.appendCxxflags, compilerKeys),
-        appendInstall: parseCompilerSuggestions(raw.appendInstall, compilerKeys),
-        triplets: parseCompilerSuggestions(raw.triplets, compilerKeys),
-        buildTypes: parseCompilerSuggestions(raw.buildTypes, compilerKeys),
-
-        // Customization flags
-        defaultBuildType: raw.defaultBuildType.trim() || 'Release',
-        sanitizerBuildType: raw.sanitizerBuildType.trim() || 'Release',
-        x86BuildType: raw.x86BuildType.trim() || 'Release',
-        useContainers: raw.useContainers,
-        warnNoMatches: raw.warnNoMatches,
-
-        // Output file
-        outputFile: raw.outputFile,
-
-        // Annotations and tracing
-        logMatrix: raw.logMatrix,
-        generateSummary: raw.generateSummary,
-        traceCommands: raw.traceCommands,
-
-        // Failure rate sorting
-        sortByFailureRate: raw.sortByFailureRate,
-        failureRateRuns: raw.failureRateRuns,
-        githubToken: raw.githubToken
-    };
-}
-
-/**
- * Main entry point for the matrix generation.
- *
- * @param inputs - Converted input parameters
+ * @param inputs - Schema-inferred inputs with transforms applied
  * @returns The generated matrix entries
  */
 export async function main(inputs: Inputs): Promise<MatrixEntry[]> {
-    // Normalize compiler names in the keys of compiler_versions,
-    // latestFactors, factors, combinatorialFactors
-    normalizeCompilerNameKeys(inputs.subrangePolicy as unknown as Record<string, unknown>);
-    normalizeCompilerNameKeys(inputs.compiler_versions as unknown as Record<string, unknown>);
-    normalizeCompilerNameKeys(inputs.latestFactors as unknown as Record<string, unknown>);
-    normalizeCompilerNameKeys(inputs.factors as unknown as Record<string, unknown>);
-    normalizeCompilerNameKeys(inputs.combinatorialFactors as unknown as Record<string, unknown>);
-
-    // Normalize compiler names in the 'compiler' fields of runsOn and
-    // containers. They are arrays of objects.
-    normalizeCompilerNameSuggestions(inputs.runsOn);
-    normalizeCompilerNameSuggestions(inputs.containers);
-    normalizeCompilerNameSuggestions(inputs.generators);
-    normalizeCompilerNameSuggestions(inputs.generatorToolsets);
-    normalizeCompilerNameSuggestions(inputs.b2Toolsets);
-    normalizeCompilerNameSuggestions(inputs.ccflags);
-    normalizeCompilerNameSuggestions(inputs.cxxflags);
-    normalizeCompilerNameSuggestions(inputs.install);
-    normalizeCompilerNameSuggestions(inputs.triplets);
-    normalizeCompilerNameSuggestions(inputs.buildTypes);
-
     return await generateMatrix(inputs);
 }
 
@@ -862,8 +522,7 @@ runAction({
     inputsSchema,
     outputsSchema,
     title: 'C++ Matrix',
-    main: async (rawInputs: RawInputs) => {
-        const inputs = convertRawInputs(rawInputs);
+    main: async (inputs: Inputs) => {
         const matrixEntries = await main(inputs);
         const matrixJson = JSON.stringify(matrixEntries);
         core.setOutput('matrix', matrixJson);

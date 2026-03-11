@@ -8,7 +8,22 @@ import * as semver from 'semver';
 import * as path from 'path';
 import * as traceCommands from 'trace-commands';
 
-import { SubrangePolicies, type SubrangePolicy } from './types';
+/**
+ * Policies for selecting versions from a semver range when generating matrix entries.
+ *
+ * These policies control which specific versions are selected when a version range
+ * would match multiple available versions (e.g., what to do with ">=10" when 10, 11, 12 exist).
+ */
+export const SubrangePolicies = {
+    ONE_PER_MAJOR: 0,
+    ONE_PER_MINOR: 1,
+    ONE_PER_MAJOR_OR_MINOR: 2
+} as const;
+
+/**
+ * A policy for handling version subranges in the matrix.
+ */
+export type SubrangePolicy = typeof SubrangePolicies[keyof typeof SubrangePolicies];
 
 import * as setup_program from 'setup-program';
 

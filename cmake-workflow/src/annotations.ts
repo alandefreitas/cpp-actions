@@ -8,7 +8,25 @@ import * as core from '@actions/core';
 import * as path from 'path';
 import * as traceCommands from 'trace-commands';
 
-import { type Message, type ResolvedInputs } from './types';
+import { type ResolvedInputs } from './types';
+
+/**
+ * Represents a compiler or CMake message for annotation creation.
+ */
+export interface Message {
+    /** Message title for the annotation */
+    title: string;
+    /** Source file path */
+    file?: string;
+    /** Line number in the file */
+    line?: number;
+    /** Column number in the file */
+    column?: number;
+    /** Message severity (warning, error) */
+    severity: string;
+    /** The message content */
+    message: string;
+}
 
 /**
  * Fields extracted from a compiler diagnostic regex match.
