@@ -137,33 +137,33 @@ describe('decideStrategy', () => {
             branch: 'develop',
             patches: new Set<string>(),
             modules: new Set<string>(),
-            scan_modules_dir: new Set<string>(),
-            modules_scan_paths: new Set<string>(),
-            modules_exclude_paths: new Set<string>(),
-            scan_modules_ignore: new Set<string>(),
-            optimistic_caching: false,
-            boost_dir: '/tmp/boost',
+            scanModulesDir: new Set<string>(),
+            modulesScanPaths: new Set<string>(),
+            modulesExcludePaths: new Set<string>(),
+            scanModulesIgnore: new Set<string>(),
+            optimisticCaching: false,
+            boostDir: '/tmp/boost',
             cache: true,
-            trace_commands: false,
-            clone_strategy: 'auto' as const,
-            archive_threshold: 25,
+            traceCommands: false,
+            cloneStrategy: 'auto' as const,
+            archiveThreshold: 25,
             ...overrides
         };
     }
 
     it('respects explicit git strategy', () => {
-        expect(decideStrategy(makeInputs({ clone_strategy: 'git' }), 100)).toBe('git');
+        expect(decideStrategy(makeInputs({ cloneStrategy: 'git' }), 100)).toBe('git');
     });
 
     it('respects explicit archive strategy for release tags', () => {
         expect(decideStrategy(
-            makeInputs({ clone_strategy: 'archive', branch: 'boost-1.87.0' }), 100
+            makeInputs({ cloneStrategy: 'archive', branch: 'boost-1.87.0' }), 100
         )).toBe('archive');
     });
 
     it('falls back to git for archive on non-release branch', () => {
         expect(decideStrategy(
-            makeInputs({ clone_strategy: 'archive', branch: 'develop' }), 100
+            makeInputs({ cloneStrategy: 'archive', branch: 'develop' }), 100
         )).toBe('git');
     });
 
@@ -173,13 +173,13 @@ describe('decideStrategy', () => {
 
     it('auto mode uses archive for release tags above threshold', () => {
         expect(decideStrategy(
-            makeInputs({ branch: 'boost-1.87.0', archive_threshold: 25 }), 30
+            makeInputs({ branch: 'boost-1.87.0', archiveThreshold: 25 }), 30
         )).toBe('archive');
     });
 
     it('auto mode uses git for release tags below threshold', () => {
         expect(decideStrategy(
-            makeInputs({ branch: 'boost-1.87.0', archive_threshold: 25 }), 10
+            makeInputs({ branch: 'boost-1.87.0', archiveThreshold: 25 }), 10
         )).toBe('git');
     });
 });

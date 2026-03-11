@@ -8,23 +8,23 @@
  */
 
 import * as path from 'path';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 import * as gh_inputs from 'gh-inputs';
 
-import { Inputs, ResolvedInputs } from './types';
+import { type Inputs, type ResolvedInputs } from './types';
 
 /**
  * Parses extra arguments into a list or map of arguments.
  *
  * Supports both simple argument lists and key-value pairs for matrix builds.
  *
- * @param extra_args - Raw extra arguments to parse
+ * @param extraArgs - Raw extra arguments to parse
  * @returns Parsed arguments as array or map
  */
-export function parseExtraArgs(extra_args: string[]): string[] | Record<string, string[]> {
-    const fnlog = trace_commands.scoped('parseExtraArgs');
+export function parseExtraArgs(extraArgs: string[]): string[] | Record<string, string[]> {
+    const fnlog = traceCommands.scoped('parseExtraArgs');
 
-    if (extra_args.length === 0) {
+    if (extraArgs.length === 0) {
         return [];
     }
 
@@ -55,12 +55,12 @@ export function parseExtraArgs(extra_args: string[]): string[] | Record<string, 
         return { key: key, value: match[2] };
     }
 
-    const first_line = extra_args[0];
-    let res = getLineKeyValue(first_line);
+    const firstLine = extraArgs[0];
+    let res = getLineKeyValue(firstLine);
     if (!res) {
         // Parse all lines as a single line of cmake args
         fnlog('Parsing all lines as a single line of cmake args');
-        return gh_inputs.parseBashArguments(extra_args);
+        return gh_inputs.parseBashArguments(extraArgs);
     } else {
         // Parse lines as a map of key-value pairs where each value
         // is one factor we have to test.
@@ -68,8 +68,8 @@ export function parseExtraArgs(extra_args: string[]): string[] | Record<string, 
         const extraArgsMap: Record<string, string[]> = {};
         extraArgsMap[res.key] = [res.value];
         let curKey = res.key;
-        for (let i = 1; i < extra_args.length; i++) {
-            const line = extra_args[i];
+        for (let i = 1; i < extraArgs.length; i++) {
+            const line = extraArgs[i];
             res = getLineKeyValue(line);
             if (!res) {
                 // Continuation of the previous key
@@ -109,12 +109,12 @@ export function sanitizeKey(key: string): string {
  * Generates a directory suffix from combinatorial factor values.
  *
  * Creates a suffix string that uniquely identifies this combination of factors.
- * Returns empty string for the main/default entry (first extra_args key + main cxxstd).
+ * Returns empty string for the main/default entry (first extraArgs key + main cxxstd).
  *
- * @param extraArgsKey - The extra_args configuration key (undefined if not using map)
+ * @param extraArgsKey - The extraArgs configuration key (undefined if not using map)
  * @param cxxstd - The C++ standard version for this entry
  * @param mainCxxstd - The main/default C++ standard version
- * @param isFirstExtraArgsKey - Whether this is the first (default) extra_args key
+ * @param isFirstExtraArgsKey - Whether this is the first (default) extraArgs key
  * @returns Suffix string (empty for main entry, e.g., "-asan-cxx20" otherwise)
  */
 export function generateFactorSuffix(
@@ -125,7 +125,7 @@ export function generateFactorSuffix(
 ): string {
     const parts: string[] = [];
 
-    // Add extra_args key if not the first/default
+    // Add extraArgs key if not the first/default
     if (extraArgsKey && !isFirstExtraArgsKey) {
         parts.push(sanitizeKey(extraArgsKey));
     }
@@ -153,39 +153,39 @@ export function makeFactorPath(basePath: string, suffix: string): string {
  * Expands combinatorial factors in Inputs to a list of ResolvedInputs.
  *
  * Creates the Cartesian product of:
- * - extra_args keys (if extra_args is a map)
+ * - extraArgs keys (if extraArgs is a map)
  * - cxxstd values
  *
- * The first combination (first extra_args key + first cxxstd) is marked as the
+ * The first combination (first extraArgs key + first cxxstd) is marked as the
  * main entry and receives the exact user-specified paths without suffixes.
  *
  * @param inputs - Raw inputs with combinatorial factors
  * @returns Array of resolved inputs, one per factor combination
  */
 export function expandInputs(inputs: Inputs): ResolvedInputs[] {
-    const fnlog = trace_commands.scoped('expandInputs');
+    const fnlog = traceCommands.scoped('expandInputs');
 
     const results: ResolvedInputs[] = [];
 
-    // Determine extra_args structure
-    const isExtraArgsMap = !Array.isArray(inputs.extra_args);
+    // Determine extraArgs structure
+    const isExtraArgsMap = !Array.isArray(inputs.extraArgs);
     const extraArgsKeys: (string | undefined)[] = isExtraArgsMap
-        ? Object.keys(inputs.extra_args as Record<string, string[]>)
+        ? Object.keys(inputs.extraArgs as Record<string, string[]>)
         : [undefined];
     const firstExtraArgsKey = extraArgsKeys[0];
 
     // Main cxxstd is the first in the list
     const mainCxxstd = inputs.cxxstd[0];
 
-    fnlog(`Expanding inputs: ${extraArgsKeys.length} extra_args keys × ${inputs.cxxstd.length} cxxstd values`);
+    fnlog(`Expanding inputs: ${extraArgsKeys.length} extraArgs keys × ${inputs.cxxstd.length} cxxstd values`);
 
     for (const extraArgsKey of extraArgsKeys) {
         const isFirstExtraArgsKey = extraArgsKey === firstExtraArgsKey;
 
-        // Get the extra_args array for this key
+        // Get the extraArgs array for this key
         const extraArgsArray: string[] = isExtraArgsMap
-            ? (inputs.extra_args as Record<string, string[]>)[extraArgsKey as string]
-            : (inputs.extra_args as string[]);
+            ? (inputs.extraArgs as Record<string, string[]>)[extraArgsKey as string]
+            : (inputs.extraArgs as string[]);
 
         for (const cxxstd of inputs.cxxstd) {
             const isMainEntry = isFirstExtraArgsKey && cxxstd === mainCxxstd;
@@ -195,13 +195,13 @@ export function expandInputs(inputs: Inputs): ResolvedInputs[] {
 
             const entry: ResolvedInputs = {
                 // Copy non-factor fields
-                cmake_path: inputs.cmake_path,
-                cmake_version: inputs.cmake_version,
-                source_dir: inputs.source_dir,
+                cmakePath: inputs.cmakePath,
+                cmakeVersion: inputs.cmakeVersion,
+                sourceDir: inputs.sourceDir,
                 url: inputs.url,
-                git_repository: inputs.git_repository,
-                git_tag: inputs.git_tag,
-                download_dir: inputs.download_dir,
+                gitRepository: inputs.gitRepository,
+                gitTag: inputs.gitTag,
+                downloadDir: inputs.downloadDir,
                 patches: inputs.patches,
                 preset: inputs.preset,
                 cc: inputs.cc,
@@ -211,42 +211,42 @@ export function expandInputs(inputs: Inputs): ResolvedInputs[] {
                 shared: inputs.shared,
                 toolchain: inputs.toolchain,
                 generator: inputs.generator,
-                generator_toolset: inputs.generator_toolset,
-                generator_architecture: inputs.generator_architecture,
+                generatorToolset: inputs.generatorToolset,
+                generatorArchitecture: inputs.generatorArchitecture,
                 arch: inputs.arch,
-                build_type: inputs.build_type,
-                build_target: inputs.build_target,
-                export_compile_commands: inputs.export_compile_commands,
+                buildType: inputs.buildType,
+                buildTarget: inputs.buildTarget,
+                exportCompileCommands: inputs.exportCompileCommands,
                 jobs: inputs.jobs,
-                run_tests: inputs.run_tests,
-                configure_tests_flag: inputs.configure_tests_flag,
-                ctest_timeout: inputs.ctest_timeout,
+                runTests: inputs.runTests,
+                configureTestsFlag: inputs.configureTestsFlag,
+                ctestTimeout: inputs.ctestTimeout,
                 install: inputs.install,
                 package: inputs.package,
-                package_name: inputs.package_name,
-                package_vendor: inputs.package_vendor,
-                package_generators: inputs.package_generators,
-                package_artifact: inputs.package_artifact,
-                package_retention_days: inputs.package_retention_days,
-                create_annotations: inputs.create_annotations,
-                ref_source_dir: inputs.ref_source_dir,
-                trace_commands: inputs.trace_commands,
+                packageName: inputs.packageName,
+                packageVendor: inputs.packageVendor,
+                packageGenerators: inputs.packageGenerators,
+                packageArtifact: inputs.packageArtifact,
+                packageRetentionDays: inputs.packageRetentionDays,
+                createAnnotations: inputs.createAnnotations,
+                refSourceDir: inputs.refSourceDir,
+                traceCommands: inputs.traceCommands,
 
                 // Resolved factor fields
                 cxxstd: cxxstd,
-                extra_args: extraArgsArray,
+                extraArgs: extraArgsArray,
                 extra_args_key: extraArgsKey,
                 is_main_entry: isMainEntry,
 
                 // Flags controlling which steps run for non-main entries
-                test_all_cxxstd: inputs.test_all_cxxstd,
-                install_all_cxxstd: inputs.install_all_cxxstd,
-                package_all_cxxstd: inputs.package_all_cxxstd,
+                testAllCxxstd: inputs.testAllCxxstd,
+                installAllCxxstd: inputs.installAllCxxstd,
+                packageAllCxxstd: inputs.packageAllCxxstd,
 
                 // Paths with factor suffixes
-                build_dir: makeFactorPath(inputs.build_dir || 'build', suffix),
-                install_prefix: makeFactorPath(inputs.install_prefix || 'install', suffix),
-                package_dir: makeFactorPath(inputs.package_dir || 'package', suffix),
+                buildDir: makeFactorPath(inputs.buildDir || 'build', suffix),
+                installPrefix: makeFactorPath(inputs.installPrefix || 'install', suffix),
+                packageDir: makeFactorPath(inputs.packageDir || 'package', suffix),
             };
 
             results.push(entry);
@@ -270,16 +270,16 @@ export function validateUniquePaths(entries: ResolvedInputs[]): void {
     const buildDirs = new Set<string>();
 
     for (const entry of entries) {
-        if (buildDirs.has(entry.build_dir)) {
+        if (buildDirs.has(entry.buildDir)) {
             const factorDesc = entry.extra_args_key
                 ? `extra_args_key="${entry.extra_args_key}", cxxstd=${entry.cxxstd ?? 'default'}`
                 : `cxxstd=${entry.cxxstd ?? 'default'}`;
             throw new Error(
-                `Duplicate build directory "${entry.build_dir}" detected for entry (${factorDesc}). ` +
+                `Duplicate build directory "${entry.buildDir}" detected for entry (${factorDesc}). ` +
                 `Ensure factor combinations produce unique identifiers.`
             );
         }
-        buildDirs.add(entry.build_dir);
+        buildDirs.add(entry.buildDir);
     }
 }
 
@@ -321,9 +321,9 @@ export function applyPresetMacros(value: unknown, allInputs: Inputs): unknown {
     // - $env{<variable-name>}: The value of the environment variable
     // - $penv{<variable-name>}: The value of the environment variable
     if (typeof value === 'string' || value instanceof String) {
-        return (value as string).replace(/\${sourceDir}/g, allInputs.source_dir)
-            .replace(/\${sourceParentDir}/g, path.dirname(allInputs.source_dir))
-            .replace(/\${sourceDirName}/g, path.basename(allInputs.source_dir))
+        return (value as string).replace(/\${sourceDir}/g, allInputs.sourceDir)
+            .replace(/\${sourceParentDir}/g, path.dirname(allInputs.sourceDir))
+            .replace(/\${sourceDirName}/g, path.basename(allInputs.sourceDir))
             .replace(/\${presetName}/g, allInputs.preset)
             .replace(/\${generator}/g, allInputs.generator)
             .replace(/\${hostSystemName}/g, process.platform === 'win32' ? 'Windows' : (process.platform === 'darwin' ? 'Darwin' : 'Linux'))

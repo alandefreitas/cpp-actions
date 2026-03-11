@@ -22,13 +22,13 @@ export interface Outputs {
     bindir: string
     dir: string
     release: string
-    version_major: number
-    version_minor: number
-    version_patch: number
-    msvc_toolset_version: string
-    msvc_product_version: string
-    msvc_release_year: string
-    msvc_compiler_version: string
+    versionMajor: number
+    versionMinor: number
+    versionPatch: number
+    msvcToolsetVersion: string
+    msvcProductVersion: string
+    msvcReleaseYear: string
+    msvcCompilerVersion: string
 }
 
 /**

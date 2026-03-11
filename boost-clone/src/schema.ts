@@ -31,7 +31,7 @@ export type CloneStrategy = typeof cloneStrategies[number];
 export const inputsSchema = {
     ...baseInputs,
 
-    boost_dir: {
+    boostDir: {
         type: 'string' as const,
         default: '',
         description: `The directory where Boost should be cloned.
@@ -66,7 +66,7 @@ Each path will be cloned in the \`libs\` directory of the super-project.`
 This field is optional. If not set, the action will scan the modules found in \`scan-modules-dir\`.`
     },
 
-    scan_modules_dir: {
+    scanModulesDir: {
         type: 'multilineSet' as const,
         default: new Set(['.']) as Set<string>,
         transform: (dirs) => new Set(
@@ -81,7 +81,7 @@ The Boost modules required in files from this directory will be added to the \`m
 Only the subdirectories of this directory specified by \`modules-scan-paths\` will be scanned.`
     },
 
-    modules_scan_paths: {
+    modulesScanPaths: {
         type: 'set' as const,
         default: new Set<string>(),
         description: `Additional subdirectories within each \`scan-modules-dir\` entry to scan for \`#include <boost/...>\` headers.
@@ -92,7 +92,7 @@ This only affects module discovery — it does not change which files are checke
 By default, the action scans the ['include', 'src', 'source', 'test', 'tests', 'example', 'examples'] subdirectories.`
     },
 
-    modules_exclude_paths: {
+    modulesExcludePaths: {
         type: 'set' as const,
         default: new Set(['test', 'tests']),
         description: `Subdirectories within each \`scan-modules-dir\` entry to exclude from the header scan.
@@ -103,7 +103,7 @@ This only affects which headers are scanned — it does not change which files a
 By default, the action excludes the ['test', 'tests'] subdirectories.`
     },
 
-    scan_modules_ignore: {
+    scanModulesIgnore: {
         type: 'set' as const,
         default: new Set<string>(),
         description: `List of modules that should be ignored after scanning headers.
@@ -123,7 +123,7 @@ dependency is updated and \`optimistic-caching\` is being used, the cache will n
 The previous version of the transitive dependency will be used until the cache expires.`
     },
 
-    optimistic_caching: {
+    optimisticCaching: {
         type: 'boolean' as const,
         default: false,
         description: `If this option is \`true\`, the action will reuse the cache whenever direct dependencies haven't changed.
@@ -152,7 +152,7 @@ The default value is \`false\`, because we prioritize correctness over performan
 most users should consider the possibility of setting this option to \`true\`, considering their requirements.`
     },
 
-    clone_strategy: {
+    cloneStrategy: {
         type: 'string' as const,
         default: 'auto' as const,
         validValues: cloneStrategies,
@@ -169,7 +169,7 @@ git overhead. However, it only works for release tags (e.g., boost-1.87.0), not 
 develop/master branches.`
     },
 
-    archive_threshold: {
+    archiveThreshold: {
         type: 'number' as const,
         default: 25,
         description: `Number of total modules (including transitive dependencies) above which the archive
@@ -190,7 +190,7 @@ typical module count.`
  * Output schema for the boost-clone action.
  */
 export const outputsSchema = {
-    boost_dir: {
+    boostDir: {
         description: 'The absolute path to the boost source files.'
     }
 } satisfies ActionOutputsSchema;

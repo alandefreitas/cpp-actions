@@ -12,7 +12,7 @@
  */
 
 import * as core from '@actions/core';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 import * as gh_inputs from 'gh-inputs';
 import { reportAndSetFailed } from 'pretty-errors';
 import { parseInputs } from './parser';
@@ -22,10 +22,10 @@ import type { ActionInputsSchema, InferInputs, RunnerOptions } from './types';
  * Base interface for inputs that support tracing.
  *
  * This is automatically satisfied when your schema includes `baseInputs` or `setupInputs`,
- * since they define the `trace_commands` field.
+ * since they define the `traceCommands` field.
  */
 export interface TraceableInputs {
-    trace_commands: boolean;
+    traceCommands: boolean;
 }
 
 /**
@@ -68,8 +68,8 @@ export function createActionRunner<
         const inputs = parseInputs(inputsSchema) as I;
 
         // Enable tracing if requested
-        if (inputs.trace_commands) {
-            trace_commands.set_trace_commands(true);
+        if (inputs.traceCommands) {
+            traceCommands.setTraceCommands(true);
         }
 
         // Log inputs

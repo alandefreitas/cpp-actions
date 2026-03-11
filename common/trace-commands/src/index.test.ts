@@ -11,12 +11,12 @@ import * as core from '@actions/core';
 describe('trace-commands', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        traceModule.set_trace_commands(false);
+        traceModule.setTraceCommands(false);
     });
 
     describe('log', () => {
         it('should call core.debug when trace is disabled', () => {
-            traceModule.set_trace_commands(false);
+            traceModule.setTraceCommands(false);
             traceModule.log('test message');
 
             expect(core.debug).toHaveBeenCalledWith('test message');
@@ -24,7 +24,7 @@ describe('trace-commands', () => {
         });
 
         it('should call core.info when trace is enabled', () => {
-            traceModule.set_trace_commands(true);
+            traceModule.setTraceCommands(true);
             traceModule.log('test message');
 
             expect(core.info).toHaveBeenCalledWith('test message');
@@ -32,32 +32,32 @@ describe('trace-commands', () => {
         });
 
         it('should join multiple arguments with spaces', () => {
-            traceModule.set_trace_commands(true);
+            traceModule.setTraceCommands(true);
             traceModule.log('hello', 'world', 123);
 
             expect(core.info).toHaveBeenCalledWith('hello world 123');
         });
     });
 
-    describe('set_trace_commands', () => {
+    describe('setTraceCommands', () => {
         it('should enable tracing', () => {
-            traceModule.set_trace_commands(true);
+            traceModule.setTraceCommands(true);
             expect(traceModule.enabled()).toBe(true);
         });
 
         it('should disable tracing', () => {
-            traceModule.set_trace_commands(true);
-            traceModule.set_trace_commands(false);
+            traceModule.setTraceCommands(true);
+            traceModule.setTraceCommands(false);
             expect(traceModule.enabled()).toBe(false);
         });
     });
 
     describe('enabled', () => {
         it('should return current trace state', () => {
-            traceModule.set_trace_commands(false);
+            traceModule.setTraceCommands(false);
             expect(traceModule.enabled()).toBe(false);
 
-            traceModule.set_trace_commands(true);
+            traceModule.setTraceCommands(true);
             expect(traceModule.enabled()).toBe(true);
         });
     });

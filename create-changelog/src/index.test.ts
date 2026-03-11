@@ -171,7 +171,7 @@ describe('compareCommits', () => {
     function createCommit(date: string, linesChanged: number): main.Commit {
         const commit = new main.Commit();
         commit.date = date;
-        commit.lines_changed = linesChanged;
+        commit.linesChanged = linesChanged;
         return commit;
     }
 
@@ -205,7 +205,7 @@ describe('sortChanges', () => {
     function createCommitWithDateAndLines(date: string, linesChanged: number, description: string): main.Commit {
         const commit = new main.Commit();
         commit.date = date;
-        commit.lines_changed = linesChanged;
+        commit.linesChanged = linesChanged;
         commit.description = description;
         commit.hash = 'abc1234000000000000000000000000000000000';
         return commit;
@@ -341,8 +341,8 @@ test('generateOutput avoids duplicating scope for multiline entries', () => {
     };
     const changeTypePriority = ['docs'];
     const args = {
-        link_commits: false,
-        thank_non_regular: false
+        linkCommits: false,
+        thankNonRegular: false
     } as any;
     const authors = {};
 

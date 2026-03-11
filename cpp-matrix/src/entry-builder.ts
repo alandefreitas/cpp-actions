@@ -6,7 +6,7 @@
 
 import * as semver from 'semver';
 
-import { CompilerSuggestion, Inputs, MatrixEntry } from './types';
+import { type CompilerSuggestion, type Inputs, type MatrixEntry } from './types';
 import { getVisualCppYear } from './versions';
 import { humanizeCompilerName } from './compiler-support';
 
@@ -142,8 +142,8 @@ export function setSuggestion(entry: MatrixEntry, key: string, suggestionMap: Co
     if (isArrayOfObjects(suggestionMap)) {
         for (const userSuggestion of suggestionMap) {
             if (userSuggestion.factor !== undefined && userSuggestion.compiler === entry.compiler) {
-                const factor_key = userSuggestion.factor.toLowerCase();
-                if (entry[factor_key]) {
+                const factorKey = userSuggestion.factor.toLowerCase();
+                if (entry[factorKey]) {
                     entry[key] = userSuggestion.value;
                     return true;
                 }
@@ -181,8 +181,8 @@ export function appendSuggestion(entry: MatrixEntry, key: string, suggestionMap:
         let appended = false;
         for (const userSuggestion of suggestionMap) {
             if (userSuggestion.factor !== undefined && userSuggestion.compiler === entry.compiler) {
-                const factor_key = userSuggestion.factor.toLowerCase();
-                if (entry[factor_key]) {
+                const factorKey = userSuggestion.factor.toLowerCase();
+                if (entry[factorKey]) {
                     const existing = typeof entry[key] === 'string' ? entry[key].trim() : '';
                     entry[key] = existing ? `${existing} ${userSuggestion.value}` : userSuggestion.value;
                     appended = true;
@@ -215,11 +215,11 @@ export function applyForcedFactors(entry: MatrixEntry, suggestionMap: CompilerSu
     if (isArrayOfObjects(suggestionMap)) {
         for (const userSuggestion of suggestionMap) {
             if (userSuggestion.factor !== undefined && userSuggestion.compiler === entry.compiler) {
-                const factor_key = userSuggestion.factor.toLowerCase();
-                if (entry[factor_key]) {
-                    const forced_factor = userSuggestion.value;
-                    const lc_forced_factor = forced_factor.toLowerCase();
-                    entry[lc_forced_factor] = true;
+                const factorKey = userSuggestion.factor.toLowerCase();
+                if (entry[factorKey]) {
+                    const forcedFactor = userSuggestion.value;
+                    const lcForcedFactor = forcedFactor.toLowerCase();
+                    entry[lcForcedFactor] = true;
                     return true;
                 }
             }
@@ -227,9 +227,9 @@ export function applyForcedFactors(entry: MatrixEntry, suggestionMap: CompilerSu
         for (const userSuggestion of suggestionMap) {
             if (userSuggestion.range !== undefined && userSuggestion.compiler === entry.compiler) {
                 if (semver.subset(subrange, userSuggestion.range)) {
-                    const forced_factor = userSuggestion.value;
-                    const lc_forced_factor = forced_factor.toLowerCase();
-                    entry[lc_forced_factor] = true;
+                    const forcedFactor = userSuggestion.value;
+                    const lcForcedFactor = forcedFactor.toLowerCase();
+                    entry[lcForcedFactor] = true;
                     return true;
                 }
             }
@@ -261,11 +261,11 @@ export function setCompilerContainer(entry: MatrixEntry, inputs: Inputs, compile
             entry['container'] = 'ubuntu:24.04';
         } else if (semver.satisfies(minSubrangeVersion, '>=9')) {
             entry['runs-on'] = 'ubuntu-22.04';
-            if (inputs.use_containers) {
+            if (inputs.useContainers) {
                 entry['container'] = 'ubuntu:22.04';
             }
         } else if (semver.satisfies(minSubrangeVersion, '>=7')) {
-            if (!inputs.use_containers) {
+            if (!inputs.useContainers) {
                 entry['runs-on'] = 'ubuntu-20.04';
             } else {
                 entry['runs-on'] = 'ubuntu-22.04';
@@ -284,7 +284,7 @@ export function setCompilerContainer(entry: MatrixEntry, inputs: Inputs, compile
             entry['container'] = 'ubuntu:24.04';
         } else if (semver.satisfies(minSubrangeVersion, '>=15')) {
             entry['runs-on'] = 'ubuntu-22.04';
-            if (inputs.use_containers) {
+            if (inputs.useContainers) {
                 entry['container'] = 'ubuntu:22.04';
             }
         } else if (semver.satisfies(minSubrangeVersion, '>=12')) {
@@ -293,7 +293,7 @@ export function setCompilerContainer(entry: MatrixEntry, inputs: Inputs, compile
             entry['runs-on'] = 'ubuntu-22.04';
             entry['container'] = 'ubuntu:22.04';
         } else if (semver.satisfies(minSubrangeVersion, '>=6')) {
-            if (!inputs.use_containers) {
+            if (!inputs.useContainers) {
                 entry['runs-on'] = 'ubuntu-20.04';
             } else {
                 entry['runs-on'] = 'ubuntu-22.04';
@@ -491,19 +491,19 @@ export function setEntryVersionFlags(entry: MatrixEntry, i: number, subranges: s
  * @param entry - Matrix entry to update
  * @param compilerName - Compiler name
  * @param subrange - Version subrange string
- * @param compiler_cxxs - Array of supported C++ standards
+ * @param compilerCxxs - Array of supported C++ standards
  */
-export function setEntryName(entry: MatrixEntry, compilerName: string, subrange: string, compiler_cxxs: string[]): void {
+export function setEntryName(entry: MatrixEntry, compilerName: string, subrange: string, compilerCxxs: string[]): void {
     // Come up with a name for this entry
     let name = `${humanizeCompilerName(compilerName)}`;
     if (subrange !== '*') {
         name += ` ${subrange}`;
     }
-    if (compiler_cxxs.length !== 0) {
-        if (compiler_cxxs.length > 1) {
-            name += `: C++${compiler_cxxs[0]}-${compiler_cxxs[compiler_cxxs.length - 1]}`;
+    if (compilerCxxs.length !== 0) {
+        if (compilerCxxs.length > 1) {
+            name += `: C++${compilerCxxs[0]}-${compilerCxxs[compilerCxxs.length - 1]}`;
         } else {
-            name += `: C++${compiler_cxxs[0]}`;
+            name += `: C++${compilerCxxs[0]}`;
         }
     }
     entry['name'] = name;

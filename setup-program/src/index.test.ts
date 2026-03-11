@@ -2,35 +2,35 @@ import * as main from './index';
 import * as fs from 'fs';
 import * as semver from 'semver';
 
-test('find_program_in_path', async () => {
-    const { find_program_in_path } = main;
+test('findProgramInPath', async () => {
+    const { findProgramInPath } = main;
     for (const name of ['node', 'gcc']) {
         const version = '>=1';
         // check if /usr/local/bin/node exists
         if (fs.existsSync(`/usr/local/bin/${name}`) || fs.existsSync(`/usr/bin/${name}`)) {
             const paths = [`/usr/local/bin/${name}`, `/usr/bin/${name}`];
-            const result = await find_program_in_path(paths, version, true);
-            // result.output_version satisfies version
-            if (result.output_version) {
-                expect(semver.satisfies(result.output_version, version)).toBe(true);
+            const result = await findProgramInPath(paths, version, true);
+            // result.outputVersion satisfies version
+            if (result.outputVersion) {
+                expect(semver.satisfies(result.outputVersion, version)).toBe(true);
             }
-            expect(result.output_path == `/usr/local/bin/${name}` || result.output_path == `/usr/bin/${name}`).toBe(true);
+            expect(result.outputPath === `/usr/local/bin/${name}` || result.outputPath === `/usr/bin/${name}`).toBe(true);
         }
     }
 }, 30000);
 
-test('find_program_in_system_paths', async () => {
-    const { find_program_in_system_paths } = main;
+test('findProgramInSystemPaths', async () => {
+    const { findProgramInSystemPaths } = main;
     for (const name of ['node', 'gcc']) {
         const paths = ['/usr/bin', '/usr/local/bin'];
         const version = '>=1';
         // check if /usr/local/bin/node exists
         if (fs.existsSync(`/usr/local/bin/${name}`) || fs.existsSync(`/usr/bin/${name}`)) {
-            const result = await find_program_in_system_paths(paths, [name], version, true);
-            if (result.output_version) {
-                expect(semver.satisfies(result.output_version, version)).toBe(true);
+            const result = await findProgramInSystemPaths(paths, [name], version, true);
+            if (result.outputVersion) {
+                expect(semver.satisfies(result.outputVersion, version)).toBe(true);
             }
-            expect(result.output_path == `/usr/local/bin/${name}` || result.output_path == `/usr/bin/${name}`).toBe(true);
+            expect(result.outputPath === `/usr/local/bin/${name}` || result.outputPath === `/usr/bin/${name}`).toBe(true);
         }
     }
 }, 30000);
@@ -58,15 +58,15 @@ describe('pretty errors', () => {
 });
 
 // Unreliable for testing as it is
-// test('find_program_with_apt', async () => {
+// test('findProgramWithApt', async () => {
 //   if (process.platform === 'linux') {
-//     const {find_program_with_apt} = main
+//     const {findProgramWithApt} = main
 //     for (const name of ['cowsay']) {
 //       const version = '>=1'
-//       const result = await find_program_with_apt([name], version, true)
-//       if (result.output_path !== null) {
-//         expect(semver.satisfies(result.output_version, version)).toBe(true)
-//         expect(result.output_path == `/usr/local/bin/${name}` || result.output_path == `/usr/bin/${name}`).toBe(true)
+//       const result = await findProgramWithApt([name], version, true)
+//       if (result.outputPath !== null) {
+//         expect(semver.satisfies(result.outputVersion, version)).toBe(true)
+//         expect(result.outputPath == `/usr/local/bin/${name}` || result.outputPath == `/usr/bin/${name}`).toBe(true)
 //       }
 //     }
 //   }

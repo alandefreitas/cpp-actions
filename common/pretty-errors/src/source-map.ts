@@ -7,7 +7,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
-import { SourceMapConsumer, RawSourceMap } from 'source-map';
+import { SourceMapConsumer, type RawSourceMap } from 'source-map';
 
 // Cache for source map consumers to avoid re-parsing
 const sourceMapCache = new Map<string, SourceMapConsumer | null>();

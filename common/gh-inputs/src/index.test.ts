@@ -410,6 +410,15 @@ describe('gh-inputs', () => {
         it('should convert underscores to hyphens', () => {
             expect(ghInputs.makeKebabName('some_name_here')).toBe('some-name-here');
         });
+
+        it('should convert camelCase to kebab-case', () => {
+            expect(ghInputs.makeKebabName('someNameHere')).toBe('some-name-here');
+        });
+
+        it('should handle mixed camelCase and underscores', () => {
+            expect(ghInputs.makeKebabName('versionMajor')).toBe('version-major');
+            expect(ghInputs.makeKebabName('versionMajor')).toBe('version-major');
+        });
     });
 
     describe('printInputObject', () => {

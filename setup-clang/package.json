@@ -3,6 +3,7 @@
   "version": "1.9.3",
   "description": "Set up a specific version of Clang compiler",
   "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "scripts": {
     "build": "tsc -p .config/tsconfig.json && node ../utils/esbuild/dist/index.js .",
     "typecheck": "tsc -p .config/tsconfig.json --noEmit",

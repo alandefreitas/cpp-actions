@@ -5,7 +5,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { git, gitSafe, GitOptions } from './git';
+import { git, gitSafe, type GitOptions } from './git';
 
 /**
  * Information about a worktree.
@@ -96,7 +96,7 @@ export function removeWorktree(worktreePath: string, options: GitOptions, force 
     try {
         git(args, { ...options, silent: true });
         console.log('Worktree removed');
-    } catch (err) {
+    } catch {
         // Try force removal if normal removal fails
         if (!force) {
             console.log('Normal removal failed, trying force removal...');
@@ -110,7 +110,7 @@ export function removeWorktree(worktreePath: string, options: GitOptions, force 
                 }
                 git(['worktree', 'prune'], { ...options, silent: true });
                 console.log('Manual cleanup completed');
-            } catch (cleanupErr) {
+            } catch {
                 console.error(`Warning: Could not clean up worktree at ${worktreePath}`);
             }
         }

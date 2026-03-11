@@ -9,8 +9,7 @@ import * as exec from '@actions/exec';
 import * as io from '@actions/io';
 import * as fs from 'fs';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const setup_program = require('setup-program');
+import * as setup_program from 'setup-program';
 
 /**
  * Checks if the OS is Debian-based using /etc/os-release contents.
@@ -46,17 +45,17 @@ export function isDebianLike(osReleaseContents: string): boolean {
  */
 export async function ensureGit({ subgroups = true, fnlog = (): void => {} }: { subgroups?: boolean; fnlog?: (msg: string) => void } = {}): Promise<string | null> {
     const runnerOS = (process.env['RUNNER_OS'] || process.platform).toLowerCase();
-    let git_path: string | null = null;
+    let gitPath: string | null = null;
 
     try {
-        git_path = await io.which('git');
-    } catch (error) {
-        git_path = null;
+        gitPath = await io.which('git');
+    } catch {
+        gitPath = null;
     }
 
-    if (git_path) {
-        fnlog(`git already available at ${git_path}`);
-        return git_path;
+    if (gitPath) {
+        fnlog(`git already available at ${gitPath}`);
+        return gitPath;
     }
 
     if (subgroups) {
@@ -75,7 +74,7 @@ export async function ensureGit({ subgroups = true, fnlog = (): void => {} }: { 
     let osRelease = '';
     try {
         osRelease = fs.readFileSync('/etc/os-release', 'utf8');
-    } catch (error) {
+    } catch {
         fnlog('Unable to read /etc/os-release; skipping automatic git installation.');
         if (subgroups) {
             core.endGroup();
@@ -109,7 +108,7 @@ export async function ensureGit({ subgroups = true, fnlog = (): void => {} }: { 
     let gitAfterInstall: string | null = null;
     try {
         gitAfterInstall = await io.which('git');
-    } catch (error) {
+    } catch {
         gitAfterInstall = null;
     }
 

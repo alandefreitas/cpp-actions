@@ -35,11 +35,11 @@ export interface BoolOrStringOption {
     /** Input key name */
     key: string;
     /** Corresponding B2 command-line key */
-    b2_key: string;
+    b2Key: string;
     /** Value to use when option is true */
-    true_value: string;
+    trueValue: string;
     /** Value to use when option is false, or undefined to omit */
-    false_value: string | undefined;
+    falseValue: string | undefined;
 }
 
 /**
@@ -50,8 +50,8 @@ export interface BoolOrStringOption {
  */
 export interface Inputs {
     // Configure options
-    source_dir: string;
-    build_dir: string;
+    sourceDir: string;
+    buildDir: string;
     cxx: string;
     ccflags: string;
     cxxflags: string;
@@ -59,13 +59,13 @@ export interface Inputs {
     shared: boolean | undefined;
     toolset: string;
     arch: string;
-    build_type: string;
+    buildType: string;
     modules: string[];
-    module_target: string[];
-    extra_args: string[];
+    moduleTarget: string[];
+    extraArgs: string[];
     // B2-specific options
-    warnings_as_errors: boolean | string | undefined;
-    address_model: string | undefined;
+    warningsAsErrors: boolean | string | undefined;
+    addressModel: string | undefined;
     asan: boolean | string | undefined;
     ubsan: boolean | string | undefined;
     msan: boolean | string | undefined;
@@ -75,24 +75,24 @@ export interface Inputs {
     threading: string | undefined;
     rtti: boolean | string | undefined;
     clean: boolean | undefined;
-    clean_all: boolean | undefined;
-    abbreviate_paths: boolean | undefined;
+    cleanAll: boolean | undefined;
+    abbreviatePaths: boolean | undefined;
     hash: boolean | undefined;
-    rebuild_all: boolean | undefined;
-    dry_run: boolean | undefined;
-    stop_on_error: boolean | undefined;
+    rebuildAll: boolean | undefined;
+    dryRun: boolean | undefined;
+    stopOnError: boolean | undefined;
     config: string;
-    site_config: string;
-    user_config: string;
-    project_config: string;
-    debug_configuration: boolean | undefined;
-    debug_building: boolean | undefined;
-    debug_generators: boolean | undefined;
+    siteConfig: string;
+    userConfig: string;
+    projectConfig: string;
+    debugConfiguration: boolean | undefined;
+    debugBuilding: boolean | undefined;
+    debugGenerators: boolean | undefined;
     include: string;
     define: string | undefined;
-    runtime_link: boolean | string | undefined;
+    runtimeLink: boolean | string | undefined;
     // Build options
     jobs: number;
     // Annotations and tracing
-    trace_commands: boolean;
+    traceCommands: boolean;
 }

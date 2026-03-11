@@ -49,13 +49,13 @@ export interface CompileCommand {
  */
 export interface UploadArtifactsInputs {
     /** Path to the output file */
-    output_path: string;
+    outputPath: string;
     /** Path to the report file */
-    report_path: string;
+    reportPath: string;
     /** Build directory containing the traces */
-    build_dir: string;
+    buildDir: string;
     /** Number of days to retain the artifacts */
-    package_retention_days?: number;
+    packageRetentionDays?: number;
 }
 
 /**
@@ -63,19 +63,19 @@ export interface UploadArtifactsInputs {
  */
 export interface MainInputs {
     /** Source directory path */
-    source_dir: string;
+    sourceDir: string;
     /** Build directory containing time traces */
-    build_dir: string;
+    buildDir: string;
     /** Output path for combined traces */
-    output_path: string;
+    outputPath: string;
     /** Output path for the report */
-    report_path: string;
+    reportPath: string;
     /** Whether to update the GitHub Actions summary */
-    update_summary: boolean;
+    updateSummary: boolean;
     /** Whether to upload artifacts */
-    upload_artifact: boolean;
+    uploadArtifact: boolean;
     /** Artifact retention period in days */
-    package_retention_days?: number;
+    packageRetentionDays?: number;
 }
 
 /**
@@ -83,7 +83,7 @@ export interface MainInputs {
  */
 export interface MainOutputs {
     /** Path to the combined traces file */
-    traces_path: string;
+    tracesPath: string;
     /** Path to the generated SVG file */
-    svg_path: string;
+    svgPath: string;
 }

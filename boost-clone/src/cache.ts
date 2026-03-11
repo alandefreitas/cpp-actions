@@ -12,7 +12,7 @@
 
 import * as core from '@actions/core';
 import * as cache from '@actions/cache';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 import type { Inputs } from './schema';
 import type { GitFeatures } from './git-utils';
 
@@ -67,7 +67,7 @@ export async function fetchModuleHashes(
     gitFeatures: GitFeatures,
     repoUrlOverrides?: Map<string, string>
 ): Promise<Map<string, string>> {
-    const fnlog = trace_commands.scoped('fetchModuleHashes');
+    const fnlog = traceCommands.scoped('fetchModuleHashes');
 
     const moduleList = [...modules];
     const result = new Map<string, string>();
@@ -112,7 +112,7 @@ export async function fetchModuleHashes(
  */
 export async function getCachedBoost(inputs: Inputs, cacheKey: string): Promise<boolean> {
     core.info(`Checking cache for key: ${cacheKey}`);
-    const hit = await cache.restoreCache([inputs.boost_dir], cacheKey, []) !== undefined;
+    const hit = await cache.restoreCache([inputs.boostDir], cacheKey, []) !== undefined;
     if (hit) {
         core.info(`Cache hit!`);
     } else {
@@ -128,5 +128,5 @@ export async function getCachedBoost(inputs: Inputs, cacheKey: string): Promise<
  * @param cacheKey - The cache key to use for storage
  */
 export async function cacheBoost(inputs: Inputs, cacheKey: string): Promise<void> {
-    await cache.saveCache([inputs.boost_dir], cacheKey, {});
+    await cache.saveCache([inputs.boostDir], cacheKey, {});
 }

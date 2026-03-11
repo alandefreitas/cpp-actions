@@ -6,9 +6,9 @@
 
 import * as core from '@actions/core';
 import * as path from 'path';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 
-import { Message, ResolvedInputs } from './types';
+import { type Message, type ResolvedInputs } from './types';
 
 /**
  * Fields extracted from a compiler diagnostic regex match.
@@ -47,9 +47,9 @@ function constructBuildMessage(
     let { file } = fields;
     fnlog(`File: ${file}`);
     if (file) {
-        file = path.resolve(inputs.source_dir, file);
+        file = path.resolve(inputs.sourceDir, file);
         fnlog(`Absolute file: ${file}`);
-        file = path.relative(inputs.ref_source_dir, file);
+        file = path.relative(inputs.refSourceDir, file);
         fnlog(`File relative to repository: ${file}`);
     }
 
@@ -64,15 +64,15 @@ function constructBuildMessage(
         severity = severity.charAt(0).toUpperCase() + severity.slice(1);
     }
 
-    const cxx_basename = path.basename(inputs.cxx);
+    const cxxBasename = path.basename(inputs.cxx);
     let title = `Build ${severity}`;
     if (inputs.cxx) {
-        title += ` - ${cxx_basename}`;
+        title += ` - ${cxxBasename}`;
     }
 
     let msg = '';
     if (inputs.cxx) {
-        msg = `${cxx_basename} - ${fields.errorMsg}`;
+        msg = `${cxxBasename} - ${fields.errorMsg}`;
     } else {
         msg = fields.errorMsg || '';
     }
@@ -102,7 +102,7 @@ function constructBuildMessage(
  * @param inputs - Workflow inputs for path resolution
  */
 export function createCMakeConfigureAnnotations(output: string, inputs: ResolvedInputs): void {
-    const fnlog = trace_commands.scoped('createCMakeConfigureAnnotations');
+    const fnlog = traceCommands.scoped('createCMakeConfigureAnnotations');
 
     // A CMake configure warning/error message looks like this regex followed
     // by optional line breaks, then more lines with the message.
@@ -123,13 +123,13 @@ export function createCMakeConfigureAnnotations(output: string, inputs: Resolved
             let file: string | undefined = match[3] || undefined;
             fnlog(`File: ${file}`);
             if (file) {
-                file = path.resolve(inputs.source_dir, file);
+                file = path.resolve(inputs.sourceDir, file);
                 fnlog(`Absolute file: ${file}`);
-                file = path.relative(inputs.ref_source_dir, file);
+                file = path.relative(inputs.refSourceDir, file);
                 fnlog(`File relative to repository: ${file}`);
             }
             // Get line and attempt to convert to integer
-            let lineNum: number | undefined = match[4] ? parseInt(match[4]) : undefined;
+            const lineNum: number | undefined = match[4] ? parseInt(match[4]) : undefined;
             fnlog(`Line: ${lineNum}`);
             if (lineNum) {
                 fnlog(`Line (int): ${lineNum}`);
@@ -174,7 +174,7 @@ export function createCMakeConfigureAnnotations(output: string, inputs: Resolved
  * @param inputs - Workflow inputs for path resolution
  */
 export function createCMakeBuildAnnotations(output: string, inputs: ResolvedInputs): void {
-    const fnlog = trace_commands.scoped('createCMakeBuildAnnotations');
+    const fnlog = traceCommands.scoped('createCMakeBuildAnnotations');
 
     // A CMake build warning/error message is actually a warning/error
     // message from the compiler
@@ -232,7 +232,7 @@ export function createCMakeBuildAnnotations(output: string, inputs: ResolvedInpu
  * @param messages - Array of parsed messages to create annotations from
  */
 export function createAnnotationsFromMessage(messages: Message[]): void {
-    const fnlog = trace_commands.scoped('createAnnotationsFromMessage');
+    const fnlog = traceCommands.scoped('createAnnotationsFromMessage');
 
     for (const message of messages) {
         fnlog(`Creating annotation: ${JSON.stringify(message)}`);
@@ -263,7 +263,7 @@ export function createAnnotationsFromMessage(messages: Message[]): void {
  * @param inputs - Workflow inputs for path resolution
  */
 export function createCMakeTestAnnotations(output: string, inputs: ResolvedInputs): void {
-    const fnlog = trace_commands.scoped('createCMakeTestAnnotations');
+    const fnlog = traceCommands.scoped('createCMakeTestAnnotations');
 
     // A CMake test warning/error message is actually an error message
     // from whatever test framework is being used. The only supported format
@@ -281,13 +281,13 @@ export function createCMakeTestAnnotations(output: string, inputs: ResolvedInput
             let file: string | undefined = match[1] || undefined;
             fnlog(`File: ${file}`);
             if (file) {
-                file = path.resolve(inputs.source_dir, file);
+                file = path.resolve(inputs.sourceDir, file);
                 fnlog(`Absolute file: ${file}`);
-                file = path.relative(inputs.ref_source_dir, file);
+                file = path.relative(inputs.refSourceDir, file);
                 fnlog(`File relative to repository: ${file}`);
             }
             // Get line and attempt to convert to integer
-            let lineNum: number | undefined = match[2] ? parseInt(match[2]) : undefined;
+            const lineNum: number | undefined = match[2] ? parseInt(match[2]) : undefined;
             fnlog(`Line: ${lineNum}`);
             if (lineNum) {
                 fnlog(`Line (int): ${lineNum}`);

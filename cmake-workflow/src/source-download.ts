@@ -9,12 +9,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as io from '@actions/io';
 import * as os from 'os';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 
-import { Inputs } from './types';
+import { type Inputs } from './types';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const setup_program = require('setup-program');
+import * as setup_program from 'setup-program';
 
 /**
  * Downloads source code from a URL.
@@ -23,8 +22,8 @@ const setup_program = require('setup-program');
  * @throws Error if download fails
  */
 export async function downloadUrlSourceCode(inputs: Inputs): Promise<void> {
-    if (inputs.download_dir) {
-        const res = await setup_program.downloadAndExtract(inputs.url, inputs.download_dir);
+    if (inputs.downloadDir) {
+        const res = await setup_program.downloadAndExtract(inputs.url, inputs.downloadDir);
         if (res === undefined) {
             throw new Error(`Failed to download source code from ${inputs.url}`);
         }
@@ -33,9 +32,9 @@ export async function downloadUrlSourceCode(inputs: Inputs): Promise<void> {
         if (res === undefined) {
             throw new Error(`Failed to download source code from ${inputs.url}`);
         }
-        inputs.download_dir = res;
+        inputs.downloadDir = res;
     }
-    await setup_program.stripSingleDirectoryFromPath(inputs.download_dir);
+    await setup_program.stripSingleDirectoryFromPath(inputs.downloadDir);
 }
 
 /**
@@ -44,14 +43,14 @@ export async function downloadUrlSourceCode(inputs: Inputs): Promise<void> {
  * @param inputs - Workflow inputs with git repository and tag info
  */
 export async function cloneGitRepository(inputs: Inputs): Promise<void> {
-    if (!inputs.download_dir) {
-        inputs.download_dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'source-'));
+    if (!inputs.downloadDir) {
+        inputs.downloadDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'source-'));
     }
-    inputs.download_dir = path.resolve(inputs.download_dir);
-    if (inputs.git_tag) {
-        await setup_program.cloneGitRepo(inputs.git_repository, inputs.download_dir, inputs.git_tag, { shallow: true });
+    inputs.downloadDir = path.resolve(inputs.downloadDir);
+    if (inputs.gitTag) {
+        await setup_program.cloneGitRepo(inputs.gitRepository, inputs.downloadDir, inputs.gitTag, { shallow: true });
     } else {
-        await setup_program.cloneGitRepo(inputs.git_repository, inputs.download_dir, undefined, { shallow: true });
+        await setup_program.cloneGitRepo(inputs.gitRepository, inputs.downloadDir, undefined, { shallow: true });
     }
 }
 
@@ -61,8 +60,8 @@ export async function cloneGitRepository(inputs: Inputs): Promise<void> {
  * @param inputs - Workflow inputs with source download configuration
  */
 export async function downloadSourceCode(inputs: Inputs): Promise<void> {
-    if (!inputs.download_dir) {
-        inputs.download_dir = inputs.source_dir;
+    if (!inputs.downloadDir) {
+        inputs.downloadDir = inputs.sourceDir;
     }
     if (inputs.url) {
         await downloadUrlSourceCode(inputs);
@@ -79,7 +78,7 @@ export async function downloadSourceCode(inputs: Inputs): Promise<void> {
  * @param inputs - Workflow inputs with patch file paths
  */
 export async function applyPatches(inputs: Inputs): Promise<void> {
-    const fnlog = trace_commands.scoped('applyPatches');
+    const fnlog = traceCommands.scoped('applyPatches');
 
     if (!inputs.patches || inputs.patches.length === 0) {
         return;
@@ -100,13 +99,13 @@ export async function applyPatches(inputs: Inputs): Promise<void> {
             const files = fs.readdirSync(patchPath);
             for (const file of files) {
                 const filePath = path.resolve(patchPath, file);
-                const destPath = path.resolve(inputs.source_dir, file);
+                const destPath = path.resolve(inputs.sourceDir, file);
                 core.info(`Copying ${filePath} to ${destPath}`);
                 await io.cp(filePath, destPath, { recursive: true, force: true });
             }
         } else {
             const filePath = path.resolve(patch);
-            const destPath = path.resolve(inputs.source_dir, path.basename(patch));
+            const destPath = path.resolve(inputs.sourceDir, path.basename(patch));
             core.info(`Copying ${filePath} to ${destPath}`);
             await io.cp(filePath, destPath, { force: true });
         }

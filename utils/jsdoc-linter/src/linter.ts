@@ -1,7 +1,7 @@
-import { Project, SourceFile, Node, SyntaxKind, FunctionDeclaration, ClassDeclaration, InterfaceDeclaration, TypeAliasDeclaration, MethodDeclaration, JSDoc, VariableStatement, PropertySignature, MethodSignature } from 'ts-morph';
+import { Project, type SourceFile, Node, SyntaxKind, type FunctionDeclaration, type ClassDeclaration, type InterfaceDeclaration, type TypeAliasDeclaration, type MethodDeclaration, type JSDoc, type MethodSignature } from 'ts-morph';
 import * as path from 'path';
 import { glob } from 'glob';
-import { DeclarationInfo, FileLintResult, LintResult, LinterOptions, ParsedJSDoc, JSDocTag, ParameterInfo } from './types';
+import { type DeclarationInfo, type FileLintResult, type LintResult, type LinterOptions, type ParsedJSDoc, type JSDocTag, type ParameterInfo } from './types';
 import { checkDeclaration } from './rules';
 
 /**
@@ -99,7 +99,7 @@ function hasThrowStatements(node: FunctionDeclaration | MethodDeclaration): bool
  * @param node - The node to check
  * @returns True if the declaration is exported
  */
-function isExported(node: Node): boolean {
+function _isExported(node: Node): boolean {
     if (Node.isFunctionDeclaration(node) || Node.isClassDeclaration(node) ||
         Node.isInterfaceDeclaration(node) || Node.isTypeAliasDeclaration(node)) {
         return node.isExported();

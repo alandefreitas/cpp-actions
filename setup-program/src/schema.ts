@@ -49,7 +49,7 @@ the version we found.`
 The paths can be separated by ':' or ';'.`
     },
 
-    check_latest: {
+    checkLatest: {
         type: 'boolean' as const,
         default: false,
         description: 'Set this option if you want the action to check for the latest available version that satisfies the version spec.'
@@ -79,7 +79,7 @@ To simplify the download, the URL can contain the following placeholders:
 - \`{{arch}}\`: The architecture name. (process.arch)`
     },
 
-    install_prefix: {
+    installPrefix: {
         type: 'string' as const,
         default: '',
         description: `The directory where the tool should be installed if it's not available in the environment.
@@ -87,13 +87,13 @@ To simplify the download, the URL can contain the following placeholders:
 By default, the tool will be installed in the hosttools cache directory.`
     },
 
-    update_environment: {
+    updateEnvironment: {
         type: 'boolean' as const,
         default: true,
         description: 'Set this option if you want the action to update environment variables.'
     },
 
-    fail_on_error: {
+    failOnError: {
         type: 'boolean' as const,
         default: true,
         description: 'Fail if the program is not found.'
@@ -113,13 +113,13 @@ export const outputsSchema = {
     version: {
         description: 'The installed program version. Useful when given a version range as input.'
     },
-    version_major: {
+    versionMajor: {
         description: 'The installed program version major. Useful when given a version range as input.'
     },
-    version_minor: {
+    versionMinor: {
         description: 'The installed program version minor. Useful when given a version range as input.'
     },
-    version_patch: {
+    versionPatch: {
         description: 'The installed program version patch. Useful when given a version range as input.'
     },
     found: {

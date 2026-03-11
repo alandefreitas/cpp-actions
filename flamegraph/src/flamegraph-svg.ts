@@ -7,9 +7,9 @@
  * @module flamegraph-svg
  */
 
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 
-import { Trace } from './types';
+import { type Trace } from './types';
 
 /**
  * Represents a trace event with timing information.
@@ -18,13 +18,13 @@ export class Event {
     label: string;
     timestamp: number;
     duration: number;
-    total_duration: number;
+    totalDuration: number;
 
     constructor(label: string, timestamp: number, dur: number) {
         this.label = label;
         this.timestamp = timestamp;
         this.duration = dur;
-        this.total_duration = dur;
+        this.totalDuration = dur;
     }
 
     /**
@@ -56,7 +56,7 @@ function cantorPairing(a: number, b: number): number {
  * @param eventsDict - Dictionary to populate with events
  */
 function getTraceEvents(combinedTrace: Trace, eventsDict: Record<string, Event[]>): void {
-    const fnlog = trace_commands.scoped('getTraceEvents');
+    const fnlog = traceCommands.scoped('getTraceEvents');
     fnlog(`combinedTrace: ${combinedTrace}`);
     fnlog(`Get ${combinedTrace.traceEvents.length} trace events as {Event}`);
 
@@ -77,7 +77,7 @@ function getTraceEvents(combinedTrace: Trace, eventsDict: Record<string, Event[]
  * @returns Dictionary mapping cantor values to event arrays
  */
 function loadEvents(combinedTrace: Trace): Record<string, Event[]> {
-    const fnlog = trace_commands.scoped('loadEvents');
+    const fnlog = traceCommands.scoped('loadEvents');
 
     fnlog(`Load events from combined trace`);
     fnlog(`combinedTrace: ${combinedTrace}`);
@@ -226,7 +226,7 @@ function saveStack(stack: Event[], stackIdentifiers: ArrayMap): void {
     }
 
     const existingDuration = stackIdentifiers.has(identifiers) ? stackIdentifiers.get(identifiers)! : 0;
-    stackIdentifiers.set(identifiers, existingDuration + event!.total_duration);
+    stackIdentifiers.set(identifiers, existingDuration + event!.totalDuration);
 }
 
 /**
@@ -248,7 +248,7 @@ function loadStackIdentifiers(events: Event[], stackIdentifiers: ArrayMap): void
             }
 
             if (eventStack.length) {
-                eventStack[eventStack.length - 1].total_duration -= e.duration;
+                eventStack[eventStack.length - 1].totalDuration -= e.duration;
             }
 
             eventStack.push(e);
@@ -269,7 +269,7 @@ function loadStackIdentifiers(events: Event[], stackIdentifiers: ArrayMap): void
  */
 export function stackCollapseChromeTracing(combinedTrace: Trace): ArrayMap {
     // Adapted from https://github.com/brendangregg/FlameGraph/blob/master/stackcollapse-chrome-tracing.py
-    const fnlog = trace_commands.scoped('stackCollapseChromeTracing');
+    const fnlog = traceCommands.scoped('stackCollapseChromeTracing');
 
     fnlog(`Generate stack collapse from combined trace`);
     fnlog(`combinedTrace: ${combinedTrace}`);
@@ -452,7 +452,7 @@ function namehash(name: string): number {
  * @param name - Name to hash
  * @returns Unsigned 32-bit integer hash
  */
-function sum_namehash(name: string): number {
+function sumNamehash(name: string): number {
     // Generate a basic hash for the name string
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
@@ -469,13 +469,13 @@ function sum_namehash(name: string): number {
  * @param name - Name to hash
  * @returns Random value between 0 and 1, consistent for the same name
  */
-function random_namehash(name: string): number {
+function randomNamehash(name: string): number {
     // Generate a random hash for the name string.
     // This ensures that functions with the same name have the same color,
     // both within a flamegraph and across multiple flamegraphs.
 
     // Seed random number generator using the hash
-    let seed = sum_namehash(name);
+    let seed = sumNamehash(name);
 
     function seededRandom() {
         seed = (seed * 9301 + 49297) % 233280;
@@ -505,9 +505,9 @@ function getColor(type: string, hash: boolean, name: string, rand: boolean): str
         v2 = Math.random();
         v3 = Math.random();
     } else {
-        v1 = random_namehash(name);
-        v2 = random_namehash(name);
-        v3 = random_namehash(name);
+        v1 = randomNamehash(name);
+        v2 = randomNamehash(name);
+        v3 = randomNamehash(name);
     }
 
     // theme palettes
@@ -640,7 +640,7 @@ function getColor(type: string, hash: boolean, name: string, rand: boolean): str
  * @param negate - Whether to negate the value
  * @returns RGB color string
  */
-function color_scale(value: number, max: number, negate = false): string {
+function colorScale(value: number, max: number, negate = false): string {
     let r = 255, g = 255, b = 255;
     if (negate) {
         value = -value;
@@ -663,7 +663,7 @@ function color_scale(value: number, max: number, negate = false): string {
  * @param rand - Whether to use random coloring
  * @returns RGB color string
  */
-function color_map(colors: string, func: string, paletteMap: Record<string, string>, hash: boolean, rand: boolean): string {
+function colorMap(colors: string, func: string, paletteMap: Record<string, string>, hash: boolean, rand: boolean): string {
     if (paletteMap[func]) {
         return paletteMap[func];
     } else {
@@ -688,14 +688,13 @@ function flow(last: string[], thisStack: string[], v: number, d: number | undefi
     const lenB = thisStack.length - 1;
 
     let i = 0;
-    let lenSame;
 
     for (; i <= lenA; i++) {
         if (i > lenB || last[i] !== thisStack[i]) {
             break;
         }
     }
-    lenSame = i;
+    const lenSame = i;
 
     for (i = lenA; i >= lenSame; i--) {
         const key = `${last[i]};${i}`;
@@ -733,7 +732,7 @@ function flow(last: string[], thisStack: string[], v: number, d: number | undefi
  * @throws Error if there are too few samples for the flame graph
  */
 export function generateFlameGraph(stackIdentifiers: ArrayMap): string {
-    const fnlog = trace_commands.scoped('generateFlameGraph');
+    const fnlog = traceCommands.scoped('generateFlameGraph');
 
     const interactive = true;
 
@@ -769,7 +768,7 @@ export function generateFlameGraph(stackIdentifiers: ArrayMap): string {
     // io, wakeup, chain, java, js, perl, red, green, blue
     // aqua, yellow, purple, orange
     // color theme
-    let colors: string = 'hot';
+    const colors: string = 'hot';
 
     // set background colors. gradient choices are yellow,
     // blue, green, grey; flat colors use "#rrggbb"
@@ -871,7 +870,6 @@ export function generateFlameGraph(stackIdentifiers: ArrayMap): string {
         duration: number;
     }
     const Data: DataEntry[] = [];
-    let SortedData: DataEntry[];
     let last: string[] = [];
     let time = 0;
     const delta = undefined;
@@ -887,7 +885,7 @@ export function generateFlameGraph(stackIdentifiers: ArrayMap): string {
     }
 
     // Process Data array
-    SortedData = Data.slice().sort((a, b) => a.stack.localeCompare(b.stack));
+    const SortedData: DataEntry[] = Data.slice().sort((a, b) => a.stack.localeCompare(b.stack));
 
     // process and merge frames
     let ignored = 0;
@@ -948,7 +946,7 @@ export function generateFlameGraph(stackIdentifiers: ArrayMap): string {
     const widthpertime = (imagewidth - 2 * xpad) / timemax;
 
     // Treat as a percentage of time if the string ends in a "%".
-    const minwidth_time = minwidth / widthpertime;
+    const minwidthTime = minwidth / widthpertime;
 
     // Sort "Node" by keys
     const sortedNode = Object.keys(Node).sort().reduce((acc, key) => {
@@ -967,7 +965,7 @@ export function generateFlameGraph(stackIdentifiers: ArrayMap): string {
             throw new Error(`missing start for ${id}`);
         }
 
-        if ((etimeNum - stime) < minwidth_time) {
+        if ((etimeNum - stime) < minwidthTime) {
             delete sortedNode[id];
             continue;
         }
@@ -1477,7 +1475,7 @@ export function generateFlameGraph(stackIdentifiers: ArrayMap): string {
             info = `all (${samplesTxt} ${countname}, 100%)`;
         } else {
             const pct = ((100 * samples) / (timemax * factor)).toFixed(2);
-            let escapedFunc = func
+            const escapedFunc = func
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
@@ -1505,10 +1503,10 @@ export function generateFlameGraph(stackIdentifiers: ArrayMap): string {
         } else if (func === '-') {
             color = dgrey;
         } else if (deltaVal !== undefined) {
-            color = color_scale(deltaVal, maxdelta);
+            color = colorScale(deltaVal, maxdelta);
         } else if (palette) {
             const paletteMap: Record<string, string> = {};
-            color = color_map(colors, func, paletteMap, hash, rand);
+            color = colorMap(colors, func, paletteMap, hash, rand);
         } else {
             color = getColor(colors, hash, func, rand);
         }

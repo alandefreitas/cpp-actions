@@ -34,7 +34,7 @@ test('parseExtraArgsEntry', async () => {
     expect(gh_inputs.parseBashArguments(['-D BOOST_SRC_DIR="/__t/boost/master"'])).toEqual(['-D', 'BOOST_SRC_DIR=/__t/boost/master']);
 });
 
-test('resolveInputParameters normalizes Windows package_dir to avoid escape sequences', async () => {
+test('resolveInputParameters normalizes Windows packageDir to avoid escape sequences', async () => {
     // Skip this test on non-Windows platforms since we can't reliably mock path.resolve
     // The test verifies that Windows paths with backslashes are normalized to forward slashes
     if (process.platform !== 'win32') {
@@ -46,61 +46,61 @@ test('resolveInputParameters normalizes Windows package_dir to avoid escape sequ
 
     const inputs = {
         preset: '',
-        build_type: '',
-        build_dir: 'build',
-        cmake_path: 'cmake',
+        buildType: '',
+        buildDir: 'build',
+        cmakePath: 'cmake',
         generator: 'Ninja',
-        generator_toolset: '',
-        generator_architecture: '',
+        generatorToolset: '',
+        generatorArchitecture: '',
         cc: '',
         ccflags: '',
         cxx: '',
         cxxflags: '',
         cxxstd: [] as (string | null)[],
-        export_compile_commands: undefined as boolean | undefined,
-        run_tests: undefined as boolean | undefined,
-        configure_tests_flag: '',
-        ctest_timeout: undefined as number | undefined,
+        exportCompileCommands: undefined as boolean | undefined,
+        runTests: undefined as boolean | undefined,
+        configureTestsFlag: '',
+        ctestTimeout: undefined as number | undefined,
         shared: false as boolean | undefined,
         toolchain: '',
-        source_dir: 'D:/a/mrdocs/mrdocs',
-        install_prefix: 'install',
-        package_dir: 'packages',
-        package_name: '',
-        package_vendor: '',
-        package_generators: [] as string[],
-        extra_args: [] as string[],
+        sourceDir: 'D:/a/mrdocs/mrdocs',
+        installPrefix: 'install',
+        packageDir: 'packages',
+        packageName: '',
+        packageVendor: '',
+        packageGenerators: [] as string[],
+        extraArgs: [] as string[],
         extra_args_key: undefined as string | undefined,
-        cmake_version: '',
+        cmakeVersion: '',
         url: '',
-        git_repository: '',
-        git_tag: '',
-        download_dir: '',
+        gitRepository: '',
+        gitTag: '',
+        downloadDir: '',
         patches: [] as string[],
         arch: '',
-        build_target: [] as (string | null)[],
+        buildTarget: [] as (string | null)[],
         jobs: 1,
-        test_all_cxxstd: false,
+        testAllCxxstd: false,
         install: undefined as boolean | undefined,
-        install_all_cxxstd: false,
+        installAllCxxstd: false,
         package: undefined as boolean | undefined,
-        package_all_cxxstd: false,
-        package_artifact: undefined as boolean | undefined,
-        package_retention_days: 10,
-        create_annotations: undefined as boolean | undefined,
-        ref_source_dir: '',
-        trace_commands: false
+        packageAllCxxstd: false,
+        packageArtifact: undefined as boolean | undefined,
+        packageRetentionDays: 10,
+        createAnnotations: undefined as boolean | undefined,
+        refSourceDir: '',
+        traceCommands: false
     };
 
     const setupCMakeOutputs = {
         path: 'cmake',
         dir: 'C:/Program Files/CMake/bin',
-        supported_presets_version: 7
+        supportedPresetsVersion: 7
     };
 
     await main._resolveInputParameters(inputs, setupCMakeOutputs);
-    expect(inputs.install_prefix.includes('\\')).toBe(false);
-    expect(inputs.package_dir).toBe('D:/a/mrdocs/mrdocs/build/packages');
+    expect(inputs.installPrefix.includes('\\')).toBe(false);
+    expect(inputs.packageDir).toBe('D:/a/mrdocs/mrdocs/build/packages');
 });
 
 test('deriveGeneratorArchitectureFromArch maps Visual Studio targets', () => {
@@ -124,52 +124,52 @@ describe('applyPatches', () => {
      * @param overrides - Fields to override in the default inputs
      * @returns Inputs object for testing
      */
-    function createInputs(overrides: { patches?: string[]; source_dir?: string }): Parameters<typeof main._applyPatches>[0] {
+    function createInputs(overrides: { patches?: string[]; sourceDir?: string }): Parameters<typeof main._applyPatches>[0] {
         return {
             preset: '',
-            build_type: '',
-            build_dir: 'build',
-            cmake_path: 'cmake',
+            buildType: '',
+            buildDir: 'build',
+            cmakePath: 'cmake',
             generator: '',
-            generator_toolset: '',
-            generator_architecture: '',
+            generatorToolset: '',
+            generatorArchitecture: '',
             cc: '',
             ccflags: '',
             cxx: '',
             cxxflags: '',
             cxxstd: [],
-            export_compile_commands: undefined,
-            run_tests: undefined,
-            configure_tests_flag: '',
-            ctest_timeout: undefined,
+            exportCompileCommands: undefined,
+            runTests: undefined,
+            configureTestsFlag: '',
+            ctestTimeout: undefined,
             shared: undefined,
             toolchain: '',
-            source_dir: overrides.source_dir ?? '/test/source',
-            install_prefix: '',
-            package_dir: '',
-            package_name: '',
-            package_vendor: '',
-            package_generators: [],
-            extra_args: [],
-            cmake_version: '',
+            sourceDir: overrides.sourceDir ?? '/test/source',
+            installPrefix: '',
+            packageDir: '',
+            packageName: '',
+            packageVendor: '',
+            packageGenerators: [],
+            extraArgs: [],
+            cmakeVersion: '',
             url: '',
-            git_repository: '',
-            git_tag: '',
-            download_dir: '',
+            gitRepository: '',
+            gitTag: '',
+            downloadDir: '',
             patches: overrides.patches ?? [],
             arch: '',
-            build_target: [],
+            buildTarget: [],
             jobs: 1,
-            test_all_cxxstd: false,
+            testAllCxxstd: false,
             install: undefined,
-            install_all_cxxstd: false,
+            installAllCxxstd: false,
             package: undefined,
-            package_all_cxxstd: false,
-            package_artifact: undefined,
-            package_retention_days: 10,
-            create_annotations: undefined,
-            ref_source_dir: '',
-            trace_commands: false
+            packageAllCxxstd: false,
+            packageArtifact: undefined,
+            packageRetentionDays: 10,
+            createAnnotations: undefined,
+            refSourceDir: '',
+            traceCommands: false
         };
     }
 
@@ -185,7 +185,7 @@ describe('applyPatches', () => {
 
         const inputs = createInputs({
             patches: ['/patches/CMakePresets.json'],
-            source_dir: '/project/src'
+            sourceDir: '/project/src'
         });
 
         await main._applyPatches(inputs);
@@ -205,7 +205,7 @@ describe('applyPatches', () => {
 
         const inputs = createInputs({
             patches: ['/patches'],
-            source_dir: '/project/src'
+            sourceDir: '/project/src'
         });
 
         await main._applyPatches(inputs);
@@ -228,7 +228,7 @@ describe('applyPatches', () => {
 
         const inputs = createInputs({
             patches: ['/patches/missing.txt'],
-            source_dir: '/project/src'
+            sourceDir: '/project/src'
         });
 
         await main._applyPatches(inputs);
@@ -242,7 +242,7 @@ describe('applyPatches', () => {
 
         const inputs = createInputs({
             patches: ['/patches/first.txt', '/patches/second.txt'],
-            source_dir: '/project/src'
+            sourceDir: '/project/src'
         });
 
         await main._applyPatches(inputs);

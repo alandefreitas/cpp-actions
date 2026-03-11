@@ -22,12 +22,12 @@ export type RawInputs = InferInputs<typeof inputsSchema>;
  */
 export class Commit {
     hash: string | null = null;
-    extra_hashes: string[] = [];
+    extraHashes: string[] = [];
     author: string | null = null;
-    author_name: string | null = null;
-    author_email: string | null = null;
-    gh_name: string | null = null;
-    gh_username: string | null = null;
+    authorName: string | null = null;
+    authorEmail: string | null = null;
+    ghName: string | null = null;
+    ghUsername: string | null = null;
     date: string | null = null;
     message = '';
 
@@ -48,16 +48,16 @@ export class Commit {
 
     // issue info
     issue: string | null = null;
-    gh_issue_username: string | null = null;
+    ghIssueUsername: string | null = null;
 
     // delimiter (git tag or version pattern)
     tag: string | null = null;
-    is_parent_release = false;
+    isParentRelease = false;
 
     // diff statistics (populated when sort-by is lines-based)
-    lines_added = 0;
-    lines_deleted = 0;
-    lines_changed = 0;
+    linesAdded = 0;
+    linesDeleted = 0;
+    linesChanged = 0;
 }
 
 /**
@@ -71,11 +71,11 @@ export class GitHubUser {
     username: string | null = null;
     name: string | null = null;
     commits = 0;
-    commits_perc = 0;
-    is_owner = false;
-    is_admin = false;
-    is_affiliated = false;
-    is_regular = true;
+    commitsPerc = 0;
+    isOwner = false;
+    isAdmin = false;
+    isAffiliated = false;
+    isRegular = true;
 }
 
 /**
@@ -125,24 +125,24 @@ export function parseSortByOption(value: string): SortByOption {
  */
 export interface Inputs {
     /** Path to the source repository */
-    source_dir: string;
+    sourceDir: string;
     /** Pattern to match version strings in commit messages */
-    version_pattern: RegExp;
+    versionPattern: RegExp;
     /** Pattern to match version tags */
-    tag_pattern: RegExp;
+    tagPattern: RegExp;
     /** Path where the changelog will be written */
-    output_path: string;
+    outputPath: string;
     limit: number;
-    thank_non_regular: boolean;
-    check_unconventional: CheckUnconventionalMode;
-    link_commits: boolean;
-    github_token: string;
-    update_summary: boolean;
-    trace_commands: boolean;
-    include_types: Set<string>;
-    exclude_types: Set<string>;
-    sort_by: SortByOption;
-    repo_branch?: string;
+    thankNonRegular: boolean;
+    checkUnconventional: CheckUnconventionalMode;
+    linkCommits: boolean;
+    githubToken: string;
+    updateSummary: boolean;
+    traceCommands: boolean;
+    includeTypes: Set<string>;
+    excludeTypes: Set<string>;
+    sortBy: SortByOption;
+    repoBranch?: string;
     repoUrl?: string;
     repoOwner?: string;
     repoName?: string;

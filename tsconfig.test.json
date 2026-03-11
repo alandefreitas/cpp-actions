@@ -10,7 +10,12 @@
       "pretty-errors": ["common/pretty-errors/src/index"],
       "trace-commands": ["common/trace-commands/src/index"],
       "gh-inputs": ["common/gh-inputs/src/index"],
-      "action-schema": ["common/action-schema/src/index"]
+      "action-schema": ["common/action-schema/src/index"],
+      "setup-program": ["setup-program/src/index"],
+      "setup-gcc": ["setup-gcc/src/index"],
+      "setup-clang": ["setup-clang/src/index"],
+      "setup-msvc": ["setup-msvc/src/index"],
+      "setup-cmake": ["setup-cmake/src/index"]
     }
   },
   "include": [

@@ -5,15 +5,15 @@ import * as path from 'path';
 import * as exec from '@actions/exec';
 import * as io from '@actions/io';
 import * as os from 'os';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 import { runAction } from 'action-schema';
 
 import {
-    RawInputs,
-    Inputs,
-    ResolvedInputs,
-    SetupCMakeOutputs,
-    ResolvedParameters
+    type RawInputs,
+    type Inputs,
+    type ResolvedInputs,
+    type SetupCMakeOutputs,
+    type ResolvedParameters
 } from './types';
 
 // Schema imports
@@ -37,8 +37,7 @@ import {
     applyPresetMacros
 } from './input-expansion';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const setup_cmake = require('setup-cmake');
+import * as setup_cmake from 'setup-cmake';
 
 /**
  * Returns the number of available CPU cores.
@@ -84,7 +83,7 @@ function makeArgsString(args: string[]): string {
  * @returns Resolved parameters ready for the CMake workflow execution
  */
 async function resolveInputParameters(inputs: Inputs, setupCMakeOutputs: SetupCMakeOutputs): Promise<ResolvedParameters> {
-    const fnlog = trace_commands.scoped('resolveInputParameters');
+    const fnlog = traceCommands.scoped('resolveInputParameters');
 
     // ----------------------------------------------
     // Identify and apply preset to input args
@@ -97,10 +96,10 @@ async function resolveInputParameters(inputs: Inputs, setupCMakeOutputs: SetupCM
     if (!inputs.preset) {
         // We don't set these when there's a preset because
         // it might be defined there
-        inputs.build_type = inputs.build_type || 'Release';
-        inputs.build_dir = inputs.build_dir || 'build';
+        inputs.buildType = inputs.buildType || 'Release';
+        inputs.buildDir = inputs.buildDir || 'build';
     }
-    inputs.cmake_path = setupCMakeOutputs.path || 'cmake';
+    inputs.cmakePath = setupCMakeOutputs.path || 'cmake';
 
     // ----------------------------------------------
     // Identify generator features
@@ -108,19 +107,19 @@ async function resolveInputParameters(inputs: Inputs, setupCMakeOutputs: SetupCM
     if (!inputs.generator && !inputs.preset) {
         await setupDefaultGenerator(inputs);
     }
-    let generator_is_multi_config = false;
+    let generatorIsMultiConfig = false;
     if (inputs.generator) {
-        generator_is_multi_config = inputs.generator.startsWith('Visual Studio') || ['Ninja Multi-Config', 'Xcode'].includes(inputs.generator);
-        core.info(`🔄 Generator "${inputs.generator}" ${generator_is_multi_config ? 'IS' : 'is NOT'} multi-config`);
+        generatorIsMultiConfig = inputs.generator.startsWith('Visual Studio') || ['Ninja Multi-Config', 'Xcode'].includes(inputs.generator);
+        core.info(`🔄 Generator "${inputs.generator}" ${generatorIsMultiConfig ? 'IS' : 'is NOT'} multi-config`);
     }
 
     // ----------------------------------------------
     // Find other cmake tools
     // ----------------------------------------------
-    const ctest_path = path.join(setupCMakeOutputs.dir, 'ctest');
-    core.info(`🧩 ctest_path: ${ctest_path}`);
-    const cpack_path = path.join(setupCMakeOutputs.dir, 'cpack');
-    core.info(`🧩 cpack_path: ${cpack_path}`);
+    const ctestPath = path.join(setupCMakeOutputs.dir, 'ctest');
+    core.info(`🧩 ctestPath: ${ctestPath}`);
+    const cpackPath = path.join(setupCMakeOutputs.dir, 'cpack');
+    core.info(`🧩 cpackPath: ${cpackPath}`);
 
     // ----------------------------------------------
     // Identify complete compiler paths
@@ -135,7 +134,7 @@ async function resolveInputParameters(inputs: Inputs, setupCMakeOutputs: SetupCM
         if (isNameOnly) {
             try {
                 return await io.which(compiler);
-            } catch (error) {
+            } catch {
                 fnlog(`Could not find ${compiler} in PATH`);
                 return compiler;
             }
@@ -169,21 +168,21 @@ async function resolveInputParameters(inputs: Inputs, setupCMakeOutputs: SetupCM
         inputs.cxxstd = [null];
     }
     core.info(`🧩 cxxstd: ${inputs.cxxstd.map(element => (element === null ? '<default>' : element))}`);
-    const main_cxxstd = inputs.cxxstd[inputs.cxxstd.length - 1];
-    core.info(`🧩 main_cxxstd: ${main_cxxstd === null ? '<default>' : main_cxxstd}`);
+    const mainCxxstd = inputs.cxxstd[inputs.cxxstd.length - 1];
+    core.info(`🧩 mainCxxstd: ${mainCxxstd === null ? '<default>' : mainCxxstd}`);
 
     // ----------------------------------------------
     // Resolve paths
     // ----------------------------------------------
-    inputs.source_dir = path.resolve(applyPresetMacros(inputs.source_dir, inputs) as string);
-    if (inputs.build_dir) {
-        inputs.build_dir = path.resolve(inputs.source_dir, applyPresetMacros(inputs.build_dir, inputs) as string);
+    inputs.sourceDir = path.resolve(applyPresetMacros(inputs.sourceDir, inputs) as string);
+    if (inputs.buildDir) {
+        inputs.buildDir = path.resolve(inputs.sourceDir, applyPresetMacros(inputs.buildDir, inputs) as string);
     }
-    if (inputs.install_prefix) {
-        inputs.install_prefix = normalizePath(path.resolve(applyPresetMacros(inputs.install_prefix, inputs) as string));
+    if (inputs.installPrefix) {
+        inputs.installPrefix = normalizePath(path.resolve(applyPresetMacros(inputs.installPrefix, inputs) as string));
     }
-    if (inputs.package_dir) {
-        inputs.package_dir = normalizePath(path.resolve(inputs.build_dir, applyPresetMacros(inputs.package_dir, inputs) as string));
+    if (inputs.packageDir) {
+        inputs.packageDir = normalizePath(path.resolve(inputs.buildDir, applyPresetMacros(inputs.packageDir, inputs) as string));
     }
 
     // Apply preset macros to the inputs that accept them
@@ -197,10 +196,10 @@ async function resolveInputParameters(inputs: Inputs, setupCMakeOutputs: SetupCM
     }
 
     return {
-        main_cxxstd,
-        generator_is_multi_config,
-        ctest_path,
-        cpack_path
+        mainCxxstd,
+        generatorIsMultiConfig,
+        ctestPath,
+        cpackPath
     };
 }
 
@@ -227,7 +226,7 @@ function makeFactorDescription(entry: ResolvedInputs): string {
  * Processes a single resolved entry through the CMake workflow.
  *
  * Runs configure, build, test, install, and package steps for a single
- * combination of factors (cxxstd, extra_args).
+ * combination of factors (cxxstd, extraArgs).
  *
  * @param entry - Resolved inputs for this factor combination
  * @param setupCMakeOutputs - CMake setup results (paths, capabilities)
@@ -239,21 +238,21 @@ async function processEntry(
     setupCMakeOutputs: SetupCMakeOutputs,
     resolvedParams: ResolvedParameters
 ): Promise<void> {
-    const fnlog = trace_commands.scoped('processEntry');
+    const fnlog = traceCommands.scoped('processEntry');
 
-    const { generator_is_multi_config, ctest_path, cpack_path } = resolvedParams;
+    const { generatorIsMultiConfig, ctestPath, cpackPath } = resolvedParams;
     const factorDesc = makeFactorDescription(entry);
 
-    fnlog(`Processing entry: ${factorDesc}, build_dir=${entry.build_dir}`);
+    fnlog(`Processing entry: ${factorDesc}, buildDir=${entry.buildDir}`);
 
     // ==============================================
     // Configure step
     // ==============================================
     core.startGroup(`⚙️ Configure (${factorDesc})`);
     {
-        const std_build_dir = entry.build_dir;
+        const stdBuildDir = entry.buildDir;
 
-        const configure_args: string[] = [];
+        const configureArgs: string[] = [];
         // Copy entry fields that may be modified
         let cxxflags = entry.cxxflags;
         let ccflags = entry.ccflags;
@@ -261,33 +260,33 @@ async function processEntry(
         /*
             Build parameters
          */
-        if (setupCMakeOutputs.supports_path_to_build) {
+        if (setupCMakeOutputs.supportsPathToBuild) {
             // If this can't be set directly, then we need to change the
             // working directory when running the command
-            configure_args.push('-S');
-            configure_args.push(entry.source_dir);
-            configure_args.push('-B');
-            configure_args.push(std_build_dir);
+            configureArgs.push('-S');
+            configureArgs.push(entry.sourceDir);
+            configureArgs.push('-B');
+            configureArgs.push(stdBuildDir);
         }
         if (entry.preset) {
-            configure_args.push(`--preset=${entry.preset}`);
+            configureArgs.push(`--preset=${entry.preset}`);
         }
         if (entry.generator) {
-            configure_args.push('-G');
-            configure_args.push(entry.generator);
+            configureArgs.push('-G');
+            configureArgs.push(entry.generator);
         }
-        if (entry.generator_toolset) {
-            configure_args.push('-T');
-            configure_args.push(entry.generator_toolset);
+        if (entry.generatorToolset) {
+            configureArgs.push('-T');
+            configureArgs.push(entry.generatorToolset);
         }
-        if (entry.generator_architecture) {
-            configure_args.push('-A');
-            configure_args.push(entry.generator_architecture);
+        if (entry.generatorArchitecture) {
+            configureArgs.push('-A');
+            configureArgs.push(entry.generatorArchitecture);
         }
         if (cxxflags.includes('/m32') && entry.generator.startsWith('Visual Studio')) {
             // In Visual Studio, the -A option is used to specify the architecture,
             // and it needs to be set explicitly
-            configure_args.push('-A', 'Win32');
+            configureArgs.push('-A', 'Win32');
             // Remove /m32 from cxxflags
             cxxflags = cxxflags
                 .split(' ').filter((input) => input !== '')
@@ -298,110 +297,110 @@ async function processEntry(
                 .filter((input) => input !== '/m32')
                 .join(' ');
         }
-        if (entry.build_type && !generator_is_multi_config) {
+        if (entry.buildType && !generatorIsMultiConfig) {
             // When the generator is multi-config, the build type is set
             // when building the target. `CMAKE_CONFIGURATION_TYPES`
             // should not be set in this case.
-            configure_args.push('-D');
-            configure_args.push(`CMAKE_BUILD_TYPE=${entry.build_type}`);
+            configureArgs.push('-D');
+            configureArgs.push(`CMAKE_BUILD_TYPE=${entry.buildType}`);
         }
         if (entry.toolchain) {
-            configure_args.push('-D');
-            configure_args.push(`CMAKE_TOOLCHAIN_FILE=${entry.toolchain}`);
+            configureArgs.push('-D');
+            configureArgs.push(`CMAKE_TOOLCHAIN_FILE=${entry.toolchain}`);
         }
-        if (entry.run_tests !== undefined && entry.configure_tests_flag) {
-            configure_args.push('-D');
-            if (entry.configure_tests_flag.includes('=')) {
-                configure_args.push(entry.configure_tests_flag);
+        if (entry.runTests !== undefined && entry.configureTestsFlag) {
+            configureArgs.push('-D');
+            if (entry.configureTestsFlag.includes('=')) {
+                configureArgs.push(entry.configureTestsFlag);
             } else {
-                configure_args.push(`${entry.configure_tests_flag}=${entry.run_tests ? 'ON' : 'OFF'}`);
+                configureArgs.push(`${entry.configureTestsFlag}=${entry.runTests ? 'ON' : 'OFF'}`);
             }
         }
         if (entry.shared) {
-            configure_args.push('-D');
-            configure_args.push('BUILD_SHARED_LIBS=ON');
+            configureArgs.push('-D');
+            configureArgs.push('BUILD_SHARED_LIBS=ON');
         }
         if (entry.cc) {
-            configure_args.push('-D');
-            configure_args.push(`CMAKE_C_COMPILER=${entry.cc}`);
+            configureArgs.push('-D');
+            configureArgs.push(`CMAKE_C_COMPILER=${entry.cc}`);
         }
         if (ccflags) {
-            configure_args.push('-D');
-            configure_args.push(`CMAKE_C_FLAGS=${ccflags}`);
+            configureArgs.push('-D');
+            configureArgs.push(`CMAKE_C_FLAGS=${ccflags}`);
         }
         if (entry.cxx) {
-            configure_args.push('-D');
-            configure_args.push(`CMAKE_CXX_COMPILER=${entry.cxx}`);
+            configureArgs.push('-D');
+            configureArgs.push(`CMAKE_CXX_COMPILER=${entry.cxx}`);
         }
         if (cxxflags) {
-            configure_args.push('-D');
-            configure_args.push(`CMAKE_CXX_FLAGS=${cxxflags}`);
+            configureArgs.push('-D');
+            configureArgs.push(`CMAKE_CXX_FLAGS=${cxxflags}`);
         }
         if (entry.cxxstd) {
-            configure_args.push('-D');
-            configure_args.push(`CMAKE_CXX_STANDARD=${entry.cxxstd}`);
+            configureArgs.push('-D');
+            configureArgs.push(`CMAKE_CXX_STANDARD=${entry.cxxstd}`);
         }
-        if (entry.export_compile_commands === true) {
-            configure_args.push('-D');
-            configure_args.push('CMAKE_EXPORT_COMPILE_COMMANDS=ON');
-        } else if (entry.export_compile_commands === false) {
-            configure_args.push('-D');
-            configure_args.push('CMAKE_EXPORT_COMPILE_COMMANDS=OFF');
+        if (entry.exportCompileCommands === true) {
+            configureArgs.push('-D');
+            configureArgs.push('CMAKE_EXPORT_COMPILE_COMMANDS=ON');
+        } else if (entry.exportCompileCommands === false) {
+            configureArgs.push('-D');
+            configureArgs.push('CMAKE_EXPORT_COMPILE_COMMANDS=OFF');
         }
-        configure_args.push('--no-warn-unused-cli');
+        configureArgs.push('--no-warn-unused-cli');
 
         /*
             Install and package parameters
          */
-        if (entry.install_prefix) {
-            configure_args.push('-D');
-            configure_args.push(`CMAKE_INSTALL_PREFIX=${entry.install_prefix}`);
+        if (entry.installPrefix) {
+            configureArgs.push('-D');
+            configureArgs.push(`CMAKE_INSTALL_PREFIX=${entry.installPrefix}`);
         }
-        if (entry.package_name.length > 0) {
-            configure_args.push('-D');
-            configure_args.push(`CPACK_GENERATOR=${entry.package_generators.join(';')}`);
+        if (entry.packageName.length > 0) {
+            configureArgs.push('-D');
+            configureArgs.push(`CPACK_GENERATOR=${entry.packageGenerators.join(';')}`);
         }
-        if (entry.package_name) {
-            configure_args.push('-D');
-            configure_args.push(`CPACK_PACKAGE_NAME=${entry.package_name}`);
+        if (entry.packageName) {
+            configureArgs.push('-D');
+            configureArgs.push(`CPACK_PACKAGE_NAME=${entry.packageName}`);
         }
-        if (entry.package_dir) {
-            configure_args.push('-D');
-            configure_args.push(`CPACK_PACKAGE_DIRECTORY=${entry.package_dir}`);
+        if (entry.packageDir) {
+            configureArgs.push('-D');
+            configureArgs.push(`CPACK_PACKAGE_DIRECTORY=${entry.packageDir}`);
         }
-        if (entry.package_vendor) {
-            configure_args.push('-D');
-            configure_args.push(`CPACK_PACKAGE_VENDOR=${entry.package_vendor}`);
+        if (entry.packageVendor) {
+            configureArgs.push('-D');
+            configureArgs.push(`CPACK_PACKAGE_VENDOR=${entry.packageVendor}`);
         }
 
         /*
             Extra arguments
          */
-        fnlog(`Extra arguments: ${JSON.stringify(entry.extra_args)}`);
-        for (const extra_arg of entry.extra_args) {
-            configure_args.push(extra_arg);
+        fnlog(`Extra arguments: ${JSON.stringify(entry.extraArgs)}`);
+        for (const extraArg of entry.extraArgs) {
+            configureArgs.push(extraArg);
         }
-        if (!setupCMakeOutputs.supports_path_to_build) {
+        if (!setupCMakeOutputs.supportsPathToBuild) {
             // If CMake doesn't support the -S and -B options, then we will
             // need to change the working directory when running the command
             // and set the source directory as the last argument
-            configure_args.push(`${entry.source_dir}`);
+            configureArgs.push(`${entry.sourceDir}`);
         }
 
         /*
             Prepare build directory
          */
-        // Ensure build_dir exists
-        const cmd_dir = setupCMakeOutputs.supports_path_to_build ? entry.source_dir : std_build_dir;
-        if (!setupCMakeOutputs.supports_path_to_build) {
-            await io.mkdirP(std_build_dir);
+        // Ensure buildDir exists
+        const cmdDir = setupCMakeOutputs.supportsPathToBuild ? entry.sourceDir : stdBuildDir;
+        if (!setupCMakeOutputs.supportsPathToBuild) {
+            await io.mkdirP(stdBuildDir);
         }
-        core.info(`💻 ${std_build_dir}> ${entry.cmake_path} ${makeArgsString(configure_args)}`);
-        const { exitCode: exitCode, stdout } = await exec.getExecOutput(`"${entry.cmake_path}"`, configure_args, {
-            cwd: cmd_dir,
+        core.info(`💻 ${stdBuildDir}> ${entry.cmakePath} ${makeArgsString(configureArgs)}`);
+        const { exitCode: exitCode, stdout } = await exec.getExecOutput(`"${entry.cmakePath}"`, configureArgs, {
+            cwd: cmdDir,
             ignoreReturnCode: true
         });
-        if (entry.create_annotations) {
+        if (entry.createAnnotations) {
             createCMakeConfigureAnnotations(stdout, entry);
         }
         if (exitCode !== 0) {
@@ -415,46 +414,46 @@ async function processEntry(
     // ==============================================
     core.startGroup(`🛠️ Build (${factorDesc})`);
     {
-        const std_build_dir = entry.build_dir;
+        const stdBuildDir = entry.buildDir;
 
         // Normalize build targets
-        let build_targets = entry.build_target;
-        if (build_targets.length === 0) {
+        let buildTargets = entry.buildTarget;
+        if (buildTargets.length === 0) {
             // null represents the default target
-            build_targets = [null];
-        } else if (setupCMakeOutputs.supports_build_multiple_targets && build_targets.length > 1) {
+            buildTargets = [null];
+        } else if (setupCMakeOutputs.supportsBuildMultipleTargets && buildTargets.length > 1) {
             // If multiple targets are specified, then we can only build them
             // all at once if the generator supports it. The targets
             // need to be space separated.
-            build_targets = [build_targets.join(' ')];
+            buildTargets = [buildTargets.join(' ')];
         }
 
         /*
             Build parameters
          */
-        for (const cur_build_target of build_targets) {
-            const build_args: string[] = ['--build'];
-            build_args.push(std_build_dir);
-            if (setupCMakeOutputs.supports_parallel_build) {
-                build_args.push('--parallel');
-                build_args.push(`${entry.jobs}`);
+        for (const curBuildTarget of buildTargets) {
+            const buildArgs: string[] = ['--build'];
+            buildArgs.push(stdBuildDir);
+            if (setupCMakeOutputs.supportsParallelBuild) {
+                buildArgs.push('--parallel');
+                buildArgs.push(`${entry.jobs}`);
             }
-            if (entry.build_type && generator_is_multi_config) {
-                build_args.push('--config');
-                build_args.push(entry.build_type || 'Release');
+            if (entry.buildType && generatorIsMultiConfig) {
+                buildArgs.push('--config');
+                buildArgs.push(entry.buildType || 'Release');
             }
-            if (cur_build_target) {
-                build_args.push('--target');
-                for (const split_build_target of cur_build_target.split(' ').filter((input) => input !== '')) {
-                    build_args.push(split_build_target);
+            if (curBuildTarget) {
+                buildArgs.push('--target');
+                for (const splitBuildTarget of curBuildTarget.split(' ').filter((input) => input !== '')) {
+                    buildArgs.push(splitBuildTarget);
                 }
             }
-            core.info(`💻 ${entry.source_dir}> ${entry.cmake_path} ${makeArgsString(build_args)}`);
-            const { exitCode: exitCode, stdout } = await exec.getExecOutput(`"${entry.cmake_path}"`, build_args, {
-                cwd: entry.source_dir,
+            core.info(`💻 ${entry.sourceDir}> ${entry.cmakePath} ${makeArgsString(buildArgs)}`);
+            const { exitCode: exitCode, stdout } = await exec.getExecOutput(`"${entry.cmakePath}"`, buildArgs, {
+                cwd: entry.sourceDir,
                 ignoreReturnCode: true
             });
-            if (entry.create_annotations) {
+            if (entry.createAnnotations) {
                 createCMakeBuildAnnotations(stdout, entry);
             }
             if (exitCode !== 0) {
@@ -467,49 +466,49 @@ async function processEntry(
     // ==============================================
     // Test step
     // ==============================================
-    // Run tests if: tests are enabled AND (test_all_cxxstd OR this is the main entry)
-    const shouldRunTests = entry.run_tests !== false && (entry.test_all_cxxstd || entry.is_main_entry);
+    // Run tests if: tests are enabled AND (testAllCxxstd OR this is the main entry)
+    const shouldRunTests = entry.runTests !== false && (entry.testAllCxxstd || entry.is_main_entry);
     if (shouldRunTests) {
         core.startGroup(`🧪 Test (${factorDesc})`);
         {
-            const std_build_dir = entry.build_dir;
+            const stdBuildDir = entry.buildDir;
 
             /*
                 Test parameters
              */
-            const test_args: string[] = ['--test-dir', std_build_dir];
-            if (setupCMakeOutputs.supports_parallel_build) {
-                test_args.push('--parallel');
-                test_args.push(`${entry.jobs}`);
+            const testArgs: string[] = ['--test-dir', stdBuildDir];
+            if (setupCMakeOutputs.supportsParallelBuild) {
+                testArgs.push('--parallel');
+                testArgs.push(`${entry.jobs}`);
             }
-            if (entry.build_type && generator_is_multi_config) {
-                test_args.push('--build-config');
-                test_args.push(entry.build_type || 'Release');
+            if (entry.buildType && generatorIsMultiConfig) {
+                testArgs.push('--build-config');
+                testArgs.push(entry.buildType || 'Release');
             }
-            if (entry.run_tests === true) {
-                test_args.push('--no-tests=error');
+            if (entry.runTests === true) {
+                testArgs.push('--no-tests=error');
             } else {
-                test_args.push('--no-tests=ignore');
+                testArgs.push('--no-tests=ignore');
             }
-            test_args.push('--progress');
-            test_args.push('--output-on-failure');
-            if (entry.ctest_timeout !== undefined) {
-                test_args.push('--timeout');
-                test_args.push(`${entry.ctest_timeout}`);
+            testArgs.push('--progress');
+            testArgs.push('--output-on-failure');
+            if (entry.ctestTimeout !== undefined) {
+                testArgs.push('--timeout');
+                testArgs.push(`${entry.ctestTimeout}`);
             }
 
             /*
                 Run
              */
-            core.info(`💻 ${entry.source_dir}> ${ctest_path} ${makeArgsString(test_args)}`);
-            const { exitCode: exitCode, stdout } = await exec.getExecOutput(`"${ctest_path}"`, test_args, {
-                cwd: entry.source_dir,
+            core.info(`💻 ${entry.sourceDir}> ${ctestPath} ${makeArgsString(testArgs)}`);
+            const { exitCode: exitCode, stdout } = await exec.getExecOutput(`"${ctestPath}"`, testArgs, {
+                cwd: entry.sourceDir,
                 ignoreReturnCode: true
             });
-            if (entry.create_annotations) {
+            if (entry.createAnnotations) {
                 createCMakeTestAnnotations(stdout, entry);
             }
-            if (exitCode !== 0 && entry.run_tests === true) {
+            if (exitCode !== 0 && entry.runTests === true) {
                 throw new Error(`CMake tests failed with exit code ${exitCode}`);
             }
         }
@@ -519,47 +518,47 @@ async function processEntry(
     // ==============================================
     // Install step
     // ==============================================
-    // Run install if: install is enabled AND (install_all_cxxstd OR this is the main entry)
-    const shouldInstall = entry.install !== false && (entry.install_all_cxxstd || entry.is_main_entry);
+    // Run install if: install is enabled AND (installAllCxxstd OR this is the main entry)
+    const shouldInstall = entry.install !== false && (entry.installAllCxxstd || entry.is_main_entry);
     if (shouldInstall) {
         core.startGroup(`🚚 Install (${factorDesc})`);
         {
-            const std_build_dir = entry.build_dir;
-            const std_install_dir = entry.install_prefix;
+            const stdBuildDir = entry.buildDir;
+            const stdInstallDir = entry.installPrefix;
 
             // Ensure install_dir exists
-            await io.mkdirP(std_install_dir);
+            await io.mkdirP(stdInstallDir);
 
             /*
                 Install parameters
              */
-            const install_args: string[] = [];
-            if (setupCMakeOutputs.supports_cmake_install) {
-                install_args.push('--install');
+            const installArgs: string[] = [];
+            if (setupCMakeOutputs.supportsCmakeInstall) {
+                installArgs.push('--install');
             } else {
-                install_args.push('--build');
+                installArgs.push('--build');
             }
-            install_args.push(std_build_dir);
-            if (entry.build_type && generator_is_multi_config) {
-                install_args.push('--config');
-                install_args.push(entry.build_type || 'Release');
+            installArgs.push(stdBuildDir);
+            if (entry.buildType && generatorIsMultiConfig) {
+                installArgs.push('--config');
+                installArgs.push(entry.buildType || 'Release');
             }
-            if (setupCMakeOutputs.supports_cmake_install) {
-                if (entry.install_prefix) {
-                    install_args.push('--prefix');
-                    install_args.push(std_install_dir);
+            if (setupCMakeOutputs.supportsCmakeInstall) {
+                if (entry.installPrefix) {
+                    installArgs.push('--prefix');
+                    installArgs.push(stdInstallDir);
                 }
             } else {
-                install_args.push('--target');
-                install_args.push('install');
+                installArgs.push('--target');
+                installArgs.push('install');
             }
 
             /*
                 Run
              */
-            core.info(`💻 ${entry.source_dir}> ${entry.cmake_path} ${makeArgsString(install_args)}`);
-            const { exitCode: exitCode } = await exec.getExecOutput(`"${entry.cmake_path}"`, install_args, {
-                cwd: entry.source_dir,
+            core.info(`💻 ${entry.sourceDir}> ${entry.cmakePath} ${makeArgsString(installArgs)}`);
+            const { exitCode: exitCode } = await exec.getExecOutput(`"${entry.cmakePath}"`, installArgs, {
+                cwd: entry.sourceDir,
                 ignoreReturnCode: true
             });
             if (exitCode !== 0 && entry.install === true) {
@@ -572,33 +571,33 @@ async function processEntry(
     // ==============================================
     // Package step
     // ==============================================
-    // Run package if: package is enabled AND (package_all_cxxstd OR this is the main entry)
-    const shouldPackage = entry.package && (entry.package_all_cxxstd || entry.is_main_entry);
+    // Run package if: package is enabled AND (packageAllCxxstd OR this is the main entry)
+    const shouldPackage = entry.package && (entry.packageAllCxxstd || entry.is_main_entry);
     if (shouldPackage) {
         core.startGroup(`📦 Package (${factorDesc})`);
 
         /*
             Determine cpack generators
          */
-        let use_default_generators = false;
-        let package_generators = entry.package_generators;
-        if (package_generators.length === 0) {
+        let useDefaultGenerators = false;
+        let packageGenerators = entry.packageGenerators;
+        if (packageGenerators.length === 0) {
             fnlog(`No package generators specified. Using available generators.`);
             // Run something equivalent to
-            // generators=$("${{ steps.params.outputs.cpack_path }}" --help | awk '/Generators/ {flag=1; next} flag && NF {print $1}' ORS=';' | sed 's/;$//')
+            // generators=$("${{ steps.params.outputs.cpackPath }}" --help | awk '/Generators/ {flag=1; next} flag && NF {print $1}' ORS=';' | sed 's/;$//')
             // to find the line where the list of generators starts, and then
             // get each generator from the following lines until a blank line.
             // The output of each of these lines is something like:
             //   7Z                           = 7-Zip file format
-            const { stdout } = await exec.getExecOutput(`"${cpack_path}"`, ['--help'], {
+            const { stdout } = await exec.getExecOutput(`"${cpackPath}"`, ['--help'], {
                 silent: true,
                 ignoreReturnCode: true
             });
-            const available_generators: string[] = [];
-            let collecting_generators = false;
+            const availableGenerators: string[] = [];
+            let collectingGenerators = false;
             for (const line of stdout.split(/\r?\n/)) {
-                if (!collecting_generators) {
-                    collecting_generators = line.trim() === 'Generators';
+                if (!collectingGenerators) {
+                    collectingGenerators = line.trim() === 'Generators';
                 } else {
                     if (line.trim() === '') {
                         break;
@@ -607,55 +606,55 @@ async function processEntry(
                     if (parts.length !== 2) {
                         break;
                     }
-                    available_generators.push(parts[0].trim());
+                    availableGenerators.push(parts[0].trim());
                 }
             }
-            core.info(`🔄 Available CPack generators: ${available_generators.join(';')}`);
-            package_generators = available_generators;
-            use_default_generators = true;
+            core.info(`🔄 Available CPack generators: ${availableGenerators.join(';')}`);
+            packageGenerators = availableGenerators;
+            useDefaultGenerators = true;
         } else {
-            fnlog(`Using specified package generators: ${package_generators.join(';')}`);
+            fnlog(`Using specified package generators: ${packageGenerators.join(';')}`);
         }
 
-        const std_build_dir = entry.build_dir;
-        const package_files: string[] = [];
+        const stdBuildDir = entry.buildDir;
+        const packageFiles: string[] = [];
 
         // Internal loop over package generators (not a combinatorial factor)
-        for (const package_generator of package_generators) {
-            core.info(`⚙️ Generating package with generator "${package_generator}"`);
-            const cpack_args: string[] = ['-G', package_generator];
-            if (entry.build_type && generator_is_multi_config) {
-                cpack_args.push('-C');
-                cpack_args.push(entry.build_type || 'Release');
+        for (const packageGenerator of packageGenerators) {
+            core.info(`⚙️ Generating package with generator "${packageGenerator}"`);
+            const cpackArgs: string[] = ['-G', packageGenerator];
+            if (entry.buildType && generatorIsMultiConfig) {
+                cpackArgs.push('-C');
+                cpackArgs.push(entry.buildType || 'Release');
             }
-            if (trace_commands.enabled()) {
-                cpack_args.push('--verbose');
+            if (traceCommands.enabled()) {
+                cpackArgs.push('--verbose');
             }
-            if (entry.package_name) {
-                cpack_args.push('-P');
-                cpack_args.push(entry.package_name);
+            if (entry.packageName) {
+                cpackArgs.push('-P');
+                cpackArgs.push(entry.packageName);
             }
-            if (entry.package_dir) {
-                cpack_args.push('-B');
-                cpack_args.push(entry.package_dir);
+            if (entry.packageDir) {
+                cpackArgs.push('-B');
+                cpackArgs.push(entry.packageDir);
             }
-            if (entry.package_vendor) {
-                cpack_args.push('--vendor');
-                cpack_args.push(entry.package_vendor);
+            if (entry.packageVendor) {
+                cpackArgs.push('--vendor');
+                cpackArgs.push(entry.packageVendor);
             }
             /*
                 Run
              */
-            core.info(`💻 ${std_build_dir}> ${cpack_path} ${makeArgsString(cpack_args)}`);
-            const { exitCode: exitCode, stdout } = await exec.getExecOutput(`"${cpack_path}"`, cpack_args, {
-                cwd: std_build_dir,
+            core.info(`💻 ${stdBuildDir}> ${cpackPath} ${makeArgsString(cpackArgs)}`);
+            const { exitCode: exitCode, stdout } = await exec.getExecOutput(`"${cpackPath}"`, cpackArgs, {
+                cwd: stdBuildDir,
                 ignoreReturnCode: true
             });
             if (exitCode !== 0) {
                 fnlog(`package: ${entry.package}`);
-                fnlog(`use_default_generators: ${use_default_generators}`);
-                const msg = `CPack (generator: ${package_generator}) failed with exit code ${exitCode}`;
-                if (!use_default_generators) {
+                fnlog(`useDefaultGenerators: ${useDefaultGenerators}`);
+                const msg = `CPack (generator: ${packageGenerator}) failed with exit code ${exitCode}`;
+                if (!useDefaultGenerators) {
                     throw new Error(msg);
                 } else {
                     // If we are using the default generators, then we
@@ -675,70 +674,70 @@ async function processEntry(
                 if (match) {
                     const packagePath = match[1];
                     core.info(`✅ Generated package: ${packagePath}`);
-                    package_files.push(packagePath);
+                    packageFiles.push(packagePath);
                     break;
                 }
             }
         }
         core.endGroup();
 
-        if (package_files.length !== 0 && entry.package_artifact) {
+        if (packageFiles.length !== 0 && entry.packageArtifact) {
             core.startGroup(`⬆️ Upload package artifacts`);
             /*
                 Generate artifacts
              */
-            core.info(`📦 Package files: ${package_files.join(',')}`);
+            core.info(`📦 Package files: ${packageFiles.join(',')}`);
 
             // Determine the common prefix of the basenames of these files
             // to use as the artifact
-            let common_prefix = '';
-            for (const package_file of package_files) {
-                if (common_prefix === '') {
-                    common_prefix = package_file;
+            let commonPrefix = '';
+            for (const packageFile of packageFiles) {
+                if (commonPrefix === '') {
+                    commonPrefix = packageFile;
                 } else {
                     let i = 0;
-                    for (; i < common_prefix.length && i < package_file.length; i++) {
-                        if (common_prefix[i] !== package_file[i]) {
+                    for (; i < commonPrefix.length && i < packageFile.length; i++) {
+                        if (commonPrefix[i] !== packageFile[i]) {
                             break;
                         }
                     }
-                    common_prefix = common_prefix.substring(0, i);
+                    commonPrefix = commonPrefix.substring(0, i);
                 }
             }
-            fnlog(`Common package prefix: ${common_prefix}`);
+            fnlog(`Common package prefix: ${commonPrefix}`);
 
             // Create a name for the artifact with all packages
-            let artifact_name = path.basename(common_prefix) + '-';
+            let artifactName = path.basename(commonPrefix) + '-';
             // Check if platform OS is Ubuntu
-            if (artifact_name === 'linux' && fs.existsSync('/etc/os-release')) {
-                const os_release = fs.readFileSync('/etc/os-release', 'utf8');
-                if (os_release.includes('Ubuntu')) {
+            if (artifactName === 'linux' && fs.existsSync('/etc/os-release')) {
+                const osRelease = fs.readFileSync('/etc/os-release', 'utf8');
+                if (osRelease.includes('Ubuntu')) {
                     // Get ubuntu version
-                    let ubuntu_version: string | undefined = undefined;
+                    let ubuntuVersion: string | undefined = undefined;
                     const regex = /VERSION_ID="(.*)"/;
-                    const match = os_release.match(regex);
+                    const match = osRelease.match(regex);
                     if (match) {
-                        ubuntu_version = match[1];
+                        ubuntuVersion = match[1];
                     }
-                    if (!ubuntu_version) {
-                        // Rely on lsb_release -rs
-                        const { exitCode: exitCode, stdout } = await exec.getExecOutput('lsb_release', ['-rs'], {
+                    if (!ubuntuVersion) {
+                        // Rely on lsbRelease -rs
+                        const { exitCode: exitCode, stdout } = await exec.getExecOutput('lsbRelease', ['-rs'], {
                             ignoreReturnCode: true
                         });
                         if (exitCode === 0) {
-                            artifact_name += stdout.trim();
+                            artifactName += stdout.trim();
                         }
                     }
-                    if (!ubuntu_version) {
+                    if (!ubuntuVersion) {
                         // Extract the Ubuntu version from /etc/lsb-release
-                        const lsb_release = fs.readFileSync('/etc/lsb-release', 'utf8');
+                        const lsbRelease = fs.readFileSync('/etc/lsb-release', 'utf8');
                         const regex = /DISTRIB_RELEASE=(.*)/;
-                        const match = lsb_release.match(regex);
+                        const match = lsbRelease.match(regex);
                         if (match) {
-                            ubuntu_version = match[1].trim();
+                            ubuntuVersion = match[1].trim();
                         }
                     }
-                    if (!ubuntu_version) {
+                    if (!ubuntuVersion) {
                         // Extract Ubuntu version from uname -a
                         const { exitCode: exitCode, stdout } = await exec.getExecOutput('uname', ['-a'], {
                             ignoreReturnCode: true
@@ -747,52 +746,52 @@ async function processEntry(
                             const regex = /Ubuntu (.*)/;
                             const match = stdout.match(regex);
                             if (match) {
-                                ubuntu_version = match[1].trim();
+                                ubuntuVersion = match[1].trim();
                             }
                         }
                     }
-                    if (ubuntu_version) {
-                        artifact_name += '-ubuntu-' + ubuntu_version;
+                    if (ubuntuVersion) {
+                        artifactName += '-ubuntu-' + ubuntuVersion;
                     }
                 }
             } else {
-                artifact_name += '-' + (process.env['RUNNER_OS'] || process.platform).toLowerCase();
+                artifactName += '-' + (process.env['RUNNER_OS'] || process.platform).toLowerCase();
             }
 
             // Add compiler to artifact name
-            if (!entry.cxx && artifact_name === 'windows') {
-                artifact_name += '-msvc';
+            if (!entry.cxx && artifactName === 'windows') {
+                artifactName += '-msvc';
             } else if (entry.cxx) {
-                const cxx_basename = path.basename(entry.cxx);
-                if (cxx_basename.startsWith('clang')) {
-                    if (artifact_name !== 'windows') {
-                        artifact_name += '-clang';
+                const cxxBasename = path.basename(entry.cxx);
+                if (cxxBasename.startsWith('clang')) {
+                    if (artifactName !== 'windows') {
+                        artifactName += '-clang';
                     } else {
-                        artifact_name += '-clang-cl';
+                        artifactName += '-clang-cl';
                     }
-                } else if (cxx_basename.startsWith('gcc') || cxx_basename.startsWith('g++')) {
-                    if (artifact_name !== 'windows') {
-                        artifact_name += '-gcc';
+                } else if (cxxBasename.startsWith('gcc') || cxxBasename.startsWith('g++')) {
+                    if (artifactName !== 'windows') {
+                        artifactName += '-gcc';
                     } else {
-                        artifact_name += '-mingw';
+                        artifactName += '-mingw';
                     }
-                } else if (cxx_basename.startsWith('cl')) {
-                    artifact_name += '-msvc';
+                } else if (cxxBasename.startsWith('cl')) {
+                    artifactName += '-msvc';
                 }
             }
-            artifact_name += '-packages';
-            fnlog(`Artifact name: ${artifact_name}`);
-            fnlog(`Retention days: ${entry.package_retention_days}`);
-            const packages_dir = path.dirname(common_prefix);
-            fnlog(`Packages directory: ${packages_dir}`);
+            artifactName += '-packages';
+            fnlog(`Artifact name: ${artifactName}`);
+            fnlog(`Retention days: ${entry.packageRetentionDays}`);
+            const packagesDir = path.dirname(commonPrefix);
+            fnlog(`Packages directory: ${packagesDir}`);
             const artifact = new DefaultArtifactClient();
             const { id, size } = await artifact.uploadArtifact(
-                artifact_name,
-                package_files,
-                packages_dir,
-                { retentionDays: entry.package_retention_days }
+                artifactName,
+                packageFiles,
+                packagesDir,
+                { retentionDays: entry.packageRetentionDays }
             );
-            trace_commands.log(`Created artifact with id: ${id} (bytes: ${size}`);
+            traceCommands.log(`Created artifact with id: ${id} (bytes: ${size}`);
             core.endGroup();
         }
     }
@@ -807,17 +806,17 @@ async function processEntry(
 function convertRawInputs(raw: RawInputs): Inputs {
     return {
         // CMake
-        cmake_path: raw.cmake_path,
-        cmake_version: raw.cmake_version,
+        cmakePath: raw.cmakePath,
+        cmakeVersion: raw.cmakeVersion,
         // Source project
-        source_dir: path.resolve(raw.source_dir),
+        sourceDir: path.resolve(raw.sourceDir),
         url: raw.url,
-        git_repository: raw.git_repository,
-        git_tag: raw.git_tag,
-        download_dir: raw.download_dir,
+        gitRepository: raw.gitRepository,
+        gitTag: raw.gitTag,
+        downloadDir: raw.downloadDir,
         patches: raw.patches,
         // Configure options
-        build_dir: raw.build_dir,
+        buildDir: raw.buildDir,
         preset: raw.preset,
         cc: raw.cc,
         ccflags: raw.ccflags,
@@ -827,37 +826,37 @@ function convertRawInputs(raw: RawInputs): Inputs {
         shared: raw.shared,
         toolchain: raw.toolchain,
         generator: raw.generator,
-        generator_toolset: raw.generator_toolset,
-        generator_architecture: raw.generator_architecture,
+        generatorToolset: raw.generatorToolset,
+        generatorArchitecture: raw.generatorArchitecture,
         arch: normalizeArchitectureInput(raw.arch),
-        build_type: raw.build_type,
-        build_target: raw.build_target as (string | null)[],
-        extra_args: parseExtraArgs(raw.extra_args),
-        export_compile_commands: raw.export_compile_commands,
+        buildType: raw.buildType,
+        buildTarget: raw.buildTarget as (string | null)[],
+        extraArgs: parseExtraArgs(raw.extraArgs),
+        exportCompileCommands: raw.exportCompileCommands,
         // Build options
         jobs: raw.jobs || numberOfCpus(),
         // Test options
-        run_tests: raw.run_tests,
-        configure_tests_flag: raw.configure_tests_flag,
-        test_all_cxxstd: raw.test_all_cxxstd,
-        ctest_timeout: raw.ctest_timeout || undefined,
+        runTests: raw.runTests,
+        configureTestsFlag: raw.configureTestsFlag,
+        testAllCxxstd: raw.testAllCxxstd,
+        ctestTimeout: raw.ctestTimeout || undefined,
         // Install
         install: raw.install,
-        install_all_cxxstd: raw.install_all_cxxstd,
-        install_prefix: raw.install_prefix,
+        installAllCxxstd: raw.installAllCxxstd,
+        installPrefix: raw.installPrefix,
         // Package
         package: raw.package,
-        package_all_cxxstd: raw.package_all_cxxstd,
-        package_name: raw.package_name,
-        package_dir: raw.package_dir,
-        package_vendor: raw.package_vendor,
-        package_generators: raw.package_generators,
-        package_artifact: raw.package_artifact,
-        package_retention_days: raw.package_retention_days,
+        packageAllCxxstd: raw.packageAllCxxstd,
+        packageName: raw.packageName,
+        packageDir: raw.packageDir,
+        packageVendor: raw.packageVendor,
+        packageGenerators: raw.packageGenerators,
+        packageArtifact: raw.packageArtifact,
+        packageRetentionDays: raw.packageRetentionDays,
         // Annotations and tracing
-        create_annotations: raw.create_annotations,
-        ref_source_dir: path.resolve(raw.ref_source_dir || process.env.GITHUB_WORKSPACE || '.'),
-        trace_commands: raw.trace_commands
+        createAnnotations: raw.createAnnotations,
+        refSourceDir: path.resolve(raw.refSourceDir || process.env.GITHUB_WORKSPACE || '.'),
+        traceCommands: raw.traceCommands
     };
 }
 
@@ -874,7 +873,7 @@ export async function main(inputs: Inputs): Promise<void> {
     // ==============================================
     // Download source code (once)
     // ==============================================
-    if (inputs.url || inputs.git_repository) {
+    if (inputs.url || inputs.gitRepository) {
         core.startGroup(`🌎 Download source code`);
         await downloadSourceCode(inputs);
         core.endGroup();
@@ -893,20 +892,20 @@ export async function main(inputs: Inputs): Promise<void> {
     // Setup CMake (once)
     // ==============================================
     core.startGroup(`🔎 Setup CMake`);
-    const setupCMakeOutputs: SetupCMakeOutputs = await setup_cmake.main({
-        trace_commands: trace_commands,
-        version: inputs.cmake_version,
-        cmake_file: path.resolve(inputs.source_dir, 'CMakeLists.txt'),
-        path: inputs.cmake_path,
-        cmake_path: 'cmake',
+    const setupCMakeOutputs = await setup_cmake.main({
+        traceCommands: inputs.traceCommands,
+        version: inputs.cmakeVersion,
+        cmakeFile: path.resolve(inputs.sourceDir, 'CMakeLists.txt'),
+        path: inputs.cmakePath,
+        cmakePath: 'cmake',
         cache: false,
-        check_latest: false,
-        update_environment: false
-    }, false);
+        checkLatest: false,
+        updateEnvironment: false
+    } as setup_cmake.Inputs, false) as unknown as SetupCMakeOutputs;
     if (!setupCMakeOutputs.path) {
         throw new Error('CMake not found');
     }
-    inputs.cmake_path = setupCMakeOutputs.path;
+    inputs.cmakePath = setupCMakeOutputs.path;
     core.endGroup();
 
     // ==============================================
@@ -925,7 +924,7 @@ export async function main(inputs: Inputs): Promise<void> {
     core.info(`📊 Expanded to ${entries.length} factor combination(s)`);
     for (const entry of entries) {
         const desc = makeFactorDescription(entry);
-        core.info(`  • ${desc}: build_dir=${entry.build_dir}`);
+        core.info(`  • ${desc}: buildDir=${entry.buildDir}`);
     }
     core.endGroup();
 

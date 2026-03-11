@@ -18,7 +18,7 @@
 import * as exec from '@actions/exec';
 import * as path from 'path';
 import * as os from 'os';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 import * as gh_inputs from 'gh-inputs';
 import type { Inputs } from './schema';
 import type { GitFeatures } from './git-utils';
@@ -98,7 +98,7 @@ export async function initializeSubmodules(
     patchNames: Set<string> = new Set(),
     preScannedDeps: Map<string, string[]> = new Map()
 ): Promise<DiscoveryResult> {
-    const fnlog = trace_commands.scoped('initializeSubmodules');
+    const fnlog = traceCommands.scoped('initializeSubmodules');
 
     const gitArgs = makeSubmoduleUpdateArgs(gitFeatures);
 
@@ -110,7 +110,7 @@ export async function initializeSubmodules(
     const initialModuleSubpaths = new Set([...allModulesSubPaths, ...essentialSubPaths]);
     if (initialModuleSubpaths.size > 0) {
         const args = ['submodule', 'update'].concat(gitArgs).concat(['--init', ...initialModuleSubpaths]);
-        await exec.exec(`"${gitFeatures.gitPath}"`, args, { cwd: inputs.boost_dir });
+        await exec.exec(`"${gitFeatures.gitPath}"`, args, { cwd: inputs.boostDir });
     }
 
     // Seed patch modules as already initialized so they enter the scan loop.
@@ -139,14 +139,14 @@ export async function initializeSubmodules(
 
         // Scan all modules in this layer in parallel
         const scanResults = await Promise.all([...remainingModules].map(async (mod) => {
-            const modulePath = path.resolve(path.join(inputs.boost_dir, 'libs', mod));
-            const ignoreSet = new Set<string>(inputs.scan_modules_ignore);
+            const modulePath = path.resolve(path.join(inputs.boostDir, 'libs', mod));
+            const ignoreSet = new Set<string>(inputs.scanModulesIgnore);
             ignoreSet.add(mod);
             const moduleInputs: Inputs = {
                 ...inputs,
-                scan_modules_ignore: ignoreSet,
-                modules_scan_paths: new Set<string>(),
-                modules_exclude_paths: new Set<string>(['test', 'tests', 'example', 'examples'])
+                scanModulesIgnore: ignoreSet,
+                modulesScanPaths: new Set<string>(),
+                modulesExcludePaths: new Set<string>(['test', 'tests', 'example', 'examples'])
             };
             const deps = await scanBoostDependencies(modulePath, moduleInputs, exceptions, submodulePaths);
             fnlog(`Submodules of ${mod}: ${gh_inputs.makeValueString(deps)}`);
@@ -171,7 +171,7 @@ export async function initializeSubmodules(
         if (toInit.length > 0) {
             const paths = toInit.map(m => `libs/${m}`);
             const args = ['submodule', 'update'].concat(gitArgs).concat(['--init', ...paths]);
-            await exec.exec(`"${gitFeatures.gitPath}"`, args, { cwd: inputs.boost_dir });
+            await exec.exec(`"${gitFeatures.gitPath}"`, args, { cwd: inputs.boostDir });
         }
         for (const mod of newModules) {
             initializedModules.add(mod);
@@ -195,5 +195,5 @@ export async function initializeAllSubmodules(inputs: Inputs, gitFeatures: GitFe
     const args = ['submodule', 'update']
         .concat(makeSubmoduleUpdateArgs(gitFeatures))
         .concat(['--init', '--recursive']);
-    await exec.exec(`"${gitFeatures.gitPath}"`, args, { cwd: inputs.boost_dir });
+    await exec.exec(`"${gitFeatures.gitPath}"`, args, { cwd: inputs.boostDir });
 }

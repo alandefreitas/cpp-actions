@@ -6,12 +6,11 @@
 
 import * as semver from 'semver';
 import * as path from 'path';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 
-import { SubrangePolicies, SubrangePolicy } from './types';
+import { SubrangePolicies, type SubrangePolicy } from './types';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const setup_program = require('setup-program');
+import * as setup_program from 'setup-program';
 
 const defaultCacheDir = process.env.CPP_MATRIX_CACHE_DIR || path.join(__dirname, '..', 'var', 'cache', 'cpp-matrix');
 setup_program.setVersionsCacheDir(defaultCacheDir);
@@ -65,11 +64,11 @@ export async function findCompilerVersions(compiler: string): Promise<string[]> 
 /**
  * Gets the Visual Studio year from an MSVC version.
  *
- * @param msvc_version - MSVC version string or SemVer
+ * @param msvcVersion - MSVC version string or SemVer
  * @returns Visual Studio year or undefined
  */
-export function getVisualCppYear(msvc_version: string | semver.SemVer): string | undefined {
-    const v = semver.parse(msvc_version);
+export function getVisualCppYear(msvcVersion: string | semver.SemVer): string | undefined {
+    const v = semver.parse(msvcVersion);
     if (!v) return undefined;
     if (semver.gte(v, '14.30.0')) {
         return '2022';
@@ -179,7 +178,7 @@ export function getSubrangePolicyStr(policy: SubrangePolicy): string {
  * @returns Array of specific version strings selected from the range
  */
 export function splitRanges(range: string, versions: string[], policy: SubrangePolicy = SubrangePolicies.ONE_PER_MAJOR): string[] {
-    const fnlog = trace_commands.scoped('splitRanges');
+    const fnlog = traceCommands.scoped('splitRanges');
 
     if (versions.length === 0) {
         // We know nothing about the available versions for that compiler, so we just return "*"
@@ -204,143 +203,143 @@ export function splitRanges(range: string, versions: string[], policy: SubrangeP
         return ['*'];
     }
 
-    const major_or_minor_policy = minSemVer.major === maxSemVer.major ? SubrangePolicies.ONE_PER_MINOR : SubrangePolicies.ONE_PER_MAJOR;
-    const effective_policy = policy === SubrangePolicies.ONE_PER_MAJOR_OR_MINOR ? major_or_minor_policy : policy;
-    const range_versions = parsedVersions.filter(v => semver.satisfies(v, range));
+    const majorOrMinorPolicy = minSemVer.major === maxSemVer.major ? SubrangePolicies.ONE_PER_MINOR : SubrangePolicies.ONE_PER_MAJOR;
+    const effectivePolicy = policy === SubrangePolicies.ONE_PER_MAJOR_OR_MINOR ? majorOrMinorPolicy : policy;
+    const rangeVersions = parsedVersions.filter(v => semver.satisfies(v, range));
 
-    let subranges: string[] = [];
-    if (effective_policy === SubrangePolicies.ONE_PER_MAJOR) {
+    const subranges: string[] = [];
+    if (effectivePolicy === SubrangePolicies.ONE_PER_MAJOR) {
         fnlog('Effective policy: ONE_PER_MAJOR');
 
         // Add each major range (1, 2, 3, ...) from the main range for which there is a valid version
         for (let i = minSemVer.major; i <= maxSemVer.major; i++) {
             // Create an initial requirement with just the major version (eg: "9")
-            let major_range = i.toString();
-            if (semver.subset(major_range, range)) {
-                subranges.push(major_range);
+            let majorRange = i.toString();
+            if (semver.subset(majorRange, range)) {
+                subranges.push(majorRange);
                 continue;
             }
 
             // Versions that would satisfy the major requirement regardless of real requirement
             // (eg: 9.1.0, 9.2.0, 9.3.0, 9.4.0, 9.5.0)
-            let major_versions = parsedVersions.filter(v => semver.satisfies(v, major_range));
-            if (major_versions.length === 0) {
+            const majorVersions = parsedVersions.filter(v => semver.satisfies(v, majorRange));
+            if (majorVersions.length === 0) {
                 continue;
             }
 
             // Versions that would satisfy both the major requirement and the input range
             // (eg: 9.3.0, 9.4.0, 9.5.0 when the range is >=9.3)
-            let range_major_versions = range_versions.filter(v => semver.satisfies(v, major_range));
-            if (range_major_versions.length === 0) {
+            const rangeMajorVersions = rangeVersions.filter(v => semver.satisfies(v, majorRange));
+            if (rangeMajorVersions.length === 0) {
                 continue;
             }
 
             // If both represent the same versions, this means the major requirement is effectively the same
-            if (arraysHaveSameElements(major_versions, range_major_versions)) {
-                subranges.push(major_range);
+            if (arraysHaveSameElements(majorVersions, rangeMajorVersions)) {
+                subranges.push(majorRange);
                 continue;
             }
 
             // If the main range satisfies all the highest minors in the major version, then this is
             // a "^" requirement, meaning we should define the minor, and we can update it as we want
-            const latest_major_versions = major_versions.slice(-range_major_versions.length);
-            if (arraysHaveSameElements(latest_major_versions, range_major_versions)) {
-                let major_range = `^${i}.${latest_major_versions[0].minor}`;
+            const latestMajorVersions = majorVersions.slice(-rangeMajorVersions.length);
+            if (arraysHaveSameElements(latestMajorVersions, rangeMajorVersions)) {
+                let majorRange = `^${i}.${latestMajorVersions[0].minor}`;
                 // but if there's another major version with the same minor outside the range, we need to specify the
                 // patch
-                if (major_versions.some(v => v.minor === latest_major_versions[0].minor && !semver.satisfies(v, range))) {
-                    major_range = `^${latest_major_versions[0].toString()}`;
+                if (majorVersions.some(v => v.minor === latestMajorVersions[0].minor && !semver.satisfies(v, range))) {
+                    majorRange = `^${latestMajorVersions[0].toString()}`;
                 }
-                subranges.push(major_range);
+                subranges.push(majorRange);
                 continue;
             }
 
             // If the main range satisfies all the lowest minors in the major version, then this is
             // a <= requirement
-            const earliest_major_versions = major_versions.slice(0, range_major_versions.length);
-            if (arraysHaveSameElements(earliest_major_versions, range_major_versions)) {
-                major_range = `${i} - ${i}.${earliest_major_versions[earliest_major_versions.length - 1].minor}`;
+            const earliestMajorVersions = majorVersions.slice(0, rangeMajorVersions.length);
+            if (arraysHaveSameElements(earliestMajorVersions, rangeMajorVersions)) {
+                majorRange = `${i} - ${i}.${earliestMajorVersions[earliestMajorVersions.length - 1].minor}`;
                 // but if there's another major version with the same minor outside the range, we need to specify the
                 // patch
-                if (major_versions.some(v => v.minor === earliest_major_versions[earliest_major_versions.length - 1].minor && !semver.satisfies(v, range))) {
-                    major_range = `${i} - ${earliest_major_versions[earliest_major_versions.length - 1].toString()}`;
+                if (majorVersions.some(v => v.minor === earliestMajorVersions[earliestMajorVersions.length - 1].minor && !semver.satisfies(v, range))) {
+                    majorRange = `${i} - ${earliestMajorVersions[earliestMajorVersions.length - 1].toString()}`;
                 }
-                subranges.push(major_range);
+                subranges.push(majorRange);
                 continue;
             }
 
             // If the main range only satisfies an arbitrary interval of the major version, so this is a "-"
-            const fromIdx = major_versions.indexOf(range_major_versions[0]);
-            const toIdx = major_versions.indexOf(range_major_versions[range_major_versions.length - 1]);
-            let fromStr = major_versions[fromIdx].toString();
-            if (fromIdx === 0 || major_versions[fromIdx - 1].minor !== major_versions[fromIdx].minor) {
-                fromStr = `${major_versions[fromIdx].major}.${major_versions[fromIdx].minor}`;
+            const fromIdx = majorVersions.indexOf(rangeMajorVersions[0]);
+            const toIdx = majorVersions.indexOf(rangeMajorVersions[rangeMajorVersions.length - 1]);
+            let fromStr = majorVersions[fromIdx].toString();
+            if (fromIdx === 0 || majorVersions[fromIdx - 1].minor !== majorVersions[fromIdx].minor) {
+                fromStr = `${majorVersions[fromIdx].major}.${majorVersions[fromIdx].minor}`;
             }
-            let toStr = major_versions[toIdx].toString();
-            if (toIdx === major_versions.length - 1 || major_versions[toIdx + 1].minor !== major_versions[toIdx].minor) {
-                toStr = `${major_versions[toIdx].major}.${major_versions[toIdx].minor}`;
+            let toStr = majorVersions[toIdx].toString();
+            if (toIdx === majorVersions.length - 1 || majorVersions[toIdx + 1].minor !== majorVersions[toIdx].minor) {
+                toStr = `${majorVersions[toIdx].major}.${majorVersions[toIdx].minor}`;
             }
             subranges.push(`${fromStr} - ${toStr}`);
         }
     }
 
-    if (effective_policy === SubrangePolicies.ONE_PER_MINOR) {
+    if (effectivePolicy === SubrangePolicies.ONE_PER_MINOR) {
         fnlog('Effective policy: ONE_PER_MINOR');
 
         // Add each major range (1, 2, 3, ...) from the main range for which there is a valid version
         for (let i = minSemVer.major; i <= maxSemVer.major; i++) {
-            const unique_minors = parsedVersions
+            const uniqueMinors = parsedVersions
                 .filter(v => v.major === i)
                 .map(v => v.minor)
                 .sort()
                 .filter((value, index, self) => self.indexOf(value) === index);
-            for (const j of unique_minors) {
+            for (const j of uniqueMinors) {
                 // Create an initial requirement with just the major version (eg: "9")
-                let minor_range = `${i}.${j}`;
-                if (semver.subset(minor_range, range)) {
-                    subranges.push(minor_range);
+                const minorRange = `${i}.${j}`;
+                if (semver.subset(minorRange, range)) {
+                    subranges.push(minorRange);
                     continue;
                 }
 
                 // Versions that would satisfy the minor requirement regardless of real requirement
-                let minor_versions = parsedVersions.filter(v => semver.satisfies(v, minor_range));
-                if (minor_versions.length === 0) {
+                const minorVersions = parsedVersions.filter(v => semver.satisfies(v, minorRange));
+                if (minorVersions.length === 0) {
                     continue;
                 }
 
                 // Versions that would satisfy both the minor requirement and the input range
-                let range_minor_versions = range_versions.filter(v => semver.satisfies(v, minor_range));
-                if (range_minor_versions.length === 0) {
+                const rangeMinorVersions = rangeVersions.filter(v => semver.satisfies(v, minorRange));
+                if (rangeMinorVersions.length === 0) {
                     continue;
                 }
 
                 // If both represent the same versions, this means the major requirement is effectively the same
-                if (arraysHaveSameElements(minor_versions, range_minor_versions)) {
-                    subranges.push(minor_range);
+                if (arraysHaveSameElements(minorVersions, rangeMinorVersions)) {
+                    subranges.push(minorRange);
                     continue;
                 }
 
                 // If the main range satisfies all the highest minors in the major version, then this is
                 // a "^" requirement, meaning we should define the minor, and we can update it as we want
-                const latest_minor_versions = minor_versions.slice(-range_minor_versions.length);
-                if (arraysHaveSameElements(latest_minor_versions, range_minor_versions)) {
-                    subranges.push(`~${latest_minor_versions[0].toString()}`);
+                const latestMinorVersions = minorVersions.slice(-rangeMinorVersions.length);
+                if (arraysHaveSameElements(latestMinorVersions, rangeMinorVersions)) {
+                    subranges.push(`~${latestMinorVersions[0].toString()}`);
                     continue;
                 }
 
                 // If the main range satisfies all the lowest minors in the major version, then this is
                 // a <= requirement
-                const earliest_minor_versions = minor_versions.slice(0, range_minor_versions.length);
-                if (arraysHaveSameElements(earliest_minor_versions, range_minor_versions)) {
-                    subranges.push(`${i}.${j} - ${latest_minor_versions[0].toString()}`);
+                const earliestMinorVersions = minorVersions.slice(0, rangeMinorVersions.length);
+                if (arraysHaveSameElements(earliestMinorVersions, rangeMinorVersions)) {
+                    subranges.push(`${i}.${j} - ${latestMinorVersions[0].toString()}`);
                     continue;
                 }
 
                 // If the main range only satisfies an arbitrary interval of the major version, so this is a "-"
-                const fromIdx = minor_versions.indexOf(range_minor_versions[0]);
-                const toIdx = minor_versions.indexOf(range_minor_versions[range_minor_versions.length - 1]);
-                let fromStr = minor_versions[fromIdx].toString();
-                let toStr = minor_versions[toIdx].toString();
+                const fromIdx = minorVersions.indexOf(rangeMinorVersions[0]);
+                const toIdx = minorVersions.indexOf(rangeMinorVersions[rangeMinorVersions.length - 1]);
+                const fromStr = minorVersions[fromIdx].toString();
+                const toStr = minorVersions[toIdx].toString();
                 subranges.push(`${fromStr} - ${toStr}`);
             }
         }

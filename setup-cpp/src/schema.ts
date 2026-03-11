@@ -40,7 +40,7 @@ By default, it uses any version available in the environment.`
         description: 'The compiler executable. We attempt to find the compiler at this path first.'
     },
 
-    check_latest: {
+    checkLatest: {
         type: 'boolean' as const,
         default: false,
         description: `By default, when the compiler is not available, this action will install the minimum version in the version spec.
@@ -49,7 +49,7 @@ This ensures the code respects its contract in terms of what minimum GCC version
 Set this option if you want the action to check for the latest available version that satisfies the version spec instead.`
     },
 
-    update_environment: {
+    updateEnvironment: {
         type: 'boolean' as const,
         default: true,
         description: 'Set this option if you want the action to update environment variables.'
@@ -82,25 +82,25 @@ export const outputsSchema = {
     version: {
         description: 'The installed compiler version. For MSVC this is the MSVC toolset version; for other compilers it is their native version string.'
     },
-    version_major: {
+    versionMajor: {
         description: 'The installed compiler version major. Useful when given a version range as input.'
     },
-    version_minor: {
+    versionMinor: {
         description: 'The installed compiler version minor. Useful when given a version range as input.'
     },
-    version_patch: {
+    versionPatch: {
         description: 'The installed compiler version patch. Useful when given a version range as input.'
     },
-    msvc_toolset_version: {
+    msvcToolsetVersion: {
         description: 'When using MSVC, the toolset version resolved for cl.exe (for example 14.44.35207).'
     },
-    msvc_product_version: {
+    msvcProductVersion: {
         description: 'When using MSVC, the Visual Studio product version (for example 17.11).'
     },
-    msvc_release_year: {
+    msvcReleaseYear: {
         description: 'When using MSVC, the mapped Visual Studio release year (for example 2022).'
     },
-    msvc_compiler_version: {
+    msvcCompilerVersion: {
         description: 'When using MSVC, the cl.exe front-end version reported by \`cl /Bv\` (for example 19.44.35219).'
     }
 } satisfies ActionOutputsSchema;

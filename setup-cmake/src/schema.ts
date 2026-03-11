@@ -35,7 +35,7 @@ By default, it uses any version available in the environment.`
         description: 'The target architecture (x86, x64). By default, this value is inferred.'
     },
 
-    cmake_file: {
+    cmakeFile: {
         type: 'string' as const,
         default: 'CMakeLists.txt',
         description: `File containing the CMake version to use in a cmake_minimum_required command.
@@ -56,7 +56,7 @@ Each entry can be an absolute/relative file path or a basename:
 Multiple entries can be provided by separating them with the platform path delimiter (\`:\` on Unix-like systems, \`;\` on Windows) or new lines. They are evaluated in order until an executable that satisfies the requested \`version\` range is located. To accept any version without filtering, set \`version: '*'\`.`
     },
 
-    cmake_path: {
+    cmakePath: {
         type: 'string' as const,
         default: '',
         description: `Alias for \`path\` preserved for backwards compatibility.
@@ -72,7 +72,7 @@ When provided, these entries are evaluated before \`path\` using the same semant
 As binaries are provided for all versions of CMake, this option is deprecated and will be removed in a future release.`
     },
 
-    check_latest: {
+    checkLatest: {
         type: 'boolean' as const,
         default: false,
         description: `By default, when CMake is not available, this action will install the minimum version in the version spec.
@@ -81,7 +81,7 @@ This ensures the code respects its contract in terms of what minimum CMake versi
 Set this option if you want the action to check for the latest available version that satisfies the version spec instead.`
     },
 
-    update_environment: {
+    updateEnvironment: {
         type: 'boolean' as const,
         default: true,
         description: 'Set this option if you want the action to update environment variables.'
@@ -101,28 +101,28 @@ export const outputsSchema = {
     version: {
         description: 'The installed CMake version. Useful when given a version range as input.'
     },
-    version_major: {
+    versionMajor: {
         description: 'The installed CMake version major. Useful when given a version range as input.'
     },
-    version_minor: {
+    versionMinor: {
         description: 'The installed CMake version minor. Useful when given a version range as input.'
     },
-    version_patch: {
+    versionPatch: {
         description: 'The installed CMake version patch. Useful when given a version range as input.'
     },
-    cache_hit: {
+    cacheHit: {
         description: 'A boolean value to indicate a cache entry was found'
     },
-    supports_path_to_build: {
+    supportsPathToBuild: {
         description: 'Whether CMake supports the -B <path-to-build> syntax'
     },
-    supports_parallel_build: {
+    supportsParallelBuild: {
         description: 'Whether CMake supports the -j <threads> syntax'
     },
-    supports_build_multiple_targets: {
+    supportsBuildMultipleTargets: {
         description: 'Whether CMake supports the --target with multiple targets'
     },
-    supports_cmake_install: {
+    supportsCmakeInstall: {
         description: 'Whether CMake supports the cmake --install'
     }
 } satisfies ActionOutputsSchema;

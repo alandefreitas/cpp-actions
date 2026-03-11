@@ -11,7 +11,7 @@ import * as path from 'path';
 import { parseArgs, printHelp } from './cli';
 import { determineVersion, isValidSemver, normalizeTag } from './version';
 import { executeRelease } from './release';
-import { isWorkingTreeClean, getCurrentBranch, GitOptions } from './git';
+import { isWorkingTreeClean, getCurrentBranch, type GitOptions } from './git';
 
 /**
  * Main entry point for the release CLI.

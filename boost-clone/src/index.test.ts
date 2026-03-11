@@ -47,8 +47,7 @@ import type { Inputs } from './schema';
 import type { GitFeatures } from './git-utils';
 import { describePrettyErrors } from 'pretty-errors/test-helper';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const setup_program = require('setup-program');
+import * as setup_program from 'setup-program';
 
 // ── Test helpers ──────────────────────────────────────────────────────
 
@@ -60,19 +59,19 @@ const setup_program = require('setup-program');
  */
 function makeInputs(overrides: Partial<Inputs> = {}): Inputs {
     return {
-        boost_dir: '',
+        boostDir: '',
         branch: 'master',
         modules: new Set<string>(),
         patches: new Set<string>(),
-        scan_modules_dir: new Set<string>(),
-        modules_scan_paths: new Set<string>(),
-        modules_exclude_paths: new Set<string>(),
-        scan_modules_ignore: new Set<string>(),
+        scanModulesDir: new Set<string>(),
+        modulesScanPaths: new Set<string>(),
+        modulesExcludePaths: new Set<string>(),
+        scanModulesIgnore: new Set<string>(),
         cache: true,
-        optimistic_caching: false,
-        trace_commands: false,
-        clone_strategy: 'auto' as const,
-        archive_threshold: 25,
+        optimisticCaching: false,
+        traceCommands: false,
+        cloneStrategy: 'auto' as const,
+        archiveThreshold: 25,
         ...overrides
     };
 }
@@ -128,8 +127,8 @@ function setupBaseMocks(opts: {
     if (cacheAvailable) {
         (cache.isFeatureAvailable as jest.Mock).mockReturnValue(true);
     }
-    setup_program.findGit.mockResolvedValue('/usr/bin/git');
-    setup_program.cloneGitRepo.mockResolvedValue(undefined);
+    (setup_program.findGit as jest.Mock).mockResolvedValue('/usr/bin/git');
+    (setup_program.cloneGitRepo as jest.Mock).mockResolvedValue(undefined);
 
     const versionOutput = { exitCode: 0, stdout: 'git version 2.30.0' };
     (exec.getExecOutput as jest.Mock).mockImplementation((_cmd: string, args: string[]) => {
@@ -159,7 +158,7 @@ function setupBaseMocks(opts: {
  * @param sourceCacheResult - Value returned on the second restoreCache call (default: `'boost-source-key'`)
  */
 function mockJournalRestore(
-    entries: Record<string, { commitHash: string; directDeps: string[] }>,
+    entries: Record<string, { commitHash: string; direct_deps: string[] }>,
     sourceCacheResult: string | undefined = 'boost-source-key'
 ): void {
     let callCount = 0;
@@ -195,12 +194,12 @@ function mockDownloadTool(gitmodulesPath: string, exceptionsPath: string): void 
  * cppalliance patches (buffers, http, capy) that each bring their own
  * transitive Boost dependencies.
  *
- * @param tmpDir - Temporary directory for boost_dir
+ * @param tmpDir - Temporary directory for boostDir
  * @returns Inputs configured with config+system modules and three cppalliance patches
  */
 function makeMultiPatchInputs(tmpDir: string): Inputs {
     return makeInputs({
-        boost_dir: path.join(tmpDir, 'boost-src'),
+        boostDir: path.join(tmpDir, 'boost-src'),
         branch: 'develop',
         modules: new Set<string>(['config', 'system']),
         patches: new Set<string>([
@@ -208,7 +207,7 @@ function makeMultiPatchInputs(tmpDir: string): Inputs {
             'https://github.com/cppalliance/http',
             'https://github.com/cppalliance/capy'
         ]),
-        modules_exclude_paths: new Set<string>(['test', 'tests'])
+        modulesExcludePaths: new Set<string>(['test', 'tests'])
     });
 }
 
@@ -230,14 +229,14 @@ test('computeSourceCacheKey reflects modules-exclude-paths', () => {
     const roots = new Set(['filesystem']);
     const baseInputs = makeInputs({
         modules: new Set<string>(['filesystem']),
-        modules_exclude_paths: new Set<string>(['test']),
-        optimistic_caching: true
+        modulesExcludePaths: new Set<string>(['test']),
+        optimisticCaching: true
     });
 
     const keyA = computeSourceCacheKey(resolved, baseInputs, roots);
     const keyB = computeSourceCacheKey(resolved, {
         ...baseInputs,
-        modules_exclude_paths: new Set<string>(['examples'])
+        modulesExcludePaths: new Set<string>(['examples'])
     }, roots);
 
     // Exclude lists no longer affect the cache key (they only affect module discovery,
@@ -285,7 +284,7 @@ test('optimistic vs pessimistic produces different keys when extra modules diffe
     const pessimisticKey = computeSourceCacheKey(resolved, baseInputs, roots);
     const optimisticKey = computeSourceCacheKey(resolved, {
         ...baseInputs,
-        optimistic_caching: true
+        optimisticCaching: true
     }, roots);
 
     // With extra transitive modules (core, assert) having different hashes,
@@ -297,7 +296,7 @@ test('main short-circuits on cache hit before downloads and saves', async () => 
     setupBaseMocks();
     (cache.restoreCache as jest.Mock).mockResolvedValue('cache-hit');
 
-    const inputs = makeInputs({ boost_dir: path.join(os.tmpdir(), 'boost-cache-hit') });
+    const inputs = makeInputs({ boostDir: path.join(os.tmpdir(), 'boost-cache-hit') });
     await main(inputs);
 
     // With no modules requested → trivially complete → cache check
@@ -323,9 +322,9 @@ async function runCacheMissScenario(tmpPrefix: string): Promise<void> {
     mockDownloadTool(gitmodulesPath, exceptionsPath);
 
     const inputs = makeInputs({
-        boost_dir: path.join(tmpDir, 'boost-src'),
+        boostDir: path.join(tmpDir, 'boost-src'),
         modules: new Set<string>(['config']),
-        optimistic_caching: true
+        optimisticCaching: true
     });
 
     await main(inputs);
@@ -352,14 +351,14 @@ test('main journal hit leads to cache check', async () => {
         defaultHash: 'confighash'
     });
     mockJournalRestore({
-        config: { commitHash: 'confighash', directDeps: ['core'] },
-        core: { commitHash: 'corehash', directDeps: [] }
+        config: { commitHash: 'confighash', direct_deps: ['core'] },
+        core: { commitHash: 'corehash', direct_deps: [] }
     });
 
     const inputs = makeInputs({
-        boost_dir: path.join(tmpDir, 'boost-src'),
+        boostDir: path.join(tmpDir, 'boost-src'),
         modules: new Set<string>(['config']),
-        optimistic_caching: true
+        optimisticCaching: true
     });
 
     await main(inputs);
@@ -396,9 +395,9 @@ test('initializeSubmodules returns DiscoveryResult', async () => {
     };
 
     const inputs = makeInputs({
-        boost_dir: tmpDir,
+        boostDir: tmpDir,
         modules: new Set<string>(['config']),
-        modules_exclude_paths: new Set<string>(['test', 'tests', 'example', 'examples'])
+        modulesExcludePaths: new Set<string>(['test', 'tests', 'example', 'examples'])
     });
 
     const result = await initializeSubmodules(
@@ -453,7 +452,7 @@ test('issue #31: empty journal triggers patch pre-scan and full clone', async ()
 
     // cloneGitRepo: for patch pre-scan clones, write headers that declare real deps
     const preScanClones: string[] = [];
-    setup_program.cloneGitRepo.mockImplementation(async (url: string, dest: string) => {
+    (setup_program.cloneGitRepo as jest.Mock).mockImplementation(async (url: string, dest: string) => {
         if (url.includes('cppalliance/buffers') && dest.includes('boost-patch-')) {
             preScanClones.push('buffers');
             const incDir = path.join(dest, 'include');
@@ -540,14 +539,14 @@ test('issue #31: complete journal with patch deps resolves all and hits cache', 
         defaultHash: 'otherhash'
     });
     mockJournalRestore({
-        config: { commitHash: 'confighash', directDeps: [] },
-        core: { commitHash: 'corehash', directDeps: ['config'] },
-        system: { commitHash: 'systemhash', directDeps: ['config'] },
-        assert: { commitHash: 'asserthash', directDeps: ['config'] },
-        json: { commitHash: 'jsonhash', directDeps: ['config', 'core'] },
-        buffers: { commitHash: 'buffershash', directDeps: ['core', 'assert'] },
-        http: { commitHash: 'httphash', directDeps: ['core', 'json'] },
-        capy: { commitHash: 'capyhash', directDeps: ['system', 'config'] }
+        config: { commitHash: 'confighash', direct_deps: [] },
+        core: { commitHash: 'corehash', direct_deps: ['config'] },
+        system: { commitHash: 'systemhash', direct_deps: ['config'] },
+        assert: { commitHash: 'asserthash', direct_deps: ['config'] },
+        json: { commitHash: 'jsonhash', direct_deps: ['config', 'core'] },
+        buffers: { commitHash: 'buffershash', direct_deps: ['core', 'assert'] },
+        http: { commitHash: 'httphash', direct_deps: ['core', 'json'] },
+        capy: { commitHash: 'capyhash', direct_deps: ['system', 'config'] }
     });
     mockDownloadTool(gitmodulesPath, exceptionsPath);
 
@@ -602,17 +601,17 @@ test('partial journal resolution reuses hashes and merges journal on save', asyn
     });
     // Journal: config and assert are current, system is stale
     mockJournalRestore({
-        config: { commitHash: 'confighash', directDeps: ['assert'] },
-        assert: { commitHash: 'asserthash', directDeps: [] },
-        system: { commitHash: 'systemhash_OLD', directDeps: ['config'] }
+        config: { commitHash: 'confighash', direct_deps: ['assert'] },
+        assert: { commitHash: 'asserthash', direct_deps: [] },
+        system: { commitHash: 'systemhash_OLD', direct_deps: ['config'] }
     }, undefined);
     mockDownloadTool(gitmodulesPath, exceptionsPath);
 
     const inputs = makeInputs({
-        boost_dir: path.join(tmpDir, 'boost-src'),
+        boostDir: path.join(tmpDir, 'boost-src'),
         branch: 'develop',
         modules: new Set<string>(['config', 'system']),
-        modules_exclude_paths: new Set<string>(['test', 'tests'])
+        modulesExcludePaths: new Set<string>(['test', 'tests'])
     });
 
     await main(inputs);
@@ -670,7 +669,7 @@ test('main with cache disabled skips all cache operations', async () => {
     mockDownloadTool(gitmodulesPath, exceptionsPath);
 
     const inputs = makeInputs({
-        boost_dir: path.join(tmpDir, 'boost-src'),
+        boostDir: path.join(tmpDir, 'boost-src'),
         modules: new Set<string>(['config']),
         cache: false
     });
@@ -695,7 +694,7 @@ test('main with release tag uses precomputed deps', async () => {
     const release = getLatestRelease()!;
 
     const inputs = makeInputs({
-        boost_dir: path.join(tmpDir, 'boost-src'),
+        boostDir: path.join(tmpDir, 'boost-src'),
         branch: release,
         modules: new Set<string>(['system'])
     });
@@ -712,7 +711,7 @@ test('main no modules and no patches uses trivially complete resolution', async 
     setupBaseMocks();
     (cache.restoreCache as jest.Mock).mockResolvedValue('cache-hit');
 
-    const inputs = makeInputs({ boost_dir: path.join(os.tmpdir(), 'boost-empty') });
+    const inputs = makeInputs({ boostDir: path.join(os.tmpdir(), 'boost-empty') });
     await main(inputs);
 
     // Trivially complete → cache check → hit → no clone
@@ -738,7 +737,7 @@ test('patch pre-scan populates journal before resolution walk (first run)', asyn
 
     // Track cloneGitRepo calls to verify patch pre-scan clones
     const cloneCalls: string[] = [];
-    setup_program.cloneGitRepo.mockImplementation(async (url: string, dest: string) => {
+    (setup_program.cloneGitRepo as jest.Mock).mockImplementation(async (url: string, dest: string) => {
         cloneCalls.push(url);
         // For patch clone, create a minimal include dir with a boost header
         if (url.includes('cppalliance/buffers')) {
@@ -752,11 +751,11 @@ test('patch pre-scan populates journal before resolution walk (first run)', asyn
     mockDownloadTool(gitmodulesPath, exceptionsPath);
 
     const inputs = makeInputs({
-        boost_dir: path.join(tmpDir, 'boost-src'),
+        boostDir: path.join(tmpDir, 'boost-src'),
         branch: 'develop',
         modules: new Set<string>(['config']),
         patches: new Set<string>(['https://github.com/cppalliance/buffers']),
-        modules_exclude_paths: new Set<string>(['test', 'tests'])
+        modulesExcludePaths: new Set<string>(['test', 'tests'])
     });
 
     await main(inputs);
@@ -781,14 +780,14 @@ test('patch pre-scan uses correct URL for hash fetch (cache hit with patches)', 
         defaultHash: 'otherhash'
     });
     mockJournalRestore({
-        config: { commitHash: 'confighash', directDeps: [] },
-        buffers: { commitHash: 'cppalliance_bh', directDeps: ['core'] },
-        core: { commitHash: 'corehash', directDeps: [] }
+        config: { commitHash: 'confighash', direct_deps: [] },
+        buffers: { commitHash: 'cppalliance_bh', direct_deps: ['core'] },
+        core: { commitHash: 'corehash', direct_deps: [] }
     });
     mockDownloadTool(gitmodulesPath, exceptionsPath);
 
     const inputs = makeInputs({
-        boost_dir: path.join(tmpDir, 'boost-src'),
+        boostDir: path.join(tmpDir, 'boost-src'),
         branch: 'develop',
         modules: new Set<string>(['config']),
         patches: new Set<string>(['https://github.com/cppalliance/buffers'])

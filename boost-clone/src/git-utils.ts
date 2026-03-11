@@ -8,7 +8,7 @@ import * as exec from '@actions/exec';
 import * as fsp from 'fs/promises';
 import * as path from 'path';
 import * as semver from 'semver';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 import type { Inputs } from './schema';
 
 /**
@@ -27,8 +27,7 @@ export interface GitFeatures {
     supportsDepth: boolean;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const setup_program = require('setup-program');
+import * as setup_program from 'setup-program';
 
 const boostSuperProjectRepo = 'https://github.com/boostorg/boost.git';
 
@@ -37,9 +36,13 @@ const boostSuperProjectRepo = 'https://github.com/boostorg/boost.git';
  *
  * @param _inputs - Action inputs (currently unused)
  * @returns Git path, version, and supported features
+ * @throws Error if git is not found
  */
 export async function findGitFeatures(_inputs: Inputs): Promise<GitFeatures> {
     const gitPath = await setup_program.findGit();
+    if (!gitPath) {
+        throw new Error('Git not found');
+    }
     const { stdout } = await exec.getExecOutput(`"${gitPath}"`, ['--version']);
     const versionOutput = stdout.trim();
     const versionRegex = /(\d+\.\d+\.\d+)/;
@@ -69,7 +72,7 @@ export async function cloneRepo(url: string, dest: string, branch: string): Prom
  * @param inputs - Action inputs containing branch and directory settings
  */
 export async function cloneBoostSuperproject(inputs: Inputs): Promise<void> {
-    await setup_program.cloneGitRepo(boostSuperProjectRepo, inputs.boost_dir, inputs.branch);
+    await setup_program.cloneGitRepo(boostSuperProjectRepo, inputs.boostDir, inputs.branch);
 }
 
 /**
@@ -96,11 +99,11 @@ export function getRepoName(url: string): string {
  * @param preScannedDirs - Map of patch name to temp directory from pre-scanning
  */
 export async function applyPatches(inputs: Inputs, preScannedDirs?: Map<string, string>): Promise<void> {
-    const fnlog = trace_commands.scoped('applyPatches');
+    const fnlog = traceCommands.scoped('applyPatches');
 
     await Promise.all([...inputs.patches].map(async (patch) => {
         const patchName = getRepoName(patch);
-        const patchDir = path.join(inputs.boost_dir, 'libs', patchName);
+        const patchDir = path.join(inputs.boostDir, 'libs', patchName);
         try {
             await fsp.access(patchDir);
             fnlog(`Removing existing directory: ${patchDir}`);

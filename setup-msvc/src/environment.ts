@@ -35,7 +35,7 @@ export function isPathVariable(name: string): boolean {
  * environment in unexpected ways.
  */
 export function deduplicatePathValue(path: string): string {
-    let paths = path.split(';')
+    const paths = path.split(';')
     // Remove duplicates by keeping the first occurrence and preserving order.
     // This keeps path shadowing working as intended.
     function unique(value: string, index: number, self: string[]) {

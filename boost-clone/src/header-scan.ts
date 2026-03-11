@@ -8,7 +8,7 @@ import * as core from '@actions/core';
 import * as tc from '@actions/tool-cache';
 import * as fsp from 'fs/promises';
 import * as path from 'path';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 import * as gh_inputs from 'gh-inputs';
 import type { Inputs } from './schema';
 import { parseExceptions, parseGitmodules } from './scanning';
@@ -21,7 +21,7 @@ import { parseExceptions, parseGitmodules } from './scanning';
  * @throws Error if the file does not exist
  */
 export async function readExceptions(exceptionsPath: string): Promise<Record<string, string>> {
-    trace_commands.log(`readExceptions: Reading exceptions from ${exceptionsPath}`);
+    traceCommands.log(`readExceptions: Reading exceptions from ${exceptionsPath}`);
     try {
         await fsp.access(exceptionsPath);
     } catch {
@@ -56,7 +56,7 @@ export async function readGitmodules(gitmodulesPath: string): Promise<Set<string
  * @returns Parsed submodule paths and header-to-module exception map
  */
 export async function fetchBoostMetadata(branch: string): Promise<{ submodulePaths: Set<string>; exceptions: Record<string, string> }> {
-    const fnlog = trace_commands.scoped('fetchBoostMetadata');
+    const fnlog = traceCommands.scoped('fetchBoostMetadata');
 
     const gitmodulesUrl = `https://raw.githubusercontent.com/boostorg/boost/${branch}/.gitmodules`;
     const exceptionsUrl = `https://raw.githubusercontent.com/boostorg/boostdep/${branch}/depinst/exceptions.txt`;
@@ -99,7 +99,7 @@ const loggedHeaders = new Set<string>();
  * @returns The module name or null if not found
  */
 export function moduleForHeader(header: string, exceptions: Record<string, string>, submodulePaths: Set<string>): string | null {
-    const fnlog = trace_commands.scoped('moduleForHeader');
+    const fnlog = traceCommands.scoped('moduleForHeader');
 
     if (header in exceptions) {
         return exceptions[header];
@@ -163,7 +163,7 @@ export async function scanHeaderDependencies(fileContents: string, exceptions: R
  * @returns Set of Boost module names found in the directory
  */
 export async function scanSubdirectoryDependencies(dir: string, exceptions: Record<string, string>, submodulePaths: Set<string>): Promise<Set<string>> {
-    const fnlog = trace_commands.scoped('scanSubdirectoryDependencies');
+    const fnlog = traceCommands.scoped('scanSubdirectoryDependencies');
 
     fnlog(`Scanning directory: ${dir}`);
     const modules = new Set<string>();
@@ -194,7 +194,7 @@ export async function scanSubdirectoryDependencies(dir: string, exceptions: Reco
  * @returns Set of Boost module names found
  */
 export async function listBoostDependencies(dir: string, subdirs: string[], exceptions: Record<string, string>, submodulePaths: Set<string>): Promise<Set<string>> {
-    trace_commands.log(`listBoostDependencies: Scanning subdirs of ${dir}`);
+    traceCommands.log(`listBoostDependencies: Scanning subdirs of ${dir}`);
     const modules = new Set<string>();
     for (const subdir of subdirs) {
         const subdirPath = path.resolve(path.join(dir, subdir));
@@ -203,7 +203,7 @@ export async function listBoostDependencies(dir: string, subdirs: string[], exce
         } catch {
             continue;
         }
-        trace_commands.log(`listBoostDependencies: Scanning subdir: ${subdirPath} for Boost dependencies`);
+        traceCommands.log(`listBoostDependencies: Scanning subdir: ${subdirPath} for Boost dependencies`);
         const subdirModules = await scanSubdirectoryDependencies(subdirPath, exceptions, submodulePaths);
         for (const module of subdirModules) {
             modules.add(module);
@@ -226,9 +226,9 @@ export async function listBoostDependencies(dir: string, subdirs: string[], exce
  */
 export async function scanBoostDependencies(scanDir: string, inputs: Inputs, exceptions: Record<string, string>, submodulePaths: Set<string>): Promise<Set<string>> {
     const dir = scanDir;
-    const ignore = inputs.scan_modules_ignore;
-    const include = inputs.modules_scan_paths;
-    const exclude = inputs.modules_exclude_paths;
+    const ignore = inputs.scanModulesIgnore;
+    const include = inputs.modulesScanPaths;
+    const exclude = inputs.modulesExcludePaths;
 
     let subdirs = ['include', 'src', 'source', 'test', 'tests', 'example', 'examples'];
     for (const subdir of exclude) {

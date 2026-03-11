@@ -4,7 +4,7 @@
  * @module sorting
  */
 
-import { Inputs, MatrixEntry } from './types';
+import { type Inputs, type MatrixEntry } from './types';
 
 /**
  * Sorts the matrix entries by priority order.
@@ -19,10 +19,10 @@ export function sortMatrix(matrix: MatrixEntry[], inputs: Inputs): void {
     // 3) Earliest
     // 4) Factors
     // 5) Intermediary
-    const contains_factor = (entry: MatrixEntry): boolean => {
+    const containsFactor = (entry: MatrixEntry): boolean => {
         let allFactors: string[] = [];
-        if (entry['compiler'] in inputs.latest_factors) {
-            allFactors.push(...inputs.latest_factors[entry['compiler']]);
+        if (entry['compiler'] in inputs.latestFactors) {
+            allFactors.push(...inputs.latestFactors[entry['compiler']]);
         }
         if (entry['compiler'] in inputs.factors) {
             allFactors.push(...inputs.factors[entry['compiler']]);
@@ -39,23 +39,23 @@ export function sortMatrix(matrix: MatrixEntry[], inputs: Inputs): void {
         return false;
     };
 
-    const is_latest_no_factor = (entry: MatrixEntry): boolean => {
-        return entry['is-latest'] && !entry['is-earliest'] && !contains_factor(entry);
+    const isLatestNoFactor = (entry: MatrixEntry): boolean => {
+        return entry['is-latest'] && !entry['is-earliest'] && !containsFactor(entry);
     };
 
-    const is_unique_no_factor = (entry: MatrixEntry): boolean => {
-        return entry['is-latest'] && entry['is-earliest'] && !contains_factor(entry);
+    const isUniqueNoFactor = (entry: MatrixEntry): boolean => {
+        return entry['is-latest'] && entry['is-earliest'] && !containsFactor(entry);
     };
 
-    const is_earliest_no_factor = (entry: MatrixEntry): boolean => {
-        return entry['is-earliest'] && !entry['is-latest'] && !contains_factor(entry);
+    const isEarliestNoFactor = (entry: MatrixEntry): boolean => {
+        return entry['is-earliest'] && !entry['is-latest'] && !containsFactor(entry);
     };
 
     matrix.reverse();
     matrix.sort(function (a, b) {
         // Latest compilers come first
-        const a0 = is_latest_no_factor(a);
-        const b0 = is_latest_no_factor(b);
+        const a0 = isLatestNoFactor(a);
+        const b0 = isLatestNoFactor(b);
         if (a0 && !b0) {
             return -1;
         } else if (!a0 && b0) {
@@ -63,8 +63,8 @@ export function sortMatrix(matrix: MatrixEntry[], inputs: Inputs): void {
         }
 
         // Then compilers with a single version
-        const a1 = is_unique_no_factor(a);
-        const b1 = is_unique_no_factor(b);
+        const a1 = isUniqueNoFactor(a);
+        const b1 = isUniqueNoFactor(b);
         if (a1 && !b1) {
             return -1;
         } else if (!a1 && b1) {
@@ -72,8 +72,8 @@ export function sortMatrix(matrix: MatrixEntry[], inputs: Inputs): void {
         }
 
         // Then the oldest compilers
-        const a2 = is_earliest_no_factor(a);
-        const b2 = is_earliest_no_factor(b);
+        const a2 = isEarliestNoFactor(a);
+        const b2 = isEarliestNoFactor(b);
         if (a2 && !b2) {
             return -1;
         } else if (!a2 && b2) {
@@ -81,8 +81,8 @@ export function sortMatrix(matrix: MatrixEntry[], inputs: Inputs): void {
         }
 
         // Then configurations with special factors
-        const a3 = contains_factor(a);
-        const b3 = contains_factor(b);
+        const a3 = containsFactor(a);
+        const b3 = containsFactor(b);
         if (a3 && !b3) {
             return -1;
         } else if (!a3 && b3) {

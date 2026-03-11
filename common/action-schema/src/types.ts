@@ -154,7 +154,7 @@ export interface OutputSchema {
  * ```typescript
  * const inputsSchema = {
  *     version: { type: 'string' as const, default: '*', description: 'Version to use.' },
- *     check_latest: { type: 'boolean' as const, default: false, description: 'Check latest.' }
+ *     checkLatest: { type: 'boolean' as const, default: false, description: 'Check latest.' }
  * } satisfies ActionInputsSchema;
  * ```
  */
@@ -193,11 +193,11 @@ export type InferInputType<S extends InputSchema> =
  * ```typescript
  * const schema = {
  *     version: { type: 'string' as const, default: '*', description: '...' },
- *     check_latest: { type: 'boolean' as const, default: false, description: '...' }
+ *     checkLatest: { type: 'boolean' as const, default: false, description: '...' }
  * } satisfies ActionInputsSchema;
  *
  * type Inputs = InferInputs<typeof schema>;
- * // Inputs = { version: string; check_latest: boolean; }
+ * // Inputs = { version: string; checkLatest: boolean; }
  * ```
  */
 export type InferInputs<S extends ActionInputsSchema> = {

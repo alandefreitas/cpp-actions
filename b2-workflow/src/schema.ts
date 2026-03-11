@@ -22,7 +22,7 @@ export const inputsSchema = {
     // ======================================
     // Configure options
     // ======================================
-    source_dir: {
+    sourceDir: {
         type: 'path' as const,
         default: '.',
         description: `The boost source directory.
@@ -31,7 +31,7 @@ This path will be used to build and install \`B2\` for the workflow
 and test the specified modules.`
     },
 
-    build_dir: {
+    buildDir: {
         type: 'string' as const,
         default: '',
         description: `Changes the build directories for all project roots being built.
@@ -122,7 +122,7 @@ If the environment variable is not specified, the action will use the default to
 for the B2 \`address-model\` and \`architecture\` properties unless they are explicitly set.`
     },
 
-    build_variant: {
+    buildVariant: {
         type: 'string' as const,
         default: '',
         fallbackEnv: 'B2_BUILD_VARIANT',
@@ -142,7 +142,7 @@ If the input is not specified, the action will use the value defined by the envi
 If the environment variable is not specified, the action will use the value from \`build-type\`.`
     },
 
-    build_type: {
+    buildType: {
         type: 'string' as const,
         default: '',
         fallbackEnv: 'B2_BUILD_TYPE',
@@ -163,7 +163,7 @@ If the environment variable is not specified, the action will use the default va
 The directory \`libs/<module>/test\` will be provided for each module in the list.`
     },
 
-    module_target: {
+    moduleTarget: {
         type: 'string[]' as const,
         default: ['test'] as string[],
         description: `Subdirectory or explicit target to append to each module.
@@ -177,7 +177,7 @@ This input accepts a single value or a list separated by spaces, commas, or new 
 provided, every target is applied to every module.`
     },
 
-    extra_args: {
+    extraArgs: {
         type: 'multiline' as const,
         default: [] as string[],
         description: 'Extra arguments.'
@@ -186,13 +186,13 @@ provided, every target is applied to every module.`
     // ======================================
     // B2-specific options
     // ======================================
-    warnings_as_errors: {
+    warningsAsErrors: {
         type: 'string' as const,
         default: '',
         description: 'Treat warnings as errors.'
     },
 
-    address_model: {
+    addressModel: {
         type: 'string' as const,
         default: '',
         description: 'Valid B2 list of address models.'
@@ -255,7 +255,7 @@ Note that unlike the \`clean\` target in make, you can use --clean together with
 clean specific targets.`
     },
 
-    clean_all: {
+    cleanAll: {
         type: 'boolean' as const,
         default: false,
         description: `Cleans all targets, no matter where they are defined.
@@ -264,7 +264,7 @@ In particular, it will clean targets in parent Jamfiles, and targets defined und
 other project roots.`
     },
 
-    abbreviate_paths: {
+    abbreviatePaths: {
         type: 'boolean' as const,
         default: true,
         description: `Compresses target paths by abbreviating each component.
@@ -289,7 +289,7 @@ See also the B2 documentation section
 https://www.boost.org/doc/libs/master/tools/build/doc/html/index.html#bbv2.reference.buildprocess.targetpath["Target Paths"].`
     },
 
-    rebuild_all: {
+    rebuildAll: {
         type: 'boolean' as const,
         default: false,
         description: `Equivalent to the \`-a\` option.
@@ -297,7 +297,7 @@ https://www.boost.org/doc/libs/master/tools/build/doc/html/index.html#bbv2.refer
 Causes all files to be rebuilt.`
     },
 
-    dry_run: {
+    dryRun: {
         type: 'boolean' as const,
         default: false,
         description: `Equivalent to the \`-n\` option.
@@ -305,7 +305,7 @@ Causes all files to be rebuilt.`
 Do not execute the commands, only print them.`
     },
 
-    stop_on_error: {
+    stopOnError: {
         type: 'boolean' as const,
         default: false,
         description: `Equivalent to the \`-q\` option.
@@ -321,7 +321,7 @@ Stop at the first error, as opposed to continuing to build targets that don't de
 Override all configuration files`
     },
 
-    site_config: {
+    siteConfig: {
         type: 'string' as const,
         default: '',
         description: `Equivalent to the \`--site-config=filename\` option.
@@ -329,7 +329,7 @@ Override all configuration files`
 Override the default site-config.jam.`
     },
 
-    user_config: {
+    userConfig: {
         type: 'string' as const,
         default: '',
         description: `Equivalent to the \`--user-config=filename\` option.
@@ -340,7 +340,7 @@ When this option is specified, the action will not generate a \`user-config.jam\
 the \`cxx\` toolset path.`
     },
 
-    project_config: {
+    projectConfig: {
         type: 'string' as const,
         default: '',
         description: `Equivalent to the \`--project-config=filename\` option.
@@ -348,7 +348,7 @@ the \`cxx\` toolset path.`
 Override the default project-config.jam`
     },
 
-    debug_configuration: {
+    debugConfiguration: {
         type: 'tribool' as const,
         default: undefined,
         description: `Equivalent to the \`--debug-configuration\` option.
@@ -358,7 +358,7 @@ Produces debug information about the loading of B2 and toolset files.
 If not specified, the value is inherited from \`trace-commands\`.`
     },
 
-    debug_building: {
+    debugBuilding: {
         type: 'tribool' as const,
         default: undefined,
         description: `Equivalent to the \`--debug-building\` option.
@@ -368,7 +368,7 @@ Prints what targets are being built and with what properties.
 If not specified, the value is inherited from \`trace-commands\`.`
     },
 
-    debug_generators: {
+    debugGenerators: {
         type: 'tribool' as const,
         default: undefined,
         description: `Equivalent to the \`--debug-generators\` option.
@@ -392,7 +392,7 @@ If not specified, the value is inherited from \`trace-commands\`.`
 The string should be either SYMBOL or SYMBOL=VALUE.`
     },
 
-    runtime_link: {
+    runtimeLink: {
         type: 'string' as const,
         default: '',
         description: `Equivalent to the \`--runtime-link=<shared,static>\` option.

@@ -1,4 +1,4 @@
-import { LintResult, FileLintResult, LintIssue } from './types';
+import { type LintResult, type LintIssue } from './types';
 
 /**
  * Formats a lint issue for text output.

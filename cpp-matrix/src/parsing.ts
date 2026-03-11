@@ -8,9 +8,9 @@ import * as core from '@actions/core';
 import * as semver from 'semver';
 
 import {
-    CompilerVersions,
-    CompilerFactors,
-    CompilerSuggestion
+    type CompilerVersions,
+    type CompilerFactors,
+    type CompilerSuggestion
 } from './types';
 
 /**
@@ -169,9 +169,9 @@ export function normalizeCppVersionRequirement(range: string): string {
         if (year >= 0 && year <= 99) {
             const a = currentCenturyFirstYear + year;
             const b = previousCenturyFirstYear + year;
-            const a_diff = Math.abs(currentYear - a);
-            const b_diff = Math.abs(currentYear - b);
-            if (a_diff < b_diff) {
+            const aDiff = Math.abs(currentYear - a);
+            const bDiff = Math.abs(currentYear - b);
+            if (aDiff < bDiff) {
                 return a.toString();
             } else {
                 return b.toString();

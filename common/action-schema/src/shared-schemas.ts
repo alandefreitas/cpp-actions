@@ -24,7 +24,7 @@ import type { ActionInputsSchema, ActionOutputsSchema } from './types';
  * ```
  */
 export const baseInputs = {
-    trace_commands: {
+    traceCommands: {
         type: 'boolean' as const,
         default: false,
         description: 'Trace commands executed by the workflow.'
@@ -42,7 +42,7 @@ export const baseInputs = {
  * // setup-cmake/src/schema.ts
  * export const inputsSchema = {
  *     ...setupInputs,
- *     cmake_file: { type: 'path' as const, default: '', description: 'Path to CMakeLists.txt.' }
+ *     cmakeFile: { type: 'path' as const, default: '', description: 'Path to CMakeLists.txt.' }
  * } satisfies ActionInputsSchema;
  * ```
  */
@@ -64,7 +64,7 @@ By default, it uses any version available in the environment.`
         description: `Path to the executable. We attempt to find the tool at this path first.`
     },
 
-    check_latest: {
+    checkLatest: {
         type: 'boolean' as const,
         default: false,
         description: `By default, when the tool is not available, this action will install the minimum version in the version spec.
@@ -73,7 +73,7 @@ This ensures the code respects its contract in terms of what minimum version is 
 Set this option if you want the action to check for the latest available version that satisfies the version spec instead.`
     },
 
-    update_environment: {
+    updateEnvironment: {
         type: 'boolean' as const,
         default: true,
         description: 'Set this option if you want the action to update environment variables.'
@@ -106,13 +106,13 @@ export const compilerOutputs = {
     version: {
         description: 'The installed version. Useful when given a version range as input.'
     },
-    version_major: {
+    versionMajor: {
         description: 'The installed version major component.'
     },
-    version_minor: {
+    versionMinor: {
         description: 'The installed version minor component.'
     },
-    version_patch: {
+    versionPatch: {
         description: 'The installed version patch component.'
     }
 } satisfies ActionOutputsSchema;
@@ -149,7 +149,7 @@ export const toolOutputs = {
  * const inputsSchema = {
  *     ...baseInputs,
  *     ...compilerEnvInputs,
- *     build_type: { type: 'string' as const, default: 'Release', description: '...' }
+ *     buildType: { type: 'string' as const, default: 'Release', description: '...' }
  * } satisfies ActionInputsSchema;
  * ```
  */
@@ -218,8 +218,8 @@ By default, it uses any version available in the environment.`
             ...setupInputs.path,
             description: `Path to the ${toolName} executable. We attempt to find ${toolName} at this path first.`
         },
-        check_latest: {
-            ...setupInputs.check_latest,
+        checkLatest: {
+            ...setupInputs.checkLatest,
             description: `By default, when ${toolName} is not available, this action will install the minimum version in the version spec.
 This ensures the code respects its contract in terms of what minimum ${toolName} version is supported.
 
@@ -302,13 +302,13 @@ export function createCompilerOutputs(
         version: {
             description: `The installed ${toolName} version. Useful when given a version range as input.`
         },
-        version_major: {
+        versionMajor: {
             description: `The installed ${toolName} version major. Useful when given a version range as input.`
         },
-        version_minor: {
+        versionMinor: {
             description: `The installed ${toolName} version minor. Useful when given a version range as input.`
         },
-        version_patch: {
+        versionPatch: {
             description: `The installed ${toolName} version patch. Useful when given a version range as input.`
         }
     };

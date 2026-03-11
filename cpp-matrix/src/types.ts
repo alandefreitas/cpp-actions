@@ -64,42 +64,42 @@ export interface SubrangePolicyMap {
 export interface Inputs {
     /** Compiler version requirements */
     compiler_versions: CompilerVersions;
-    subrange_policy: SubrangePolicyMap;
+    subrangePolicy: SubrangePolicyMap;
     standards: string;
-    max_standards?: number;
-    latest_factors: CompilerFactors;
+    maxStandards?: number;
+    latestFactors: CompilerFactors;
     factors: CompilerFactors;
-    combinatorial_factors: CompilerFactors;
-    force_factors: CompilerSuggestion[];
-    extra_values?: KeyValue[];
-    runs_on: CompilerSuggestion[];
+    combinatorialFactors: CompilerFactors;
+    forceFactors: CompilerSuggestion[];
+    extraValues?: KeyValue[];
+    runsOn: CompilerSuggestion[];
     containers: CompilerSuggestion[];
     generators: CompilerSuggestion[];
-    generator_toolsets: CompilerSuggestion[];
-    b2_toolsets: CompilerSuggestion[];
+    generatorToolsets: CompilerSuggestion[];
+    b2Toolsets: CompilerSuggestion[];
     ccflags: CompilerSuggestion[];
     cxxflags: CompilerSuggestion[];
     install: CompilerSuggestion[];
-    append_ccflags: CompilerSuggestion[];
-    append_cxxflags: CompilerSuggestion[];
-    append_install: CompilerSuggestion[];
+    appendCcflags: CompilerSuggestion[];
+    appendCxxflags: CompilerSuggestion[];
+    appendInstall: CompilerSuggestion[];
     triplets: CompilerSuggestion[];
-    build_types: CompilerSuggestion[];
-    default_build_type: string;
-    sanitizer_build_type: string;
-    x86_build_type: string;
-    use_containers: boolean;
-    warn_no_matches: boolean;
-    output_file?: string;
-    log_matrix: boolean;
-    generate_summary: boolean;
-    trace_commands: boolean;
+    buildTypes: CompilerSuggestion[];
+    defaultBuildType: string;
+    sanitizerBuildType: string;
+    x86BuildType: string;
+    useContainers: boolean;
+    warnNoMatches: boolean;
+    outputFile?: string;
+    logMatrix: boolean;
+    generateSummary: boolean;
+    traceCommands: boolean;
     /** Enable sorting by historical failure rate */
-    sort_by_failure_rate: boolean;
+    sortByFailureRate: boolean;
     /** Number of recent workflow runs to analyze for failure rates */
-    failure_rate_runs: number;
+    failureRateRuns: number;
     /** GitHub token for API access */
-    github_token: string;
+    githubToken: string;
 }
 
 /**

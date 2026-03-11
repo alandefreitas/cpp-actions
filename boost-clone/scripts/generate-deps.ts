@@ -29,8 +29,8 @@ import {
     parseExceptions,
     parseGitmodules,
     scanModuleDependencies,
-    ExceptionsMap,
-    SubmodulePaths
+    type ExceptionsMap,
+    type SubmodulePaths
 } from '../src/scanning';
 
 // ============================================================================
@@ -101,15 +101,15 @@ function downloadFile(url: string): Promise<string> {
 /**
  * Builds the transitive dependency closure for all modules.
  *
- * @param directDeps - Map of module name to its direct dependencies
+ * @param directDepsMap - Map of module name to its direct dependencies
  * @returns Map of module name to its complete dependency info
  */
 function buildTransitiveClosures(
-    directDeps: Map<string, Set<string>>
+    directDepsMap: Map<string, Set<string>>
 ): Map<string, ModuleDeps> {
     const result = new Map<string, ModuleDeps>();
 
-    for (const [moduleName, deps] of directDeps) {
+    for (const [moduleName, deps] of directDepsMap) {
         const transitiveDeps = new Set<string>();
         const queue = [...deps];
         const visited = new Set<string>();
@@ -122,7 +122,7 @@ function buildTransitiveClosures(
             visited.add(dep);
             transitiveDeps.add(dep);
 
-            const depDeps = directDeps.get(dep);
+            const depDeps = directDepsMap.get(dep);
             if (depDeps) {
                 for (const d of depDeps) {
                     if (!visited.has(d)) {
@@ -156,7 +156,7 @@ async function scanAllModules(
     submodulePaths: SubmodulePaths
 ): Promise<ReleaseDeps> {
     const libsDir = path.join(boostDir, 'libs');
-    const directDeps = new Map<string, Set<string>>();
+    const directDepsMap = new Map<string, Set<string>>();
 
     const moduleNames: string[] = [];
     for (const submodulePath of submodulePaths) {
@@ -172,12 +172,12 @@ async function scanAllModules(
         const modulePath = path.join(libsDir, moduleName);
         if (fs.existsSync(modulePath)) {
             const deps = await scanModuleDependencies(modulePath, moduleName, exceptions, submodulePaths);
-            directDeps.set(moduleName, deps);
+            directDepsMap.set(moduleName, deps);
         }
     }
 
     console.log(`Building transitive closures...`);
-    const moduleData = buildTransitiveClosures(directDeps);
+    const moduleData = buildTransitiveClosures(directDepsMap);
 
     const modules: Record<string, ModuleDeps> = {};
     for (const [name, deps] of moduleData) {
@@ -194,7 +194,7 @@ async function scanAllModules(
  * @returns Array of release tag names
  */
 async function fetchLatestReleases(count: number): Promise<string[]> {
-    const url = 'https://api.github.com/repos/boostorg/boost/tags?per_page=100';
+    const url = 'https://api.github.com/repos/boostorg/boost/tags?perPage=100';
 
     return new Promise((resolve, reject) => {
         https.get(url, {
@@ -407,7 +407,7 @@ async function main(): Promise<void> {
     console.log(`Releases to process: ${releasesToProcess.join(', ')}`);
 
     const outputPath = path.resolve(args.output);
-    let data = loadExistingData(outputPath);
+    const data = loadExistingData(outputPath);
 
     if (args.skipExisting) {
         const existingReleases = Object.keys(data.releases);

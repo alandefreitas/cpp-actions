@@ -28,7 +28,7 @@ test('combineTraces+Report+Flamegraph', async () => {
     expect(combinedTrace.traceEvents.length).toBeGreaterThan(1500);
     const combinedTracePath = path.join(__dirname, '../testOutput', 'combinedTraces.json');
     fs.writeFileSync(combinedTracePath, JSON.stringify(combinedTrace, null, 2));
-    expect(reportData.total_compile.count).toBe(2);
+    expect(reportData.totalCompile.count).toBe(2);
     const reportContent = main.generateReport(reportData);
     expect(reportContent).toBeTruthy();
     const reportPath = path.join(__dirname, '../testOutput', 'report.md');

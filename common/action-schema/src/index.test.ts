@@ -20,7 +20,7 @@ jest.mock('gh-inputs', () => ({
 
 // Mock trace-commands
 jest.mock('trace-commands', () => ({
-    set_trace_commands: jest.fn()
+    setTraceCommands: jest.fn()
 }));
 
 // Mock @actions/core
@@ -222,7 +222,7 @@ describe('action-schema', () => {
             mockedGhInputs.getBoolean.mockReturnValue(false);
 
             const schema = {
-                check_latest: {
+                checkLatest: {
                     type: 'boolean' as const,
                     default: false,
                     description: 'Check latest'
@@ -431,7 +431,7 @@ describe('action-schema', () => {
 
         it('should convert snake_case to kebab-case in output', () => {
             const schema = {
-                check_latest: {
+                checkLatest: {
                     type: 'boolean' as const,
                     default: false,
                     description: 'Check latest'
@@ -441,7 +441,7 @@ describe('action-schema', () => {
             const result = generateInputsSection(schema);
 
             expect(result['check-latest']).toBeDefined();
-            expect(result['check_latest']).toBeUndefined();
+            expect(result['checkLatest']).toBeUndefined();
         });
 
         it('should mark required inputs', () => {
@@ -522,7 +522,7 @@ describe('action-schema', () => {
 
         it('should convert snake_case to kebab-case', () => {
             const schema = {
-                version_major: {
+                versionMajor: {
                     description: 'Major version'
                 }
             } satisfies ActionOutputsSchema;
@@ -534,18 +534,18 @@ describe('action-schema', () => {
     });
 
     describe('shared schemas', () => {
-        it('should export baseInputs with trace_commands', () => {
-            expect(actionSchema.baseInputs.trace_commands).toBeDefined();
-            expect(actionSchema.baseInputs.trace_commands.type).toBe('boolean');
-            expect(actionSchema.baseInputs.trace_commands.default).toBe(false);
+        it('should export baseInputs with traceCommands', () => {
+            expect(actionSchema.baseInputs.traceCommands).toBeDefined();
+            expect(actionSchema.baseInputs.traceCommands.type).toBe('boolean');
+            expect(actionSchema.baseInputs.traceCommands.default).toBe(false);
         });
 
         it('should export setupInputs with common fields', () => {
             expect(actionSchema.setupInputs.version).toBeDefined();
             expect(actionSchema.setupInputs.path).toBeDefined();
-            expect(actionSchema.setupInputs.check_latest).toBeDefined();
-            expect(actionSchema.setupInputs.update_environment).toBeDefined();
-            expect(actionSchema.setupInputs.trace_commands).toBeDefined();
+            expect(actionSchema.setupInputs.checkLatest).toBeDefined();
+            expect(actionSchema.setupInputs.updateEnvironment).toBeDefined();
+            expect(actionSchema.setupInputs.traceCommands).toBeDefined();
         });
 
         it('should export compilerOutputs', () => {
@@ -557,7 +557,7 @@ describe('action-schema', () => {
 
     describe('type inference', () => {
         it('should correctly infer types from schema', () => {
-            const schema = {
+            const _schema = {
                 name: { type: 'string' as const, default: '', description: '' },
                 enabled: { type: 'boolean' as const, default: false, description: '' },
                 count: { type: 'number' as const, description: '' },
@@ -565,7 +565,7 @@ describe('action-schema', () => {
             } satisfies ActionInputsSchema;
 
             // This is a compile-time check - if types are wrong, this won't compile
-            type Inputs = InferInputs<typeof schema>;
+            type Inputs = InferInputs<typeof _schema>;
 
             // Verify the type structure (runtime check for test purposes)
             const example: Inputs = {
@@ -582,12 +582,12 @@ describe('action-schema', () => {
         });
 
         it('should infer set and multilineSet types', () => {
-            const schema = {
+            const _schema = {
                 tags: { type: 'set' as const, default: new Set<string>(), description: '' },
                 dirs: { type: 'multilineSet' as const, default: new Set(['.']) as Set<string>, description: '' }
             } satisfies ActionInputsSchema;
 
-            type Inputs = InferInputs<typeof schema>;
+            type Inputs = InferInputs<typeof _schema>;
 
             const example: Inputs = {
                 tags: new Set(['a']),
@@ -599,7 +599,7 @@ describe('action-schema', () => {
         });
 
         it('should narrow types with validValues as const', () => {
-            const schema = {
+            const _schema = {
                 strategy: {
                     type: 'string' as const,
                     default: 'auto' as const,
@@ -608,7 +608,7 @@ describe('action-schema', () => {
                 }
             } satisfies ActionInputsSchema;
 
-            type Inputs = InferInputs<typeof schema>;
+            type Inputs = InferInputs<typeof _schema>;
 
             // Compile-time: strategy is 'auto' | 'git' | 'archive', not string
             const example: Inputs = { strategy: 'git' };

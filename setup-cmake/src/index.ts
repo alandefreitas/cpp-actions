@@ -8,14 +8,13 @@ import * as core from '@actions/core';
 import * as tc from '@actions/tool-cache';
 import * as semver from 'semver';
 import * as path from 'path';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 import { runAction } from 'action-schema';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const setup_program = require('setup-program');
+import * as setup_program from 'setup-program';
 
 // Type imports and re-exports
-import { Inputs, Outputs, ProgramResult } from './types';
+import { type Inputs, type Outputs, type ProgramResult } from './types';
 export type { Inputs, Outputs, ProgramResult }
 
 // Schema imports
@@ -42,16 +41,10 @@ export { ensureGit } from './system-utils';
  * @throws Error if the specified version is invalid or CMake cannot be installed
  */
 export async function main(inputs: Inputs, subgroups = true): Promise<Partial<Outputs>> {
-    const fnlog = trace_commands.scoped('setup-cmake');
+    const fnlog = traceCommands.scoped('setup-cmake');
 
-    let {
-        version,
-        architecture,
-        cmake_file,
-        path: inputPath,
-        check_latest,
-        update_environment
-    } = inputs;
+    let { version, path: inputPath } = inputs;
+    const { architecture, cmakeFile, checkLatest, updateEnvironment } = inputs;
 
     await ensureGit({ subgroups, fnlog });
 
@@ -78,7 +71,7 @@ export async function main(inputs: Inputs, subgroups = true): Promise<Partial<Ou
     if (!version) {
         version = '*';
     }
-    version = updateCMakeVersionFromFile(cmake_file, version, allVersions);
+    version = updateCMakeVersionFromFile(cmakeFile, version, allVersions);
     if (subgroups) {
         core.endGroup();
     }
@@ -94,8 +87,8 @@ export async function main(inputs: Inputs, subgroups = true): Promise<Partial<Ou
         process.env['RUNNER_TOOL_CACHE'] = process.env['AGENT_TOOLSDIRECTORY'];
     }
 
-    let output_path: string | null = null;
-    let output_version: string | null = null;
+    let outputPath: string | null = null;
+    let outputVersion: string | null = null;
 
     // ----------------------------------------------
     // Look for path CMake
@@ -108,12 +101,12 @@ export async function main(inputs: Inputs, subgroups = true): Promise<Partial<Ou
 
         // Setup from provided path
         core.info(`Searching for CMake ${version} in path${execPaths.length === 1 ? '' : 's'} [${execPaths.join(',')}]`);
-        const __ret: ProgramResult = await setup_program.find_program_in_path(execPaths, version, check_latest);
-        if (__ret.output_version && __ret.output_path) {
-            core.info(`✅ Found CMake ${__ret.output_version} in ${__ret.output_path}`);
+        const result: ProgramResult = await setup_program.findProgramInPath(execPaths, version, checkLatest);
+        if (result.outputVersion && result.outputPath) {
+            core.info(`✅ Found CMake ${result.outputVersion} in ${result.outputPath}`);
         }
-        output_version = __ret.output_version;
-        output_path = __ret.output_path;
+        outputVersion = result.outputVersion;
+        outputPath = result.outputPath;
         if (subgroups) {
             core.endGroup();
         }
@@ -122,7 +115,7 @@ export async function main(inputs: Inputs, subgroups = true): Promise<Partial<Ou
     // ----------------------------------------------
     // Look for system CMake
     // ----------------------------------------------
-    if (output_path === null) {
+    if (outputPath === null) {
         if (subgroups) {
             core.startGroup('📦 Look for system CMake');
         }
@@ -133,29 +126,29 @@ export async function main(inputs: Inputs, subgroups = true): Promise<Partial<Ou
         // if CMAKE_ROOT ends up being downloaded from a URL in a previous step.
         const extraPaths: string[] = [];
         if (process.env['CMAKE_ROOT']?.trim()) {
-            const cmake_root = process.env['CMAKE_ROOT'];
-            if (!extraPaths.includes(cmake_root)) {
-                extraPaths.push(cmake_root);
+            const cmakeRoot = process.env['CMAKE_ROOT'];
+            if (!extraPaths.includes(cmakeRoot)) {
+                extraPaths.push(cmakeRoot);
             }
-            if (!extraPaths.includes(path.join(cmake_root, 'bin'))) {
-                extraPaths.push(path.join(cmake_root, 'bin'));
+            if (!extraPaths.includes(path.join(cmakeRoot, 'bin'))) {
+                extraPaths.push(path.join(cmakeRoot, 'bin'));
             }
         }
 
         // Include all versions potentially cached with tc
-        const tc_paths = tc.findAllVersions('CMake');
-        for (const tc_path of tc_paths) {
-            if (!extraPaths.includes(tc_path)) {
-                extraPaths.push(tc_path);
+        const tcPaths = tc.findAllVersions('CMake');
+        for (const tcPath of tcPaths) {
+            if (!extraPaths.includes(tcPath)) {
+                extraPaths.push(tcPath);
             }
         }
 
-        const __ret: ProgramResult = await setup_program.find_program_in_system_paths(extraPaths, ['cmake'], version, check_latest);
-        if (__ret.output_path && __ret.output_version) {
-            core.info(`✅ Found CMake ${__ret.output_version} in ${__ret.output_path}`);
+        const result: ProgramResult = await setup_program.findProgramInSystemPaths(extraPaths, ['cmake'], version, checkLatest);
+        if (result.outputPath && result.outputVersion) {
+            core.info(`✅ Found CMake ${result.outputVersion} in ${result.outputPath}`);
         }
-        output_version = __ret.output_version;
-        output_path = __ret.output_path;
+        outputVersion = result.outputVersion;
+        outputPath = result.outputPath;
         if (subgroups) {
             core.endGroup();
         }
@@ -164,17 +157,17 @@ export async function main(inputs: Inputs, subgroups = true): Promise<Partial<Ou
     // ----------------------------------------------
     // Look for CMake in APT (Linux only)
     // ----------------------------------------------
-    if (!output_version && process.platform === 'linux') {
+    if (!outputVersion && process.platform === 'linux') {
         if (subgroups) {
             core.startGroup('📦 Look for CMake in APT');
         }
         core.info(`Searching for CMake ${version} in APT repositories`);
-        const __ret: ProgramResult = await setup_program.find_program_with_apt(['cmake'], version, check_latest);
-        if (__ret.output_version && __ret.output_path) {
-            core.info(`✅ Found CMake ${__ret.output_version} via APT at ${__ret.output_path}`);
+        const result: ProgramResult = await setup_program.findProgramWithApt(['cmake'], version, checkLatest);
+        if (result.outputVersion && result.outputPath) {
+            core.info(`✅ Found CMake ${result.outputVersion} via APT at ${result.outputPath}`);
         }
-        output_version = __ret.output_version;
-        output_path = __ret.output_path;
+        outputVersion = result.outputVersion;
+        outputPath = result.outputPath;
         if (subgroups) {
             core.endGroup();
         }
@@ -183,11 +176,11 @@ export async function main(inputs: Inputs, subgroups = true): Promise<Partial<Ou
     // ----------------------------------------------
     // Download CMake
     // ----------------------------------------------
-    if (!output_version) {
+    if (!outputVersion) {
         if (subgroups) {
             core.startGroup('⬇️ Download CMake');
         }
-        version = inputs.check_latest ?
+        version = inputs.checkLatest ?
             semver.maxSatisfying(allVersions, version) || version :
             semver.minSatisfying(allVersions, version) || version;
         const coercedVersion = semver.coerce(version);
@@ -197,13 +190,13 @@ export async function main(inputs: Inputs, subgroups = true): Promise<Partial<Ou
         version = coercedVersion.toString();
 
         core.info(`Downloading CMake ${version}`);
-        const cmake_url = generateCMakeURL(version, architecture, fnlog);
-        const __ret: ProgramResult = await setup_program.install_program_from_url(['cmake'], version, check_latest, cmake_url, update_environment);
-        if (__ret.output_version && __ret.output_path) {
-            core.info(`✅ Installed CMake ${__ret.output_version} to ${__ret.output_path}`);
+        const cmakeUrl = generateCMakeURL(version, architecture, fnlog);
+        const result: ProgramResult = await setup_program.installProgramFromUrl(['cmake'], version, checkLatest, cmakeUrl, updateEnvironment, null);
+        if (result.outputVersion && result.outputPath) {
+            core.info(`✅ Installed CMake ${result.outputVersion} to ${result.outputPath}`);
         }
-        output_version = __ret.output_version;
-        output_path = __ret.output_path;
+        outputVersion = result.outputVersion;
+        outputPath = result.outputPath;
         if (subgroups) {
             core.endGroup();
         }
@@ -212,18 +205,18 @@ export async function main(inputs: Inputs, subgroups = true): Promise<Partial<Ou
     if (subgroups) {
         core.startGroup('📤 Return outputs');
     }
-    if (!output_path) {
+    if (!outputPath) {
         core.error(`❌ Could not find or install CMake ${version}`);
-        fnlog(`output_version: ${output_version}`);
-        fnlog(`output_path: ${output_path}`);
+        fnlog(`outputVersion: ${outputVersion}`);
+        fnlog(`outputPath: ${outputPath}`);
         return {};
     }
 
-    inputPath = output_path;
-    if (!output_version) {
+    inputPath = outputPath;
+    if (!outputVersion) {
         throw new Error('No version found');
     }
-    version = output_version;
+    version = outputVersion;
     const versionSV = semver.coerce(version);
     if (!versionSV) {
         throw new Error(`Invalid version: ${version}`);
@@ -233,7 +226,7 @@ export async function main(inputs: Inputs, subgroups = true): Promise<Partial<Ou
         core.endGroup();
     }
 
-    const max_supported_presets_version =
+    const maxSupportedPresetsVersion =
         semver.gte(versionSV, '3.25.3') ? 6 :
             semver.gte(versionSV, '3.24.4') ? 5 :
                 semver.gte(versionSV, '3.23.5') ? 4 :
@@ -246,16 +239,16 @@ export async function main(inputs: Inputs, subgroups = true): Promise<Partial<Ou
         path: inputPath,
         dir: path.dirname(inputPath),
         version: versionSV.toString(),
-        version_major: versionSV.major,
-        version_minor: versionSV.minor,
-        version_patch: versionSV.patch,
+        versionMajor: versionSV.major,
+        versionMinor: versionSV.minor,
+        versionPatch: versionSV.patch,
         // Cache is always disabled because it's not needed
-        cache_hit: false,
-        supports_path_to_build: semver.gte(versionSV, '3.13.0'),
-        supports_parallel_build: semver.gte(versionSV, '3.12.0'),
-        supports_build_multiple_targets: semver.gte(versionSV, '3.15.0'),
-        supports_cmake_install: semver.gte(versionSV, '3.15.0'),
-        supported_presets_version: max_supported_presets_version
+        cacheHit: false,
+        supportsPathToBuild: semver.gte(versionSV, '3.13.0'),
+        supportsParallelBuild: semver.gte(versionSV, '3.12.0'),
+        supportsBuildMultipleTargets: semver.gte(versionSV, '3.15.0'),
+        supportsCmakeInstall: semver.gte(versionSV, '3.15.0'),
+        supportedPresetsVersion: maxSupportedPresetsVersion
     };
 }
 
@@ -270,10 +263,10 @@ runAction({
     outputsSchema,
     title: 'Setup CMake',
     main: async (inputs: Inputs) => {
-        // Handle cmake_path alias for backwards compatibility
+        // Handle cmakePath alias for backwards compatibility
         const effectiveInputs = { ...inputs };
-        if (effectiveInputs.cmake_path) {
-            effectiveInputs.path = effectiveInputs.cmake_path;
+        if (effectiveInputs.cmakePath) {
+            effectiveInputs.path = effectiveInputs.cmakePath;
         }
 
         const outputs = await main(effectiveInputs);

@@ -1,8 +1,7 @@
 import { normalizeCompiler, resolveMSVCArch } from './index';
 import { describePrettyErrors } from 'pretty-errors/test-helper';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const msvc = require('setup-msvc');
+import * as msvc from 'setup-msvc';
 
 test('normalize compiler', async () => {
     const compiler = normalizeCompiler('gcc-4.9.2', '*');
@@ -33,13 +32,13 @@ test('build MSVC outputs uses Visual Studio metadata when available', () => {
     expect(outputs.bindir).toEqual('C\\VS\\VC\\Tools\\MSVC\\14.40.33807\\bin\\Hostx64\\x64');
     expect(outputs.dir).toEqual('C\\VS\\VC\\');
     expect(outputs.release).toEqual('14.40.33807');
-    expect(outputs.version_major).toEqual(14);
-    expect(outputs.version_minor).toEqual(40);
-    expect(outputs.version_patch).toEqual(33807);
-    expect(outputs.msvc_toolset_version).toEqual('14.40.33807');
-    expect(outputs.msvc_product_version).toEqual('17.11.35205.1');
-    expect(outputs.msvc_release_year).toEqual('2022');
-    expect(outputs.msvc_compiler_version).toEqual('19.44.35219');
+    expect(outputs.versionMajor).toEqual(14);
+    expect(outputs.versionMinor).toEqual(40);
+    expect(outputs.versionPatch).toEqual(33807);
+    expect(outputs.msvcToolsetVersion).toEqual('14.40.33807');
+    expect(outputs.msvcProductVersion).toEqual('17.11.35205.1');
+    expect(outputs.msvcReleaseYear).toEqual('2022');
+    expect(outputs.msvcCompilerVersion).toEqual('19.44.35219');
 });
 
 test('build MSVC outputs falls back when metadata is missing', () => {
@@ -48,7 +47,7 @@ test('build MSVC outputs falls back when metadata is missing', () => {
 
     expect(outputs.dir).toEqual('C\\VS\\VC\\Tools\\MSVC\\14.40.33807\\bin\\Hostx64');
     expect(outputs.release).toEqual('14.40.33807');
-    expect(outputs.version_major).toEqual(14);
+    expect(outputs.versionMajor).toEqual(14);
 });
 
 describePrettyErrors('cpp boom', 'Setup C++ failed');

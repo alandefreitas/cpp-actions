@@ -5,7 +5,7 @@ let traceCommands: boolean = process.env['ACTIONS_STEP_DEBUG'] === 'true';
 /**
  * Logs a message to the GitHub Actions output with conditional visibility.
  *
- * When trace commands are enabled (via ACTIONS_STEP_DEBUG=true or set_trace_commands),
+ * When trace commands are enabled (via ACTIONS_STEP_DEBUG=true or setTraceCommands),
  * messages are logged using core.info() making them visible in the workflow output.
  * Otherwise, messages are logged using core.debug() and only visible when debug
  * logging is enabled.
@@ -42,7 +42,7 @@ export function scoped(name: string): (msg: string) => void {
  *
  * @param trace - True to enable trace command output, false to disable
  */
-export function set_trace_commands(trace: boolean): void {
+export function setTraceCommands(trace: boolean): void {
     traceCommands = trace;
 }
 
@@ -50,7 +50,7 @@ export function set_trace_commands(trace: boolean): void {
  * Returns whether trace commands are currently enabled.
  *
  * Trace commands are enabled by default if the ACTIONS_STEP_DEBUG environment
- * variable is set to 'true', or if set_trace_commands(true) has been called.
+ * variable is set to 'true', or if setTraceCommands(true) has been called.
  *
  * @returns True if trace commands are enabled, false otherwise
  */
@@ -62,6 +62,6 @@ export function enabled(): boolean {
  * Exported trace commands flag for backward compatibility.
  *
  * Note: This export reflects the initial state and will not track dynamic updates
- * made via set_trace_commands(). Use enabled() for current state.
+ * made via setTraceCommands(). Use enabled() for current state.
  */
-export { traceCommands as trace_commands };
+export { traceCommands };

@@ -7,7 +7,7 @@
 import * as core from '@actions/core';
 import * as semver from 'semver';
 
-import { Inputs, MatrixEntry } from './types';
+import { type Inputs, type MatrixEntry } from './types';
 
 /*
     It's very common for compilers to not fully comply with the standards they claim to support, even
@@ -60,7 +60,7 @@ export function compilerSupportsStd(compiler: string, version: string | semver.S
  * @returns Human-readable compiler name
  */
 export function humanizeCompilerName(compiler: string): string {
-    const human_compiler_names: Record<string, string> = {
+    const humanCompilerNames: Record<string, string> = {
         'gcc': 'GCC',
         'clang': 'Clang',
         'apple-clang': 'Apple-Clang',
@@ -68,8 +68,8 @@ export function humanizeCompilerName(compiler: string): string {
         'mingw': 'MinGW',
         'clang-cl': 'Windows-Clang'
     };
-    if (compiler in human_compiler_names) {
-        return human_compiler_names[compiler];
+    if (compiler in humanCompilerNames) {
+        return humanCompilerNames[compiler];
     }
     return compiler;
 }
@@ -81,7 +81,7 @@ export function humanizeCompilerName(compiler: string): string {
  * @returns Emoji for the compiler
  */
 export function compilerEmoji(compiler: string): string {
-    const compiler_emojis: Record<string, string> = {
+    const compilerEmojis: Record<string, string> = {
         'gcc': '🐧',
         'clang': '🐉',
         'apple-clang': '🍏',
@@ -89,8 +89,8 @@ export function compilerEmoji(compiler: string): string {
         'mingw': '🪓',
         'clang-cl': '🛠️'
     };
-    if (compiler in compiler_emojis) {
-        return compiler_emojis[compiler];
+    if (compiler in compilerEmojis) {
+        return compilerEmojis[compiler];
     }
     return '🛠️';
 }
@@ -209,7 +209,7 @@ export function warnEmptyCompilerEntries(compilerName: string, range: string, av
     const combinedMatches = requestedStds.length === 0 ? [] : rangeMatches.filter(v => stdMatchSet.has(v));
 
     // Core message plus bullet list of supporting details
-    let message = `${humanName}: No matrix entries were generated because no known ${humanName} versions satisfy every requested requirement simultaneously.`;
+    const message = `${humanName}: No matrix entries were generated because no known ${humanName} versions satisfy every requested requirement simultaneously.`;
     const detailLines = [`- Version requirement "${range || '*'}": ${formatVersionList(rangeMatches)}`];
     detailLines.push(...stdDetails.map(line => `- ${line}`));
     if (requestedStds.length !== 0) {
@@ -232,28 +232,28 @@ export function warnEmptyCompilerEntries(compilerName: string, range: string, av
  */
 export function getCompilerCxxStds(entry: MatrixEntry, inputs: Inputs, allCompilerVersions: string[], cxxstds: number[], compilerName: string, minSubrangeVersion: semver.SemVer): string[] | undefined {
     // The versions of cxxstd we should test with this compiler
-    let compiler_cxxs: number[] = [];
+    let compilerCxxs: number[] = [];
     if (allCompilerVersions.length !== 0) {
         // Identify versions of cxxstd supported by this compiler + version
-        compiler_cxxs = cxxstds.filter(cxxstd => compilerSupportsStd(compilerName, minSubrangeVersion, cxxstd));
+        compilerCxxs = cxxstds.filter(cxxstd => compilerSupportsStd(compilerName, minSubrangeVersion, cxxstd));
 
         // Set entry values if we found any
-        if (compiler_cxxs.length === 0) {
+        if (compilerCxxs.length === 0) {
             // We know about the compiler versions but this compiler does not
             // support any of the standards we want to test. Skip it.
             return undefined;
         }
 
-        if (inputs.max_standards && compiler_cxxs.length > inputs.max_standards) {
-            compiler_cxxs = compiler_cxxs.splice(-inputs.max_standards);
+        if (inputs.maxStandards && compilerCxxs.length > inputs.maxStandards) {
+            compilerCxxs = compilerCxxs.splice(-inputs.maxStandards);
         }
-        const compiler_cxx_strs = compiler_cxxs.map(v => v.toString().slice(-2));
-        entry['cxxstd'] = compiler_cxx_strs.join(',');
-        entry['latest-cxxstd'] = compiler_cxx_strs[compiler_cxx_strs.length - 1];
+        const compilerCxxStrs = compilerCxxs.map(v => v.toString().slice(-2));
+        entry['cxxstd'] = compilerCxxStrs.join(',');
+        entry['latest-cxxstd'] = compilerCxxStrs[compilerCxxStrs.length - 1];
     }
     // Return list even if it's empty.
     // An empty list means we want to test this compiler, but we don't know
     // what versions of cxxstd it supports because there's no compiler version
     // we know about.
-    return compiler_cxxs.map(v => v.toString().slice(-2));
+    return compilerCxxs.map(v => v.toString().slice(-2));
 }

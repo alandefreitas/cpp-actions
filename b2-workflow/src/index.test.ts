@@ -19,25 +19,24 @@ jest.mock('@actions/io', () => ({
 jest.mock('trace-commands', () => ({
     log: jest.fn(),
     scoped: jest.fn(() => jest.fn()),
-    set_trace_commands: jest.fn()
+    setTraceCommands: jest.fn()
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const exec = require('@actions/exec');
+import * as exec from '@actions/exec';
 import { main } from './index';
 import { describePrettyErrors } from 'pretty-errors/test-helper';
 
 interface InputOverrides {
     modules?: string[];
-    module_target?: string[];
+    moduleTarget?: string[];
     arch?: string;
     [key: string]: unknown;
 }
 
 // Helper to build the minimum set of inputs that exercise the module targeting logic without touching the filesystem.
 function createInputs(overrides: InputOverrides = {}): {
-    source_dir: string;
-    build_dir: string;
+    sourceDir: string;
+    buildDir: string;
     cxx: string;
     ccflags: string;
     cxxflags: string;
@@ -45,12 +44,12 @@ function createInputs(overrides: InputOverrides = {}): {
     shared: undefined;
     toolset: string;
     arch: string;
-    build_type: string;
+    buildType: string;
     modules: string[];
-    module_target: string[];
-    extra_args: string[];
-    warnings_as_errors: undefined;
-    address_model: undefined;
+    moduleTarget: string[];
+    extraArgs: string[];
+    warningsAsErrors: undefined;
+    addressModel: undefined;
     asan: undefined;
     ubsan: undefined;
     msan: undefined;
@@ -60,28 +59,28 @@ function createInputs(overrides: InputOverrides = {}): {
     threading: undefined;
     rtti: undefined;
     clean: undefined;
-    clean_all: undefined;
-    abbreviate_paths: undefined;
+    cleanAll: undefined;
+    abbreviatePaths: undefined;
     hash: undefined;
-    rebuild_all: undefined;
-    dry_run: undefined;
-    stop_on_error: undefined;
+    rebuildAll: undefined;
+    dryRun: undefined;
+    stopOnError: undefined;
     config: string;
-    site_config: string;
-    user_config: string;
-    project_config: string;
-    debug_configuration: undefined;
-    debug_building: undefined;
-    debug_generators: undefined;
+    siteConfig: string;
+    userConfig: string;
+    projectConfig: string;
+    debugConfiguration: undefined;
+    debugBuilding: undefined;
+    debugGenerators: undefined;
     include: string;
     define: undefined;
-    runtime_link: undefined;
+    runtimeLink: undefined;
     jobs: number;
-    trace_commands: boolean;
+    traceCommands: boolean;
 } {
     return {
-        source_dir: '/tmp/boost',
-        build_dir: '',
+        sourceDir: '/tmp/boost',
+        buildDir: '',
         cxx: '',
         ccflags: '',
         cxxflags: '',
@@ -89,12 +88,12 @@ function createInputs(overrides: InputOverrides = {}): {
         shared: undefined,
         toolset: '',
         arch: '',
-        build_type: '',
+        buildType: '',
         modules: ['filesystem'],
-        module_target: [],
-        extra_args: [],
-        warnings_as_errors: undefined,
-        address_model: undefined,
+        moduleTarget: [],
+        extraArgs: [],
+        warningsAsErrors: undefined,
+        addressModel: undefined,
         asan: undefined,
         ubsan: undefined,
         msan: undefined,
@@ -104,46 +103,46 @@ function createInputs(overrides: InputOverrides = {}): {
         threading: undefined,
         rtti: undefined,
         clean: undefined,
-        clean_all: undefined,
-        abbreviate_paths: undefined,
+        cleanAll: undefined,
+        abbreviatePaths: undefined,
         hash: undefined,
-        rebuild_all: undefined,
-        dry_run: undefined,
-        stop_on_error: undefined,
+        rebuildAll: undefined,
+        dryRun: undefined,
+        stopOnError: undefined,
         config: '',
-        site_config: '',
-        user_config: '',
-        project_config: '',
-        debug_configuration: undefined,
-        debug_building: undefined,
-        debug_generators: undefined,
+        siteConfig: '',
+        userConfig: '',
+        projectConfig: '',
+        debugConfiguration: undefined,
+        debugBuilding: undefined,
+        debugGenerators: undefined,
         include: '',
         define: undefined,
-        runtime_link: undefined,
+        runtimeLink: undefined,
         jobs: 2,
-        trace_commands: false,
+        traceCommands: false,
         ...overrides
     };
 }
 
 beforeEach(() => {
-    exec.getExecOutput.mockReset();
-    exec.getExecOutput.mockResolvedValue({ exitCode: 0, stdout: '', stderr: '' });
+    (exec.getExecOutput as jest.Mock).mockReset();
+    (exec.getExecOutput as jest.Mock).mockResolvedValue({ exitCode: 0, stdout: '', stderr: '' });
 });
 
 // Ensures the default maps modules to libs/<module>/test when module-target is omitted.
 test('uses default module target when none is specified', async () => {
     const inputs = createInputs();
     await main(inputs);
-    const buildArgs = exec.getExecOutput.mock.calls[2][1];
+    const buildArgs = (exec.getExecOutput as jest.Mock).mock.calls[2][1];
     expect(buildArgs).toContain('libs/filesystem/test');
 });
 
 // Setting a single module-target should replace the suffix for every module.
 test('supports overriding the module target suffix', async () => {
-    const inputs = createInputs({ module_target: ['example'] });
+    const inputs = createInputs({ moduleTarget: ['example'] });
     await main(inputs);
-    const buildArgs = exec.getExecOutput.mock.calls[2][1];
+    const buildArgs = (exec.getExecOutput as jest.Mock).mock.calls[2][1];
     expect(buildArgs).toContain('libs/filesystem/example');
 });
 
@@ -151,10 +150,10 @@ test('supports overriding the module target suffix', async () => {
 test('passes through explicit module paths untouched', async () => {
     const inputs = createInputs({
         modules: ['libs/math/example'],
-        module_target: ['example']
+        moduleTarget: ['example']
     });
     await main(inputs);
-    const buildArgs = exec.getExecOutput.mock.calls[2][1];
+    const buildArgs = (exec.getExecOutput as jest.Mock).mock.calls[2][1];
     expect(buildArgs).toContain('libs/math/example');
 });
 
@@ -162,10 +161,10 @@ test('passes through explicit module paths untouched', async () => {
 test('applies per-module targets when multiple values are provided', async () => {
     const inputs = createInputs({
         modules: ['filesystem', 'chrono'],
-        module_target: ['test', 'example']
+        moduleTarget: ['test', 'example']
     });
     await main(inputs);
-    const buildArgs = exec.getExecOutput.mock.calls[2][1];
+    const buildArgs = (exec.getExecOutput as jest.Mock).mock.calls[2][1];
     expect(buildArgs).toContain('libs/filesystem/test');
     expect(buildArgs).toContain('libs/filesystem/example');
     expect(buildArgs).toContain('libs/chrono/test');
@@ -176,10 +175,10 @@ test('applies per-module targets when multiple values are provided', async () =>
 test('broadcasts all targets to a single module', async () => {
     const inputs = createInputs({
         modules: ['beast2'],
-        module_target: ['test', 'example']
+        moduleTarget: ['test', 'example']
     });
     await main(inputs);
-    const buildArgs = exec.getExecOutput.mock.calls[2][1];
+    const buildArgs = (exec.getExecOutput as jest.Mock).mock.calls[2][1];
     expect(buildArgs).toContain('libs/beast2/test');
     expect(buildArgs).toContain('libs/beast2/example');
 });
@@ -189,7 +188,7 @@ test('derives address model and architecture from arch input when unspecified', 
         arch: 'arm64'
     });
     await main(inputs);
-    const buildArgs = exec.getExecOutput.mock.calls[2][1];
+    const buildArgs = (exec.getExecOutput as jest.Mock).mock.calls[2][1];
     expect(buildArgs).toContain('address-model=64');
     expect(buildArgs).toContain('architecture=arm');
 });

@@ -25,7 +25,7 @@
  */
 
 import * as crypto from 'crypto';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 import type { Inputs } from './schema';
 
 /**
@@ -130,7 +130,7 @@ export function makeResolvedModuleSet(
  * are immutable.
  *
  * @param resolved - Complete resolution with modules and per-module hashes
- * @param inputs - User configuration inputs (uses `branch` and `optimistic_caching`)
+ * @param inputs - User configuration inputs (uses `branch` and `optimisticCaching`)
  * @param graphRoots - Direct modules ∪ patch names (for optimistic mode hash selection)
  * @returns Branded SourceCacheKey string
  */
@@ -139,7 +139,7 @@ export function computeSourceCacheKey(
     inputs: Inputs,
     graphRoots: Set<string>
 ): SourceCacheKey {
-    const fnlog = trace_commands.scoped('computeSourceCacheKey');
+    const fnlog = traceCommands.scoped('computeSourceCacheKey');
 
     const allModulesSorted = toSortedArray(resolved.modules);
 
@@ -148,7 +148,7 @@ export function computeSourceCacheKey(
     if (resolved.hashes.size === 0) {
         // Release tag: modules are immutable, use tag as synthetic hash
         hashEntries = allModulesSorted.map(m => [m, inputs.branch]);
-    } else if (inputs.optimistic_caching) {
+    } else if (inputs.optimisticCaching) {
         // Optimistic: only graph root modules (direct + patches)
         hashEntries = [...resolved.hashes.entries()]
             .filter(([mod]) => graphRoots.has(mod))
@@ -160,7 +160,7 @@ export function computeSourceCacheKey(
     }
 
     const modulesHash = hashObject(hashEntries).substring(0, HASH_HEX_LENGTH);
-    fnlog(`Modules hash (${resolved.hashes.size === 0 ? 'release-tag' : inputs.optimistic_caching ? 'optimistic' : 'pessimistic'}, ${hashEntries.length} modules): ${modulesHash}`);
+    fnlog(`Modules hash (${resolved.hashes.size === 0 ? 'release-tag' : inputs.optimisticCaching ? 'optimistic' : 'pessimistic'}, ${hashEntries.length} modules): ${modulesHash}`);
 
     // The boostHash NEVER appears in this key
     const key = `boost-source-${modulesHash}`;

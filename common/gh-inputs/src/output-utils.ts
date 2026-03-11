@@ -37,16 +37,20 @@ export function makeValueString(value: unknown): string {
 }
 
 /**
- * Converts a name from snake_case to kebab-case.
+ * Converts a name from snake_case or camelCase to kebab-case.
  *
- * Replaces all underscores with hyphens. This is commonly used to convert
- * JavaScript property names to GitHub Actions input/output names.
+ * Replaces underscores with hyphens and inserts hyphens before uppercase
+ * letters. This is used to convert JavaScript property names to GitHub
+ * Actions input/output names.
  *
- * @param name - The snake_case name to convert
+ * @param name - The snake_case or camelCase name to convert
  * @returns The name in kebab-case
  */
 export function makeKebabName(name: string): string {
-    return name.replaceAll('_', '-');
+    return name
+        .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+        .replaceAll('_', '-')
+        .toLowerCase();
 }
 
 /**

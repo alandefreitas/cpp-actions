@@ -6,10 +6,9 @@
 
 import * as os from 'os';
 
-import { ArchConfig } from './types';
+import { type ArchConfig } from './types';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { normalizeArchitectureInput } = require('setup-program');
+import { normalizeArchitectureInput } from 'setup-program';
 export { normalizeArchitectureInput };
 
 /**

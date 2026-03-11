@@ -7,9 +7,9 @@
 import * as core from '@actions/core';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 
-import { Inputs, SetupCMakeOutputs, PresetFileResult } from './types';
+import { type Inputs, type SetupCMakeOutputs, type PresetFileResult } from './types';
 
 /**
  * Reads and validates a CMake preset file.
@@ -34,24 +34,24 @@ export function readAndValidatePresetFile(presetPath: string, supportedPresetsVe
     try {
         presetJson = JSON.parse(presetFileContents) as Record<string, unknown>;
     } catch (error) {
-        trace_commands.log(`Failed to parse preset file: ${error}`);
+        traceCommands.log(`Failed to parse preset file: ${error}`);
         return { exists, supported, presetJson };
     }
     if (typeof presetJson !== 'object') {
-        trace_commands.log(`Preset file is not an object`);
+        traceCommands.log(`Preset file is not an object`);
         return { exists, supported, presetJson };
     }
     if (!('version' in presetJson)) {
-        trace_commands.log(`Preset file does not have a 'version' field`);
+        traceCommands.log(`Preset file does not have a 'version' field`);
         return { exists, supported, presetJson };
     }
     if (typeof presetJson['version'] !== 'number') {
-        trace_commands.log(`Preset file 'version' field is not a number`);
+        traceCommands.log(`Preset file 'version' field is not a number`);
         return { exists, supported, presetJson };
     }
     const presetVersion = presetJson['version'] as number;
     if (presetVersion > supportedPresetsVersion) {
-        trace_commands.log(`Preset file version ${presetVersion} is greater than the maximum supported version ${supportedPresetsVersion}`);
+        traceCommands.log(`Preset file version ${presetVersion} is greater than the maximum supported version ${supportedPresetsVersion}`);
         return { exists, supported, presetJson };
     }
     // The preset file is supported
@@ -209,19 +209,19 @@ export function resolvePreset(inputs: Inputs, setupCMakeOutputs: SetupCMakeOutpu
     if (!inputs.preset) {
         return;
     }
-    const presetPath = path.resolve(inputs.source_dir, 'CMakePresets.json');
+    const presetPath = path.resolve(inputs.sourceDir, 'CMakePresets.json');
     const {
         exists,
         supported,
         presetJson
-    } = readAndValidatePresetFile(presetPath, setupCMakeOutputs.supported_presets_version);
+    } = readAndValidatePresetFile(presetPath, setupCMakeOutputs.supportedPresetsVersion);
 
-    const userPresetPath = path.resolve(inputs.source_dir, 'CMakeUserPresets.json');
+    const userPresetPath = path.resolve(inputs.sourceDir, 'CMakeUserPresets.json');
     const {
         exists: userExists,
         supported: userSupported,
         presetJson: userPresetJson
-    } = readAndValidatePresetFile(userPresetPath, setupCMakeOutputs.supported_presets_version);
+    } = readAndValidatePresetFile(userPresetPath, setupCMakeOutputs.supportedPresetsVersion);
 
     if (exists && supported && (!userExists || userSupported)) {
         // Everything OK. User built-in support for presets
@@ -231,7 +231,7 @@ export function resolvePreset(inputs: Inputs, setupCMakeOutputs: SetupCMakeOutpu
     // Apply preset manually:
     // Check if at least the main preset file exists
     if (!exists) {
-        trace_commands.log(`Preset file not found: ${presetPath}`);
+        traceCommands.log(`Preset file not found: ${presetPath}`);
         return;
     }
 
@@ -255,11 +255,11 @@ export function resolvePreset(inputs: Inputs, setupCMakeOutputs: SetupCMakeOutpu
     // Find the main preset
     let mainPreset = getPreset(inputs.preset, mergedPresetJson);
     if (!mainPreset) {
-        trace_commands.log(`Preset ${inputs.preset} not found`);
+        traceCommands.log(`Preset ${inputs.preset} not found`);
         return;
     }
     if (mainPreset['inherits'] && !Array.isArray(mainPreset['inherits']) && typeof mainPreset['inherits'] !== 'string') {
-        trace_commands.log(`Preset ${inputs.preset} has an invalid inherits field`);
+        traceCommands.log(`Preset ${inputs.preset} has an invalid inherits field`);
         return;
     }
     if (mainPreset['inherits'] && typeof mainPreset['inherits'] === 'string') {
@@ -279,12 +279,12 @@ export function resolvePreset(inputs: Inputs, setupCMakeOutputs: SetupCMakeOutpu
         const inherits = [...(mainPreset['inherits'] as string[])];
         for (const inherit of inherits) {
             if (inheritedPresetNames.includes(inherit)) {
-                trace_commands.log(`Inherited preset ${inherit} already inherited`);
+                traceCommands.log(`Inherited preset ${inherit} already inherited`);
                 continue;
             }
             const inheritedPreset = getPreset(inherit, mergedPresetJson);
             if (!inheritedPreset) {
-                trace_commands.log(`Inherited preset ${inherit} not found`);
+                traceCommands.log(`Inherited preset ${inherit} not found`);
                 continue;
             }
             mainPreset = mergeCMakeConfigurePresetObject(mainPreset, inheritedPreset);
@@ -301,16 +301,16 @@ export function resolvePreset(inputs: Inputs, setupCMakeOutputs: SetupCMakeOutpu
 
     // Apply the preset values to inputs with precedence to the user's inputs
     inputs.generator = inputs.generator || (mainPreset['generator'] as string) || '';
-    inputs.build_dir = inputs.build_dir || (mainPreset['binaryDir'] as string) || '';
+    inputs.buildDir = inputs.buildDir || (mainPreset['binaryDir'] as string) || '';
     inputs.toolchain = inputs.toolchain || (mainPreset['toolchainFile'] as string) || '';
-    inputs.generator_toolset = inputs.generator_toolset || (mainPreset['toolset'] as string) || '';
-    inputs.generator_architecture = inputs.generator_architecture || (mainPreset['architecture'] as string) || '';
+    inputs.generatorToolset = inputs.generatorToolset || (mainPreset['toolset'] as string) || '';
+    inputs.generatorArchitecture = inputs.generatorArchitecture || (mainPreset['architecture'] as string) || '';
     inputs.toolchain = inputs.toolchain || (mainPreset['toolchainFile'] as string) || '';
-    inputs.install_prefix = inputs.install_prefix || (mainPreset['installDir'] as string) || '';
-    inputs.cmake_path = inputs.cmake_path || (mainPreset['cmakeExecutable'] as string) || '';
+    inputs.installPrefix = inputs.installPrefix || (mainPreset['installDir'] as string) || '';
+    inputs.cmakePath = inputs.cmakePath || (mainPreset['cmakeExecutable'] as string) || '';
     if ('cacheVariables' in mainPreset) {
         const cacheVariablesArgsArray = makeCacheVariablesArgsArray(mainPreset['cacheVariables'] as Record<string, unknown>);
-        (inputs.extra_args as string[]) = (inputs.extra_args as string[]).concat(cacheVariablesArgsArray);
+        (inputs.extraArgs as string[]) = (inputs.extraArgs as string[]).concat(cacheVariablesArgsArray);
     }
     if ('environment' in mainPreset) {
         const environment = mainPreset['environment'] as Record<string, string | null>;
@@ -329,27 +329,27 @@ export function resolvePreset(inputs: Inputs, setupCMakeOutputs: SetupCMakeOutpu
             }
             if (warning === 'dev') {
                 if (value) {
-                    (inputs.extra_args as string[]).push('-Wdev');
+                    (inputs.extraArgs as string[]).push('-Wdev');
                 } else {
-                    (inputs.extra_args as string[]).push('-Wno-dev');
+                    (inputs.extraArgs as string[]).push('-Wno-dev');
                 }
             } else if (warning === 'deprecated') {
                 if (value) {
-                    (inputs.extra_args as string[]).push('-Wdeprecated');
+                    (inputs.extraArgs as string[]).push('-Wdeprecated');
                 } else {
-                    (inputs.extra_args as string[]).push('-Wno-deprecated');
+                    (inputs.extraArgs as string[]).push('-Wno-deprecated');
                 }
             } else if (warning === 'uninitialized') {
                 if (value) {
-                    (inputs.extra_args as string[]).push('--warn-uninitialized');
+                    (inputs.extraArgs as string[]).push('--warn-uninitialized');
                 }
             } else if (warning === 'unusedCli') {
                 if (!value) {
-                    (inputs.extra_args as string[]).push('--no-warn-unused-cli');
+                    (inputs.extraArgs as string[]).push('--no-warn-unused-cli');
                 }
             } else if (warning === 'systemVars') {
                 if (value) {
-                    (inputs.extra_args as string[]).push('--check-system-vars');
+                    (inputs.extraArgs as string[]).push('--check-system-vars');
                 }
             }
         }
@@ -363,15 +363,15 @@ export function resolvePreset(inputs: Inputs, setupCMakeOutputs: SetupCMakeOutpu
             }
             if (error === 'dev') {
                 if (value) {
-                    (inputs.extra_args as string[]).push('-Werror=dev');
+                    (inputs.extraArgs as string[]).push('-Werror=dev');
                 } else {
-                    (inputs.extra_args as string[]).push('-Wno-error=dev');
+                    (inputs.extraArgs as string[]).push('-Wno-error=dev');
                 }
             } else if (error === 'deprecated') {
                 if (value) {
-                    (inputs.extra_args as string[]).push('-Werror=deprecated');
+                    (inputs.extraArgs as string[]).push('-Werror=deprecated');
                 } else {
-                    (inputs.extra_args as string[]).push('-Wno-error=deprecated');
+                    (inputs.extraArgs as string[]).push('-Wno-error=deprecated');
                 }
             }
         }
@@ -385,15 +385,15 @@ export function resolvePreset(inputs: Inputs, setupCMakeOutputs: SetupCMakeOutpu
             }
             if (key === 'output') {
                 if (value) {
-                    (inputs.extra_args as string[]).push('--debug-output');
+                    (inputs.extraArgs as string[]).push('--debug-output');
                 }
             } else if (key === 'tryCompile') {
                 if (value) {
-                    (inputs.extra_args as string[]).push('--debug-trycompile');
+                    (inputs.extraArgs as string[]).push('--debug-trycompile');
                 }
             } else if (key === 'find') {
                 if (value) {
-                    (inputs.extra_args as string[]).push('--debug-find');
+                    (inputs.extraArgs as string[]).push('--debug-find');
                 }
             }
         }
@@ -407,15 +407,15 @@ export function resolvePreset(inputs: Inputs, setupCMakeOutputs: SetupCMakeOutpu
                     continue;
                 }
                 if (value === 'on') {
-                    (inputs.extra_args as string[]).push('--trace');
+                    (inputs.extraArgs as string[]).push('--trace');
                 } else if (value === 'expand') {
-                    (inputs.extra_args as string[]).push('--trace-expand');
+                    (inputs.extraArgs as string[]).push('--trace-expand');
                 }
             } else if (key === 'format') {
                 if (typeof value !== 'string') {
                     continue;
                 }
-                (inputs.extra_args as string[]).push(`--trace-format=${value}`);
+                (inputs.extraArgs as string[]).push(`--trace-format=${value}`);
             } else if (key === 'source') {
                 if (!Array.isArray(value) && typeof value !== 'string') {
                     continue;
@@ -423,14 +423,14 @@ export function resolvePreset(inputs: Inputs, setupCMakeOutputs: SetupCMakeOutpu
                 const sources = Array.isArray(value) ? value : [value];
                 for (const source of sources) {
                     const escapedSource = (source as string).replace(/"/g, '\\"');
-                    (inputs.extra_args as string[]).push(`--trace-source="${escapedSource}"`);
+                    (inputs.extraArgs as string[]).push(`--trace-source="${escapedSource}"`);
                 }
             } else if (key === 'redirect') {
                 if (typeof value !== 'string') {
                     continue;
                 }
                 const escapedValue = value.replace(/"/g, '\\"');
-                (inputs.extra_args as string[]).push(`--trace-redirect="${escapedValue}"`);
+                (inputs.extraArgs as string[]).push(`--trace-redirect="${escapedValue}"`);
             }
         }
     }

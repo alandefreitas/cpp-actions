@@ -10,11 +10,10 @@ import * as exec from '@actions/exec';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as semver from 'semver';
-import * as trace_commands from 'trace-commands';
-import { CompanionPackageResult } from './types';
+import * as traceCommands from 'trace-commands';
+import { type CompanionPackageResult } from './types';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const setup_program = require('setup-program');
+import * as setup_program from 'setup-program';
 
 /**
  * Finds llvm-symbolizer in the system and returns its path.
@@ -142,7 +141,7 @@ export function hasSanitizerRuntimes(majorVersion: number): boolean {
  * @returns Object containing the symbolizer path if found
  */
 export async function installCompanionPackages(installedVersion: string, installedAptPackage: string | null, installedFromUrl: boolean): Promise<CompanionPackageResult> {
-    const fnlog = trace_commands.scoped('installCompanionPackages');
+    const fnlog = traceCommands.scoped('installCompanionPackages');
 
     let symbolizerPath: string | null = null;
 

@@ -4,8 +4,7 @@ import * as process from 'process';
 const cacheDir = path.join(__dirname, '..', 'test-data', 'cache');
 process.env.CPP_MATRIX_CACHE_DIR = cacheDir;
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const setup_program = require('setup-program');
+import * as setup_program from 'setup-program';
 setup_program.setVersionsCacheDir(cacheDir);
 
 import {
@@ -35,38 +34,38 @@ function makeDefaultMatrixInputs(overrides: Partial<Inputs> = {}): Inputs {
     return ({
         compiler_versions: {},
         standards: '',
-        subrange_policy: { '': 'one-per-major' },
-        max_standards: 2,
-        latest_factors: {},
+        subrangePolicy: { '': 'one-per-major' },
+        maxStandards: 2,
+        latestFactors: {},
         factors: {},
-        combinatorial_factors: {},
-        force_factors: [],
-        extra_values: [],
-        runs_on: [],
+        combinatorialFactors: {},
+        forceFactors: [],
+        extraValues: [],
+        runsOn: [],
         containers: [],
         generators: [],
-        generator_toolsets: [],
-        b2_toolsets: [],
+        generatorToolsets: [],
+        b2Toolsets: [],
         ccflags: [],
         cxxflags: [],
         install: [],
-        append_ccflags: [],
-        append_cxxflags: [],
-        append_install: [],
+        appendCcflags: [],
+        appendCxxflags: [],
+        appendInstall: [],
         triplets: [],
-        build_types: [],
-        default_build_type: 'Release',
-        sanitizer_build_type: 'Release',
-        x86_build_type: 'Release',
-        use_containers: false,
-        warn_no_matches: false,
-        output_file: undefined,
-        log_matrix: false,
-        generate_summary: false,
-        trace_commands: false,
-        sort_by_failure_rate: false,
-        failure_rate_runs: 20,
-        github_token: '',
+        buildTypes: [],
+        defaultBuildType: 'Release',
+        sanitizerBuildType: 'Release',
+        x86BuildType: 'Release',
+        useContainers: false,
+        warnNoMatches: false,
+        outputFile: undefined,
+        logMatrix: false,
+        generateSummary: false,
+        traceCommands: false,
+        sortByFailureRate: false,
+        failureRateRuns: 20,
+        githubToken: '',
         ...overrides
     }) as Inputs;
 }
@@ -181,7 +180,7 @@ describe('generateMatrix', () => {
         const inputs = makeDefaultMatrixInputs({
             compiler_versions: compilerVersions,
             standards: normalizeCppVersionRequirement('>=11'),
-            latest_factors: { gcc: ['Coverage', 'TSan', 'UBSan'] },
+            latestFactors: { gcc: ['Coverage', 'TSan', 'UBSan'] },
             factors: { gcc: ['Asan', 'Shared'], msvc: ['Shared', 'x86'] },
             cxxflags: parseCompilerSuggestions(['gcc >=10 <12: -static'], Object.keys(compilerVersions))
         });
@@ -196,7 +195,7 @@ describe('generateMatrix', () => {
         const inputs = makeDefaultMatrixInputs({
             compiler_versions: { msvc: '>=14.0.0' },
             standards: normalizeCppVersionRequirement('>=26'),
-            warn_no_matches: true
+            warnNoMatches: true
         });
         try {
             await generateMatrix(inputs);
@@ -211,7 +210,7 @@ test('msvc x86 entries prefer arch metadata over /m32 flags', async () => {
     const inputs = makeDefaultMatrixInputs({
         compiler_versions: { msvc: '>=14.0.0' },
         standards: normalizeCppVersionRequirement('>=11'),
-        max_standards: 1,
+        maxStandards: 1,
         factors: { msvc: ['x86'] }
     });
     const matrix = await generateMatrix(inputs);
@@ -226,7 +225,7 @@ test('non-x86 entries default arch to x64 unless overridden', async () => {
     const inputs = makeDefaultMatrixInputs({
         compiler_versions: { gcc: '>=10' },
         standards: normalizeCppVersionRequirement('>=17'),
-        max_standards: 1
+        maxStandards: 1
     });
     const matrix = await generateMatrix(inputs);
     const gccEntry = matrix.find(entry => entry.compiler === 'gcc');
@@ -239,7 +238,7 @@ test('generates entries for compilers with no known versions', async () => {
     const inputs = makeDefaultMatrixInputs({
         compiler_versions: { 'apple-clang': '*', 'mingw': '*', 'clang-cl': '*' },
         standards: normalizeCppVersionRequirement('>=14'),
-        warn_no_matches: true // Should NOT warn because entries should be generated
+        warnNoMatches: true // Should NOT warn because entries should be generated
     });
     const warnSpy = jest.spyOn(core, 'warning').mockImplementation(() => { });
     try {
@@ -284,8 +283,8 @@ describe('setRecommendedFlags sanitizer factors', () => {
         const inputs = makeDefaultMatrixInputs({
             compiler_versions: { gcc: '>=13' },
             standards: normalizeCppVersionRequirement('>=17'),
-            max_standards: 1,
-            latest_factors: { gcc: ['Asan'] }
+            maxStandards: 1,
+            latestFactors: { gcc: ['Asan'] }
         });
         const matrix = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'gcc' && e.asan === true);
@@ -300,8 +299,8 @@ describe('setRecommendedFlags sanitizer factors', () => {
         const inputs = makeDefaultMatrixInputs({
             compiler_versions: { msvc: '>=14' },
             standards: normalizeCppVersionRequirement('>=17'),
-            max_standards: 1,
-            latest_factors: { msvc: ['Asan'] }
+            maxStandards: 1,
+            latestFactors: { msvc: ['Asan'] }
         });
         const matrix = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'msvc' && e.asan === true);
@@ -313,8 +312,8 @@ describe('setRecommendedFlags sanitizer factors', () => {
         const inputs = makeDefaultMatrixInputs({
             compiler_versions: { gcc: '>=13' },
             standards: normalizeCppVersionRequirement('>=17'),
-            max_standards: 1,
-            latest_factors: { gcc: ['UBSan'] }
+            maxStandards: 1,
+            latestFactors: { gcc: ['UBSan'] }
         });
         const matrix = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'gcc' && e.ubsan === true);
@@ -327,8 +326,8 @@ describe('setRecommendedFlags sanitizer factors', () => {
         const inputs = makeDefaultMatrixInputs({
             compiler_versions: { clang: '>=16' },
             standards: normalizeCppVersionRequirement('>=17'),
-            max_standards: 1,
-            latest_factors: { clang: ['TSan'] }
+            maxStandards: 1,
+            latestFactors: { clang: ['TSan'] }
         });
         const matrix = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'clang' && e.tsan === true);
@@ -340,8 +339,8 @@ describe('setRecommendedFlags sanitizer factors', () => {
         const inputs = makeDefaultMatrixInputs({
             compiler_versions: { clang: '>=16' },
             standards: normalizeCppVersionRequirement('>=17'),
-            max_standards: 1,
-            latest_factors: { clang: ['MSan'] }
+            maxStandards: 1,
+            latestFactors: { clang: ['MSan'] }
         });
         const matrix = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'clang' && e.msan === true);
@@ -353,8 +352,8 @@ describe('setRecommendedFlags sanitizer factors', () => {
         const inputs = makeDefaultMatrixInputs({
             compiler_versions: { clang: '>=16' },
             standards: normalizeCppVersionRequirement('>=17'),
-            max_standards: 1,
-            latest_factors: { clang: ['IntSan'] }
+            maxStandards: 1,
+            latestFactors: { clang: ['IntSan'] }
         });
         const matrix = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'clang' && e.intsan === true);
@@ -368,8 +367,8 @@ describe('setRecommendedFlags sanitizer factors', () => {
         const inputs = makeDefaultMatrixInputs({
             compiler_versions: { gcc: '>=13' },
             standards: normalizeCppVersionRequirement('>=17'),
-            max_standards: 1,
-            latest_factors: { gcc: ['IntSan'] }
+            maxStandards: 1,
+            latestFactors: { gcc: ['IntSan'] }
         });
         const matrix = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'gcc' && e.intsan === true);
@@ -385,8 +384,8 @@ describe('setRecommendedFlags sanitizer factors', () => {
         const inputs = makeDefaultMatrixInputs({
             compiler_versions: { clang: '>=16' },
             standards: normalizeCppVersionRequirement('>=17'),
-            max_standards: 1,
-            latest_factors: { clang: ['BoundSan'] }
+            maxStandards: 1,
+            latestFactors: { clang: ['BoundSan'] }
         });
         const matrix = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'clang' && e.boundsan === true);
@@ -399,8 +398,8 @@ describe('setRecommendedFlags sanitizer factors', () => {
         const inputs = makeDefaultMatrixInputs({
             compiler_versions: { gcc: '>=13' },
             standards: normalizeCppVersionRequirement('>=17'),
-            max_standards: 1,
-            latest_factors: { gcc: ['BoundSan'] }
+            maxStandards: 1,
+            latestFactors: { gcc: ['BoundSan'] }
         });
         const matrix = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'gcc' && e.boundsan === true);
@@ -412,8 +411,8 @@ describe('setRecommendedFlags sanitizer factors', () => {
         const inputs = makeDefaultMatrixInputs({
             compiler_versions: { clang: '>=16' },
             standards: normalizeCppVersionRequirement('>=17'),
-            max_standards: 1,
-            latest_factors: { clang: ['LSan'] }
+            maxStandards: 1,
+            latestFactors: { clang: ['LSan'] }
         });
         const matrix = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'clang' && e.lsan === true);
@@ -427,8 +426,8 @@ describe('setRecommendedFlags sanitizer factors', () => {
         const inputs = makeDefaultMatrixInputs({
             compiler_versions: { gcc: '>=13' },
             standards: normalizeCppVersionRequirement('>=17'),
-            max_standards: 1,
-            latest_factors: { gcc: ['LSan'] }
+            maxStandards: 1,
+            latestFactors: { gcc: ['LSan'] }
         });
         const matrix = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'gcc' && e.lsan === true);
@@ -442,8 +441,8 @@ describe('setRecommendedFlags sanitizer factors', () => {
         const inputs = makeDefaultMatrixInputs({
             compiler_versions: { clang: '>=16' },
             standards: normalizeCppVersionRequirement('>=17'),
-            max_standards: 1,
-            latest_factors: { clang: ['CFI'] }
+            maxStandards: 1,
+            latestFactors: { clang: ['CFI'] }
         });
         const matrix = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'clang' && e.cfi === true);
@@ -459,8 +458,8 @@ describe('setRecommendedFlags sanitizer factors', () => {
         const inputs = makeDefaultMatrixInputs({
             compiler_versions: { clang: '>=16' },
             standards: normalizeCppVersionRequirement('>=17'),
-            max_standards: 1,
-            latest_factors: { clang: ['ASan+UBSan'] }
+            maxStandards: 1,
+            latestFactors: { clang: ['ASan+UBSan'] }
         });
         const matrix = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'clang' && e.asan === true && e.ubsan === true);
@@ -469,13 +468,13 @@ describe('setRecommendedFlags sanitizer factors', () => {
         expect(entry?.cxxflags).toContain('undefined');
     });
 
-    test('sanitizer entries use sanitizer_build_type', async () => {
+    test('sanitizer entries use sanitizerBuildType', async () => {
         const inputs = makeDefaultMatrixInputs({
             compiler_versions: { gcc: '>=13' },
             standards: normalizeCppVersionRequirement('>=17'),
-            max_standards: 1,
-            latest_factors: { gcc: ['Asan'] },
-            sanitizer_build_type: 'RelWithDebInfo'
+            maxStandards: 1,
+            latestFactors: { gcc: ['Asan'] },
+            sanitizerBuildType: 'RelWithDebInfo'
         });
         const matrix = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'gcc' && e.asan === true);
@@ -487,8 +486,8 @@ describe('setRecommendedFlags sanitizer factors', () => {
         const inputs = makeDefaultMatrixInputs({
             compiler_versions: { gcc: '>=13' },
             standards: normalizeCppVersionRequirement('>=17'),
-            max_standards: 1,
-            latest_factors: { gcc: ['Asan'] }
+            maxStandards: 1,
+            latestFactors: { gcc: ['Asan'] }
         });
         const matrix = await generateMatrix(inputs);
         const nonAsanEntries = matrix.filter(e => e.compiler === 'gcc' && e.asan !== true);
@@ -505,9 +504,9 @@ describe('append suggestions', () => {
         const inputs = makeDefaultMatrixInputs({
             compiler_versions: compilerVersions,
             standards: normalizeCppVersionRequirement('>=17'),
-            max_standards: 1,
-            latest_factors: { gcc: ['Coverage'] },
-            append_install: parseCompilerSuggestions(
+            maxStandards: 1,
+            latestFactors: { gcc: ['Coverage'] },
+            appendInstall: parseCompilerSuggestions(
                 ['gcc Coverage: extra-pkg'],
                 Object.keys(compilerVersions)
             )
@@ -524,9 +523,9 @@ describe('append suggestions', () => {
         const inputs = makeDefaultMatrixInputs({
             compiler_versions: compilerVersions,
             standards: normalizeCppVersionRequirement('>=17'),
-            max_standards: 1,
-            latest_factors: { gcc: ['Asan'] },
-            append_cxxflags: parseCompilerSuggestions(
+            maxStandards: 1,
+            latestFactors: { gcc: ['Asan'] },
+            appendCxxflags: parseCompilerSuggestions(
                 ['gcc Asan: -Wextra'],
                 Object.keys(compilerVersions)
             )
@@ -543,9 +542,9 @@ describe('append suggestions', () => {
         const inputs = makeDefaultMatrixInputs({
             compiler_versions: compilerVersions,
             standards: normalizeCppVersionRequirement('>=17'),
-            max_standards: 1,
-            latest_factors: { gcc: ['Asan'] },
-            append_ccflags: parseCompilerSuggestions(
+            maxStandards: 1,
+            latestFactors: { gcc: ['Asan'] },
+            appendCcflags: parseCompilerSuggestions(
                 ['gcc Asan: -Wextra'],
                 Object.keys(compilerVersions)
             )
@@ -562,9 +561,9 @@ describe('append suggestions', () => {
         const inputs = makeDefaultMatrixInputs({
             compiler_versions: compilerVersions,
             standards: normalizeCppVersionRequirement('>=17'),
-            max_standards: 1,
-            latest_factors: { gcc: ['Asan'] },
-            append_install: parseCompilerSuggestions(
+            maxStandards: 1,
+            latestFactors: { gcc: ['Asan'] },
+            appendInstall: parseCompilerSuggestions(
                 ['gcc Asan: pkg-a', 'gcc >=13: pkg-b'],
                 Object.keys(compilerVersions)
             )
@@ -581,13 +580,13 @@ describe('append suggestions', () => {
         const inputs = makeDefaultMatrixInputs({
             compiler_versions: compilerVersions,
             standards: normalizeCppVersionRequirement('>=17'),
-            max_standards: 1,
-            latest_factors: { gcc: ['Asan'] },
+            maxStandards: 1,
+            latestFactors: { gcc: ['Asan'] },
             install: parseCompilerSuggestions(
                 ['gcc Asan: replaced-pkg'],
                 Object.keys(compilerVersions)
             ),
-            append_install: parseCompilerSuggestions(
+            appendInstall: parseCompilerSuggestions(
                 ['gcc Asan: appended-pkg'],
                 Object.keys(compilerVersions)
             )

@@ -10,7 +10,7 @@ import * as exec from '@actions/exec'
 import * as path from 'path'
 import * as semver from 'semver'
 
-import { Outputs, BuildOutputsMetadata } from './types'
+import { type Outputs, type BuildOutputsMetadata } from './types'
 import { productVersionToReleaseYear, inferToolsetVersionFromPath } from './version-utils'
 
 /**
@@ -97,9 +97,9 @@ export function buildMSVCOutputs(compilerPath: string, env: NodeJS.ProcessEnv = 
     const toolsetVersion = env.VCToolsVersion || inferToolsetVersionFromPath(normalizedCompilerPath)
     const toolsetSemver = toolsetVersion ? semver.coerce(toolsetVersion) : null
     const releaseString = toolsetSemver ? toolsetSemver.toString() : (toolsetVersion || '0.0.0')
-    const version_major = toolsetSemver ? toolsetSemver.major : 0
-    const version_minor = toolsetSemver ? toolsetSemver.minor : 0
-    const version_patch = toolsetSemver ? toolsetSemver.patch : 0
+    const versionMajor = toolsetSemver ? toolsetSemver.major : 0
+    const versionMinor = toolsetSemver ? toolsetSemver.minor : 0
+    const versionPatch = toolsetSemver ? toolsetSemver.patch : 0
     const productVersion = env.VisualStudioVersion || ''
     const releaseYear = productVersionToReleaseYear(productVersion)
     const compilerVersion = metadata.compilerVersion || ''
@@ -110,12 +110,12 @@ export function buildMSVCOutputs(compilerPath: string, env: NodeJS.ProcessEnv = 
         bindir,
         dir,
         release: releaseString,
-        version_major,
-        version_minor,
-        version_patch,
-        msvc_toolset_version: toolsetVersion || '',
-        msvc_product_version: productVersion,
-        msvc_release_year: releaseYear,
-        msvc_compiler_version: compilerVersion
+        versionMajor,
+        versionMinor,
+        versionPatch,
+        msvcToolsetVersion: toolsetVersion || '',
+        msvcProductVersion: productVersion,
+        msvcReleaseYear: releaseYear,
+        msvcCompilerVersion: compilerVersion
     }
 }

@@ -133,32 +133,32 @@ export class CountDuration {
  * Main class to store report data.
  */
 export class ReportData {
-    total_compile: CountDuration;
-    total_frontend: CountDuration;
-    total_parsing: CountDuration;
-    total_instantiations: CountDuration;
-    total_backend: CountDuration;
-    total_codegen: CountDuration;
-    total_optimize: CountDuration;
-    file_compile: Record<string, CountDuration>;
-    file_parse: Record<string, CountDuration>;
-    symbol_parse: Record<string, CountDuration>;
-    symbol_instantiate: Record<string, CountDuration>;
-    symbol_set_instantiate: Record<string, CountDuration>;
+    totalCompile: CountDuration;
+    totalFrontend: CountDuration;
+    totalParsing: CountDuration;
+    totalInstantiations: CountDuration;
+    totalBackend: CountDuration;
+    totalCodegen: CountDuration;
+    totalOptimize: CountDuration;
+    fileCompile: Record<string, CountDuration>;
+    fileParse: Record<string, CountDuration>;
+    symbolParse: Record<string, CountDuration>;
+    symbolInstantiate: Record<string, CountDuration>;
+    symbolSetInstantiate: Record<string, CountDuration>;
 
     constructor() {
-        this.total_compile = new CountDuration();
-        this.total_frontend = new CountDuration();
-        this.total_parsing = new CountDuration();
-        this.total_instantiations = new CountDuration();
-        this.total_backend = new CountDuration();
-        this.total_codegen = new CountDuration();
-        this.total_optimize = new CountDuration();
-        this.file_compile = {};
-        this.file_parse = {};
-        this.symbol_parse = {};
-        this.symbol_instantiate = {};
-        this.symbol_set_instantiate = {};
+        this.totalCompile = new CountDuration();
+        this.totalFrontend = new CountDuration();
+        this.totalParsing = new CountDuration();
+        this.totalInstantiations = new CountDuration();
+        this.totalBackend = new CountDuration();
+        this.totalCodegen = new CountDuration();
+        this.totalOptimize = new CountDuration();
+        this.fileCompile = {};
+        this.fileParse = {};
+        this.symbolParse = {};
+        this.symbolInstantiate = {};
+        this.symbolSetInstantiate = {};
     }
 
     /**
@@ -170,7 +170,7 @@ export class ReportData {
      * @param type - Type of data (compile or parse)
      */
     addFileData(fileName: string, count: number, duration: number, type: 'compile' | 'parse' = 'compile'): void {
-        const key = `file_${type}` as 'file_compile' | 'file_parse';
+        const key = (type === 'compile' ? 'fileCompile' : 'fileParse') as 'fileCompile' | 'fileParse';
         if (!this[key][fileName]) {
             this[key][fileName] = new CountDuration(count, duration);
         } else {
@@ -209,7 +209,8 @@ export class ReportData {
      * @param type - Type of data (parse, instantiate, or set_instantiate)
      */
     addSymbolData(symbolName: string, count: number, duration: number, type: 'parse' | 'instantiate' | 'set_instantiate' = 'parse'): void {
-        const key = `symbol_${type}` as 'symbol_parse' | 'symbol_instantiate' | 'symbol_set_instantiate';
+        const keyMap = { parse: 'symbolParse', instantiate: 'symbolInstantiate', set_instantiate: 'symbolSetInstantiate' } as const;
+        const key = keyMap[type];
         if (!this[key][symbolName]) {
             this[key][symbolName] = new CountDuration(count, duration);
         } else {
@@ -327,57 +328,57 @@ export function generateReport(reportData: ReportData): string {
     content += `## Summary\n\n`;
     content += `| Step | %     | Total Time | Avg. | Count |\n`;
     content += `| --------- | ----- | ---------- | ------------ | ----- |\n`;
-    const totalCompile = reportData.total_compile.duration;
-    if (reportData.total_compile.count !== 0) {
-        const datum = reportData.total_compile;
+    const totalCompile = reportData.totalCompile.duration;
+    if (reportData.totalCompile.count !== 0) {
+        const datum = reportData.totalCompile;
         content += `| Compile   | 100%   | ${formatTimeStr(datum.duration)} | ${formatTimeStr(datum.averageDuration())} | ${datum.count} |\n`;
     }
-    if (reportData.total_frontend.count !== 0) {
-        const datum = reportData.total_frontend;
-        content += `| 1) Frontend   | ${round(100 * datum.duration / totalCompile, 2)}% | ${formatTimeStr(datum.duration)} | ${formatTimeStr(datum.averageDuration())} | ${reportData.total_frontend.count} |\n`;
+    if (reportData.totalFrontend.count !== 0) {
+        const datum = reportData.totalFrontend;
+        content += `| 1) Frontend   | ${round(100 * datum.duration / totalCompile, 2)}% | ${formatTimeStr(datum.duration)} | ${formatTimeStr(datum.averageDuration())} | ${reportData.totalFrontend.count} |\n`;
     }
-    if (reportData.total_parsing.count !== 0) {
-        const datum = reportData.total_parsing;
+    if (reportData.totalParsing.count !== 0) {
+        const datum = reportData.totalParsing;
         content += `| 1A) Parsing   | ${round(100 * datum.duration / totalCompile, 2)}% | ${formatTimeStr(datum.duration)} | ${formatTimeStr(datum.averageDuration())} | ${datum.count} |\n`;
     }
-    if (reportData.total_instantiations.count !== 0) {
-        const datum = reportData.total_instantiations;
+    if (reportData.totalInstantiations.count !== 0) {
+        const datum = reportData.totalInstantiations;
         content += `| 1B) Instantiations   | ${round(100 * datum.duration / totalCompile, 2)}% | ${formatTimeStr(datum.duration)} | ${formatTimeStr(datum.averageDuration())} | ${datum.count} |\n`;
     }
-    if (reportData.total_backend.count !== 0) {
-        const datum = reportData.total_backend;
+    if (reportData.totalBackend.count !== 0) {
+        const datum = reportData.totalBackend;
         content += `| 2) Backend   | ${round(100 * datum.duration / totalCompile, 2)}% | ${formatTimeStr(datum.duration)} | ${formatTimeStr(datum.averageDuration())} | ${datum.count} |\n`;
     }
-    if (reportData.total_codegen.count !== 0) {
-        const datum = reportData.total_codegen;
+    if (reportData.totalCodegen.count !== 0) {
+        const datum = reportData.totalCodegen;
         content += `| 2A) Code Generation   | ${round(100 * datum.duration / totalCompile, 2)}% | ${formatTimeStr(datum.duration)} | ${formatTimeStr(datum.averageDuration())} | ${datum.count} |\n`;
     }
-    if (reportData.total_optimize.count !== 0) {
-        const datum = reportData.total_optimize;
+    if (reportData.totalOptimize.count !== 0) {
+        const datum = reportData.totalOptimize;
         content += `| 2B) Optimization   | ${round(100 * datum.duration / totalCompile, 2)}% | ${formatTimeStr(datum.duration)} | ${formatTimeStr(datum.averageDuration())} | ${datum.count} |\n`;
     }
     content += `\n\n`;
 
     content += `## Files\n\n`;
     content += '### Compile\n\n';
-    content += sectionTable('File', reportData.file_compile);
+    content += sectionTable('File', reportData.fileCompile);
     content += '### Parse\n\n';
-    content += sectionTable('File', reportData.file_parse);
+    content += sectionTable('File', reportData.fileParse);
 
     content += '## Project Symbols\n\n';
     content += '### Parse\n\n';
-    content += sectionTable('Symbol', filterProjectSymbols(reportData.symbol_parse));
+    content += sectionTable('Symbol', filterProjectSymbols(reportData.symbolParse));
     content += '### Instantiate\n\n';
-    content += sectionTable('Symbol', filterProjectSymbols(reportData.symbol_instantiate));
+    content += sectionTable('Symbol', filterProjectSymbols(reportData.symbolInstantiate));
     content += '### Instantiate Sets\n\n';
-    content += sectionTable('Symbol Set', filterProjectSymbols(reportData.symbol_set_instantiate));
+    content += sectionTable('Symbol Set', filterProjectSymbols(reportData.symbolSetInstantiate));
 
     content += '## All Symbols\n\n';
     content += '### Parse\n\n';
-    content += sectionTable('Symbol', reportData.symbol_parse);
+    content += sectionTable('Symbol', reportData.symbolParse);
     content += '### Instantiate\n\n';
-    content += sectionTable('Symbol', reportData.symbol_instantiate);
+    content += sectionTable('Symbol', reportData.symbolInstantiate);
     content += '### Instantiate Sets\n\n';
-    content += sectionTable('Symbol Set', reportData.symbol_set_instantiate);
+    content += sectionTable('Symbol Set', reportData.symbolSetInstantiate);
     return content;
 }

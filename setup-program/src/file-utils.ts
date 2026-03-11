@@ -6,7 +6,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 
 /**
  * Recursively finds all subdirectories within a directory.
@@ -46,7 +46,7 @@ export function isSymlink(filePath: string): boolean {
         const stats = fs.lstatSync(filePath);
         return stats.isSymbolicLink();
     } catch (error) {
-        trace_commands.log('An error occurred while checking if the path is a symlink:' + String(error));
+        traceCommands.log('An error occurred while checking if the path is a symlink:' + String(error));
         return false;
     }
 }
@@ -63,7 +63,7 @@ export function isSymlink(filePath: string): boolean {
 export function copySymlink(sourcePath: string, destinationPath: string, level = 0): void {
     const targetPath = fs.readlinkSync(sourcePath);
     const levelPrefix = ' '.repeat(level * 2);
-    trace_commands.log(`${levelPrefix}Symlink found from ${sourcePath} to ${targetPath}`);
+    traceCommands.log(`${levelPrefix}Symlink found from ${sourcePath} to ${targetPath}`);
     fs.symlinkSync(targetPath, destinationPath);
-    trace_commands.log(`${levelPrefix}Symlink recreated from ${sourcePath} to ${destinationPath} with target ${targetPath}`);
+    traceCommands.log(`${levelPrefix}Symlink recreated from ${sourcePath} to ${destinationPath} with target ${targetPath}`);
 }

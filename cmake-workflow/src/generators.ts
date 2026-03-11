@@ -6,12 +6,11 @@
 
 import * as core from '@actions/core';
 import * as exec from '@actions/exec';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 
-import { Inputs } from './types';
+import { type Inputs } from './types';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { normalizeArchitectureInput } = require('setup-program');
+import { normalizeArchitectureInput } from 'setup-program';
 export { normalizeArchitectureInput };
 
 /**
@@ -50,15 +49,15 @@ export function deriveGeneratorArchitectureFromArch(arch: string, generator: str
  * @param inputs - Workflow inputs to update with generator info
  */
 export async function setupDefaultGenerator(inputs: Inputs): Promise<void> {
-    const fnlog = trace_commands.scoped('setupDefaultGenerator');
+    const fnlog = traceCommands.scoped('setupDefaultGenerator');
 
     // Execute and get the output of:
     fnlog(`Identifying default generator`);
-    // "$cmake_path" --system-information | sed -n 's/^CMAKE_GENERATOR [[:space:]]*"\([^"]*\)".*/\1/p')
+    // "$cmakePath" --system-information | sed -n 's/^CMAKE_GENERATOR [[:space:]]*"\([^"]*\)".*/\1/p')
     const {
         exitCode: exitCode,
         stdout
-    } = await exec.getExecOutput(`"${inputs.cmake_path}"`, ['--system-information'], {
+    } = await exec.getExecOutput(`"${inputs.cmakePath}"`, ['--system-information'], {
         silent: true,
         ignoreReturnCode: true
     });
@@ -97,10 +96,10 @@ export async function setupDefaultGenerator(inputs: Inputs): Promise<void> {
         }
     }
     fnlog(`Default generator: ${inputs.generator}`);
-    if (!inputs.generator_architecture && inputs.arch) {
+    if (!inputs.generatorArchitecture && inputs.arch) {
         const derivedArch = deriveGeneratorArchitectureFromArch(inputs.arch, inputs.generator);
         if (derivedArch) {
-            inputs.generator_architecture = derivedArch;
+            inputs.generatorArchitecture = derivedArch;
             core.info(`Derived CMake generator architecture "${derivedArch}" from arch "${inputs.arch}"`);
         }
     }

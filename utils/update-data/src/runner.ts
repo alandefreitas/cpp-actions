@@ -2,7 +2,7 @@
  * Command execution utilities.
  */
 
-import { spawn, SpawnOptions } from 'child_process';
+import { spawn, type SpawnOptions } from 'child_process';
 
 /**
  * Result of a command execution.

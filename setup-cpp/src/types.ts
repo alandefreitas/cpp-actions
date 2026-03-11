@@ -25,13 +25,13 @@ export interface NormalizedCompiler {
  * Result of setting up a C++ compiler.
  */
 export interface SetupResult {
-    output_path: string | null;
+    outputPath?: string | null;
     cc: string | null;
     cxx: string | null;
     bindir: string | null;
     dir: string | null;
-    release: string | null;
-    version_major: number | null;
-    version_minor: number | null;
-    version_patch: number | null;
+    release?: string | null;
+    versionMajor: number | null;
+    versionMinor: number | null;
+    versionPatch: number | null;
 }

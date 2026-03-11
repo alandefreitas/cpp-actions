@@ -8,7 +8,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
-import { Trace, CompileCommand } from './types';
+import { type Trace, type CompileCommand } from './types';
 
 /**
  * Creates a README file explaining the time-trace artifact contents.

@@ -6,11 +6,11 @@
 
 import * as core from '@actions/core';
 import * as semver from 'semver';
-import * as trace_commands from 'trace-commands';
-import { ClangDownloadCandidates, ClangUrls, ProgramResult } from './types';
+import * as traceCommands from 'trace-commands';
+import { type ClangDownloadCandidates, type ClangUrls, type ProgramResult } from './types';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const setup_program = require('setup-program');
+import * as path from 'path';
+import * as setup_program from 'setup-program';
 
 /**
  * Loads Ubuntu version name mappings from JSON file.
@@ -22,7 +22,6 @@ const setup_program = require('setup-program');
  * @throws Error if ubuntu-versions.json cannot be found
  */
 export function loadUbuntuVersionNames(): Record<string, string> {
-    const path = require('path');
     const paths = [
         path.join(__dirname, '../setup-program/ubuntu-versions.json'),  // from compiled index.js
         path.join(__dirname, '../../setup-program/ubuntu-versions.json') // from src/index.ts
@@ -48,24 +47,24 @@ const ubuntuVersionNames: Record<string, string> = loadUbuntuVersionNames();
  *
  * @param version - Semver version constraint for Clang
  * @param allVersions - Array of all available Clang versions
- * @param check_latest - If true, prefer latest matching version
+ * @param checkLatest - If true, prefer latest matching version
  * @returns Object containing version candidates and Ubuntu version candidates
  * @throws Error if no version satisfies the requirement or version parsing fails
  */
 export function clangDownloadCandidates(
     version: string,
     allVersions: string[],
-    check_latest: boolean
+    checkLatest: boolean
 ): ClangDownloadCandidates {
     core.info(`Fetching Clang ${version} from release binaries`);
     // Determine the release to install and version candidates to fall back to
-    trace_commands.log('All Clang versions: ' + allVersions);
+    traceCommands.log('All Clang versions: ' + allVersions);
     const maxV = semver.maxSatisfying(allVersions, version);
-    trace_commands.log(`Max version in requirement "${version}": ` + maxV);
+    traceCommands.log(`Max version in requirement "${version}": ` + maxV);
     const minV = semver.minSatisfying(allVersions, version);
-    trace_commands.log(`Min version in requirement "${version}": ` + minV);
-    const release = check_latest ? maxV : minV;
-    trace_commands.log(`Target release ${release} (check latest: ${check_latest})`);
+    traceCommands.log(`Min version in requirement "${version}": ` + minV);
+    const release = checkLatest ? maxV : minV;
+    traceCommands.log(`Target release ${release} (check latest: ${checkLatest})`);
 
     if (!release) {
         throw new Error(`No version satisfies requirement "${version}"`);
@@ -75,17 +74,17 @@ export function clangDownloadCandidates(
     if (!srelease) {
         throw new Error(`Failed to parse release version "${release}"`);
     }
-    trace_commands.log(`Parsed release "${release}" is "${srelease.toString()}"`);
+    traceCommands.log(`Parsed release "${release}" is "${srelease.toString()}"`);
 
     // Determine version candidates we can fall back to by order of preference
     const major = srelease.major;
     const minor = srelease.minor;
     const patch = srelease.patch;
-    const version_candidates: string[] = [release];
+    const versionCandidates: string[] = [release];
 
     // Sort versions
     let sortedVersions: string[];
-    if (check_latest) {
+    if (checkLatest) {
         sortedVersions = [...allVersions].sort((a, b) => semver.compare(b, a));
     } else {
         sortedVersions = [...allVersions].sort(semver.compare);
@@ -95,70 +94,70 @@ export function clangDownloadCandidates(
     for (const v of sortedVersions) {
         const sv = semver.parse(v);
         if (sv && sv.major === major && sv.minor === minor && sv.patch !== patch) {
-            version_candidates.push(v);
+            versionCandidates.push(v);
         }
     }
     // 2) Same major, different minor
     for (const v of sortedVersions) {
         const sv = semver.parse(v);
         if (sv && sv.major === major && sv.minor !== minor) {
-            version_candidates.push(v);
+            versionCandidates.push(v);
         }
     }
-    trace_commands.log(`Version candidates: [${version_candidates.join(', ')}]`);
+    traceCommands.log(`Version candidates: [${versionCandidates.join(', ')}]`);
 
     // Determine alternative ubuntu versions to try if the current one fails
     // to have a valid URL
-    const cur_ubuntu_version = setup_program.getCurrentUbuntuVersion() as string;
-    trace_commands.log(`Ubuntu version: ${cur_ubuntu_version}`);
+    const curUbuntuVersion = setup_program.getCurrentUbuntuVersion() as string;
+    traceCommands.log(`Ubuntu version: ${curUbuntuVersion}`);
 
     // Get list of all ubuntu version candidates in order of preference
     // based on distance from the current ubuntu version
-    let ubuntu_versions = Object.keys(ubuntuVersionNames);
+    let ubuntuVersions = Object.keys(ubuntuVersionNames);
     // Some versions in the map include patch components. We want
     // to remove these to keep only the major and the minor.
-    ubuntu_versions = ubuntu_versions.map((v) => v.split('.')[0] + '.' + v.split('.')[1]);
+    ubuntuVersions = ubuntuVersions.map((v) => v.split('.')[0] + '.' + v.split('.')[1]);
 
     // Sort the ubuntu versions based on the distance from the current ubuntu version
-    ubuntu_versions = ubuntu_versions.sort((a, b) => {
+    ubuntuVersions = ubuntuVersions.sort((a, b) => {
         const aMajor = parseInt(a.split('.')[0]);
         const aMinor = parseInt(a.split('.')[1]);
         const bMajor = parseInt(b.split('.')[0]);
         const bMinor = parseInt(b.split('.')[1]);
-        const curMajor = parseInt(cur_ubuntu_version.split('.')[0]);
-        const curMinor = parseInt(cur_ubuntu_version.split('.')[1]);
+        const curMajor = parseInt(curUbuntuVersion.split('.')[0]);
+        const curMinor = parseInt(curUbuntuVersion.split('.')[1]);
         const distA = Math.abs(aMajor - curMajor) * 100 + Math.abs(aMinor - curMinor);
         const distB = Math.abs(bMajor - curMajor) * 100 + Math.abs(bMinor - curMinor);
         return distA - distB;
     });
-    trace_commands.log(`Ubuntu version binaries: [${ubuntu_versions.join(', ')}]`);
-    return { version_candidates, ubuntu_versions };
+    traceCommands.log(`Ubuntu version binaries: [${ubuntuVersions.join(', ')}]`);
+    return { versionCandidates, ubuntuVersions };
 }
 
 /**
  * Generates download URLs for a specific Clang version and Ubuntu release.
  *
- * @param version_candidate - Clang version to generate URLs for
- * @param ubuntu_version - Ubuntu version to target
+ * @param versionCandidate - Clang version to generate URLs for
+ * @param ubuntuVersion - Ubuntu version to target
  * @returns Object containing LLVM project, releases, and old-format release URLs
  */
-export function generateClangUrlsFor(version_candidate: string, ubuntu_version: string): ClangUrls {
-    trace_commands.log(`Trying to fetch Clang ${version_candidate} for Ubuntu ${ubuntu_version}`);
-    const ubuntu_image = `ubuntu-${ubuntu_version}`;
-    trace_commands.log(`Ubuntu image: ${ubuntu_image}`);
-    const clang_basename = `clang+llvm-${version_candidate}-x86_64-linux-gnu-${ubuntu_image}`;
-    trace_commands.log(`Clang basename: ${clang_basename}`);
-    const clang_filename = `${clang_basename}.tar.xz`;
-    trace_commands.log(`Clang filename: ${clang_filename}`);
+export function generateClangUrlsFor(versionCandidate: string, ubuntuVersion: string): ClangUrls {
+    traceCommands.log(`Trying to fetch Clang ${versionCandidate} for Ubuntu ${ubuntuVersion}`);
+    const ubuntuImage = `ubuntu-${ubuntuVersion}`;
+    traceCommands.log(`Ubuntu image: ${ubuntuImage}`);
+    const clangBasename = `clang+llvm-${versionCandidate}-x86_64-linux-gnu-${ubuntuImage}`;
+    traceCommands.log(`Clang basename: ${clangBasename}`);
+    const clangFilename = `${clangBasename}.tar.xz`;
+    traceCommands.log(`Clang filename: ${clangFilename}`);
 
-    const llvm_project_url = `https://github.com/llvm/llvm-project/releases/download/llvmorg-${version_candidate}/${clang_filename}`;
-    const llvm_releases_url = `https://releases.llvm.org/${version_candidate}/${clang_filename}`;
+    const llvmProjectUrl = `https://github.com/llvm/llvm-project/releases/download/llvmorg-${versionCandidate}/${clangFilename}`;
+    const llvmReleasesUrl = `https://releases.llvm.org/${versionCandidate}/${clangFilename}`;
 
-    const old_clang_basename = `clang+llvm-${version_candidate}-linux-x86_64-ubuntu${ubuntu_version}`;
-    const old_clang_filename = `${old_clang_basename}.tar.xz`;
-    const old_llvm_releases_url = `https://releases.llvm.org/${version_candidate}/${old_clang_filename}`;
+    const oldClangBasename = `clang+llvm-${versionCandidate}-linux-x86_64-ubuntu${ubuntuVersion}`;
+    const oldClangFilename = `${oldClangBasename}.tar.xz`;
+    const oldLlvmReleasesUrl = `https://releases.llvm.org/${versionCandidate}/${oldClangFilename}`;
 
-    return { llvm_project_url, llvm_releases_url, old_llvm_releases_url };
+    return { llvmProjectUrl, llvmReleasesUrl, oldLlvmReleasesUrl };
 }
 
 /**
@@ -167,49 +166,49 @@ export function generateClangUrlsFor(version_candidate: string, ubuntu_version: 
  * Tries each combination of Ubuntu version and Clang version candidate
  * until a successful download and installation is achieved.
  *
- * @param ubuntu_versions - Array of Ubuntu versions to try
- * @param version_candidates - Array of Clang versions to try
+ * @param ubuntuVersions - Array of Ubuntu versions to try
+ * @param versionCandidates - Array of Clang versions to try
  * @param _version - Original version constraint (unused)
- * @param check_latest - If true, prefer latest matching version
- * @param update_environment - If true, update PATH environment variable
- * @param output_version - Previously found version (if any)
- * @param output_path - Previously found path (if any)
+ * @param checkLatest - If true, prefer latest matching version
+ * @param updateEnvironment - If true, update PATH environment variable
+ * @param outputVersion - Previously found version (if any)
+ * @param outputPath - Previously found path (if any)
  * @returns Object containing the installed version and path
  */
-export async function install_program_from_clang_urls(
-    ubuntu_versions: string[],
-    version_candidates: string[],
+export async function installProgramFromClangUrls(
+    ubuntuVersions: string[],
+    versionCandidates: string[],
     _version: string,
-    check_latest: boolean,
-    update_environment: boolean,
-    output_version: string | null,
-    output_path: string | null
+    checkLatest: boolean,
+    updateEnvironment: boolean,
+    outputVersion: string | null,
+    outputPath: string | null
 ): Promise<ProgramResult> {
     // Assemble valid URLs in the order of preference in the LLVM project format
-    for (const ubuntu_version of ubuntu_versions) {
-        for (const version_candidate of version_candidates) {
-            const { llvm_project_url, llvm_releases_url, old_llvm_releases_url } =
-                generateClangUrlsFor(version_candidate, ubuntu_version);
-            for (const clang_url of [llvm_project_url, llvm_releases_url, old_llvm_releases_url]) {
-                if (!(await setup_program.urlExists(clang_url))) {
-                    trace_commands.log(`Skipping ${clang_url} because it does not exist`);
+    for (const ubuntuVersion of ubuntuVersions) {
+        for (const versionCandidate of versionCandidates) {
+            const { llvmProjectUrl, llvmReleasesUrl, oldLlvmReleasesUrl } =
+                generateClangUrlsFor(versionCandidate, ubuntuVersion);
+            for (const clangUrl of [llvmProjectUrl, llvmReleasesUrl, oldLlvmReleasesUrl]) {
+                if (!(await setup_program.urlExists(clangUrl))) {
+                    traceCommands.log(`Skipping ${clangUrl} because it does not exist`);
                 } else {
-                    const result = await setup_program.install_program_from_url(
+                    const result = await setup_program.installProgramFromUrl(
                         ['clang'],
-                        version_candidate,
-                        check_latest,
-                        clang_url,
-                        update_environment,
+                        versionCandidate,
+                        checkLatest,
+                        clangUrl,
+                        updateEnvironment,
                         '/usr/local'
                     );
-                    output_version = result.output_version;
-                    output_path = result.output_path;
-                    if (output_version !== null) {
-                        return { output_version, output_path };
+                    outputVersion = result.outputVersion;
+                    outputPath = result.outputPath;
+                    if (outputVersion !== null) {
+                        return { outputVersion, outputPath };
                     }
                 }
             }
         }
     }
-    return { output_version, output_path };
+    return { outputVersion, outputPath };
 }

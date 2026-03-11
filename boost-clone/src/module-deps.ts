@@ -188,10 +188,10 @@ export function getTransitiveClosure(
  */
 export function decideStrategy(inputs: Inputs, estimatedModules: number): CloneStrategy {
     // If user explicitly requested a strategy, use it
-    if (inputs.clone_strategy === 'git') {
+    if (inputs.cloneStrategy === 'git') {
         return 'git';
     }
-    if (inputs.clone_strategy === 'archive') {
+    if (inputs.cloneStrategy === 'archive') {
         if (!isReleaseTag(inputs.branch)) {
             core.warning(`Archive strategy requested but branch '${inputs.branch}' is not a release tag. Falling back to git.`);
             return 'git';
@@ -206,8 +206,8 @@ export function decideStrategy(inputs: Inputs, estimatedModules: number): CloneS
     }
 
     // Release tag: use archive if module count exceeds threshold
-    if (estimatedModules > inputs.archive_threshold) {
-        core.info(`Estimated ${estimatedModules} modules exceeds threshold (${inputs.archive_threshold}), using archive strategy`);
+    if (estimatedModules > inputs.archiveThreshold) {
+        core.info(`Estimated ${estimatedModules} modules exceeds threshold (${inputs.archiveThreshold}), using archive strategy`);
         return 'archive';
     }
 

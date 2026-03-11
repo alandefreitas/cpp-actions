@@ -22,7 +22,7 @@ export const VSWHERE_PATH = `${PROGRAM_FILES_X86}\\Microsoft Visual Studio\\Inst
  * Locates a Visual Studio installation path matching the provided constraints via vswhere.
  *
  * @param pattern - Relative path to append to the vswhere installation root.
- * @param version_pattern - vswhere version range selector.
+ * @param versionPattern - vswhere version range selector.
  * @returns Absolute path if found, otherwise null.
  *
  * @example
@@ -33,9 +33,9 @@ export const VSWHERE_PATH = `${PROGRAM_FILES_X86}\\Microsoft Visual Studio\\Inst
  * vswhere is not guaranteed to exist on self-hosted agents. In that case the
  * function logs a warning and returns null so callers can fall back to manual probes.
  */
-export function findWithVswhere(pattern: string, version_pattern: string): string | null {
+export function findWithVswhere(pattern: string, versionPattern: string): string | null {
     try {
-        let installationPath = child_process.execSync(`vswhere -products * ${version_pattern} -prerelease -property installationPath`).toString().trim()
+        const installationPath = child_process.execSync(`vswhere -products * ${versionPattern} -prerelease -property installationPath`).toString().trim()
         return installationPath + '\\' + pattern
     } catch (e) {
         core.warning(`vswhere failed: ${e}`)
@@ -59,17 +59,17 @@ export function findWithVswhere(pattern: string, version_pattern: string): strin
  * to provide actionable diagnostics.
  */
 export function findVcvarsall(vsversion: string): string {
-    const vsversion_number = releaseYearToProductVersion(vsversion)
-    let version_pattern: string
-    if (vsversion_number) {
-        const upper_bound = vsversion_number.split('.')[0] + '.9'
-        version_pattern = `-version "${vsversion_number},${upper_bound}"`
+    const vsversionNumber = releaseYearToProductVersion(vsversion)
+    let versionPattern: string
+    if (vsversionNumber) {
+        const upperBound = vsversionNumber.split('.')[0] + '.9'
+        versionPattern = `-version "${vsversionNumber},${upperBound}"`
     } else {
-        version_pattern = '-latest'
+        versionPattern = '-latest'
     }
 
     // If vswhere is available, ask it about the location of the latest Visual Studio.
-    let path = findWithVswhere('VC\\Auxiliary\\Build\\vcvarsall.bat', version_pattern)
+    let path = findWithVswhere('VC\\Auxiliary\\Build\\vcvarsall.bat', versionPattern)
     if (path && fs.existsSync(path)) {
         core.info(`Found with vswhere: ${path}`)
         return path
@@ -79,10 +79,10 @@ export function findVcvarsall(vsversion: string): string {
     // If that does not work, try the standard installation locations,
     // starting with the latest and moving to the oldest.
     const years = vsversion ? [productVersionToReleaseYear(vsversion)] : YEARS
-    for (const prog_files of PROGRAM_FILES) {
+    for (const progFiles of PROGRAM_FILES) {
         for (const ver of years) {
             for (const ed of EDITIONS) {
-                path = `${prog_files}\\Microsoft Visual Studio\\${ver}\\${ed}\\VC\\Auxiliary\\Build\\vcvarsall.bat`
+                path = `${progFiles}\\Microsoft Visual Studio\\${ver}\\${ed}\\VC\\Auxiliary\\Build\\vcvarsall.bat`
                 core.info(`Trying standard location: ${path}`)
                 if (fs.existsSync(path)) {
                     core.info(`Found standard location: ${path}`)

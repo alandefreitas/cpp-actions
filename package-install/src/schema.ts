@@ -74,7 +74,7 @@ variable \`CC\`.`
 variable \`CFLAGS\`.`
     },
 
-    vcpkg_triplet: {
+    vcpkgTriplet: {
         type: 'string' as const,
         default: '',
         description: `The triplet used by vcpkg to install packages.
@@ -84,7 +84,7 @@ If no triplet is specified, a default triplet will be inferred from the platform
 Individual packages can override this value by specifying a triplet in the package name.`
     },
 
-    vcpkg_dir: {
+    vcpkgDir: {
         type: 'path' as const,
         default: '',
         description: `The directory where vcpkg should be cloned and installed.
@@ -92,13 +92,13 @@ Individual packages can override this value by specifying a triplet in the packa
 If the directory is unspecified, the runner tool cache is used.`
     },
 
-    vcpkg_branch: {
+    vcpkgBranch: {
         type: 'string' as const,
         default: 'master',
         description: 'vcpkg branch we should use. This is usually the master branch.'
     },
 
-    vcpkg_cache: {
+    vcpkgCache: {
         type: 'boolean' as const,
         default: true,
         description: `Whether we should cache vcpkg and its built dependencies.
@@ -110,7 +110,7 @@ You can disable this option when you want to always build vcpkg and its dependen
 or want to save cache storage.`
     },
 
-    vcpkg_force_install: {
+    vcpkgForceInstall: {
         type: 'boolean' as const,
         default: false,
         description: `Whether we should force install vcpkg and even when no vcpkg packages are listed.
@@ -119,7 +119,7 @@ This is useful when you want to use vcpkg in manifest mode.`
     },
 
     // APT options
-    apt_get_retries: {
+    aptGetRetries: {
         type: 'number' as const,
         default: 5,
         fallbackEnv: 'APT_GET_RETRIES',
@@ -135,7 +135,7 @@ the number of retries is exhausted. Each retry will be separated by a delay with
 exponential backoff.`
     },
 
-    apt_get_sources: {
+    aptGetSources: {
         type: 'string[]' as const,
         default: [] as string[],
         description: `List of sources for apt-get.
@@ -143,7 +143,7 @@ exponential backoff.`
 Sources are installed with \`apt-add-repository\`.`
     },
 
-    apt_get_source_keys: {
+    aptGetSourceKeys: {
         type: 'string[]' as const,
         default: [] as string[],
         description: `List of source keys for apt-get.
@@ -151,7 +151,7 @@ Sources are installed with \`apt-add-repository\`.`
 Source keys are installed with \`apt-key\`.`
     },
 
-    apt_get_ignore_missing: {
+    aptGetIgnoreMissing: {
         type: 'boolean' as const,
         default: false,
         description: `Whether apt-get should ignore missing packages.
@@ -159,7 +159,7 @@ Source keys are installed with \`apt-key\`.`
 This attempts to install packages one by one and passes the \`--ignore-missing\` option to apt-get.`
     },
 
-    apt_get_add_architecture: {
+    aptGetAddArchitecture: {
         type: 'string[]' as const,
         default: [] as string[],
         description: `Argument to pass to \`dpkg\` to add an architecture.
@@ -174,7 +174,7 @@ Common values for this parameter are: \`amd64\` (64-bit x86), \`i386\` (32-bit x
 This parameter can also be a list of architectures.`
     },
 
-    apt_get_bulk_install: {
+    aptGetBulkInstall: {
         type: 'boolean' as const,
         default: false,
         description: `This option determines if we should call apt-get once for each package (false) or if we should call apt-get once
@@ -191,12 +191,12 @@ for debugging.`
  * Output schema for the package-install action.
  */
 export const outputsSchema = {
-    vcpkg_toolchain: {
+    vcpkgToolchain: {
         description: `vcpkg toolchain file
 
 This output value can be used to configure CMake to use vcpkg.`
     },
-    vcpkg_executable: {
+    vcpkgExecutable: {
         description: 'vcpkg executable file'
     }
 } satisfies ActionOutputsSchema;

@@ -19,13 +19,13 @@ import {
 export const inputsSchema = {
     ...baseInputs,
 
-    source_dir: {
+    sourceDir: {
         type: 'path' as const,
         default: '.',
         description: 'The source directory from whose commits will be analyzed'
     },
 
-    version_pattern: {
+    versionPattern: {
         type: 'string' as const,
         default: '(Bump|Set)\\s+version',
         description: `A regex pattern used to identify if a commit is a version delimiter.
@@ -40,7 +40,7 @@ of commits considered in the notes is complete.
 This constraint does not apply to the current and latest commit.`
     },
 
-    tag_pattern: {
+    tagPattern: {
         type: 'string' as const,
         default: 'v.*\\..*\\..*',
         description: `A regex pattern used to identify if a commit is a tagged delimiter.
@@ -60,7 +60,7 @@ end of the changelog.
 This constraint does not apply to the current and latest commit.`
     },
 
-    output_path: {
+    outputPath: {
         type: 'string' as const,
         default: 'CHANGELOG.md',
         description: `The path where the changelog will be stored.
@@ -76,7 +76,7 @@ Relative paths are resolved from the source directory.`
 If the limit is set to 0 or undefined, all commits are considered.`
     },
 
-    thank_non_regular: {
+    thankNonRegular: {
         type: 'boolean' as const,
         default: true,
         description: `Thank non-regular contributors.
@@ -97,7 +97,7 @@ of the new release with their contribution and the
 thank you message.`
     },
 
-    check_unconventional: {
+    checkUnconventional: {
         type: 'string' as const,
         default: 'warn',
         description: `Check for commits that do not follow the conventional commit format.
@@ -116,7 +116,7 @@ This helps ensure all commit messages can be used in the changelog so
 that it's consistent and that the release notes are clear and concise.`
     },
 
-    link_commits: {
+    linkCommits: {
         type: 'boolean' as const,
         default: false,
         description: `Link commit ids in the changelog to the repository commit.
@@ -137,7 +137,7 @@ outside GitHub, these automatic links do not exist and it's often a good idea to
 include them to allow the reader to navigate to these repository commits.`
     },
 
-    github_token: {
+    githubToken: {
         type: 'string' as const,
         default: '',
         description: `Github token to identify information about the project.
@@ -161,14 +161,14 @@ be limited in the number of requests it can make to the GitHub API
 and might be forced to work with limited information.`
     },
 
-    update_summary: {
+    updateSummary: {
         type: 'boolean' as const,
         default: true,
         description: `When set to \`true\`, this action will update the workflow summary
 with the current changelog.`
     },
 
-    include_types: {
+    includeTypes: {
         type: 'string[]' as const,
         default: [] as string[],
         description: `Comma-separated list of commit types to include in the changelog.
@@ -183,7 +183,7 @@ Example: 'feat, fix, perf, docs'
 Note: The 'other' type represents commits that don't follow conventional commit format.`
     },
 
-    exclude_types: {
+    excludeTypes: {
         type: 'string[]' as const,
         default: ['chore', 'style'] as string[],
         description: `Comma-separated list of commit types to exclude from the changelog.
@@ -198,7 +198,7 @@ Example: 'chore, style, release'
 Tip: Use this to create cleaner changelogs by excluding routine maintenance commits.`
     },
 
-    sort_by: {
+    sortBy: {
         type: 'string' as const,
         default: 'most-changes-first',
         description: `Specifies how commits should be sorted within each scope in the changelog.

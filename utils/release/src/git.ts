@@ -2,7 +2,7 @@
  * Git operations for the release workflow.
  */
 
-import { execFileSync, ExecSyncOptions } from 'child_process';
+import { execFileSync, type ExecSyncOptions } from 'child_process';
 
 /**
  * Options for git command execution.

@@ -53,7 +53,7 @@ export const inputsSchema = {
  */
 export const outputsSchema = {
     ...createCompilerOutputs('Clang', 'clang', 'clang++'),
-    symbolizer_path: {
+    symbolizerPath: {
         description: `The absolute path to llvm-symbolizer (Linux only).
 
 This is also exported as ASAN_SYMBOLIZER_PATH, MSAN_SYMBOLIZER_PATH,

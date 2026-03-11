@@ -13,7 +13,7 @@ import * as cache from '@actions/cache';
 import * as io from '@actions/io';
 import * as os from 'os';
 
-import { Inputs, VcpkgOutputs } from './types';
+import { type Inputs, type VcpkgOutputs } from './types';
 import { uuidV4, sha1sum, escapePath, readCompilerVersion } from './utils';
 
 /**
@@ -37,7 +37,7 @@ async function createTempFolder(dest?: string): Promise<string> {
  * @returns Object containing vcpkg executable and toolchain paths
  * @throws Error if a vcpkg package fails to install
  */
-export async function vcpkg_main(inputs: Inputs): Promise<VcpkgOutputs> {
+export async function vcpkgMain(inputs: Inputs): Promise<VcpkgOutputs> {
     /*
         Infer any vcpkg parameters necessary and
         create a cache key.
@@ -46,26 +46,26 @@ export async function vcpkg_main(inputs: Inputs): Promise<VcpkgOutputs> {
     // Git Hash
     const gitPath = await io.which('git', true);
     core.info(`🧩 git-path: ${gitPath}`);
-    const vcpkg_repo = 'https://github.com/microsoft/vcpkg.git';
-    core.info(`🧩 vcpkg-repo: ${vcpkg_repo}`);
-    core.info(`🧩 vcpkg-branch: ${inputs.vcpkg_branch}`);
-    const vcpkg_commit_hash = (await exec.getExecOutput(escapePath(gitPath), ['ls-remote', vcpkg_repo, inputs.vcpkg_branch])).stdout.trim();
-    core.info(`🧩 vcpkg-commit-hash: ${vcpkg_commit_hash}`);
+    const vcpkgRepo = 'https://github.com/microsoft/vcpkg.git';
+    core.info(`🧩 vcpkg-repo: ${vcpkgRepo}`);
+    core.info(`🧩 vcpkg-branch: ${inputs.vcpkgBranch}`);
+    const vcpkgCommitHash = (await exec.getExecOutput(escapePath(gitPath), ['ls-remote', vcpkgRepo, inputs.vcpkgBranch])).stdout.trim();
+    core.info(`🧩 vcpkg-commit-hash: ${vcpkgCommitHash}`);
 
     // Triplet
     const defaultTriplet = ({'win32': 'x64-windows', 'linux': 'x64-linux', 'darwin': 'x64-osx'} as Record<string, string>)[process.platform] || '';
     core.info(`🧩 default-triplet: ${defaultTriplet}`);
-    const triplet = inputs.vcpkg_triplet || defaultTriplet;
+    const triplet = inputs.vcpkgTriplet || defaultTriplet;
     const tripletSuffix = triplet ? `:${triplet}` : '';
     core.info(`🧩 triplet: ${triplet}`);
 
     // vcpkg directory
-    let vcpkgDir = inputs.vcpkg_dir;
+    let vcpkgDir = inputs.vcpkgDir;
     if (!vcpkgDir) {
-        vcpkgDir = tc.find('vcpkg', inputs.vcpkg_branch);
+        vcpkgDir = tc.find('vcpkg', inputs.vcpkgBranch);
     }
     if (!vcpkgDir && process.env.RUNNER_TOOL_CACHE) {
-        const dir = path.join(process.env.RUNNER_TOOL_CACHE, 'vcpkg', inputs.vcpkg_branch);
+        const dir = path.join(process.env.RUNNER_TOOL_CACHE, 'vcpkg', inputs.vcpkgBranch);
         if (fs.existsSync(dir)) {
             vcpkgDir = dir;
         }
@@ -76,7 +76,7 @@ export async function vcpkg_main(inputs: Inputs): Promise<VcpkgOutputs> {
         await io.mkdirP(vcpkgTempDir);
         // Move that empty folder to the cache tools and make the cache
         // tool the final directory
-        vcpkgDir = await tc.cacheDir(vcpkgTempDir, 'vcpkg', inputs.vcpkg_branch);
+        vcpkgDir = await tc.cacheDir(vcpkgTempDir, 'vcpkg', inputs.vcpkgBranch);
     }
     if (vcpkgDir && !path.isAbsolute(vcpkgDir)) {
         vcpkgDir = path.join(process.cwd(), vcpkgDir);
@@ -121,17 +121,17 @@ export async function vcpkg_main(inputs: Inputs): Promise<VcpkgOutputs> {
     const compilerHashId = compilerHash.substr(0, 8);
     const packagesHash = sha1sum(inputs.vcpkg.join('-'));
     const packagesHashId = packagesHash.substr(0, 8);
-    let vcpkgCacheKey = `vcpkg${tripletSuffix}-os:${process.platform}-cxx:${compilerHashId}-packages:${packagesHashId}`;
+    const vcpkgCacheKey = `vcpkg${tripletSuffix}-os:${process.platform}-cxx:${compilerHashId}-packages:${packagesHashId}`;
     core.info(`🧩 vcpkg-cache-key: ${vcpkgCacheKey}`);
 
-    let outputs: VcpkgOutputs = {
-        vcpkg_executable: vcpkgExecutable,
-        vcpkg_toolchain: toolchainPath
+    const outputs: VcpkgOutputs = {
+        vcpkgExecutable: vcpkgExecutable,
+        vcpkgToolchain: toolchainPath
     };
     core.endGroup();
 
-    let cachePaths = [vcpkgDir];
-    if (inputs.vcpkg_cache) {
+    const cachePaths = [vcpkgDir];
+    if (inputs.vcpkgCache) {
         core.startGroup('🔍 Cache lookup');
         const cacheKey = await cache.restoreCache([vcpkgDir], vcpkgCacheKey, [], {}, false);
         if (cacheKey) {
@@ -146,9 +146,9 @@ export async function vcpkg_main(inputs: Inputs): Promise<VcpkgOutputs> {
         core.endGroup();
     }
     core.startGroup('📦 Install vcpkg');
-    const clone_args = ['clone', vcpkg_repo, '-b', inputs.vcpkg_branch, '--depth', '1', vcpkgDir];
-    core.info(`💻 ${escapePath(gitPath)} ${clone_args.join(' ')}`);
-    await exec.exec(escapePath(gitPath), clone_args, {});
+    const cloneArgs = ['clone', vcpkgRepo, '-b', inputs.vcpkgBranch, '--depth', '1', vcpkgDir];
+    core.info(`💻 ${escapePath(gitPath)} ${cloneArgs.join(' ')}`);
+    await exec.exec(escapePath(gitPath), cloneArgs, {});
     core.info(`💻 ${escapePath(bootstrapPath)}`);
     await exec.exec(escapePath(bootstrapPath), [], {cwd: vcpkgDir});
     core.endGroup();
@@ -187,28 +187,28 @@ export async function vcpkg_main(inputs: Inputs): Promise<VcpkgOutputs> {
             const pkgWithoutTriplet = hasOwnTriplet ? pkg.split(':')[0] : pkg;
             const pkgTriplet = hasOwnTriplet ? pkg.split(':')[1] : triplet;
             for (const prefix of ['detect_compiler', pkgWithoutTriplet]) {
-                for (const build_type of ['rel', 'dbg']) {
+                for (const buildType of ['rel', 'dbg']) {
                     for (const step of ['config', 'build', 'install']) {
                         for (const suffix of ['CMakeCache.txt', 'out', 'err']) {
-                            const log_basename = `${step}-${pkgTriplet}-${build_type}-${suffix}.log`;
-                            const log_path = path.join(vcpkgDir, 'buildtrees', prefix, log_basename);
-                            if (fs.existsSync(log_path)) {
-                                core.info(`📄 Contents of ${log_path}:`);
-                                const contents = fs.readFileSync(log_path, 'utf8');
+                            const logBasename = `${step}-${pkgTriplet}-${buildType}-${suffix}.log`;
+                            const logPath = path.join(vcpkgDir, 'buildtrees', prefix, logBasename);
+                            if (fs.existsSync(logPath)) {
+                                core.info(`📄 Contents of ${logPath}:`);
+                                const contents = fs.readFileSync(logPath, 'utf8');
                                 core.info(contents);
                             }
                         }
                     }
-                    const cmake_output_log_path = path.join(vcpkgDir, 'buildtrees', prefix, `${pkgTriplet}-${build_type}`, 'CMakeFiles', 'CMakeOutput.log');
-                    if (fs.existsSync(cmake_output_log_path)) {
-                        core.info(`📄 Contents of ${cmake_output_log_path}:`);
-                        const contents = fs.readFileSync(cmake_output_log_path, 'utf8');
+                    const cmakeOutputLogPath = path.join(vcpkgDir, 'buildtrees', prefix, `${pkgTriplet}-${buildType}`, 'CMakeFiles', 'CMakeOutput.log');
+                    if (fs.existsSync(cmakeOutputLogPath)) {
+                        core.info(`📄 Contents of ${cmakeOutputLogPath}:`);
+                        const contents = fs.readFileSync(cmakeOutputLogPath, 'utf8');
                         core.info(contents);
                     }
-                    const cmake_error_log_path = path.join(vcpkgDir, 'buildtrees', prefix, `${pkgTriplet}-${build_type}`, 'CMakeFiles', 'CMakeError.log');
-                    if (fs.existsSync(cmake_error_log_path)) {
-                        core.info(`📄 Contents of ${cmake_error_log_path}:`);
-                        const contents = fs.readFileSync(cmake_error_log_path, 'utf8');
+                    const cmakeErrorLogPath = path.join(vcpkgDir, 'buildtrees', prefix, `${pkgTriplet}-${buildType}`, 'CMakeFiles', 'CMakeError.log');
+                    if (fs.existsSync(cmakeErrorLogPath)) {
+                        core.info(`📄 Contents of ${cmakeErrorLogPath}:`);
+                        const contents = fs.readFileSync(cmakeErrorLogPath, 'utf8');
                         core.info(contents);
                     }
                 }
@@ -218,7 +218,7 @@ export async function vcpkg_main(inputs: Inputs): Promise<VcpkgOutputs> {
         }
     }
 
-    if (inputs.vcpkg_cache) {
+    if (inputs.vcpkgCache) {
         core.startGroup('💾 Cache vcpkg and built packages');
         core.info(`Cache path: ${cachePaths.join(', ')}`);
         core.info(`Cache key: ${vcpkgCacheKey}`);

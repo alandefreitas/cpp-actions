@@ -20,21 +20,21 @@ export interface Outputs {
     path: string;
     dir: string;
     version: string;
-    version_major: number;
-    version_minor: number;
-    version_patch: number;
-    cache_hit: boolean;
-    supports_path_to_build: boolean;
-    supports_parallel_build: boolean;
-    supports_build_multiple_targets: boolean;
-    supports_cmake_install: boolean;
-    supported_presets_version: number;
+    versionMajor: number;
+    versionMinor: number;
+    versionPatch: number;
+    cacheHit: boolean;
+    supportsPathToBuild: boolean;
+    supportsParallelBuild: boolean;
+    supportsBuildMultipleTargets: boolean;
+    supportsCmakeInstall: boolean;
+    supportedPresetsVersion: number;
 }
 
 /**
  * Result of a program search operation.
  */
 export interface ProgramResult {
-    output_version: string | null;
-    output_path: string | null;
+    outputVersion: string | null;
+    outputPath: string | null;
 }

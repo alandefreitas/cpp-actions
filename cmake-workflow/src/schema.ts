@@ -22,7 +22,7 @@ export const inputsSchema = {
     // ======================================
     // CMake options
     // ======================================
-    cmake_path: {
+    cmakePath: {
         type: 'string' as const,
         default: 'cmake',
         description: `Ordered list of candidate paths to the cmake executable.
@@ -35,7 +35,7 @@ Entries follow the same rules as the underlying \`setup-cmake\` action:
 Separate multiple entries with the platform path delimiter (\`:\` on Unix-like systems, \`;\` on Windows) or new lines. They are evaluated in order, and each must still satisfy the \`cmake-version\` range. Set \`cmake-version: '*'\` if you intentionally want to skip version filtering.`
     },
 
-    cmake_version: {
+    cmakeVersion: {
         type: 'string' as const,
         default: '*',
         description: `A semver range string with the cmake versions supported by this workflow.
@@ -49,7 +49,7 @@ This should usually match the \`cmake_minimum_required\` defined in your CMakeLi
     // ======================================
     // Configure options
     // ======================================
-    source_dir: {
+    sourceDir: {
         type: 'path' as const,
         default: '.',
         description: 'Directory for the source files.'
@@ -64,7 +64,7 @@ If this input is defined, the action will download the source code from the URL 
 source directory.`
     },
 
-    git_repository: {
+    gitRepository: {
         type: 'string' as const,
         default: '',
         description: `Git repository to clone.
@@ -72,7 +72,7 @@ source directory.`
 If this input is defined, the action will shallow clone the repository and use it as the source directory.`
     },
 
-    git_tag: {
+    gitTag: {
         type: 'string' as const,
         default: '',
         description: `Git branch name, tag or commit hash to checkout from the git repository.
@@ -80,7 +80,7 @@ If this input is defined, the action will shallow clone the repository and use i
 If this input is defined, the action will checkout this tag from the repository.`
     },
 
-    download_dir: {
+    downloadDir: {
         type: 'string' as const,
         default: '',
         description: `Directory where the source code will be downloaded.
@@ -109,7 +109,7 @@ Patches are applied in the order they are defined. If a file already exists in t
 source directory, it will be overwritten. This allows later patches to override earlier ones.`
     },
 
-    build_dir: {
+    buildDir: {
         type: 'string' as const,
         default: '',
         description: `Directory for the binaries relative to the source directory.
@@ -232,7 +232,7 @@ If not specified, the action will use the generator defined by the environment v
 If the environment variable is not specified, the action will try to use the default generator for the platform.`
     },
 
-    generator_toolset: {
+    generatorToolset: {
         type: 'string' as const,
         default: '',
         fallbackEnv: 'CMAKE_GENERATOR_TOOLSET',
@@ -245,7 +245,7 @@ If not specified, the action will use the toolset defined by the environment var
 If the environment variable is not specified, the action will use the default toolset for the generator.`
     },
 
-    generator_architecture: {
+    generatorArchitecture: {
         type: 'string' as const,
         default: '',
         fallbackEnv: 'CMAKE_GENERATOR_ARCHITECTURE',
@@ -266,7 +266,7 @@ chosen generator is Visual Studio, the action derives the appropriate \`-A\` swi
 generators ignore this input.`
     },
 
-    build_type: {
+    buildType: {
         type: 'string' as const,
         default: '',
         fallbackEnv: 'CMAKE_BUILD_TYPE',
@@ -282,7 +282,7 @@ If the generator is multi-config, this values will be applies to the \`CMAKE_CON
 instead of \`CMAKE_BUILD_TYPE\`.`
     },
 
-    build_target: {
+    buildTarget: {
         type: 'string[]' as const,
         default: [] as string[],
         description: `Targets to build instead of the default target.
@@ -290,13 +290,13 @@ instead of \`CMAKE_BUILD_TYPE\`.`
 This can be a single target or a list of targets separated by a \`,\`, \`;\` or space.`
     },
 
-    extra_args: {
+    extraArgs: {
         type: 'multiline' as const,
         default: [] as string[],
         description: 'Extra arguments to cmake configure command.'
     },
 
-    export_compile_commands: {
+    exportCompileCommands: {
         type: 'tribool' as const,
         default: undefined,
         fallbackEnv: 'CMAKE_EXPORT_COMPILE_COMMANDS',
@@ -310,7 +310,7 @@ If the environment variable is not specified, the action will use the default va
     // ======================================
     // Configure and Install options
     // ======================================
-    install_prefix: {
+    installPrefix: {
         type: 'string' as const,
         default: '',
         fallbackEnv: 'CMAKE_INSTALL_PREFIX',
@@ -339,7 +339,7 @@ system.`
     // ======================================
     // Test options
     // ======================================
-    run_tests: {
+    runTests: {
         type: 'tribool' as const,
         default: undefined,
         fallbackEnv: 'CMAKE_RUN_TESTS',
@@ -354,7 +354,7 @@ When the value is \`true\` or \`false\`, the action will also set the \`configur
 When the value is undefined, the \`configure-tests-flag\` is ignored.`
     },
 
-    configure_tests_flag: {
+    configureTestsFlag: {
         type: 'string' as const,
         default: 'BUILD_TESTING',
         description: `Specify the flag to be passed to cmake to enable/disable tests in the configuration step.
@@ -364,7 +364,7 @@ By default this is \`BUILD_TESTING\`, which is an option automatically created b
 If the input contains a "=", the action will use the value as is.`
     },
 
-    test_all_cxxstd: {
+    testAllCxxstd: {
         type: 'boolean' as const,
         default: false,
         description: `Whether we should run tests for all C++ standards defined by \`cxxstd\`.
@@ -372,7 +372,7 @@ If the input contains a "=", the action will use the value as is.`
 If the input is not specified, the action will only run the tests with the last value defined in \`cxxstd\`.`
     },
 
-    ctest_timeout: {
+    ctestTimeout: {
         type: 'number' as const,
         default: 0,
         fallbackEnv: 'CTEST_TEST_TIMEOUT',
@@ -401,7 +401,7 @@ If the environment variable is also not specified, the action will attempt to in
 fail if the library cannot installed.`
     },
 
-    install_all_cxxstd: {
+    installAllCxxstd: {
         type: 'tribool' as const,
         default: false,
         description: `Whether we should install the library for all C++ standards defined by \`cxxstd\`.
@@ -424,7 +424,7 @@ If the environment variable is also not specified, the action will attempt to ru
 fail if cpack cannot be run.`
     },
 
-    package_all_cxxstd: {
+    packageAllCxxstd: {
         type: 'boolean' as const,
         default: false,
         description: `Whether we should run \`cpack\` for all C++ standards defined by \`cxxstd\`.
@@ -432,13 +432,13 @@ fail if cpack cannot be run.`
 If the input is not specified, the action will only run cpack with the last value defined in \`cxxstd\`.`
     },
 
-    package_name: {
+    packageName: {
         type: 'string' as const,
         default: '',
         description: 'The name of the package (or application). If not specified, CMake will default to the project name.'
     },
 
-    package_dir: {
+    packageDir: {
         type: 'string' as const,
         default: '',
         description: `The directory in which the packages are generated by cpack.
@@ -448,13 +448,13 @@ which may be defined in CMakeLists.txt, a CPack config file or from the cpack co
 line option \`-B\`. If \`package-dir\` is set, it overrides the value found in the config file.`
     },
 
-    package_vendor: {
+    packageVendor: {
         type: 'string' as const,
         default: '',
         description: 'Override or define CPACK_PACKAGE_VENDOR.'
     },
 
-    package_generators: {
+    packageGenerators: {
         type: 'string[]' as const,
         default: [] as string[],
         fallbackEnv: 'CPACK_GENERATOR',
@@ -466,7 +466,7 @@ If this variable is not set, the action will attempt to generate the package wit
 CPack generators available to CMake.`
     },
 
-    package_artifact: {
+    packageArtifact: {
         type: 'tribool' as const,
         default: true,
         fallbackEnv: 'CMAKE_PACKAGE_ARTIFACT',
@@ -477,7 +477,7 @@ If the input is not specified, the action will use the value defined by the envi
 If the environment variable is also not specified, the action will store the packages as artifacts.`
     },
 
-    package_retention_days: {
+    packageRetentionDays: {
         type: 'number' as const,
         default: 10,
         description: 'The number of days to keep the packages generated with CPack as action artifacts.'
@@ -486,7 +486,7 @@ If the environment variable is also not specified, the action will store the pac
     // ======================================
     // Annotation options
     // ======================================
-    create_annotations: {
+    createAnnotations: {
         type: 'tribool' as const,
         default: true,
         fallbackEnv: 'CMAKE_CREATE_ANNOTATIONS',
@@ -497,7 +497,7 @@ If the input is not specified, the action will use the value defined by the envi
 If the environment variable is also not specified, the action will create annotations.`
     },
 
-    ref_source_dir: {
+    refSourceDir: {
         type: 'path' as const,
         default: '',
         fallbackEnv: 'GITHUB_WORKSPACE',

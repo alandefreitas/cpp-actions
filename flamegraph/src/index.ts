@@ -2,17 +2,17 @@ import * as core from '@actions/core';
 import { DefaultArtifactClient } from '@actions/artifact';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 import { runAction } from 'action-schema';
 
 import {
-    TraceEvent,
-    Trace,
-    CompileCommand,
-    UploadArtifactsInputs,
-    MainInputs,
-    MainOutputs,
-    RawInputs
+    type TraceEvent,
+    type Trace,
+    type CompileCommand,
+    type UploadArtifactsInputs,
+    type MainInputs,
+    type MainOutputs,
+    type RawInputs
 } from './types';
 
 import { inputsSchema, outputsSchema } from './schema';
@@ -34,7 +34,7 @@ import {
     ArrayMap,
     stackCollapseChromeTracing,
     generateFlameGraph,
-    GenerateSVGFlameGraphResult
+    type GenerateSVGFlameGraphResult
 } from './flamegraph-svg';
 
 /**
@@ -99,7 +99,7 @@ function isSubpath(childPath: string, parentPath: string): boolean {
  * @param buildDir - Build directory path
  */
 function adjustEventDetailFilename(event: TraceEvent, includePaths: Set<string>, sourceDir: string, buildDir: string): void {
-    const fnlog = trace_commands.scoped('adjustEventDetailFilename');
+    const fnlog = traceCommands.scoped('adjustEventDetailFilename');
 
     fnlog(`Adjust event detail filename`);
     const eventDetailIsExistingFile =
@@ -240,7 +240,7 @@ class TimestampRanges {
  * @param displayFilename - Display filename for the event
  */
 function updateReportData(event: TraceEvent, reportData: ReportData, parsingRegions: TimestampRanges, instantiationRegions: TimestampRanges, displayFilename: string): void {
-    const fnlog = trace_commands.scoped('adjustEventDetailFilename');
+    const fnlog = traceCommands.scoped('adjustEventDetailFilename');
 
     if (event.name === 'Source') {
         fnlog(`Adding source event ${event.name} (${event.ph}) with duration ${event.dur}`);
@@ -249,7 +249,7 @@ function updateReportData(event: TraceEvent, reportData: ReportData, parsingRegi
         const dur = event.dur || 0;
         const accountedFor = parsingRegions.includes(ts);
         if (!accountedFor) {
-            reportData.total_parsing.update(1, dur);
+            reportData.totalParsing.update(1, dur);
             parsingRegions.addRange(ts, ts + dur);
         }
         // Add to file total
@@ -279,7 +279,7 @@ function updateReportData(event: TraceEvent, reportData: ReportData, parsingRegi
         const dur = event.dur || 0;
         const accountedFor = instantiationRegions.includes(ts);
         if (!accountedFor) {
-            reportData.total_instantiations.update(1, dur);
+            reportData.totalInstantiations.update(1, dur);
             instantiationRegions.addRange(ts, ts + dur);
         }
         // Add to symbol total
@@ -290,25 +290,25 @@ function updateReportData(event: TraceEvent, reportData: ReportData, parsingRegi
         // Add to total
         const ts = event.ts;
         const dur = event.dur || 0;
-        reportData.total_instantiations.update(1, dur);
+        reportData.totalInstantiations.update(1, dur);
         instantiationRegions.addRange(ts, ts + dur);
     } else if (event.name === 'Frontend') {
         fnlog(`Adding frontend event ${event.name} (${event.ph}) with duration ${event.dur}`);
-        reportData.total_frontend.update(1, event.dur || 0);
+        reportData.totalFrontend.update(1, event.dur || 0);
     } else if (event.name === 'Backend') {
         fnlog(`Adding backend event ${event.name} (${event.ph}) with duration ${event.dur}`);
-        reportData.total_backend.update(1, event.dur || 0);
+        reportData.totalBackend.update(1, event.dur || 0);
     } else if (event.name === 'Optimizer') {
         fnlog(`Adding optimizer event ${event.name} (${event.ph}) with duration ${event.dur}`);
-        reportData.total_optimize.update(1, event.dur || 0);
+        reportData.totalOptimize.update(1, event.dur || 0);
     } else if (event.name === 'CodeGenPasses') {
         fnlog(`Adding codegen passes event ${event.name} (${event.ph}) with duration ${event.dur}`);
-        reportData.total_codegen.update(1, event.dur || 0);
+        reportData.totalCodegen.update(1, event.dur || 0);
     } else if (event.name === 'ExecuteCompiler') {
         fnlog(`Adding execute compiler event ${event.name} (${event.ph}) with duration ${event.dur}`);
         // Add to total
         const dur = event.dur || 0;
-        reportData.total_compile.update(1, dur);
+        reportData.totalCompile.update(1, dur);
         // Add to files total
         reportData.addFileCompileData(displayFilename, 1, dur);
     } else {
@@ -335,7 +335,7 @@ interface CombineTracesResult {
  * @returns Combined trace data and aggregate report statistics
  */
 async function combineTraces(sourceDir: string, buildDir: string): Promise<CombineTracesResult> {
-    const fnlog = trace_commands.scoped('combineTraces');
+    const fnlog = traceCommands.scoped('combineTraces');
 
     const traceFiles = await findTraceFiles(buildDir);
     fnlog(`Found ${traceFiles.size} trace files`);
@@ -437,7 +437,7 @@ async function combineTraces(sourceDir: string, buildDir: string): Promise<Combi
  * @returns Stack identifiers for the flame graph and the SVG content string
  */
 async function generateSVGFlameGraph(combinedTrace: Trace): Promise<GenerateSVGFlameGraphResult> {
-    const fnlog = trace_commands.scoped('generateSVGFlameGraph');
+    const fnlog = traceCommands.scoped('generateSVGFlameGraph');
 
     fnlog('Generating Flame Graph');
     fnlog(`combinedTrace: ${combinedTrace}`);
@@ -460,11 +460,11 @@ async function uploadArtifacts(inputs: UploadArtifactsInputs, extraFiles: string
     const artifact = new DefaultArtifactClient();
     const { id, size } = await artifact.uploadArtifact(
         'time-traces',
-        [inputs.output_path, inputs.report_path, ...extraFiles],
-        inputs.build_dir,
-        { retentionDays: inputs.package_retention_days }
+        [inputs.outputPath, inputs.reportPath, ...extraFiles],
+        inputs.buildDir,
+        { retentionDays: inputs.packageRetentionDays }
     );
-    trace_commands.log(`Created artifact with id: ${id} (bytes: ${size}`);
+    traceCommands.log(`Created artifact with id: ${id} (bytes: ${size}`);
 }
 
 /**
@@ -477,40 +477,40 @@ async function uploadArtifacts(inputs: UploadArtifactsInputs, extraFiles: string
  * @returns Paths to the generated trace file and SVG visualization
  */
 async function main(inputs: MainInputs): Promise<MainOutputs> {
-    const fnlog = trace_commands.scoped('main');
+    const fnlog = traceCommands.scoped('main');
 
     core.startGroup('📊 Combine Time Traces');
-    const { combinedTrace, reportData } = await combineTraces(inputs.source_dir, inputs.build_dir);
+    const { combinedTrace, reportData } = await combineTraces(inputs.sourceDir, inputs.buildDir);
     fnlog(`Combined trace with ${combinedTrace.traceEvents.length} events`);
-    const combinedTracePath = inputs.output_path;
+    const combinedTracePath = inputs.outputPath;
     fs.writeFileSync(combinedTracePath, JSON.stringify(combinedTrace, null, 2));
     core.info(`Saved combined trace to ${combinedTracePath}`);
     core.endGroup();
 
     core.startGroup('📄 Generate Time Trace Report');
     const reportContent = generateReport(reportData);
-    fs.writeFileSync(inputs.report_path, reportContent);
-    core.info(`Saved report to ${inputs.report_path}`);
+    fs.writeFileSync(inputs.reportPath, reportContent);
+    core.info(`Saved report to ${inputs.reportPath}`);
     core.endGroup();
 
-    if (inputs.update_summary) {
+    if (inputs.updateSummary) {
         core.startGroup('📄 Time Trace Report Summary');
         core.summary.addRaw(reportContent);
-        if (inputs.upload_artifact) {
+        if (inputs.uploadArtifact) {
             core.summary.addRaw('\n\n[For more information and graphics, see the time-trace artifacts](#artifacts)\n\n');
         }
         core.endGroup();
     }
 
     core.startGroup('🖼️ Generate SVG Time Trace');
-    const imagePath = inputs.output_path + '.svg';
+    const imagePath = inputs.outputPath + '.svg';
     const { SVGContent } = await generateSVGFlameGraph(combinedTrace);
     fs.writeFileSync(imagePath, SVGContent);
     core.endGroup();
 
-    if (inputs.upload_artifact) {
+    if (inputs.uploadArtifact) {
         core.startGroup('📄 Artifact Readme File');
-        const readmePath = path.join(path.dirname(inputs.report_path), 'time-trace-readme.md');
+        const readmePath = path.join(path.dirname(inputs.reportPath), 'time-trace-readme.md');
         await createReadmeFile(readmePath);
         core.info(`Saved readme to ${readmePath}`);
         core.endGroup();
@@ -520,7 +520,7 @@ async function main(inputs: MainInputs): Promise<MainOutputs> {
         core.endGroup();
     }
 
-    return { traces_path: combinedTracePath, svg_path: imagePath };
+    return { tracesPath: combinedTracePath, svgPath: imagePath };
 }
 
 /**
@@ -530,15 +530,15 @@ async function main(inputs: MainInputs): Promise<MainOutputs> {
  * @returns Converted inputs for the main function
  */
 function convertRawInputs(raw: RawInputs): MainInputs {
-    const source_dir = path.resolve(raw.source_dir);
-    const build_dir = path.resolve(raw.build_dir);
+    const sourceDir = path.resolve(raw.sourceDir);
+    const buildDir = path.resolve(raw.buildDir);
     return {
-        source_dir,
-        build_dir,
-        output_path: path.resolve(build_dir, raw.output_path),
-        report_path: path.resolve(build_dir, raw.report_path),
-        update_summary: raw.update_summary,
-        upload_artifact: raw.upload_artifact
+        sourceDir,
+        buildDir,
+        outputPath: path.resolve(buildDir, raw.outputPath),
+        reportPath: path.resolve(buildDir, raw.reportPath),
+        updateSummary: raw.updateSummary,
+        uploadArtifact: raw.uploadArtifact
     };
 }
 
@@ -553,8 +553,8 @@ runAction({
         const inputs = convertRawInputs(rawInputs);
         const outputs = await main(inputs);
         return {
-            traces_path: outputs.traces_path,
-            svg_path: outputs.svg_path
+            tracesPath: outputs.tracesPath,
+            svgPath: outputs.svgPath
         };
     },
     callerModule: module

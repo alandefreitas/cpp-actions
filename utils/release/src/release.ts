@@ -4,7 +4,6 @@
 
 import { execSync } from 'child_process';
 import {
-    git,
     fetchOrigin,
     getCommitSha,
     getCommitMessage,
@@ -20,7 +19,7 @@ import {
     gitSafe,
     commitAll,
     getChangeSummary,
-    GitOptions
+    type GitOptions
 } from './git';
 import { WorktreeContext } from './worktree';
 import { askConsent } from './prompt';

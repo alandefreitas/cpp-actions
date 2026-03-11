@@ -46,7 +46,7 @@ export const inputsSchema = {
         description: 'Explicit MSVC toolset version override. When empty we fall back to \`version\`.'
     },
 
-    visual_studio_version: {
+    visualStudioVersion: {
         type: 'string' as const,
         default: '',
         description: 'Visual Studio product version or year constraint forwarded to vswhere/vcvarsall.'
@@ -86,25 +86,25 @@ export const outputsSchema = {
     version: {
         description: 'Resolved MSVC toolset version (matches \`version\`).'
     },
-    version_major: {
+    versionMajor: {
         description: 'MSVC toolset major version.'
     },
-    version_minor: {
+    versionMinor: {
         description: 'MSVC toolset minor version.'
     },
-    version_patch: {
+    versionPatch: {
         description: 'MSVC toolset patch version.'
     },
-    msvc_toolset_version: {
+    msvcToolsetVersion: {
         description: 'Exact MSVC toolset version reported by the environment.'
     },
-    msvc_product_version: {
+    msvcProductVersion: {
         description: 'Visual Studio product version (channel).'
     },
-    msvc_release_year: {
+    msvcReleaseYear: {
         description: 'Visual Studio release year derived from the product version.'
     },
-    msvc_compiler_version: {
+    msvcCompilerVersion: {
         description: 'cl.exe front-end version read from \`cl /Bv\`.'
     }
 } satisfies ActionOutputsSchema;

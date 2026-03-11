@@ -32,8 +32,8 @@ describe('restoreJournal', () => {
     it('returns parsed journal on cache hit', async () => {
         const expectedJournal: Journal = {
             entries: {
-                config: { commitHash: 'abc123', directDeps: ['core', 'assert'] },
-                core: { commitHash: 'def456', directDeps: [] }
+                config: { commitHash: 'abc123', direct_deps: ['core', 'assert'] },
+                core: { commitHash: 'def456', direct_deps: [] }
             }
         };
 
@@ -72,6 +72,61 @@ describe('restoreJournal', () => {
         const result = await restoreJournal('boost-journal-abc-fff000', 'boost-journal-abc');
         expect(result).toBeNull();
     });
+
+    it('returns null when journal has no entries object', async () => {
+        (cache.restoreCache as jest.Mock).mockImplementation(async (paths: string[]) => {
+            const journalFile = path.join(paths[0], 'journal.json');
+            await fsp.writeFile(journalFile, JSON.stringify({ version: 1 }));
+            return 'boost-journal-abc12345';
+        });
+
+        const result = await restoreJournal('boost-journal-abc-fff000', 'boost-journal-abc');
+        expect(result).toBeNull();
+    });
+
+    it('prunes entries with missing direct_deps', async () => {
+        const malformedJournal = {
+            entries: {
+                config: { commitHash: 'abc123', direct_deps: ['core'] },
+                core: { commitHash: 'def456' },
+                assert: { commitHash: 'ghi789', direct_deps: 'not-an-array' }
+            }
+        };
+
+        (cache.restoreCache as jest.Mock).mockImplementation(async (paths: string[]) => {
+            const journalFile = path.join(paths[0], 'journal.json');
+            await fsp.writeFile(journalFile, JSON.stringify(malformedJournal));
+            return 'boost-journal-abc12345';
+        });
+
+        const result = await restoreJournal('boost-journal-abc-fff000', 'boost-journal-abc');
+        expect(result).not.toBeNull();
+        expect(result!.entries['config']).toBeDefined();
+        expect(result!.entries['config'].direct_deps).toEqual(['core']);
+        // Entries with missing or invalid direct_deps are pruned
+        expect(result!.entries['core']).toBeUndefined();
+        expect(result!.entries['assert']).toBeUndefined();
+    });
+
+    it('prunes entries with missing commitHash', async () => {
+        const malformedJournal = {
+            entries: {
+                config: { commitHash: 'abc123', direct_deps: ['core'] },
+                core: { direct_deps: [] }
+            }
+        };
+
+        (cache.restoreCache as jest.Mock).mockImplementation(async (paths: string[]) => {
+            const journalFile = path.join(paths[0], 'journal.json');
+            await fsp.writeFile(journalFile, JSON.stringify(malformedJournal));
+            return 'boost-journal-abc12345';
+        });
+
+        const result = await restoreJournal('boost-journal-abc-fff000', 'boost-journal-abc');
+        expect(result).not.toBeNull();
+        expect(result!.entries['config']).toBeDefined();
+        expect(result!.entries['core']).toBeUndefined();
+    });
 });
 
 // ── saveJournal ─────────────────────────────────────────────────────
@@ -79,7 +134,7 @@ describe('restoreJournal', () => {
 describe('saveJournal', () => {
     const testJournal: Journal = {
         entries: {
-            config: { commitHash: 'abc123', directDeps: ['core'] }
+            config: { commitHash: 'abc123', direct_deps: ['core'] }
         }
     };
 
@@ -115,40 +170,40 @@ describe('saveJournal', () => {
 describe('updateJournal', () => {
     it('creates a new journal from scratch when existing is null', () => {
         const newEntries = new Map<string, JournalEntry>([
-            ['config', { commitHash: 'abc', directDeps: ['core'] }],
-            ['core', { commitHash: 'def', directDeps: [] }]
+            ['config', { commitHash: 'abc', direct_deps: ['core'] }],
+            ['core', { commitHash: 'def', direct_deps: [] }]
         ]);
         const allModules = new Set(['config', 'core']);
 
         const result = updateJournal(null, newEntries, allModules);
         expect(Object.keys(result.entries)).toHaveLength(2);
         expect(result.entries['config'].commitHash).toBe('abc');
-        expect(result.entries['core'].directDeps).toEqual([]);
+        expect(result.entries['core'].direct_deps).toEqual([]);
     });
 
     it('merges new entries over existing', () => {
         const existing: Journal = {
             entries: {
-                config: { commitHash: 'old-hash', directDeps: ['core'] },
-                core: { commitHash: 'core-hash', directDeps: [] }
+                config: { commitHash: 'old-hash', direct_deps: ['core'] },
+                core: { commitHash: 'core-hash', direct_deps: [] }
             }
         };
         const newEntries = new Map<string, JournalEntry>([
-            ['config', { commitHash: 'new-hash', directDeps: ['core', 'assert'] }]
+            ['config', { commitHash: 'new-hash', direct_deps: ['core', 'assert'] }]
         ]);
         const allModules = new Set(['config', 'core']);
 
         const result = updateJournal(existing, newEntries, allModules);
         expect(result.entries['config'].commitHash).toBe('new-hash');
-        expect(result.entries['config'].directDeps).toEqual(['core', 'assert']);
+        expect(result.entries['config'].direct_deps).toEqual(['core', 'assert']);
         expect(result.entries['core'].commitHash).toBe('core-hash');
     });
 
     it('prunes entries not in the current module closure', () => {
         const existing: Journal = {
             entries: {
-                config: { commitHash: 'abc', directDeps: [] },
-                stale_module: { commitHash: 'xyz', directDeps: [] }
+                config: { commitHash: 'abc', direct_deps: [] },
+                stale_module: { commitHash: 'xyz', direct_deps: [] }
             }
         };
         const newEntries = new Map<string, JournalEntry>();
@@ -162,8 +217,8 @@ describe('updateJournal', () => {
     it('preserves existing entries that are still in the closure', () => {
         const existing: Journal = {
             entries: {
-                config: { commitHash: 'abc', directDeps: ['core'] },
-                core: { commitHash: 'def', directDeps: [] }
+                config: { commitHash: 'abc', direct_deps: ['core'] },
+                core: { commitHash: 'def', direct_deps: [] }
             }
         };
         const newEntries = new Map<string, JournalEntry>();

@@ -50,7 +50,7 @@ export function renderTemplate(template: string, data: Record<string, string | n
  *
  * @returns "Windows", "macOS", or "Linux" depending on process.platform
  */
-export function get_runner_os(): string {
+export function getRunnerOs(): string {
     const platform = process.platform;
     if (platform === 'win32') {
         return 'Windows';

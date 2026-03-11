@@ -3,20 +3,20 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as exec from '@actions/exec';
 import * as axios from 'axios';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 import { runAction } from 'action-schema';
 
 import {
-    RawInputs,
+    type RawInputs,
     Commit,
-    GitHubUser,
-    Tag,
-    CheckUnconventionalMode,
-    SortByOption,
+    type GitHubUser,
+    type Tag,
+    type CheckUnconventionalMode,
+    type SortByOption,
     parseSortByOption,
-    Inputs,
+    type Inputs,
     parseCheckUnconventionalMode,
-    Changes
+    type Changes
 } from './types';
 
 // Schema imports
@@ -73,10 +73,10 @@ async function getCurrentBranch(projectPath: string): Promise<string | null> {
             }
             return branch;
         } else {
-            console.error(`Git command execution failed with exit code ${exitCode}`);
+            core.error(`Git command execution failed with exit code ${exitCode}`);
         }
     } catch (error) {
-        console.error(`Error executing Git command: ${(error as Error).message}`);
+        core.error(`Error executing Git command: ${(error as Error).message}`);
     }
     return null;
 }
@@ -115,7 +115,7 @@ async function getGithubRemote(gitPath: string): Promise<string | null> {
             }
         }
     } catch (error) {
-        console.error(`Failed to execute 'git remote -v' command: ${(error as Error).message}`);
+        core.error(`Failed to execute 'git remote -v' command: ${(error as Error).message}`);
         return null;
     }
 
@@ -130,28 +130,28 @@ async function getGithubRemote(gitPath: string): Promise<string | null> {
 async function adjustParameters(inputs: Inputs): Promise<void> {
     const envKeys = ['GITHUB_BASE_REF', 'GITHUB_REF_NAME'];
     for (const envKey of envKeys) {
-        if (!inputs.repo_branch) {
-            inputs.repo_branch = process.env[envKey];
-            if (inputs.repo_branch) {
-                console.log(`Repository Branch ${inputs.repo_branch} from ${envKey}`);
+        if (!inputs.repoBranch) {
+            inputs.repoBranch = process.env[envKey];
+            if (inputs.repoBranch) {
+                core.info(`Repository Branch ${inputs.repoBranch} from ${envKey}`);
                 break;
             }
         }
     }
-    if (!inputs.repo_branch) {
-        inputs.repo_branch = (await getCurrentBranch(inputs.source_dir)) || undefined;
-        if (inputs.repo_branch) {
-            console.log(`Repository Branch ${inputs.repo_branch} from local path`);
+    if (!inputs.repoBranch) {
+        inputs.repoBranch = (await getCurrentBranch(inputs.sourceDir)) || undefined;
+        if (inputs.repoBranch) {
+            core.info(`Repository Branch ${inputs.repoBranch} from local path`);
         }
     }
-    if (!inputs.github_token) {
-        inputs.github_token = process.env['GITHUB_TOKEN'] || '';
-        if (inputs.github_token) {
-            console.log(`Access token **** from GITHUB_TOKEN`);
+    if (!inputs.githubToken) {
+        inputs.githubToken = process.env['GITHUB_TOKEN'] || '';
+        if (inputs.githubToken) {
+            core.info(`Access token **** from GITHUB_TOKEN`);
         }
     }
 
-    inputs.repoUrl = (await getGithubRemote(inputs.source_dir)) || undefined;
+    inputs.repoUrl = (await getGithubRemote(inputs.sourceDir)) || undefined;
     inputs.repoOwner = getGithubRepoOwner(inputs.repoUrl) || undefined;
     inputs.repoName = getGithubRepoName(inputs.repoUrl) || undefined;
 }
@@ -259,7 +259,7 @@ function removeTagDuplicates(tags: Tag[], comparisonFields: (keyof Tag)[]): Tag[
  * @returns Array of unique tags
  */
 async function processTags(projectPath: string, tagPattern: RegExp, repoUrl: string | undefined, accessToken: string): Promise<Tag[]> {
-    const fnlog = trace_commands.scoped('processTags');
+    const fnlog = traceCommands.scoped('processTags');
 
     let tags = await getLocalTags(projectPath, tagPattern);
     fnlog(`${tags.length} local tags`);
@@ -368,7 +368,7 @@ async function populateConventional(commit: Commit, repoUrl: string | undefined,
         if (issueFooterKeys.includes(key) && value.startsWith('#')) {
             commit.issue = value.slice(1);
             if (repoUrl) {
-                commit.gh_issue_username = await getIssueAuthor(repoUrl, commit.issue, '');
+                commit.ghIssueUsername = await getIssueAuthor(repoUrl, commit.issue, '');
             }
             break;
         }
@@ -391,20 +391,20 @@ async function populateConventional(commit: Commit, repoUrl: string | undefined,
         }
     }
 
-    commit.is_parent_release = false;
+    commit.isParentRelease = false;
     if (commit.tag !== null) {
-        console.log(`Stopping at commit id ${commit.hash?.slice(0, 8)} (tag ${commit.tag})`);
-        commit.is_parent_release = true;
+        core.info(`Stopping at commit id ${commit.hash?.slice(0, 8)} (tag ${commit.tag})`);
+        commit.isParentRelease = true;
     } else {
         let matches = commit.description?.match(versionPattern);
         if (matches) {
-            console.log(`Stopping at commit id ${commit.hash?.slice(0, 8)} (description: ${commit.description})`);
-            commit.is_parent_release = true;
+            core.info(`Stopping at commit id ${commit.hash?.slice(0, 8)} (description: ${commit.description})`);
+            commit.isParentRelease = true;
         } else {
             matches = commit.subject?.match(versionPattern);
             if (matches) {
-                console.log(`Stopping at commit id ${commit.hash?.slice(0, 8)} (subject: ${commit.subject})`);
-                commit.is_parent_release = true;
+                core.info(`Stopping at commit id ${commit.hash?.slice(0, 8)} (subject: ${commit.subject})`);
+                commit.isParentRelease = true;
             }
         }
     }
@@ -447,8 +447,8 @@ async function getLocalCommits(projectPath: string, repoUrl: string | undefined,
                 if (!isDetail) {
                     commits.push(commit);
                     if (commits.length === 1) {
-                        commits[0].is_parent_release = false;
-                    } else if (commits[commits.length - 1].is_parent_release) {
+                        commits[0].isParentRelease = false;
+                    } else if (commits[commits.length - 1].isParentRelease) {
                         break;
                     }
                 }
@@ -459,8 +459,8 @@ async function getLocalCommits(projectPath: string, repoUrl: string | undefined,
             commit.author = line.slice(8);
             const p = commit.author.indexOf(' <');
             if (p !== -1) {
-                commit.author_name = commit.author.slice(0, p);
-                commit.author_email = commit.author.slice(p + 2, -1);
+                commit.authorName = commit.author.slice(0, p);
+                commit.authorEmail = commit.author.slice(p + 2, -1);
             }
         } else if (commit.author && !commit.date && line.startsWith('Date: ')) {
             commit.date = line.slice(6);
@@ -479,7 +479,7 @@ async function getLocalCommits(projectPath: string, repoUrl: string | undefined,
 /**
  * Fetches diff statistics for a list of commits using git show --numstat.
  *
- * Populates the lines_added, lines_deleted, and lines_changed properties
+ * Populates the linesAdded, linesDeleted, and linesChanged properties
  * for each commit. This is only called when sort-by is 'lines-asc' or 'lines-desc'.
  *
  * @param projectPath - Path to the git repository
@@ -515,12 +515,12 @@ async function populateDiffStats(projectPath: string, commits: Commit[]): Promis
                 }
             }
 
-            commit.lines_added = added;
-            commit.lines_deleted = deleted;
-            commit.lines_changed = added + deleted;
-            trace_commands.log(`Commit ${commit.hash?.slice(0, 7)}: +${added} -${deleted} (${added + deleted} total)`);
+            commit.linesAdded = added;
+            commit.linesDeleted = deleted;
+            commit.linesChanged = added + deleted;
+            traceCommands.log(`Commit ${commit.hash?.slice(0, 7)}: +${added} -${deleted} (${added + deleted} total)`);
         } catch (error) {
-            trace_commands.log(`Error fetching diff stats for ${commit.hash}: ${(error as Error).message}`);
+            traceCommands.log(`Error fetching diff stats for ${commit.hash}: ${(error as Error).message}`);
         }
     }
 }
@@ -585,7 +585,7 @@ function removeCommitDuplicates(commits: Commit[]): Commit[] {
         }
         // Merge extra hashes
         if (commit.hash) {
-            uniqueCommits[idx].extra_hashes.push(commit.hash);
+            uniqueCommits[idx].extraHashes.push(commit.hash);
         }
     }
 
@@ -620,10 +620,10 @@ async function getGithubCommits(repoUrl: string | undefined, branch: string | un
     }
 
     let page = 1;
-    while (commits.length === 0 || !commits[commits.length - 1].is_parent_release) {
+    while (commits.length === 0 || !commits[commits.length - 1].isParentRelease) {
         const params = {
             page: page,
-            per_page: 100
+            perPage: 100
         };
 
         try {
@@ -635,11 +635,11 @@ async function getGithubCommits(repoUrl: string | undefined, branch: string | un
                         let commit = new Commit();
                         commit.hash = pageCommit.sha;
                         commit.author = `${pageCommit.commit.committer.name} <${pageCommit.commit.committer.email}>`;
-                        commit.author_name = pageCommit.commit.committer.name;
-                        commit.author_email = pageCommit.commit.committer.email;
+                        commit.authorName = pageCommit.commit.committer.name;
+                        commit.authorEmail = pageCommit.commit.committer.email;
                         if (pageCommit.committer?.login) {
-                            commit.gh_name = await getGithubProfileName(pageCommit.committer.login, accessToken);
-                            commit.gh_username = pageCommit.committer.login;
+                            commit.ghName = await getGithubProfileName(pageCommit.committer.login, accessToken);
+                            commit.ghUsername = pageCommit.committer.login;
                         }
                         commit.date = pageCommit.commit.committer.date;
                         commit.message = pageCommit.commit.message;
@@ -648,8 +648,8 @@ async function getGithubCommits(repoUrl: string | undefined, branch: string | un
                         if (!isDetail) {
                             commits.push(commit);
                             if (commits.length === 1) {
-                                commits[0].is_parent_release = false;
-                            } else if (commits[commits.length - 1].is_parent_release) {
+                                commits[0].isParentRelease = false;
+                            } else if (commits[commits.length - 1].isParentRelease) {
                                 break;
                             }
                         }
@@ -689,7 +689,7 @@ async function getGithubCommits(repoUrl: string | undefined, branch: string | un
  * @returns Array of processed commits
  */
 async function processCommits(projectPath: string, repoUrl: string | undefined, versionPattern: RegExp, tags: Tag[], repoBranch: string | undefined, accessToken: string, checkUnconventional: CheckUnconventionalMode): Promise<Commit[]> {
-    const fnlog = trace_commands.scoped('processCommits');
+    const fnlog = traceCommands.scoped('processCommits');
 
     let commits = await getLocalCommits(projectPath, repoUrl, versionPattern, tags);
 
@@ -710,7 +710,7 @@ async function processCommits(projectPath: string, repoUrl: string | undefined, 
 
     fnlog(`${commits.length} local commits`);
 
-    if (commits.length === 0 || !commits[commits.length - 1].is_parent_release) {
+    if (commits.length === 0 || !commits[commits.length - 1].isParentRelease) {
         const commitHashes = new Set(commits.map(commit => commit.hash));
         const repoCommits = await getGithubCommits(repoUrl, repoBranch, versionPattern, tags, accessToken);
         fnlog(`${repoCommits.length} repo commits`);
@@ -768,26 +768,26 @@ function identifyNonRegularContributors(authors: Record<string, GitHubUser>): vo
 
     for (const author of Object.values(authors)) {
         // 1. Author is not owner, admin, or affiliated
-        if (author.is_admin || author.is_affiliated || author.is_owner) {
-            author.is_regular = true;
+        if (author.isAdmin || author.isAffiliated || author.isOwner) {
+            author.isRegular = true;
             continue;
         }
         // 2. Has less than 10% of commits
         if (author.commits < commitSum / 10) {
-            author.is_regular = false;
+            author.isRegular = false;
             continue;
         }
         // 3. Has 3 or fewer commits
         if (author.commits <= 3) {
-            author.is_regular = false;
+            author.isRegular = false;
             continue;
         }
         // 4. Is not among 20% top contributors
         if (author.commits < perc80) {
-            author.is_regular = false;
+            author.isRegular = false;
             continue;
         }
-        author.is_regular = true;
+        author.isRegular = true;
     }
 }
 
@@ -841,7 +841,7 @@ export function compareCommits(a: Commit, b: Commit, sortBy: SortByOption): numb
             return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
         case 'most-changes-first':
             // Most changes first (default)
-            return b.lines_changed - a.lines_changed;
+            return b.linesChanged - a.linesChanged;
         default:
             return 0;
     }
@@ -893,13 +893,13 @@ export function sortChanges(changes: Changes, sortBy: SortByOption): Changes {
  * @returns Object with changes map, type priority list, and parent release commit
  */
 function categorizeCommits(commits: Commit[]): { changes: Changes; changeTypePriority: string[]; parentRelease: Commit | null } {
-    const fnlog = trace_commands.scoped('categorizeCommits');
+    const fnlog = traceCommands.scoped('categorizeCommits');
 
     let parentRelease: Commit | null = null;
     const changes: Changes = {};
 
     for (const c of commits.slice().reverse()) {
-        if (c.is_parent_release) {
+        if (c.isParentRelease) {
             parentRelease = c;
             continue;
         }
@@ -944,7 +944,7 @@ function categorizeCommits(commits: Commit[]): { changes: Changes; changeTypePri
  * @returns Formatted Markdown changelog string
  */
 export function generateOutput(changes: Changes, changeTypePriority: string[], args: Inputs, repoUrl: string | undefined, authors: Record<string, GitHubUser>, parentRelease: Commit | null): string {
-    const fnlog = trace_commands.scoped('generateOutput');
+    const fnlog = traceCommands.scoped('generateOutput');
 
     let output = '';
     let footnotesOutput = '';
@@ -1019,14 +1019,14 @@ export function generateOutput(changes: Changes, changeTypePriority: string[], a
                     }
 
                     // Commit ids
-                    if (args.link_commits) {
-                        for (const h of [commit.hash, ...commit.extra_hashes]) {
+                    if (args.linkCommits) {
+                        for (const h of [commit.hash, ...commit.extraHashes]) {
                             if (h) {
                                 output += ` [${h.slice(0, 7)}](${repoUrl}/commit/${h})`;
                             }
                         }
                     } else {
-                        for (const h of [commit.hash, ...commit.extra_hashes]) {
+                        for (const h of [commit.hash, ...commit.extraHashes]) {
                             if (h) {
                                 output += ` ${h.slice(0, 7)}`;
                             }
@@ -1034,15 +1034,15 @@ export function generateOutput(changes: Changes, changeTypePriority: string[], a
                     }
 
                     // Thanks
-                    if (args.thank_non_regular) {
+                    if (args.thankNonRegular) {
                         const relatedUsernames: string[] = [];
-                        if (commit.gh_username !== null) {
-                            relatedUsernames.push(commit.gh_username);
+                        if (commit.ghUsername !== null) {
+                            relatedUsernames.push(commit.ghUsername);
                         }
-                        if (commit.gh_issue_username !== null && commit.gh_issue_username !== commit.gh_username) {
-                            relatedUsernames.push(commit.gh_issue_username);
+                        if (commit.ghIssueUsername !== null && commit.ghIssueUsername !== commit.ghUsername) {
+                            relatedUsernames.push(commit.ghIssueUsername);
                         }
-                        const thankList = relatedUsernames.filter(username => !authors[username]?.is_regular).map(username => `@${username}`);
+                        const thankList = relatedUsernames.filter(username => !authors[username]?.isRegular).map(username => `@${username}`);
                         if (thankList.length > 0) {
                             output += ` (thanks ${thankList.join(', ')})`;
                         }
@@ -1098,7 +1098,7 @@ function writeChangelog(outputPath: string, output: string): void {
  *                 including version patterns, output paths, and formatting options
  */
 export async function main(inputs: Inputs): Promise<void> {
-    const fnlog = trace_commands.scoped('create-changelog');
+    const fnlog = traceCommands.scoped('create-changelog');
 
     core.startGroup('🧩 Adjusting parameters');
     await adjustParameters(inputs);
@@ -1109,33 +1109,33 @@ export async function main(inputs: Inputs): Promise<void> {
     core.endGroup();
 
     core.startGroup('🏷️ Identifying tags');
-    let tags = await processTags(inputs.source_dir, inputs.tag_pattern, inputs.repoUrl, inputs.github_token);
+    const tags = await processTags(inputs.sourceDir, inputs.tagPattern, inputs.repoUrl, inputs.githubToken);
     core.endGroup();
 
     core.startGroup('📜 Identifying commits');
     let commits = await processCommits(
-        inputs.source_dir,
+        inputs.sourceDir,
         inputs.repoUrl,
-        inputs.version_pattern,
+        inputs.versionPattern,
         tags,
-        inputs.repo_branch,
-        inputs.github_token,
-        inputs.check_unconventional);
+        inputs.repoBranch,
+        inputs.githubToken,
+        inputs.checkUnconventional);
 
     // Limit the number of commits
     if (inputs.limit && commits.length > inputs.limit) {
         commits = commits.slice(0, inputs.limit);
-        console.log(`Limited to ${inputs.limit} commits`);
+        core.info(`Limited to ${inputs.limit} commits`);
     }
     core.endGroup();
 
     core.startGroup('👤 Populating GitHub usernames');
-    await populateGithubUsernames(commits, inputs.github_token);
+    await populateGithubUsernames(commits, inputs.githubToken);
     core.endGroup();
 
     // Populate issue data
     core.startGroup('🔗 Populating issue data');
-    const authors = await populateIssueData(commits, inputs.repoUrl, inputs.repoOwner, inputs.github_token);
+    const authors = await populateIssueData(commits, inputs.repoUrl, inputs.repoOwner, inputs.githubToken);
     core.endGroup();
 
     // Identify non-regular contributors
@@ -1144,9 +1144,9 @@ export async function main(inputs: Inputs): Promise<void> {
     core.endGroup();
 
     // Populate diff stats if needed for lines-based sorting
-    if (inputs.sort_by === 'most-changes-first') {
+    if (inputs.sortBy === 'most-changes-first') {
         core.startGroup('📊 Fetching diff statistics');
-        await populateDiffStats(inputs.source_dir, commits);
+        await populateDiffStats(inputs.sourceDir, commits);
         core.endGroup();
     }
 
@@ -1157,20 +1157,20 @@ export async function main(inputs: Inputs): Promise<void> {
 
     // Filter changes by type
     core.startGroup('🔍 Filtering commit types');
-    const filteredChanges = filterChangesByType(rawChanges, inputs.include_types, inputs.exclude_types);
-    if (inputs.include_types.size > 0) {
-        trace_commands.log(`Including types: ${Array.from(inputs.include_types).join(', ')}`);
+    const filteredChanges = filterChangesByType(rawChanges, inputs.includeTypes, inputs.excludeTypes);
+    if (inputs.includeTypes.size > 0) {
+        traceCommands.log(`Including types: ${Array.from(inputs.includeTypes).join(', ')}`);
     }
-    if (inputs.exclude_types.size > 0) {
-        trace_commands.log(`Excluding types: ${Array.from(inputs.exclude_types).join(', ')}`);
+    if (inputs.excludeTypes.size > 0) {
+        traceCommands.log(`Excluding types: ${Array.from(inputs.excludeTypes).join(', ')}`);
     }
-    trace_commands.log(`Filtered from ${Object.keys(rawChanges).length} to ${Object.keys(filteredChanges).length} types`);
+    traceCommands.log(`Filtered from ${Object.keys(rawChanges).length} to ${Object.keys(filteredChanges).length} types`);
     core.endGroup();
 
     // Sort changes within each scope
     core.startGroup('🔀 Sorting commits');
-    const changes = sortChanges(filteredChanges, inputs.sort_by);
-    trace_commands.log(`Sorted commits by: ${inputs.sort_by}`);
+    const changes = sortChanges(filteredChanges, inputs.sortBy);
+    traceCommands.log(`Sorted commits by: ${inputs.sortBy}`);
     core.endGroup();
 
     // Generate output
@@ -1181,10 +1181,10 @@ export async function main(inputs: Inputs): Promise<void> {
 
     // Write file
     core.startGroup('📝 Writing changelog');
-    writeChangelog(inputs.output_path, outputContents);
+    writeChangelog(inputs.outputPath, outputContents);
     core.endGroup();
 
-    if (inputs.update_summary) {
+    if (inputs.updateSummary) {
         core.startGroup('📝 Updating summary');
         try {
             await core.summary
@@ -1205,22 +1205,22 @@ export async function main(inputs: Inputs): Promise<void> {
  * @returns Converted Inputs object
  */
 function convertRawInputs(raw: RawInputs): Inputs {
-    const source_dir = path.resolve(raw.source_dir);
+    const sourceDir = path.resolve(raw.sourceDir);
     return {
-        source_dir,
-        version_pattern: new RegExp(raw.version_pattern),
-        tag_pattern: new RegExp(raw.tag_pattern),
-        output_path: path.resolve(source_dir, raw.output_path),
+        sourceDir,
+        versionPattern: new RegExp(raw.versionPattern),
+        tagPattern: new RegExp(raw.tagPattern),
+        outputPath: path.resolve(sourceDir, raw.outputPath),
         limit: raw.limit,
-        thank_non_regular: raw.thank_non_regular,
-        check_unconventional: parseCheckUnconventionalMode(raw.check_unconventional),
-        link_commits: raw.link_commits,
-        github_token: raw.github_token,
-        update_summary: raw.update_summary,
-        trace_commands: raw.trace_commands,
-        include_types: new Set(raw.include_types),
-        exclude_types: new Set(raw.exclude_types),
-        sort_by: parseSortByOption(raw.sort_by)
+        thankNonRegular: raw.thankNonRegular,
+        checkUnconventional: parseCheckUnconventionalMode(raw.checkUnconventional),
+        linkCommits: raw.linkCommits,
+        githubToken: raw.githubToken,
+        updateSummary: raw.updateSummary,
+        traceCommands: raw.traceCommands,
+        includeTypes: new Set(raw.includeTypes),
+        excludeTypes: new Set(raw.excludeTypes),
+        sortBy: parseSortByOption(raw.sortBy)
     };
 }
 

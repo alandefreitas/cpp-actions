@@ -37,7 +37,7 @@ export const inputsSchema = {
 When the compiler version requirements are provided, the action will break the requirements into subsets of major versions to be tested. When no version is provided, the '*' semver requirement is assumed. The action can identifies subsets of compiler versions for GCC, Clang, and MSVC. For any other compilers, the version requirements will passthrough to the output.`
     },
 
-    subrange_policy: {
+    subrangePolicy: {
         type: 'map' as const,
         default: { '': 'one-per-major' } as Record<string, string>,
         description: `The policy to be used to break the compiler version requirements into sub-ranges of versions.
@@ -65,7 +65,7 @@ Each entry in the matrix will include the \`cxxstd\` key with a list of standard
 It's very common for compilers to not fully comply with the standards they claim to support, even for the old standards. The criteria used by this action for determining if a compiler supports a standard is based on the whether the compiler claims to support the standard by providing a corresponding \`-std=c++XX\` flag to enable the standard. This criteria is easy to follow, minimizes surprises, covers the most common bugs, and ensures users the library is compliant with all standard flags supported by the compilers.`
     },
 
-    max_standards: {
+    maxStandards: {
         type: 'number' as const,
         default: 2,
         description: `The maximum number of standards to be tested with each compiler.
@@ -76,7 +76,7 @@ For instance, if 'max-standards' is 2 and the compiler supports '11,14,17,20,23'
     // -----------------------------------------------------------------
     // Factors
     // -----------------------------------------------------------------
-    latest_factors: {
+    latestFactors: {
         type: 'multiline' as const,
         default: ['gcc Coverage TSan UBSan'] as string[],
         description: `The factors to be tested with the latest versions of each compiler. For each factor in this list, the entry with the latest version of a compiler will be duplicated with an entry that sets this factor to true.
@@ -99,7 +99,7 @@ The following factors are considered special: 'asan', 'ubsan', 'msan', 'tsan', '
 Other entries will also include this factor as false.`
     },
 
-    combinatorial_factors: {
+    combinatorialFactors: {
         type: 'multiline' as const,
         default: [] as string[],
         description: `The factors to be tested with all combinations of other factors. When combinatorial factors are defined, for each entry in the matrix, a new entry will be created with the factors in this list set to \`true\`.
@@ -111,7 +111,7 @@ Typically, it is advisable to steer clear of combinatorial factors to prevent a 
 For instance, if the library can be built both in "Standalone" mode and with dependencies, its workflow can simply include an extra step to also test the library in "Standalone" mode and keep the step to test the library with dependencies. This is usually safer and cheaper than duplicating the entire matrix to test all combinations of these factors and also allows steps to be skipped when the library is not expected to be built in a given mode. For instance, testing a library on Standalone mode might not be necessary when the library is being tested with intermediary compilers.`
     },
 
-    force_factors: {
+    forceFactors: {
         type: 'multiline' as const,
         default: [] as string[],
         description: `A multi-line list of factor flags to be injected with each range of compiler version even if the entry doesn't have the usual requirements to have that factor.
@@ -127,7 +127,7 @@ Omitting \`<compiler-range|compiler-factor>\` is equivalent to it being set to \
 When the build type is unspecified, the action will infer the build type from the compiler name and its version.`
     },
 
-    extra_values: {
+    extraValues: {
         type: 'multiline' as const,
         default: [] as string[],
         description: `A multi-line list of key-value pairs to be injected in each entry of the matrix.
@@ -150,7 +150,7 @@ would generate a hash-key with the value \`gcc-11.1\` for an entry with the comp
     // -----------------------------------------------------------------
     // Customize suggestions
     // -----------------------------------------------------------------
-    runs_on: {
+    runsOn: {
         type: 'multiline' as const,
         default: [] as string[],
         description: `A multi-line list of github runner images to be used with each range of compiler version. Each line has the format:
@@ -196,7 +196,7 @@ Omitting \`<compiler-range|compiler-factor>\` is equivalent to it being set to \
 When the generator is unspecified, the action will infer the generator from the compiler name and its version.`
     },
 
-    generator_toolsets: {
+    generatorToolsets: {
         type: 'multiline' as const,
         default: [] as string[],
         description: `A multi-line list of cmake generator toolsets to be used with each range of compiler version. Each line has the format:
@@ -210,7 +210,7 @@ Omitting \`<compiler-range|compiler-factor>\` is equivalent to it being set to \
 When the generator toolset is unspecified, the action will infer the generator toolset from the compiler name and its version.`
     },
 
-    b2_toolsets: {
+    b2Toolsets: {
         type: 'multiline' as const,
         default: [] as string[],
         description: `A multi-line list of b2 toolsets to be used with each range of compiler version. Each line has the format:
@@ -266,7 +266,7 @@ Omitting \`<compiler-range|compiler-factor>\` is equivalent to it being set to \
 When the package is unspecified, the action will infer the package from the compiler name and its version.`
     },
 
-    append_install: {
+    appendInstall: {
         type: 'multiline' as const,
         default: [] as string[],
         description: `A multi-line list of packages to append to the install list for each range of compiler version. Unlike \`install\`, which replaces the entire install list, this option appends to the values already generated by the action (e.g. \`build-essential\` for containers, \`lcov\` for coverage).
@@ -280,7 +280,7 @@ For instance, \`gcc ASan: libasan-dev\` appends \`libasan-dev\` to the install l
 Omitting \`<compiler-range|compiler-factor>\` is equivalent to it being set to \`*\` and will append the packages to all versions of the compiler.`
     },
 
-    append_ccflags: {
+    appendCcflags: {
         type: 'multiline' as const,
         default: [] as string[],
         description: `A multi-line list of C compiler flags to append for each range of compiler version. Unlike \`ccflags\`, which replaces the entire flag string, this option appends to the flags already generated by the action (e.g. sanitizer flags, coverage flags).
@@ -294,7 +294,7 @@ For instance, \`clang >=15: -stdlib=libc++\` appends \`-stdlib=libc++\` to the C
 Omitting \`<compiler-range|compiler-factor>\` is equivalent to it being set to \`*\` and will append the flags to all versions of the compiler.`
     },
 
-    append_cxxflags: {
+    appendCxxflags: {
         type: 'multiline' as const,
         default: [] as string[],
         description: `A multi-line list of C++ compiler flags to append for each range of compiler version. Unlike \`cxxflags\`, which replaces the entire flag string, this option appends to the flags already generated by the action (e.g. sanitizer flags, coverage flags).
@@ -322,7 +322,7 @@ Omitting \`<compiler-range|compiler-factor>\` is equivalent to it being set to \
 When the triplet is unspecified, the action will infer the triplet from the compiler name and its version.`
     },
 
-    build_types: {
+    buildTypes: {
         type: 'multiline' as const,
         default: [] as string[],
         description: `A multi-line list of build types to be used with each range of compiler version. Each line has the format:
@@ -339,25 +339,25 @@ When the build type is unspecified, the action will infer the build type from th
     // -----------------------------------------------------------------
     // Customization flags
     // -----------------------------------------------------------------
-    default_build_type: {
+    defaultBuildType: {
         type: 'string' as const,
         default: 'Release',
         description: 'The default build type to suggest for entries without a specific build type.'
     },
 
-    sanitizer_build_type: {
+    sanitizerBuildType: {
         type: 'string' as const,
         default: 'RelWithDebInfo',
         description: 'Determine the default build type to suggest when testing with sanitizers.'
     },
 
-    x86_build_type: {
+    x86BuildType: {
         type: 'string' as const,
         default: 'Release',
         description: 'Determine the default build type to suggest when testing with x86.'
     },
 
-    use_containers: {
+    useContainers: {
         type: 'boolean' as const,
         default: true,
         description: `Determine whether to use containers whenever possible to run the tests.
@@ -372,7 +372,7 @@ When the value is false, the action will still use containers when needed. This 
     // -----------------------------------------------------------------
     // Output
     // -----------------------------------------------------------------
-    output_file: {
+    outputFile: {
         type: 'string' as const,
         default: 'matrix.json',
         description: `The file to output the matrix as a JSON string.
@@ -385,7 +385,7 @@ The file will be saved in the current working directory of the action.`
     // -----------------------------------------------------------------
     // Debugging
     // -----------------------------------------------------------------
-    log_matrix: {
+    logMatrix: {
         type: 'boolean' as const,
         default: true,
         description: `Log the generated matrix as a JSON string.
@@ -393,13 +393,13 @@ The file will be saved in the current working directory of the action.`
 The is useful for debugging purposes and when transitioning to a workflow that uses a hard-coded matrix.`
     },
 
-    generate_summary: {
+    generateSummary: {
         type: 'boolean' as const,
         default: true,
         description: 'Generate summary with the complete matrix.'
     },
 
-    warn_no_matches: {
+    warnNoMatches: {
         type: 'boolean' as const,
         default: true,
         description: `Emit a GitHub warning whenever a compiler configuration results in zero matrix entries because no known versions can satisfy the requested version range and C++ standard requirements simultaneously. Leave this enabled to catch unintended gaps; set it to \`false\` if you deliberately provide unsatisfiable requirements and do not want the additional annotation.`
@@ -408,7 +408,7 @@ The is useful for debugging purposes and when transitioning to a workflow that u
     // -----------------------------------------------------------------
     // Failure rate sorting
     // -----------------------------------------------------------------
-    sort_by_failure_rate: {
+    sortByFailureRate: {
         type: 'boolean' as const,
         default: true,
         description: `Sort matrix entries by historical failure rate.
@@ -422,7 +422,7 @@ When enabled, the summary table includes a "Failure Rate" column.
 Requires \`github-token\` to be set for API access. If failure rates cannot be calculated (no token, no history, API errors), the action continues gracefully without error.`
     },
 
-    failure_rate_runs: {
+    failureRateRuns: {
         type: 'number' as const,
         default: 100,
         description: `Number of recent workflow runs to analyze when calculating failure rates.
@@ -432,7 +432,7 @@ Jobs for each run are fetched in parallel, so increasing this value has minimal 
 Only used when \`sort-by-failure-rate\` is enabled.`
     },
 
-    github_token: {
+    githubToken: {
         type: 'string' as const,
         default: '',
         description: `GitHub token for API access when fetching workflow run history for failure rate calculation.

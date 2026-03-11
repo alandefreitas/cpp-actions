@@ -1,6 +1,6 @@
 import * as fs from 'fs';
-import { main, SortByOption, parseSortByOption } from './index';
-import * as trace_commands from 'trace-commands';
+import { main, type SortByOption, parseSortByOption } from './index';
+import * as traceCommands from 'trace-commands';
 
 /**
  * Valid modes for the check-unconventional input.
@@ -15,20 +15,20 @@ type CheckUnconventionalMode = 'false' | 'warn' | 'error';
  * CLI input options for the create-changelog tool.
  */
 interface CliInputs {
-    source_dir: string;
-    version_pattern: RegExp;
-    tag_pattern: RegExp;
-    output_path: string;
+    sourceDir: string;
+    versionPattern: RegExp;
+    tagPattern: RegExp;
+    outputPath: string;
     limit: number;
-    thank_non_regular: boolean;
-    check_unconventional: CheckUnconventionalMode;
-    link_commits: boolean;
-    github_token: string;
-    update_summary: boolean;
-    trace_commands: boolean;
-    include_types: Set<string>;
-    exclude_types: Set<string>;
-    sort_by: SortByOption;
+    thankNonRegular: boolean;
+    checkUnconventional: CheckUnconventionalMode;
+    linkCommits: boolean;
+    githubToken: string;
+    updateSummary: boolean;
+    traceCommands: boolean;
+    includeTypes: Set<string>;
+    excludeTypes: Set<string>;
+    sortBy: SortByOption;
 }
 
 /**
@@ -91,67 +91,67 @@ function parseCheckUnconventionalMode(value: string): CheckUnconventionalMode {
 function parseArgs(): CliInputs {
     const args = process.argv.slice(2);
     const inputs: CliInputs = {
-        source_dir: normalizePath(process.cwd()),
-        version_pattern: /^v\d+\.\d+\.\d+$/,
-        tag_pattern: /^v\d+\.\d+\.\d+$/,
-        output_path: 'CHANGELOG.md',
+        sourceDir: normalizePath(process.cwd()),
+        versionPattern: /^v\d+\.\d+\.\d+$/,
+        tagPattern: /^v\d+\.\d+\.\d+$/,
+        outputPath: 'CHANGELOG.md',
         limit: 0,
-        thank_non_regular: true,
-        check_unconventional: 'warn',
-        link_commits: true,
-        github_token: process.env.GITHUB_TOKEN || '',
-        update_summary: false,
-        trace_commands: true,
-        include_types: new Set<string>(),
-        exclude_types: new Set(['chore', 'style']),
-        sort_by: 'most-changes-first'
+        thankNonRegular: true,
+        checkUnconventional: 'warn',
+        linkCommits: true,
+        githubToken: process.env.GITHUB_TOKEN || '',
+        updateSummary: false,
+        traceCommands: true,
+        includeTypes: new Set<string>(),
+        excludeTypes: new Set(['chore', 'style']),
+        sortBy: 'most-changes-first'
     };
 
     const sink: string[] = [];
     for (let i = 0; i < args.length; i++) {
         switch (args[i]) {
-            case '--source_dir':
-                inputs.source_dir = normalizePath(args[++i]);
+            case '--sourceDir':
+                inputs.sourceDir = normalizePath(args[++i]);
                 break;
-            case '--version_pattern':
-                inputs.version_pattern = new RegExp(args[++i]);
+            case '--versionPattern':
+                inputs.versionPattern = new RegExp(args[++i]);
                 break;
-            case '--tag_pattern':
-                inputs.tag_pattern = new RegExp(args[++i]);
+            case '--tagPattern':
+                inputs.tagPattern = new RegExp(args[++i]);
                 break;
-            case '--output_path':
+            case '--outputPath':
             case '-o':
-                inputs.output_path = normalizePath(args[++i]);
+                inputs.outputPath = normalizePath(args[++i]);
                 break;
             case '--limit':
                 inputs.limit = toIntegerInput(args[++i]) || 0;
                 break;
-            case '--thank_non_regular':
-                inputs.thank_non_regular = args[++i] === 'true';
+            case '--thankNonRegular':
+                inputs.thankNonRegular = args[++i] === 'true';
                 break;
-            case '--check_unconventional':
-                inputs.check_unconventional = parseCheckUnconventionalMode(args[++i]);
+            case '--checkUnconventional':
+                inputs.checkUnconventional = parseCheckUnconventionalMode(args[++i]);
                 break;
-            case '--link_commits':
-                inputs.link_commits = args[++i] === 'true';
+            case '--linkCommits':
+                inputs.linkCommits = args[++i] === 'true';
                 break;
-            case '--github_token':
-                inputs.github_token = args[++i];
+            case '--githubToken':
+                inputs.githubToken = args[++i];
                 break;
-            case '--update_summary':
-                inputs.update_summary = args[++i] === 'true';
+            case '--updateSummary':
+                inputs.updateSummary = args[++i] === 'true';
                 break;
-            case '--trace_commands':
-                inputs.trace_commands = args[++i] === 'true';
+            case '--traceCommands':
+                inputs.traceCommands = args[++i] === 'true';
                 break;
-            case '--include_types':
-                inputs.include_types = new Set(args[++i].split(',').map(t => t.trim()).filter(t => t));
+            case '--includeTypes':
+                inputs.includeTypes = new Set(args[++i].split(',').map(t => t.trim()).filter(t => t));
                 break;
-            case '--exclude_types':
-                inputs.exclude_types = new Set(args[++i].split(',').map(t => t.trim()).filter(t => t));
+            case '--excludeTypes':
+                inputs.excludeTypes = new Set(args[++i].split(',').map(t => t.trim()).filter(t => t));
                 break;
-            case '--sort_by':
-                inputs.sort_by = parseSortByOption(args[++i]);
+            case '--sortBy':
+                inputs.sortBy = parseSortByOption(args[++i]);
                 break;
             default:
                 sink.push(args[i]);
@@ -163,7 +163,7 @@ function parseArgs(): CliInputs {
         const dirExists = fs.existsSync(sinkDir);
         const isDir = dirExists && fs.lstatSync(sinkDir).isDirectory();
         if (dirExists && !isDir) {
-            inputs.source_dir = sinkDir;
+            inputs.sourceDir = sinkDir;
         }
     }
 
@@ -175,7 +175,7 @@ function parseArgs(): CliInputs {
  */
 async function runLocal(): Promise<void> {
     const inputs = parseArgs();
-    trace_commands.set_trace_commands(true);
+    traceCommands.setTraceCommands(true);
     try {
         await main(inputs);
     } catch (error) {

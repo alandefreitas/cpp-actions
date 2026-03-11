@@ -11,7 +11,7 @@
 import * as path from 'path';
 import { lint } from './linter';
 import { report } from './reporter';
-import { LinterOptions } from './types';
+import { type LinterOptions } from './types';
 
 /**
  * Parses command-line arguments into linter options.

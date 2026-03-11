@@ -81,16 +81,16 @@ function makeTestInputs(overrides: Partial<Inputs> = {}): Inputs {
         branch: 'develop',
         patches: new Set<string>(),
         modules: new Set<string>(['config']),
-        scan_modules_dir: new Set<string>(),
-        modules_scan_paths: new Set<string>(),
-        modules_exclude_paths: new Set<string>(['test', 'tests']),
-        scan_modules_ignore: new Set<string>(),
-        optimistic_caching: false,
-        boost_dir: '/tmp/boost',
+        scanModulesDir: new Set<string>(),
+        modulesScanPaths: new Set<string>(),
+        modulesExcludePaths: new Set<string>(['test', 'tests']),
+        scanModulesIgnore: new Set<string>(),
+        optimisticCaching: false,
+        boostDir: '/tmp/boost',
         cache: true,
-        trace_commands: false,
-        clone_strategy: 'auto' as const,
-        archive_threshold: 25,
+        traceCommands: false,
+        cloneStrategy: 'auto' as const,
+        archiveThreshold: 25,
         ...overrides
     };
 }
@@ -176,7 +176,7 @@ describe('computeSourceCacheKey', () => {
         expect(key1).toBe(key2);
     });
 
-    it('is not affected by modules_exclude_paths', () => {
+    it('is not affected by modulesExcludePaths', () => {
         const resolved = makeResolvedModuleSet(
             new Set(['config']),
             new Map([['config', 'h1']])
@@ -185,12 +185,12 @@ describe('computeSourceCacheKey', () => {
 
         const key1 = computeSourceCacheKey(
             resolved,
-            makeTestInputs({ modules_exclude_paths: new Set(['test']) }),
+            makeTestInputs({ modulesExcludePaths: new Set(['test']) }),
             roots
         );
         const key2 = computeSourceCacheKey(
             resolved,
-            makeTestInputs({ modules_exclude_paths: new Set(['examples']) }),
+            makeTestInputs({ modulesExcludePaths: new Set(['examples']) }),
             roots
         );
         expect(key1).toBe(key2);
@@ -208,7 +208,7 @@ describe('computeSourceCacheKey', () => {
 
         const pessimistic = computeSourceCacheKey(
             resolved,
-            makeTestInputs({ optimistic_caching: false }),
+            makeTestInputs({ optimisticCaching: false }),
             roots
         );
         // Change a transitive dep hash
@@ -216,7 +216,7 @@ describe('computeSourceCacheKey', () => {
         const resolved2 = makeResolvedModuleSet(modules, hashes2);
         const pessimistic2 = computeSourceCacheKey(
             resolved2,
-            makeTestInputs({ optimistic_caching: false }),
+            makeTestInputs({ optimisticCaching: false }),
             roots
         );
         // Pessimistic detects the change
@@ -235,7 +235,7 @@ describe('computeSourceCacheKey', () => {
 
         const optimistic = computeSourceCacheKey(
             resolved,
-            makeTestInputs({ optimistic_caching: true }),
+            makeTestInputs({ optimisticCaching: true }),
             roots
         );
         // Change a transitive dep hash (core is not a graph root)
@@ -243,7 +243,7 @@ describe('computeSourceCacheKey', () => {
         const resolved2 = makeResolvedModuleSet(modules, hashes2);
         const optimistic2 = computeSourceCacheKey(
             resolved2,
-            makeTestInputs({ optimistic_caching: true }),
+            makeTestInputs({ optimisticCaching: true }),
             roots
         );
         // Optimistic does NOT detect the change (core not in roots)
@@ -261,7 +261,7 @@ describe('computeSourceCacheKey', () => {
 
         const key1 = computeSourceCacheKey(
             resolved,
-            makeTestInputs({ optimistic_caching: true }),
+            makeTestInputs({ optimisticCaching: true }),
             roots
         );
 
@@ -270,7 +270,7 @@ describe('computeSourceCacheKey', () => {
         const resolved2 = makeResolvedModuleSet(modules, hashes2);
         const key2 = computeSourceCacheKey(
             resolved2,
-            makeTestInputs({ optimistic_caching: true }),
+            makeTestInputs({ optimisticCaching: true }),
             roots
         );
         // Patch hash change is detected even in optimistic mode

@@ -3,7 +3,7 @@
  *
  * This module manages the accumulative journal stored in GitHub Actions cache.
  * The journal records per-module dependency data (`module → { commitHash,
- * directDeps[] }`) discovered during previous runs. On subsequent runs, the
+ * direct_deps[] }`) discovered during previous runs. On subsequent runs, the
  * journal enables the resolution walk to validate modules without re-cloning.
  *
  * The journal key uses `restore-keys` prefix matching so that the most recent
@@ -18,7 +18,7 @@ import * as core from '@actions/core';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 
 /**
  * Per-module dependency data entry.
@@ -30,7 +30,7 @@ export interface JournalEntry {
     /** Commit hash of the module at the time deps were recorded */
     commitHash: string;
     /** Direct dependencies only (NOT the transitive closure) */
-    directDeps: string[];
+    direct_deps: string[];
 }
 
 /**
@@ -81,7 +81,7 @@ function journalCacheDir(restorePrefix: string): string {
  * @returns Parsed journal on cache hit, or null on miss
  */
 export async function restoreJournal(primaryKey: string, restorePrefix: string): Promise<Journal | null> {
-    const fnlog = trace_commands.scoped('restoreJournal');
+    const fnlog = traceCommands.scoped('restoreJournal');
 
     const cacheDir = journalCacheDir(restorePrefix);
     const journalFile = path.join(cacheDir, JOURNAL_FILENAME);
@@ -110,6 +110,16 @@ export async function restoreJournal(primaryKey: string, restorePrefix: string):
 
         const raw = await fs.readFile(journalFile, 'utf-8');
         const data = JSON.parse(raw) as Journal;
+        if (!data.entries || typeof data.entries !== 'object') {
+            fnlog('Journal has no valid entries object');
+            return null;
+        }
+        // Prune entries with missing or invalid direct_deps
+        for (const [mod, entry] of Object.entries(data.entries)) {
+            if (!entry || typeof entry.commitHash !== 'string' || !Array.isArray(entry.direct_deps)) {
+                delete data.entries[mod];
+            }
+        }
         const entryCount = Object.keys(data.entries).length;
         fnlog(`Restored journal with ${entryCount} entries`);
         return data;
@@ -138,7 +148,7 @@ export async function restoreJournal(primaryKey: string, restorePrefix: string):
  * @param journal - The journal data to cache
  */
 export async function saveJournal(key: string, restorePrefix: string, journal: Journal): Promise<void> {
-    const fnlog = trace_commands.scoped('saveJournal');
+    const fnlog = traceCommands.scoped('saveJournal');
 
     const cacheDir = journalCacheDir(restorePrefix);
     const journalFile = path.join(cacheDir, JOURNAL_FILENAME);
@@ -182,7 +192,7 @@ export function updateJournal(
     newEntries: Map<string, JournalEntry>,
     allModules: Set<string>
 ): Journal {
-    const fnlog = trace_commands.scoped('updateJournal');
+    const fnlog = traceCommands.scoped('updateJournal');
 
     const merged: Record<string, JournalEntry> = {};
 

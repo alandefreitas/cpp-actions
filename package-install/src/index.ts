@@ -7,7 +7,7 @@
 import { runAction } from 'action-schema';
 
 // Type imports and re-exports
-import { Inputs, VcpkgOutputs } from './types';
+import { type Inputs, type VcpkgOutputs } from './types';
 export type { Inputs, VcpkgOutputs }
 
 // Schema imports
@@ -15,8 +15,8 @@ import { inputsSchema, outputsSchema } from './schema';
 export { inputsSchema, outputsSchema };
 
 // Module imports
-import { apt_get_main } from './apt-install';
-import { vcpkg_main } from './vcpkg-install';
+import { aptGetMain } from './apt-install';
+import { vcpkgMain } from './vcpkg-install';
 
 // Re-exports for external consumers
 export { semverGteLoose } from './utils';
@@ -28,23 +28,23 @@ export { semverGteLoose } from './utils';
  * Manages vcpkg bootstrap, triplet configuration, and package caching.
  *
  * @param inputs - Configuration inputs for package installation
- * @param _force_install_vcpkg - Force vcpkg installation even without packages specified
+ * @param _forceInstallVcpkg - Force vcpkg installation even without packages specified
  * @returns Vcpkg-related outputs including paths and configuration
  */
-export async function main(inputs: Inputs, _force_install_vcpkg?: boolean): Promise<VcpkgOutputs> {
+export async function main(inputs: Inputs, _forceInstallVcpkg?: boolean): Promise<VcpkgOutputs> {
     // ----------------------------------------------
     // apt-get
     // ----------------------------------------------
     // Check if environment is Linux
     if (inputs.apt_get.length > 0 && process.platform === 'linux') {
-        await apt_get_main(inputs);
+        await aptGetMain(inputs);
     }
 
     // ----------------------------------------------
     // Vcpkg
     // ----------------------------------------------
-    if (inputs.vcpkg.length > 0 || inputs.vcpkg_force_install) {
-        return await vcpkg_main(inputs);
+    if (inputs.vcpkg.length > 0 || inputs.vcpkgForceInstall) {
+        return await vcpkgMain(inputs);
     }
 
     return {};
@@ -78,10 +78,10 @@ runAction({
 
         // Force install vcpkg if 'vcpkg' is in apt-get list or 'true' is in vcpkg list
         if (effectiveInputs.apt_get.includes('vcpkg')) {
-            effectiveInputs.vcpkg_force_install = true;
+            effectiveInputs.vcpkgForceInstall = true;
             effectiveInputs.apt_get = effectiveInputs.apt_get.filter((item) => item !== 'vcpkg');
         } else if (effectiveInputs.vcpkg.includes('true')) {
-            effectiveInputs.vcpkg_force_install = true;
+            effectiveInputs.vcpkgForceInstall = true;
             effectiveInputs.vcpkg = effectiveInputs.vcpkg.filter((item) => item !== 'true');
         }
 

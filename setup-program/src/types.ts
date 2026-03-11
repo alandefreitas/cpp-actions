@@ -17,10 +17,10 @@ export type SetupProgramInputs = InferInputs<typeof inputsSchema>;
  * Result of a program search or installation operation.
  */
 export interface ProgramResult {
-    output_version: string | null;
-    output_path: string | null;
+    outputVersion: string | null;
+    outputPath: string | null;
     /** The APT package name that was installed (only set when installed via APT) */
-    installed_package?: string | null;
+    installedPackage?: string | null;
 }
 
 /**

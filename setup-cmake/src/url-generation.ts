@@ -23,56 +23,56 @@ export function generateCMakeURL(version: string, architecture: string, fnlog: (
     const { major, minor } = versionSV;
 
     // Determine path to download
-    const system_os = (process.env['RUNNER_OS'] || process.platform).toLowerCase();
-    let url_os = system_os;
+    const systemOs = (process.env['RUNNER_OS'] || process.platform).toLowerCase();
+    let urlOs = systemOs;
     // Put it in the same format as the GitHub Actions runner
-    if (url_os === 'darwin') {
-        url_os = 'macos';
-    } else if (url_os === 'win32') {
-        url_os = 'windows';
+    if (urlOs === 'darwin') {
+        urlOs = 'macos';
+    } else if (urlOs === 'win32') {
+        urlOs = 'windows';
     } else {
-        url_os = 'linux';
+        urlOs = 'linux';
     }
 
-    let url_arch = (architecture || process.env['RUNNER_ARCH'] || process.arch).toLowerCase();
+    let urlArch = (architecture || process.env['RUNNER_ARCH'] || process.arch).toLowerCase();
     // Put it in the same format as the GitHub Actions runner (X86, X64, ARM, or ARM64)
-    if (url_arch === 'ia32') {
-        url_arch = 'x86';
+    if (urlArch === 'ia32') {
+        urlArch = 'x86';
     }
 
     // CMake 3.19.0 and below use a different URL format for OS
     if (semver.lte(version, '3.19.0')) {
-        if (url_os === 'windows') {
-            if (url_arch === 'x86') {
-                url_os = 'win32';
+        if (urlOs === 'windows') {
+            if (urlArch === 'x86') {
+                urlOs = 'win32';
             } else {
-                url_os = 'win64';
+                urlOs = 'win64';
             }
-        } else if (url_os === 'linux') {
-            url_os = 'Linux';
-        } else if (url_os === 'macos' && semver.lte(version, '3.18.2')) {
-            url_os = 'Darwin';
+        } else if (urlOs === 'linux') {
+            urlOs = 'Linux';
+        } else if (urlOs === 'macos' && semver.lte(version, '3.18.2')) {
+            urlOs = 'Darwin';
         }
     }
 
     // Arch URL format depends on OS
-    if (url_os === 'windows') {
-        url_arch = url_arch.startsWith('arm') ? 'arm64' : 'x86_64';
-    } else if (url_os === 'win32') {
-        url_arch = 'x86';
-    } else if (url_os === 'win64') {
-        url_arch = 'x64';
-    } else if (url_os.toLowerCase() === 'linux') {
-        url_arch = url_arch.startsWith('arm') ? 'aarch64' : 'x86_64';
-    } else if (url_os === 'macos') {
-        url_arch = 'universal';
+    if (urlOs === 'windows') {
+        urlArch = urlArch.startsWith('arm') ? 'arm64' : 'x86_64';
+    } else if (urlOs === 'win32') {
+        urlArch = 'x86';
+    } else if (urlOs === 'win64') {
+        urlArch = 'x64';
+    } else if (urlOs.toLowerCase() === 'linux') {
+        urlArch = urlArch.startsWith('arm') ? 'aarch64' : 'x86_64';
+    } else if (urlOs === 'macos') {
+        urlArch = 'universal';
     }
 
     // Form complete URL
-    const url_extension = (system_os === 'windows') ? 'zip' : 'tar.gz';
-    const cmake_basename = `cmake-${version}-${url_os}-${url_arch}`;
-    const cmake_filename = `${cmake_basename}.${url_extension}`;
-    const cmake_url = `https://cmake.org/files/v${major}.${minor}/${cmake_filename}`;
-    fnlog(`CMake URL: ${cmake_url}`);
-    return cmake_url;
+    const urlExtension = (systemOs === 'windows') ? 'zip' : 'tar.gz';
+    const cmakeBasename = `cmake-${version}-${urlOs}-${urlArch}`;
+    const cmakeFilename = `${cmakeBasename}.${urlExtension}`;
+    const cmakeUrl = `https://cmake.org/files/v${major}.${minor}/${cmakeFilename}`;
+    fnlog(`CMake URL: ${cmakeUrl}`);
+    return cmakeUrl;
 }

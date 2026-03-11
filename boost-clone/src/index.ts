@@ -9,7 +9,7 @@ import * as cache from '@actions/cache';
 import * as fsp from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 import { runAction } from 'action-schema';
 
 // Type imports
@@ -39,7 +39,7 @@ import { restoreJournal, saveJournal, updateJournal } from './cached-deps';
  */
 export interface Outputs {
     /** Absolute path to the Boost source directory */
-    boost_dir: string;
+    boostDir: string;
 }
 
 // Re-export for external consumers
@@ -67,7 +67,7 @@ class BoostCloner {
 
     /**
      * Output values returned to the action runner.
-     * Currently only `boost_dir` — the absolute path to the cloned Boost source.
+     * Currently only `boostDir` — the absolute path to the cloned Boost source.
      */
     private readonly outputs: Outputs;
 
@@ -110,7 +110,7 @@ class BoostCloner {
 
     /**
      * Cached per-module dependency data from previous runs.
-     * Maps module name → `{ commitHash, directDeps[] }` for both regular
+     * Maps module name → `{ commitHash, direct_deps[] }` for both regular
      * Boost modules and patch modules. Entries persist across runs; stale
      * entries are replaced on the next journal save.
      */
@@ -120,7 +120,7 @@ class BoostCloner {
      * Result of walking the dependency graph from `graphRoots` using the
      * journal. Each module's journal entry is validated against its current
      * commit hash (fetched via `git ls-remote`); valid entries contribute
-     * their `directDeps` to the walk.
+     * their `direct_deps` to the walk.
      *
      * `undefined` means resolution wasn't attempted (no cache, no journal,
      * or no modules requested).
@@ -186,12 +186,12 @@ class BoostCloner {
      */
     constructor(inputs: Inputs) {
         this.inputs = { ...inputs };
-        // Compute boost_dir default if not provided (depends on branch)
-        if (!this.inputs.boost_dir) {
-            this.inputs.boost_dir = path.join(os.tmpdir(), `boost-${this.inputs.branch}`);
+        // Compute boostDir default if not provided (depends on branch)
+        if (!this.inputs.boostDir) {
+            this.inputs.boostDir = path.join(os.tmpdir(), `boost-${this.inputs.branch}`);
         }
-        this.inputs.boost_dir = path.resolve(this.inputs.boost_dir);
-        this.outputs = { boost_dir: this.inputs.boost_dir };
+        this.inputs.boostDir = path.resolve(this.inputs.boostDir);
+        this.outputs = { boostDir: this.inputs.boostDir };
     }
 
     /**
@@ -209,14 +209,14 @@ class BoostCloner {
      * @returns Outputs including the Boost directory path
      */
     async run(): Promise<Outputs> {
-        await fsp.mkdir(this.inputs.boost_dir, { recursive: true });
+        await fsp.mkdir(this.inputs.boostDir, { recursive: true });
 
         core.startGroup('📐 Identify git features and modules');
-        core.info(`Cache path: ${this.inputs.boost_dir}`);
+        core.info(`Cache path: ${this.inputs.boostDir}`);
         core.info(`Cache enabled: ${this.inputs.cache}`);
-        core.info(`Optimistic caching: ${this.inputs.optimistic_caching}`);
-        core.info(`Clone strategy: ${this.inputs.clone_strategy}`);
-        core.info(`Archive threshold: ${this.inputs.archive_threshold}`);
+        core.info(`Optimistic caching: ${this.inputs.optimisticCaching}`);
+        core.info(`Clone strategy: ${this.inputs.cloneStrategy}`);
+        core.info(`Archive threshold: ${this.inputs.archiveThreshold}`);
 
         this.gitFeatures = await findGitFeatures(this.inputs);
         await this.identifyDirectModules();
@@ -240,7 +240,7 @@ class BoostCloner {
                 this.resolutionResult.hashes
             );
             this.sourceKey = computeSourceCacheKey(resolved, this.inputs, this.graphRoots);
-            core.info(`Caching mode: ${this.inputs.optimistic_caching ? 'optimistic' : 'pessimistic'}`);
+            core.info(`Caching mode: ${this.inputs.optimisticCaching ? 'optimistic' : 'pessimistic'}`);
             core.info(`Source cache key: ${this.sourceKey}`);
             const cacheHit = await getCachedBoost(this.inputs, this.sourceKey);
             if (cacheHit) {
@@ -264,7 +264,7 @@ class BoostCloner {
             await this.ensureBoostMetadata();
             const archiveUrl = getArchiveUrl(this.inputs.branch);
             try {
-                await downloadAndExtractArchive(archiveUrl, this.inputs.boost_dir);
+                await downloadAndExtractArchive(archiveUrl, this.inputs.boostDir);
             } catch (error) {
                 core.warning(`Archive download failed: ${error}. Falling back to git strategy.`);
                 await this.executeGitStrategy();
@@ -328,10 +328,10 @@ class BoostCloner {
     private async identifyDirectModules(): Promise<void> {
         const modules = new Set(this.inputs.modules);
 
-        if (this.inputs.scan_modules_dir.size > 0) {
+        if (this.inputs.scanModulesDir.size > 0) {
             await this.ensureBoostMetadata();
 
-            const scanResults = await Promise.all([...this.inputs.scan_modules_dir].map(scanDir =>
+            const scanResults = await Promise.all([...this.inputs.scanModulesDir].map(scanDir =>
                 scanBoostDependencies(scanDir, this.inputs, this.exceptions!, this.submodulePaths!)
             ));
             for (const scannedModules of scanResults) {
@@ -408,7 +408,7 @@ class BoostCloner {
      * fatal.
      */
     private async discoverPatchDependencies(): Promise<void> {
-        const fnlog = trace_commands.scoped('discoverPatchDependencies');
+        const fnlog = traceCommands.scoped('discoverPatchDependencies');
 
         const results = await Promise.all([...this.inputs.patches].map(async (patchUrl) => {
             const patchName = getRepoName(patchUrl);
@@ -456,7 +456,7 @@ class BoostCloner {
             if (!result) continue;
             this.journal!.entries[result.patchName] = {
                 commitHash: result.currentHash,
-                directDeps: [...result.deps]
+                direct_deps: [...result.deps]
             };
             this.patchCloneDirs.set(result.patchName, result.tmpDir);
         }
@@ -490,7 +490,7 @@ class BoostCloner {
             estimationRoots.add(name);
             const entry = this.journal?.entries[name];
             if (entry) {
-                for (const dep of entry.directDeps) {
+                for (const dep of entry.direct_deps) {
                     estimationRoots.add(dep);
                 }
             }
@@ -518,7 +518,7 @@ class BoostCloner {
      * Sets: `resolutionResult`.
      */
     private async resolveDependencyGraph(): Promise<void> {
-        const fnlog = trace_commands.scoped('resolveDependencyGraph');
+        const fnlog = traceCommands.scoped('resolveDependencyGraph');
 
         if (this.graphRoots.size === 0) {
             fnlog('No modules or patches requested; trivially complete resolution');
@@ -603,7 +603,7 @@ class BoostCloner {
                     if (this.resolutionResult.frontier.has(mod)) continue;
                     const entry = this.journal?.entries[mod];
                     if (entry) {
-                        preScannedDeps.set(mod, entry.directDeps);
+                        preScannedDeps.set(mod, entry.direct_deps);
                     }
                 }
                 core.info(`Initializing ${initModules.size} modules (${preScannedDeps.size} pre-scanned, ${this.resolutionResult.frontier.size} frontier)`);
@@ -657,7 +657,7 @@ class BoostCloner {
         for (const [mod, deps] of this.discoveryResult.discoveredDeps) {
             newEntries.set(mod, {
                 commitHash: allHashes.get(mod) ?? '',
-                directDeps: deps
+                direct_deps: deps
             });
         }
 
@@ -685,7 +685,7 @@ class BoostCloner {
         if (this.discoveryResult) {
             const resolved = makeResolvedModuleSet(this.discoveryResult.initialized, allHashes);
             this.sourceKey = computeSourceCacheKey(resolved, this.inputs, this.graphRoots);
-            core.info(`Caching mode: ${this.inputs.optimistic_caching ? 'optimistic' : 'pessimistic'}`);
+            core.info(`Caching mode: ${this.inputs.optimisticCaching ? 'optimistic' : 'pessimistic'}`);
             core.info(`Source cache key: ${this.sourceKey}`);
         }
 
@@ -724,7 +724,7 @@ runAction({
     main: async (inputs: Inputs) => {
         const outputs = await main(inputs);
 
-        if (!outputs.boost_dir) {
+        if (!outputs.boostDir) {
             core.setFailed('Cannot clone Boost');
         }
 

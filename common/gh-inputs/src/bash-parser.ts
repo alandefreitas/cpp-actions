@@ -62,11 +62,11 @@ function extractIdentifier(
  * - Environment variable expansion ($VAR syntax)
  * - Proper quote nesting rules (single quotes are literal, double quotes allow escapes)
  *
- * @param extra_args - A string or array of strings containing bash-style arguments
+ * @param extraArgs - A string or array of strings containing bash-style arguments
  * @returns Array of parsed individual arguments
  */
-export function parseBashArguments(extra_args: string | string[]): string[] {
-    const argsArray = Array.isArray(extra_args) ? extra_args : [extra_args];
+export function parseBashArguments(extraArgs: string | string[]): string[] {
+    const argsArray = Array.isArray(extraArgs) ? extraArgs : [extraArgs];
 
     const args: string[] = [];
     for (const line of argsArray) {

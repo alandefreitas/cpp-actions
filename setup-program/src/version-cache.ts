@@ -6,7 +6,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 
 let versionsCacheDir: string | null = null;
 
@@ -60,7 +60,7 @@ export function readVersionsFromFile(filename: string): string[] | null {
         if (Array.isArray(versions)) {
             return versions;
         }
-    } catch (error) {
+    } catch {
         // File reading failed or versions couldn't be parsed
     }
     return null;
@@ -80,8 +80,8 @@ export function saveVersionsToFile(versions: string[], filename: string): void {
         const fileContents = JSON.stringify(versions);
         fs.mkdirSync(path.dirname(resolvedFilename), { recursive: true });
         fs.writeFileSync(resolvedFilename, fileContents, 'utf8');
-        trace_commands.log('Versions saved to file.');
+        traceCommands.log('Versions saved to file.');
     } catch (error) {
-        trace_commands.log('Error saving versions to file: ' + String(error));
+        traceCommands.log('Error saving versions to file: ' + String(error));
     }
 }

@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { getCurrentBranch, isWorkingTreeClean, refExists, GitOptions } from './git';
+import { getCurrentBranch, isWorkingTreeClean, refExists, type GitOptions } from './git';
 
 describe('git utilities', () => {
     // Use the actual repo root for testing

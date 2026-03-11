@@ -7,80 +7,80 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as semver from 'semver';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 
 /**
  * Updates version requirements based on cmake_minimum_required in a CMakeLists.txt file.
  *
- * @param cmake_file - Path to CMakeLists.txt or directory containing it
+ * @param cmakeFile - Path to CMakeLists.txt or directory containing it
  * @param version - Current version requirement
  * @param allVersions - List of all available CMake versions
  * @returns Updated version requirement merged with CMake file requirements
  */
-export function updateCMakeVersionFromFile(cmake_file: string, version: string, allVersions: string[]): string {
-    const fnlog = trace_commands.scoped('updateCMakeVersionFromFile');
+export function updateCMakeVersionFromFile(cmakeFile: string, version: string, allVersions: string[]): string {
+    const fnlog = traceCommands.scoped('updateCMakeVersionFromFile');
 
-    if (!cmake_file) {
+    if (!cmakeFile) {
         fnlog('No CMake file specified');
         return version;
     }
 
-    // Check if cmake_file exists
-    let cmake_file_path = path.resolve(process.cwd(), cmake_file);
-    fnlog(`cmake_file: ${cmake_file} resolved to ${cmake_file_path}`);
-    if (!fs.existsSync(cmake_file_path)) {
-        fnlog(`CMake file ${cmake_file_path} does not exist`);
+    // Check if cmakeFile exists
+    let cmakeFilePath = path.resolve(process.cwd(), cmakeFile);
+    fnlog(`cmakeFile: ${cmakeFile} resolved to ${cmakeFilePath}`);
+    if (!fs.existsSync(cmakeFilePath)) {
+        fnlog(`CMake file ${cmakeFilePath} does not exist`);
         return version;
     }
 
-    if (fs.lstatSync(cmake_file_path).isDirectory()) {
-        fnlog(`CMake file ${cmake_file_path} is a directory`);
-        cmake_file_path = path.join(cmake_file_path, 'CMakeLists.txt');
-        if (!fs.existsSync(cmake_file_path)) {
-            fnlog(`CMake file ${cmake_file_path} also does not exist`);
+    if (fs.lstatSync(cmakeFilePath).isDirectory()) {
+        fnlog(`CMake file ${cmakeFilePath} is a directory`);
+        cmakeFilePath = path.join(cmakeFilePath, 'CMakeLists.txt');
+        if (!fs.existsSync(cmakeFilePath)) {
+            fnlog(`CMake file ${cmakeFilePath} also does not exist`);
             return version;
         }
-        return updateCMakeVersionFromFile(cmake_file_path, version, allVersions);
+        return updateCMakeVersionFromFile(cmakeFilePath, version, allVersions);
     }
 
-    // Read cmake_file
-    fnlog(`Reading Cmake file ${cmake_file_path}`);
-    const cmake_file_content = fs.readFileSync(cmake_file_path, 'utf8');
+    // Read cmakeFile
+    fnlog(`Reading Cmake file ${cmakeFilePath}`);
+    const cmakeFileContent = fs.readFileSync(cmakeFilePath, 'utf8');
 
     // Extract requirement from CMakeLists.txt
     // cmake_minimum_required(VERSION <min>[...<policy_max>] [FATAL_ERROR])
     const regex = /\s*cmake_minimum_required\(VERSION\s+(\d+(\.\d+)?)(?:\s*\.\.\.\s*(\d+(\.\d+)?))?\s*(?:FATAL_ERROR)?\)/;
-    let cmake_file_requirement: string | undefined;
-    const match = cmake_file_content.match(regex);
+    let cmakeFileRequirement: string | undefined;
+    const match = cmakeFileContent.match(regex);
     if (match) {
         fnlog(`Matched: ${match[0]}`);
-        cmake_file_requirement = match[1];
-        fnlog(`CMake file requirement: ${cmake_file_requirement}`);
+        cmakeFileRequirement = match[1];
+        fnlog(`CMake file requirement: ${cmakeFileRequirement}`);
     }
 
-    if (!cmake_file_requirement) {
-        fnlog(`Could not find CMake file requirement in ${cmake_file_path}`);
-        fnlog(`File contents: ${cmake_file_content}`);
+    if (!cmakeFileRequirement) {
+        fnlog(`Could not find CMake file requirement in ${cmakeFilePath}`);
+        fnlog(`File contents: ${cmakeFileContent}`);
         return version;
     }
 
     // Merge version requirements
     try {
-        const semverSV = semver.coerce(cmake_file_requirement);
+        const semverSV = semver.coerce(cmakeFileRequirement);
         if (semverSV !== null) {
-            cmake_file_requirement = '>=' + semverSV.toString();
-            fnlog(`Coerced cMake file requirement: ${cmake_file_requirement}`);
+            cmakeFileRequirement = '>=' + semverSV.toString();
+            fnlog(`Coerced cMake file requirement: ${cmakeFileRequirement}`);
             if (!version || version === '*') {
-                version = cmake_file_requirement;
-            } else if (semver.intersects(version, cmake_file_requirement)) {
+                version = cmakeFileRequirement;
+            } else if (semver.intersects(version, cmakeFileRequirement)) {
                 // If ranges don't intersect, `version` has priority
                 // If the intersect, then we need to merge the ranges
                 const matchingVersions = allVersions
                     .filter((v) =>
-                        semver.satisfies(v, cmake_file_requirement!) && semver.satisfies(v, version));
+                        semver.satisfies(v, cmakeFileRequirement!) && semver.satisfies(v, version));
                 fnlog(`Matching versions: ${matchingVersions}`);
                 if (!matchingVersions) {
-                    fnlog(`No matching versions for ${cmake_file_requirement} and ${version}`);
+                    fnlog(`No matching versions for ${cmakeFileRequirement} and ${version}`);
                     fnlog(`Setting version requirement to ${version}`);
                     return version;
                 } else {
@@ -93,7 +93,7 @@ export function updateCMakeVersionFromFile(cmake_file: string, version: string, 
             }
         }
     } catch (error) {
-        fnlog(`Error parsing CMake file requirement ${cmake_file_requirement} as semver string: ${error}`);
+        fnlog(`Error parsing CMake file requirement ${cmakeFileRequirement} as semver string: ${error}`);
     }
 
     return version;

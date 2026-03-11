@@ -14,7 +14,7 @@
  */
 
 import * as core from '@actions/core';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 import type { Journal } from './cached-deps';
 import type { GitFeatures } from './git-utils';
 import { fetchModuleHashes } from './cache';
@@ -57,7 +57,7 @@ export function isResolutionComplete(result: ResolutionResult): boolean {
  * For each module encountered:
  * 1. Fetch its current commit hash via `git ls-remote`.
  * 2. Look up the module in the journal.
- * 3. If found and the stored hash matches → follow stored directDeps.
+ * 3. If found and the stored hash matches → follow stored direct_deps.
  * 4. If hash doesn't match or module is missing → add to frontier.
  *
  * The walk cannot proceed past frontier modules because their deps are
@@ -83,7 +83,7 @@ export async function resolveModules(
     patchUrlMap?: Map<string, string>,
     prefetchedHashes?: Map<string, string>
 ): Promise<ResolutionResult> {
-    const fnlog = trace_commands.scoped('resolveModules');
+    const fnlog = traceCommands.scoped('resolveModules');
 
     const visited = new Set<string>();
     const hashes = new Map<string, string>();
@@ -122,10 +122,10 @@ export async function resolveModules(
             hashes.set(mod, currentHash);
 
             const entry = journal?.entries[mod];
-            if (entry && currentHash !== '' && entry.commitHash === currentHash) {
+            if (entry && currentHash !== '' && entry.commitHash === currentHash && Array.isArray(entry.direct_deps)) {
                 // Journal entry is valid — follow its direct deps
-                fnlog(`${mod}: journal hit (hash ${currentHash.substring(0, 8)}), ${entry.directDeps.length} deps`);
-                for (const dep of entry.directDeps) {
+                fnlog(`${mod}: journal hit (hash ${currentHash.substring(0, 8)}), ${entry.direct_deps.length} deps`);
+                for (const dep of entry.direct_deps) {
                     if (!visited.has(dep)) {
                         queue.push(dep);
                     }

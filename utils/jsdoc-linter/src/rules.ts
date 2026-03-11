@@ -1,4 +1,4 @@
-import { DeclarationInfo, LintIssue, Severity } from './types';
+import { type DeclarationInfo, type LintIssue, type Severity } from './types';
 
 /**
  * Rule definition interface.

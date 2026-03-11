@@ -59,9 +59,9 @@ describe('resolveModules', () => {
         const roots = new Set(['config']);
         const journal: Journal = {
             entries: {
-                config: { commitHash: 'confighash', directDeps: ['core'] },
-                core: { commitHash: 'corehash', directDeps: ['assert'] },
-                assert: { commitHash: 'asserthash', directDeps: [] }
+                config: { commitHash: 'confighash', direct_deps: ['core'] },
+                core: { commitHash: 'corehash', direct_deps: ['assert'] },
+                assert: { commitHash: 'asserthash', direct_deps: [] }
             }
         };
 
@@ -81,8 +81,8 @@ describe('resolveModules', () => {
         const roots = new Set(['config']);
         const journal: Journal = {
             entries: {
-                config: { commitHash: 'confighash_old', directDeps: ['core'] },
-                core: { commitHash: 'corehash', directDeps: [] }
+                config: { commitHash: 'confighash_old', direct_deps: ['core'] },
+                core: { commitHash: 'corehash', direct_deps: [] }
             }
         };
 
@@ -100,7 +100,7 @@ describe('resolveModules', () => {
         const roots = new Set(['config']);
         const journal: Journal = {
             entries: {
-                config: { commitHash: 'confighash', directDeps: ['core'] }
+                config: { commitHash: 'confighash', direct_deps: ['core'] }
                 // core missing from journal
             }
         };
@@ -143,7 +143,7 @@ describe('resolveModules', () => {
         // Journal has empty hash for alias_mod (from previous run where it also didn't exist)
         const journal: Journal = {
             entries: {
-                alias_mod: { commitHash: '', directDeps: ['core'] }
+                alias_mod: { commitHash: '', direct_deps: ['core'] }
             }
         };
 
@@ -162,10 +162,10 @@ describe('resolveModules', () => {
         // Diamond: core→assert, system→assert
         const journal: Journal = {
             entries: {
-                core: { commitHash: 'crh', directDeps: ['assert', 'config'] },
-                system: { commitHash: 'sh', directDeps: ['assert', 'config'] },
-                assert: { commitHash: 'ah', directDeps: ['config'] },
-                config: { commitHash: 'ch', directDeps: [] }
+                core: { commitHash: 'crh', direct_deps: ['assert', 'config'] },
+                system: { commitHash: 'sh', direct_deps: ['assert', 'config'] },
+                assert: { commitHash: 'ah', direct_deps: ['config'] },
+                config: { commitHash: 'ch', direct_deps: [] }
             }
         };
 
@@ -180,9 +180,9 @@ describe('resolveModules', () => {
         const roots = new Set(['config', 'buffers']);
         const journal: Journal = {
             entries: {
-                config: { commitHash: 'ch', directDeps: [] },
-                buffers: { commitHash: 'bh', directDeps: ['core'] },
-                core: { commitHash: 'crh', directDeps: [] }
+                config: { commitHash: 'ch', direct_deps: [] },
+                buffers: { commitHash: 'bh', direct_deps: ['core'] },
+                core: { commitHash: 'crh', direct_deps: [] }
             }
         };
 
@@ -211,11 +211,11 @@ describe('resolveModules', () => {
         // Journal only has data for the direct modules, not patch deps
         const journal: Journal = {
             entries: {
-                config: { commitHash: 'ch', directDeps: [] },
-                url: { commitHash: 'uh', directDeps: ['core', 'config'] },
-                system: { commitHash: 'sh', directDeps: ['config', 'assert'] },
-                assert: { commitHash: 'ah', directDeps: ['config'] },
-                core: { commitHash: 'crh', directDeps: ['config', 'assert'] }
+                config: { commitHash: 'ch', direct_deps: [] },
+                url: { commitHash: 'uh', direct_deps: ['core', 'config'] },
+                system: { commitHash: 'sh', direct_deps: ['config', 'assert'] },
+                assert: { commitHash: 'ah', direct_deps: ['config'] },
+                core: { commitHash: 'crh', direct_deps: ['config', 'assert'] }
                 // buffers, http, capy NOT in journal
             }
         };
@@ -246,16 +246,16 @@ describe('resolveModules', () => {
         // Journal has COMPLETE data including patch dependencies
         const journal: Journal = {
             entries: {
-                config: { commitHash: 'ch', directDeps: [] },
-                url: { commitHash: 'uh', directDeps: ['core', 'config'] },
-                system: { commitHash: 'sh', directDeps: ['config', 'assert'] },
-                assert: { commitHash: 'ah', directDeps: ['config'] },
-                core: { commitHash: 'crh', directDeps: ['config', 'assert'] },
-                buffers: { commitHash: 'bfh', directDeps: ['core', 'assert'] },
-                http: { commitHash: 'hth', directDeps: ['core', 'url', 'json'] },
-                capy: { commitHash: 'cph', directDeps: ['system', 'config'] },
-                json: { commitHash: 'jh', directDeps: ['core', 'endian'] },
-                endian: { commitHash: 'eh', directDeps: ['config'] }
+                config: { commitHash: 'ch', direct_deps: [] },
+                url: { commitHash: 'uh', direct_deps: ['core', 'config'] },
+                system: { commitHash: 'sh', direct_deps: ['config', 'assert'] },
+                assert: { commitHash: 'ah', direct_deps: ['config'] },
+                core: { commitHash: 'crh', direct_deps: ['config', 'assert'] },
+                buffers: { commitHash: 'bfh', direct_deps: ['core', 'assert'] },
+                http: { commitHash: 'hth', direct_deps: ['core', 'url', 'json'] },
+                capy: { commitHash: 'cph', direct_deps: ['system', 'config'] },
+                json: { commitHash: 'jh', direct_deps: ['core', 'endian'] },
+                endian: { commitHash: 'eh', direct_deps: ['config'] }
             }
         };
 
@@ -303,9 +303,9 @@ describe('resolveModules', () => {
             roots: new Set(['config', 'buffers']),
             journal: {
                 entries: {
-                    config: { commitHash: 'confighash', directDeps: [] },
-                    buffers: { commitHash: 'cppalliance_bh', directDeps: ['core'] },
-                    core: { commitHash: 'corehash', directDeps: [] }
+                    config: { commitHash: 'confighash', direct_deps: [] },
+                    buffers: { commitHash: 'cppalliance_bh', direct_deps: ['core'] },
+                    core: { commitHash: 'corehash', direct_deps: [] }
                 }
             }
         };
@@ -342,9 +342,9 @@ describe('resolveModules', () => {
         const roots = new Set(['config']);
         const journal: Journal = {
             entries: {
-                config: { commitHash: 'confighash', directDeps: ['core'] },
-                core: { commitHash: 'corehash', directDeps: ['assert'] },
-                assert: { commitHash: 'asserthash', directDeps: [] }
+                config: { commitHash: 'confighash', direct_deps: ['core'] },
+                core: { commitHash: 'corehash', direct_deps: ['assert'] },
+                assert: { commitHash: 'asserthash', direct_deps: [] }
             }
         };
         const prefetched = new Map([
@@ -367,6 +367,47 @@ describe('resolveModules', () => {
             });
         expect(lsRemoteCalls.length).toBe(1);
         expect((lsRemoteCalls[0][1] as string[])[1]).toContain('boostorg/assert');
+    });
+
+    it('treats journal entry with missing direct_deps as frontier', async () => {
+        mockHashes({ config: 'confighash', core: 'corehash' });
+
+        const roots = new Set(['config']);
+        // Simulate a cached journal where direct_deps is missing (e.g. written
+        // by an older version of the code or corrupted cache data).
+        const journal: Journal = {
+            entries: {
+                config: {
+                    commitHash: 'confighash',
+                    direct_deps: undefined as unknown as string[]
+                },
+                core: { commitHash: 'corehash', direct_deps: [] }
+            }
+        };
+
+        const result = await resolveModules(roots, journal, 'develop', gitFeatures);
+        expect(isResolutionComplete(result)).toBe(false);
+        expect(result.frontier.has('config')).toBe(true);
+        // core is not followed because config went to frontier
+        expect(result.modules.has('core')).toBe(false);
+    });
+
+    it('treats journal entry with non-array direct_deps as frontier', async () => {
+        mockHashes({ config: 'confighash' });
+
+        const roots = new Set(['config']);
+        const journal: Journal = {
+            entries: {
+                config: {
+                    commitHash: 'confighash',
+                    direct_deps: 'not-an-array' as unknown as string[]
+                }
+            }
+        };
+
+        const result = await resolveModules(roots, journal, 'develop', gitFeatures);
+        expect(isResolutionComplete(result)).toBe(false);
+        expect(result.frontier.has('config')).toBe(true);
     });
 
     it('without patchUrlMap, patch module gets wrong hash and goes to frontier', async () => {

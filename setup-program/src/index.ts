@@ -6,7 +6,7 @@ import * as fs from 'fs';
 import * as exec from '@actions/exec';
 import * as path from 'path';
 import * as httpm from '@actions/http-client';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 import { runAction } from 'action-schema';
 import gccDefaultTags from '../gcc-tags.json';
 import clangDefaultTags from '../clang-tags.json';
@@ -14,13 +14,13 @@ import cmakeDefaultTags from '../cmake-tags.json';
 import ubuntuVersionNames from '../ubuntu-versions.json';
 
 import {
-    ProgramResult,
-    ExecOutput,
-    SetupProgramInputs,
+    type ProgramResult,
+    type ExecOutput,
+    type SetupProgramInputs,
     PackagePreferenceTier,
-    FetchGitTagsOptions,
-    CloneGitRepoOptions,
-    AptPackageMatch
+    type FetchGitTagsOptions,
+    type CloneGitRepoOptions,
+    type AptPackageMatch
 } from './types';
 
 // Schema imports
@@ -31,7 +31,7 @@ import {
     escapeRegExp,
     removeSemverLeadingZeros,
     renderTemplate,
-    get_runner_os,
+    getRunnerOs,
     sleep,
     normalizeArchitectureInput
 } from './utils';
@@ -56,9 +56,9 @@ import {
 } from './download-utils';
 
 import {
-    find_program_in_path,
-    find_program_in_paths,
-    find_program_in_system_paths
+    findProgramInPath,
+    findProgramInPaths,
+    findProgramInSystemPaths
 } from './program-search';
 
 // Re-export types for external consumers
@@ -71,7 +71,7 @@ export { setVersionsCacheDir, resolveVersionsCachePath, readVersionsFromFile, sa
 export { downloadAndExtract, stripSingleDirectoryFromPath } from './download-utils';
 
 // Re-export program search functions for external consumers
-export { find_program_in_path, find_program_in_system_paths } from './program-search';
+export { findProgramInPath, findProgramInSystemPaths } from './program-search';
 
 /**
  * Determines the preference tier for an APT package based on its name.
@@ -163,13 +163,13 @@ export async function getExecOutputWithSudo(
  * @returns True if the URL returns HTTP 200, false otherwise
  */
 export async function urlExists(url: string): Promise<boolean> {
-    const http_client = new httpm.HttpClient('setup-clang', [], {
+    const httpClient = new httpm.HttpClient('setup-clang', [], {
         allowRetries: true, maxRetries: 3
     });
     try {
-        const res = await http_client.head(url);
+        const res = await httpClient.head(url);
         return res.message.statusCode === 200;
-    } catch (error) {
+    } catch {
         return false;
     }
 }
@@ -185,100 +185,100 @@ export { AptPackageMatch } from './types';
  *
  * @param names - Array of package/executable names to search for (e.g., ["clang", "clang++"])
  * @param version - Semver version constraint (e.g., ">=10", "14.0.0", "*")
- * @param check_latest - If true, prefer latest matching version; if false, prefer earliest
+ * @param checkLatest - If true, prefer latest matching version; if false, prefer earliest
  * @returns The best matching package info, or null if no match found
  * @throws Error if apt-cache search or showpkg commands fail
  */
-export async function search_apt_packages(
+export async function searchAptPackages(
     names: string[],
     version: string,
-    check_latest: boolean
+    checkLatest: boolean
 ): Promise<AptPackageMatch | null> {
-    const fnlog = trace_commands.scoped('search_apt_packages');
+    const fnlog = traceCommands.scoped('searchAptPackages');
 
     // Search for matching package names
-    const package_names: string[] = [];
+    const packageNames: string[] = [];
     for (const name of names) {
-        const search_expression = `${escapeRegExp(name)}(-[0-9\\.]+)?`;
-        fnlog(`Searching for packages matching ${search_expression}`);
-        const output: ExecOutput = await exec.getExecOutput('apt-cache', ['search', `^${search_expression}$`]);
+        const searchExpression = `${escapeRegExp(name)}(-[0-9\\.]+)?`;
+        fnlog(`Searching for packages matching ${searchExpression}`);
+        const output: ExecOutput = await exec.getExecOutput('apt-cache', ['search', `^${searchExpression}$`]);
         if (output.exitCode !== 0) {
             throw new Error(`Failed to run apt-cache search. Exit code ${output.exitCode}`);
         }
         fnlog(`apt-cache search. Exit code ${output.exitCode}`);
-        const apt_output = output.stdout.trim();
-        const apt_lines = apt_output.split('\n');
-        for (const apt_line of apt_lines) {
-            const apt_line_regex = new RegExp(`^(${search_expression}) `);
-            const apt_line_matches = apt_line.match(apt_line_regex);
-            if (apt_line_matches !== null) {
-                package_names.push(apt_line_matches[1]);
+        const aptOutput = output.stdout.trim();
+        const aptLines = aptOutput.split('\n');
+        for (const aptLine of aptLines) {
+            const aptLineRegex = new RegExp(`^(${searchExpression}) `);
+            const aptLineMatches = aptLine.match(aptLineRegex);
+            if (aptLineMatches !== null) {
+                packageNames.push(aptLineMatches[1]);
             }
         }
     }
-    fnlog(`Found packages [${package_names.join(', ')}]`);
+    fnlog(`Found packages [${packageNames.join(', ')}]`);
 
     // Find the best matching package and version
-    fnlog(`Listing all versions of packages [${package_names.join(', ')}]`);
-    let best_match: AptPackageMatch | null = null;
-    const install_matches: string[] = [];
+    fnlog(`Listing all versions of packages [${packageNames.join(', ')}]`);
+    let bestMatch: AptPackageMatch | null = null;
+    const installMatches: string[] = [];
 
-    for (const package_name of package_names) {
-        const output: ExecOutput = await exec.getExecOutput('apt-cache', ['showpkg', package_name], { silent: true });
+    for (const packageName of packageNames) {
+        const output: ExecOutput = await exec.getExecOutput('apt-cache', ['showpkg', packageName], { silent: true });
         if (output.exitCode !== 0) {
-            throw new Error(`Failed to run "apt-cache showpkg '${package_name}'"`);
+            throw new Error(`Failed to run "apt-cache showpkg '${packageName}'"`);
         }
         if (output.stdout.trim() === '') {
-            fnlog('No output from apt-cache showpkg ' + package_name);
+            fnlog('No output from apt-cache showpkg ' + packageName);
             continue;
         }
 
-        const showpkg_lines = output.stdout.trim().split('\n');
-        const dependencies_index = showpkg_lines.findIndex((line) => line.startsWith('Dependencies:'));
-        if (dependencies_index === -1) {
+        const showpkgLines = output.stdout.trim().split('\n');
+        const dependenciesIndex = showpkgLines.findIndex((line) => line.startsWith('Dependencies:'));
+        if (dependenciesIndex === -1) {
             continue;
         }
-        let provides_index = showpkg_lines.findIndex((line) => line.startsWith('Provides:'));
-        if (provides_index === -1) {
-            provides_index = showpkg_lines.length;
+        let providesIndex = showpkgLines.findIndex((line) => line.startsWith('Provides:'));
+        if (providesIndex === -1) {
+            providesIndex = showpkgLines.length;
         }
-        const dependencies_lines = showpkg_lines.slice(dependencies_index + 1, provides_index);
-        const package_versions = dependencies_lines.map((line) => line.split(' ')[0]);
-        fnlog(`Package ${package_name} has APT versions [${package_versions.join(', ')}]`);
+        const dependenciesLines = showpkgLines.slice(dependenciesIndex + 1, providesIndex);
+        const packageVersions = dependenciesLines.map((line) => line.split(' ')[0]);
+        fnlog(`Package ${packageName} has APT versions [${packageVersions.join(', ')}]`);
 
-        const pkg_tier = getPackagePreferenceTier(package_name, names);
-        fnlog(`Package ${package_name} has preference tier ${pkg_tier}`);
+        const pkgTier = getPackagePreferenceTier(packageName, names);
+        fnlog(`Package ${packageName} has preference tier ${pkgTier}`);
 
         // Check each version against requirements
-        for (const package_version of package_versions) {
-            const version_regexes = [/\d+:(\d+.\d+)-\d+/, /\d+:(\d+)-\d+/, /(\d+\.\d+\.\d+)/, /(\d+\.\d+)/, /(\d+)/];
-            for (const version_regex of version_regexes) {
-                const version_matches = package_version.match(version_regex);
-                if (version_matches !== null) {
-                    const pkg_version_str = removeSemverLeadingZeros(version_matches[1]);
-                    const pkg_version = semver.coerce(pkg_version_str);
-                    const satisfies = pkg_version !== null ? semver.satisfies(pkg_version, version) : true;
+        for (const packageVersion of packageVersions) {
+            const versionRegexes = [/\d+:(\d+.\d+)-\d+/, /\d+:(\d+)-\d+/, /(\d+\.\d+\.\d+)/, /(\d+\.\d+)/, /(\d+)/];
+            for (const versionRegex of versionRegexes) {
+                const versionMatches = packageVersion.match(versionRegex);
+                if (versionMatches !== null) {
+                    const pkgVersionStr = removeSemverLeadingZeros(versionMatches[1]);
+                    const pkgVersion = semver.coerce(pkgVersionStr);
+                    const satisfies = pkgVersion !== null ? semver.satisfies(pkgVersion, version) : true;
 
                     if (!satisfies) {
-                        fnlog(`Package ${package_name}=${package_version} version ${pkg_version} does NOT satisfy ${names.join(', ')} version ${version}`);
-                    } else if (pkg_version !== null) {
-                        install_matches.push(`${package_name}=${package_version}`);
+                        fnlog(`Package ${packageName}=${packageVersion} version ${pkgVersion} does NOT satisfy ${names.join(', ')} version ${version}`);
+                    } else if (pkgVersion !== null) {
+                        installMatches.push(`${packageName}=${packageVersion}`);
 
-                        const isBetterTier = best_match === null || pkg_tier < best_match.tier;
-                        const isSameTier = best_match !== null && pkg_tier === best_match.tier;
-                        const isBetterVersion = best_match !== null &&
-                            ((check_latest && semver.gt(pkg_version, best_match.semverVersion)) ||
-                             (!check_latest && semver.lt(pkg_version, best_match.semverVersion)));
-                        const isFirstMatch = best_match === null;
+                        const isBetterTier = bestMatch === null || pkgTier < bestMatch.tier;
+                        const isSameTier = bestMatch !== null && pkgTier === bestMatch.tier;
+                        const isBetterVersion = bestMatch !== null &&
+                            ((checkLatest && semver.gt(pkgVersion, bestMatch.semverVersion)) ||
+                             (!checkLatest && semver.lt(pkgVersion, bestMatch.semverVersion)));
+                        const isFirstMatch = bestMatch === null;
 
                         if (isFirstMatch || isBetterTier || (isSameTier && isBetterVersion)) {
-                            fnlog(`Package ${package_name}=${package_version} version ${pkg_version} (tier ${pkg_tier}) selected as best match for ${names.join(', ')} version ${version}`);
-                            best_match = {
-                                packageName: package_name,
-                                packageVersion: package_version,
-                                semverVersion: pkg_version.toString(),
-                                tier: pkg_tier,
-                                alternatives: install_matches
+                            fnlog(`Package ${packageName}=${packageVersion} version ${pkgVersion} (tier ${pkgTier}) selected as best match for ${names.join(', ')} version ${version}`);
+                            bestMatch = {
+                                packageName: packageName,
+                                packageVersion: packageVersion,
+                                semverVersion: pkgVersion.toString(),
+                                tier: pkgTier,
+                                alternatives: installMatches
                             };
                         }
                     }
@@ -289,11 +289,11 @@ export async function search_apt_packages(
     }
 
     // Update alternatives in the final result
-    if (best_match !== null) {
-        best_match.alternatives = install_matches;
+    if (bestMatch !== null) {
+        bestMatch.alternatives = installMatches;
     }
 
-    return best_match;
+    return bestMatch;
 }
 
 /**
@@ -318,21 +318,21 @@ export interface AptInstallOptions {
  * @param options - Installation options
  * @returns The name of the successfully installed package, or null if installation failed
  */
-export async function install_program_with_apt(
+export async function installProgramWithApt(
     packageName: string,
     packageVersion: string | null = null,
     alternatives: string[] = [],
     options: AptInstallOptions = {}
 ): Promise<string | null> {
-    const fnlog = trace_commands.scoped('install_program_with_apt');
+    const fnlog = traceCommands.scoped('installProgramWithApt');
 
     const { tryAptitude = true, tryAlternatives = true } = options;
 
-    const install_pkg = packageVersion !== null
+    const installPkg = packageVersion !== null
         ? `${packageName}=${packageVersion}`
         : packageName;
 
-    fnlog(`Installing ${install_pkg}`);
+    fnlog(`Installing ${installPkg}`);
     const execOpts: exec.ExecOptions = {
         env: {
             DEBIAN_FRONTEND: 'noninteractive',
@@ -343,29 +343,29 @@ export async function install_program_with_apt(
     };
 
     // Try apt-get install
-    let exit_code = await execWithSudo('apt-get', ['install', '-f', '-y', '--allow-downgrades', install_pkg], execOpts);
-    if (exit_code === 0) {
+    let exitCode = await execWithSudo('apt-get', ['install', '-f', '-y', '--allow-downgrades', installPkg], execOpts);
+    if (exitCode === 0) {
         return packageName;
     }
 
-    fnlog(`Failed to install ${install_pkg}. Exit code: ${exit_code}`);
+    fnlog(`Failed to install ${installPkg}. Exit code: ${exitCode}`);
 
     // Try aptitude as fallback
     if (tryAptitude) {
-        let aptitude_path: string | null;
+        let aptitudePath: string | null;
         try {
-            aptitude_path = await io.which('aptitude');
+            aptitudePath = await io.which('aptitude');
         } catch {
-            aptitude_path = null;
+            aptitudePath = null;
         }
 
-        if (aptitude_path) {
+        if (aptitudePath) {
             fnlog('Retrying with aptitude for better dependency resolution');
-            exit_code = await execWithSudo('aptitude', ['install', '-f', '-y', install_pkg], execOpts);
-            if (exit_code === 0) {
+            exitCode = await execWithSudo('aptitude', ['install', '-f', '-y', installPkg], execOpts);
+            if (exitCode === 0) {
                 return packageName;
             }
-            fnlog(`aptitude also failed. Exit code: ${exit_code}`);
+            fnlog(`aptitude also failed. Exit code: ${exitCode}`);
         } else {
             fnlog('aptitude unavailable');
         }
@@ -374,11 +374,11 @@ export async function install_program_with_apt(
     // Try alternative packages
     if (tryAlternatives && alternatives.length > 0) {
         fnlog(`Trying alternative packages [${alternatives.join(', ')}]`);
-        for (const alt_pkg of alternatives) {
-            exit_code = await execWithSudo('apt-get', ['install', '-f', '-y', '--allow-downgrades', alt_pkg], execOpts);
-            if (exit_code === 0) {
+        for (const altPkg of alternatives) {
+            exitCode = await execWithSudo('apt-get', ['install', '-f', '-y', '--allow-downgrades', altPkg], execOpts);
+            if (exitCode === 0) {
                 // Extract package name from "package=version" format
-                return alt_pkg.split('=')[0];
+                return altPkg.split('=')[0];
             }
         }
     }
@@ -415,29 +415,29 @@ export async function updateAptPackageLists(): Promise<void> {
  * This is the high-level orchestration function that:
  * 1. Checks if APT is available
  * 2. Updates package lists
- * 3. Searches for matching packages via {@link search_apt_packages}
- * 4. Installs the best match via {@link install_program_with_apt}
+ * 3. Searches for matching packages via {@link searchAptPackages}
+ * 4. Installs the best match via {@link installProgramWithApt}
  * 5. Locates the installed executable
  *
- * For direct package installation without searching, use {@link install_program_with_apt} directly.
+ * For direct package installation without searching, use {@link installProgramWithApt} directly.
  *
  * @param names - Array of package/executable names to search for
  * @param version - Semver version constraint (e.g., ">=10", "14.0.0", "*")
- * @param check_latest - If true, prefer latest matching version; if false, prefer earliest
+ * @param checkLatest - If true, prefer latest matching version; if false, prefer earliest
  * @returns Object containing the found executable path and version, or nulls if not found
  */
-export async function find_program_with_apt(names: string[], version: string, check_latest: boolean): Promise<ProgramResult> {
-    const fnlog = trace_commands.scoped('find_program_with_apt');
+export async function findProgramWithApt(names: string[], version: string, checkLatest: boolean): Promise<ProgramResult> {
+    const fnlog = traceCommands.scoped('findProgramWithApt');
 
-    let output_version: string | null = null;
-    let output_path: string | null = null;
-    let installed_package: string | null = null;
+    let outputVersion: string | null = null;
+    let outputPath: string | null = null;
+    let installedPackage: string | null = null;
 
     // Check APT availability
     fnlog('Checking if APT is available');
     if (!await isAptAvailable()) {
         fnlog('APT is not available');
-        return { output_version, output_path, installed_package };
+        return { outputVersion, outputPath, installedPackage };
     }
 
     try {
@@ -446,26 +446,26 @@ export async function find_program_with_apt(names: string[], version: string, ch
         await updateAptPackageLists();
 
         // Search for matching packages
-        const match = await search_apt_packages(names, version, check_latest);
+        const match = await searchAptPackages(names, version, checkLatest);
         if (match === null) {
             fnlog(`No matching package found for ${names.join(', ')} version ${version}`);
-            return { output_version, output_path, installed_package };
+            return { outputVersion, outputPath, installedPackage };
         }
 
         fnlog(`Best match: ${match.packageName}=${match.packageVersion} (version ${match.semverVersion}, tier ${match.tier})`);
 
         // Install the package
-        installed_package = await install_program_with_apt(
+        installedPackage = await installProgramWithApt(
             match.packageName,
             match.packageVersion,
             match.alternatives
         );
 
-        if (installed_package !== null) {
+        if (installedPackage !== null) {
             // Locate the installed executable
-            const result = await find_program_in_system_paths([], names, version, check_latest);
-            output_version = result.output_version;
-            output_path = result.output_path;
+            const result = await findProgramInSystemPaths([], names, version, checkLatest);
+            outputVersion = result.outputVersion;
+            outputPath = result.outputPath;
         }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -473,21 +473,21 @@ export async function find_program_with_apt(names: string[], version: string, ch
     }
 
     // Log results
-    if (output_path !== null) {
-        fnlog(`Program found: ${output_path}`);
+    if (outputPath !== null) {
+        fnlog(`Program found: ${outputPath}`);
     } else {
         fnlog(`Failed to find ${names[0]} packages with APT`);
     }
-    if (output_version !== null) {
-        fnlog(`Package version found ${output_version}`);
+    if (outputVersion !== null) {
+        fnlog(`Package version found ${outputVersion}`);
     } else {
         fnlog(`Failed to find ${names[0]} packages with APT`);
     }
-    if (installed_package !== null) {
-        fnlog(`Installed package: ${installed_package}`);
+    if (installedPackage !== null) {
+        fnlog(`Installed package: ${installedPackage}`);
     }
 
-    return { output_version, output_path, installed_package };
+    return { outputVersion, outputPath, installedPackage };
 }
 
 /**
@@ -498,23 +498,23 @@ export async function find_program_with_apt(names: string[], version: string, ch
  * @returns Path to the Git executable, or null if not found/installed
  */
 export async function findGit(): Promise<string | null> {
-    let git_path: string;
+    let gitPath: string;
     try {
-        git_path = await io.which('git');
+        gitPath = await io.which('git');
     } catch {
-        git_path = '';
+        gitPath = '';
     }
-    if (git_path === '') {
+    if (gitPath === '') {
         // Try to install git via APT
         await updateAptPackageLists();
-        await install_program_with_apt('git', null, [], { tryAptitude: false, tryAlternatives: false });
+        await installProgramWithApt('git', null, [], { tryAptitude: false, tryAlternatives: false });
         try {
-            git_path = await io.which('git');
+            gitPath = await io.which('git');
         } catch {
             return null;
         }
     }
-    return git_path || null;
+    return gitPath || null;
 }
 
 /**
@@ -532,19 +532,19 @@ export async function fetchGitTags(repo: string, options: FetchGitTagsOptions = 
     const { maxRetries = 10, defaultTags = [] } = options;
     try {
         // Find git in PATH
-        let git_path: string | null = null;
+        let gitPath: string | null = null;
         try {
-            git_path = await findGit();
-        } catch (error) {
-            git_path = null;
+            gitPath = await findGit();
+        } catch {
+            gitPath = null;
         }
         // Install git if we have to
-        if (!git_path) {
-            await find_program_with_apt(['git'], '*', true);
-            git_path = await findGit();
+        if (!gitPath) {
+            await findProgramWithApt(['git'], '*', true);
+            gitPath = await findGit();
         }
         // Still no git? Fail
-        if (!git_path) {
+        if (!gitPath) {
             if (defaultTags.length > 0) {
                 return defaultTags;
             }
@@ -555,7 +555,7 @@ export async function fetchGitTags(repo: string, options: FetchGitTagsOptions = 
                 const args = ['ls-remote', '--tags', repo];
                 const {
                     exitCode, stdout
-                }: ExecOutput = await exec.getExecOutput(`"${git_path}"`, args, { silent: true });
+                }: ExecOutput = await exec.getExecOutput(`"${gitPath}"`, args, { silent: true });
                 if (exitCode !== 0) {
                     throw new Error('Git exited with non-zero exit code: ' + exitCode);
                 }
@@ -571,20 +571,20 @@ export async function fetchGitTags(repo: string, options: FetchGitTagsOptions = 
                         }
                     }
                 }
-                trace_commands.log('Git tags: ' + gitTags);
+                traceCommands.log('Git tags: ' + gitTags);
                 return gitTags;
             } catch (error) {
                 if (attempt < maxRetries) {
                     const errorMessage = error instanceof Error ? error.message : String(error);
-                    trace_commands.log('Error fetching Git tags: ' + errorMessage);
-                    trace_commands.log(`Attempt ${attempt} of ${maxRetries}`);
+                    traceCommands.log('Error fetching Git tags: ' + errorMessage);
+                    traceCommands.log(`Attempt ${attempt} of ${maxRetries}`);
                     // Exponential backoff
                     const delay = Math.max(60000, Math.pow(2, attempt - 1) * 1000);
-                    trace_commands.log(`Retrying in ${delay} milliseconds...`);
+                    traceCommands.log(`Retrying in ${delay} milliseconds...`);
                     await sleep(delay);
                 } else {
                     if (defaultTags.length > 0) {
-                        trace_commands.log('Using default tags: ' + defaultTags);
+                        traceCommands.log('Using default tags: ' + defaultTags);
                         return defaultTags;
                     } else {
                         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -617,7 +617,7 @@ export async function fetchGitTags(repo: string, options: FetchGitTagsOptions = 
 export async function findVersionsFromTags(name: string, repo: string, file: string, regex: RegExp, defaultTags: string[] = []): Promise<string[]> {
     const versionsFromFile = readVersionsFromFile(file);
     if (versionsFromFile !== null) {
-        trace_commands.log(`${name} versions (from file): ` + versionsFromFile);
+        traceCommands.log(`${name} versions (from file): ` + versionsFromFile);
         return versionsFromFile;
     }
     const tags = await fetchGitTags(repo, {
@@ -635,7 +635,7 @@ export async function findVersionsFromTags(name: string, repo: string, file: str
         }
     }
     versions = versions.sort(semver.compare);
-    trace_commands.log(`${name} versions: ` + versions);
+    traceCommands.log(`${name} versions: ` + versions);
     saveVersionsToFile(versions, file);
     return versions;
 }
@@ -696,8 +696,8 @@ export async function findCMakeVersions(): Promise<string[]> {
  */
 export async function cloneGitRepo(repo: string, destPath: string, ref: string | undefined = undefined, options: CloneGitRepoOptions = { shallow: true }): Promise<void> {
     try {
-        const git_path = await findGit();
-        if (!git_path) {
+        const gitPath = await findGit();
+        if (!gitPath) {
             throw new Error('Git not found');
         }
         // Clean the destPath
@@ -720,15 +720,15 @@ export async function cloneGitRepo(repo: string, destPath: string, ref: string |
                 args.push('--branch');
                 args.push(ref);
             }
-            await exec.exec(`"${git_path}"`, args);
+            await exec.exec(`"${gitPath}"`, args);
         } else {
             // Reference is a commit hash: init and checkout
             await io.rmRF(destPath);
             await io.mkdirP(destPath);
-            await exec.exec(`"${git_path}"`, ['config', '--global', 'init.defaultBranch', 'master'], { cwd: destPath });
-            await exec.exec(`"${git_path}"`, ['config', '--global', 'advice.detachedHead', 'false'], { cwd: destPath });
-            await exec.exec(`"${git_path}"`, ['init'], { cwd: destPath });
-            await exec.exec(`"${git_path}"`, ['remote', 'add', 'origin', repo], { cwd: destPath });
+            await exec.exec(`"${gitPath}"`, ['config', '--global', 'init.defaultBranch', 'master'], { cwd: destPath });
+            await exec.exec(`"${gitPath}"`, ['config', '--global', 'advice.detachedHead', 'false'], { cwd: destPath });
+            await exec.exec(`"${gitPath}"`, ['init'], { cwd: destPath });
+            await exec.exec(`"${gitPath}"`, ['remote', 'add', 'origin', repo], { cwd: destPath });
             const args: string[] = ['fetch'];
             if (options.shallow) {
                 args.push('--depth');
@@ -738,8 +738,8 @@ export async function cloneGitRepo(repo: string, destPath: string, ref: string |
             if (ref) {
                 args.push(ref);
             }
-            await exec.exec(`"${git_path}"`, args, { cwd: destPath });
-            await exec.exec(`"${git_path}"`, ['checkout', 'FETCH_HEAD'], { cwd: destPath });
+            await exec.exec(`"${gitPath}"`, args, { cwd: destPath });
+            await exec.exec(`"${gitPath}"`, ['checkout', 'FETCH_HEAD'], { cwd: destPath });
         }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -760,10 +760,10 @@ export function getCurrentUbuntuVersion(): string | null {
         if (versionLine) {
             return versionLine.split('=')[1].replace(/"/g, '');
         }
-        console.error('Ubuntu version not found');
+        core.debug('Ubuntu version not found');
         return null;
-    } catch (error) {
-        console.error('Error:', error);
+    } catch {
+        core.debug('Error reading /etc/os-release');
         return null;
     }
 }
@@ -785,7 +785,7 @@ export function getCurrentUbuntuName(): string | null {
             }
         }
     }
-    trace_commands.log(`setup-program::getCurrentUbuntuName: Ubuntu name for version ${version} not supported`);
+    traceCommands.log(`setup-program::getCurrentUbuntuName: Ubuntu name for version ${version} not supported`);
     return null;
 }
 
@@ -804,7 +804,7 @@ export function getCurrentUbuntuName(): string | null {
  * @throws Error if a nested move operation fails
  */
 export async function moveWithPermissions(source: string, destination: string, copyInstead = false, level = 0): Promise<boolean> {
-    const fnlog = trace_commands.scoped('moveWithPermissions');
+    const fnlog = traceCommands.scoped('moveWithPermissions');
 
     const levelPrefix = '  '.repeat(level);
     try {
@@ -813,25 +813,25 @@ export async function moveWithPermissions(source: string, destination: string, c
         let count = 0;
         for (const file of files) {
             count++;
-            const source_path = path.join(source, file);
-            const destination_path = path.join(destination, file);
-            fnlog(`${levelPrefix}${count}) Handle move from ${source_path} to ${destination_path}`);
-            if (isSymlink(source_path)) {
-                fnlog(`${levelPrefix}${count}) Recreate symlink ${source_path} in ${destination_path}`);
-                copySymlink(source_path, destination_path, level);
-            } else if (fs.statSync(source_path).isDirectory() && fs.existsSync(destination_path)) {
-                fnlog(`${levelPrefix}${count}) Merge directory ${source_path} with existing ${destination_path}`);
-                const ok = await moveWithPermissions(source_path, destination_path, copyInstead, level + 1);
+            const sourcePath = path.join(source, file);
+            const destinationPath = path.join(destination, file);
+            fnlog(`${levelPrefix}${count}) Handle move from ${sourcePath} to ${destinationPath}`);
+            if (isSymlink(sourcePath)) {
+                fnlog(`${levelPrefix}${count}) Recreate symlink ${sourcePath} in ${destinationPath}`);
+                copySymlink(sourcePath, destinationPath, level);
+            } else if (fs.statSync(sourcePath).isDirectory() && fs.existsSync(destinationPath)) {
+                fnlog(`${levelPrefix}${count}) Merge directory ${sourcePath} with existing ${destinationPath}`);
+                const ok = await moveWithPermissions(sourcePath, destinationPath, copyInstead, level + 1);
                 if (!ok) {
-                    throw new Error(`Failed to move ${source_path} to ${destination_path}`);
+                    throw new Error(`Failed to move ${sourcePath} to ${destinationPath}`);
                 }
             } else /* regular file or directory that doesn't exist at destination */ {
                 if (!copyInstead) {
-                    fnlog(`${levelPrefix}${count}) Moving ${source_path} to ${destination_path}`);
-                    await io.mv(source_path, destination_path);
+                    fnlog(`${levelPrefix}${count}) Moving ${sourcePath} to ${destinationPath}`);
+                    await io.mv(sourcePath, destinationPath);
                 } else {
-                    fnlog(`${levelPrefix}${count}) Copy ${source_path} to ${destination_path}`);
-                    await io.cp(source_path, destination_path, { recursive: true });
+                    fnlog(`${levelPrefix}${count}) Copy ${sourcePath} to ${destinationPath}`);
+                    await io.cp(sourcePath, destinationPath, { recursive: true });
                 }
             }
         }
@@ -861,16 +861,16 @@ export async function moveWithPermissions(source: string, destination: string, c
  * @throws Error if sudo cannot be found or installed
  */
 export async function ensureSudoIsAvailable(): Promise<void> {
-    const fnlog = trace_commands.scoped('ensureSudoIsAvailable');
+    const fnlog = traceCommands.scoped('ensureSudoIsAvailable');
 
-    let sudo_path: string | null = null;
+    let sudoPath: string | null = null;
     try {
-        sudo_path = await io.which('sudo');
-        fnlog(`sudo found at ${sudo_path}`);
-    } catch (error) {
-        sudo_path = null;
+        sudoPath = await io.which('sudo');
+        fnlog(`sudo found at ${sudoPath}`);
+    } catch {
+        sudoPath = null;
     }
-    if (sudo_path === null || sudo_path === '') {
+    if (sudoPath === null || sudoPath === '') {
         await exec.exec(`apt-get update`, [], { ignoreReturnCode: true });
         await exec.exec(`apt-get install -y sudo`, [], { ignoreReturnCode: true });
         await io.which('sudo');
@@ -885,21 +885,21 @@ export async function ensureSudoIsAvailable(): Promise<void> {
  * @throws Error if add-apt-repository cannot be found or installed
  */
 export async function ensureAddAptRepositoryIsAvailable(): Promise<void> {
-    const fnlog = trace_commands.scoped('ensureAddAptRepositoryIsAvailable');
+    const fnlog = traceCommands.scoped('ensureAddAptRepositoryIsAvailable');
 
-    let add_apt_repository_path: string | null = null;
+    let addAptRepositoryPath: string | null = null;
     try {
-        add_apt_repository_path = await io.which('add-apt-repository');
-        fnlog(`add-apt-repository found at ${add_apt_repository_path}`);
+        addAptRepositoryPath = await io.which('add-apt-repository');
+        fnlog(`add-apt-repository found at ${addAptRepositoryPath}`);
     } catch {
-        add_apt_repository_path = null;
+        addAptRepositoryPath = null;
     }
-    if (add_apt_repository_path === null || add_apt_repository_path === '') {
+    if (addAptRepositoryPath === null || addAptRepositoryPath === '') {
         if (isSudoRequired()) {
             await ensureSudoIsAvailable();
         }
         await updateAptPackageLists();
-        await install_program_with_apt('software-properties-common', null, [], { tryAptitude: false, tryAlternatives: false });
+        await installProgramWithApt('software-properties-common', null, [], { tryAptitude: false, tryAlternatives: false });
         await io.which('add-apt-repository');
     }
 }
@@ -916,44 +916,44 @@ export async function ensureAddAptRepositoryIsAvailable(): Promise<void> {
  * @returns True if successful, false if operation failed
  */
 async function moveWithSudo(source: string, destination: string, copyInstead = false, level: number): Promise<boolean> {
-    const fnlog = trace_commands.scoped('moveWithSudo');
+    const fnlog = traceCommands.scoped('moveWithSudo');
 
     await ensureSudoIsAvailable();
     const levelPrefix = '  '.repeat(level);
     const files = fs.readdirSync(source);
     let count = 0;
     for (const file of files) {
-        const source_path = path.join(source, file);
-        const destination_path = path.join(destination, file);
+        const sourcePath = path.join(source, file);
+        const destinationPath = path.join(destination, file);
         count++;
-        if (isSymlink(source_path)) {
-            fnlog(`${levelPrefix}${count}) Recreate symlink ${source_path} in ${destination_path}`);
-            const target_path = fs.readlinkSync(source_path);
-            fnlog(`${levelPrefix}${count}) Symlink found from ${source_path} to ${target_path}`);
-            const ln_command = `sudo ln -sf "${target_path}" "${destination_path}"`;
-            await exec.getExecOutput(ln_command);
-            fnlog(`${levelPrefix}${count}) Symlink recreated from ${source_path} to ${destination_path} with target ${target_path}`);
-        } else if (fs.statSync(source_path).isDirectory() && fs.existsSync(destination_path)) {
-            const ok = await moveWithSudo(source_path, destination_path, copyInstead, level + 1);
+        if (isSymlink(sourcePath)) {
+            fnlog(`${levelPrefix}${count}) Recreate symlink ${sourcePath} in ${destinationPath}`);
+            const targetPath = fs.readlinkSync(sourcePath);
+            fnlog(`${levelPrefix}${count}) Symlink found from ${sourcePath} to ${targetPath}`);
+            const lnCommand = `sudo ln -sf "${targetPath}" "${destinationPath}"`;
+            await exec.getExecOutput(lnCommand);
+            fnlog(`${levelPrefix}${count}) Symlink recreated from ${sourcePath} to ${destinationPath} with target ${targetPath}`);
+        } else if (fs.statSync(sourcePath).isDirectory() && fs.existsSync(destinationPath)) {
+            const ok = await moveWithSudo(sourcePath, destinationPath, copyInstead, level + 1);
             if (!ok) {
                 return false;
             }
         } else {
-            const mkdir_command = `sudo mkdir -p "${destination}"`;
-            if (!fs.existsSync(destination_path)) {
-                await exec.getExecOutput(mkdir_command);
+            const mkdirCommand = `sudo mkdir -p "${destination}"`;
+            if (!fs.existsSync(destinationPath)) {
+                await exec.getExecOutput(mkdirCommand);
             }
-            const mv_command = `sudo mv "${source_path}" "${destination}"`;
-            const cp_command = `sudo cp -r "${source_path}" "${destination}"`;
-            const command = copyInstead ? cp_command : mv_command;
+            const mvCommand = `sudo mv "${sourcePath}" "${destination}"`;
+            const cpCommand = `sudo cp -r "${sourcePath}" "${destination}"`;
+            const command = copyInstead ? cpCommand : mvCommand;
             const { exitCode, stdout }: ExecOutput = await exec.getExecOutput(command);
-            const sudo_output = stdout.trim();
+            const sudoOutput = stdout.trim();
             if (exitCode !== 0) {
                 core.warning(`${levelPrefix}${count}) Error occurred while moving with sudo: exit code ${exitCode}`);
-                fnlog(sudo_output);
+                fnlog(sudoOutput);
                 return false;
             } else {
-                fnlog(`${levelPrefix}${count}) Successfully moved ${source_path} to ${destination_path} with sudo.`);
+                fnlog(`${levelPrefix}${count}) Successfully moved ${sourcePath} to ${destinationPath} with sudo.`);
             }
         }
     }
@@ -968,37 +968,37 @@ async function moveWithSudo(source: string, destination: string, copyInstead = f
  *
  * @param names - Array of executable names to search for after installation
  * @param version - Version string used for template rendering and caching
- * @param check_latest - If true, prefer latest matching version when searching
- * @param url_template - URL or URL template for the archive download
- * @param update_environment - If true, adds installation directories to PATH
- * @param install_prefix - Optional custom installation directory (uses tool cache if null)
+ * @param checkLatest - If true, prefer latest matching version when searching
+ * @param urlTemplate - URL or URL template for the archive download
+ * @param updateEnvironment - If true, adds installation directories to PATH
+ * @param installPrefix - Optional custom installation directory (uses tool cache if null)
  * @returns Object containing the found executable path and version, or nulls if not found
  */
-export async function install_program_from_url(
+export async function installProgramFromUrl(
     names: string[],
     version: string,
-    check_latest: boolean,
-    url_template: string,
-    update_environment: boolean,
-    install_prefix: string | null): Promise<ProgramResult> {
-    const fnlog = trace_commands.scoped('install_program_from_url');
+    checkLatest: boolean,
+    urlTemplate: string,
+    updateEnvironment: boolean,
+    installPrefix: string | null): Promise<ProgramResult> {
+    const fnlog = traceCommands.scoped('installProgramFromUrl');
 
-    let output_version: string | null = null;
-    let output_path: string | null = null;
+    let outputVersion: string | null = null;
+    let outputPath: string | null = null;
 
     // Render URL template
     const coercedVersion = semver.coerce(version) || semver.coerce('0.0.0');
     if (!coercedVersion) {
-        return { output_version, output_path };
+        return { outputVersion, outputPath };
     }
-    let url = url_template;
-    const may_be_template = url.includes('{{');
-    if (may_be_template) {
+    let url = urlTemplate;
+    const mayBeTemplate = url.includes('{{');
+    if (mayBeTemplate) {
         const context: Record<string, string | number> = {
             name: names[0],
             platform: process.platform,
             arch: process.arch,
-            os: get_runner_os().toLowerCase(),
+            os: getRunnerOs().toLowerCase(),
             version: coercedVersion.toString(),
             major: coercedVersion.major,
             minor: coercedVersion.minor,
@@ -1006,9 +1006,9 @@ export async function install_program_from_url(
         };
         // Convert data to JSON string
         url = renderTemplate(url, context);
-        if (url_template !== url) {
+        if (urlTemplate !== url) {
             fnlog(`Template data: ${JSON.stringify(context)}`);
-            fnlog(`Template "${url_template}" rendered as "${url}"`);
+            fnlog(`Template "${urlTemplate}" rendered as "${url}"`);
         }
     }
 
@@ -1016,7 +1016,7 @@ export async function install_program_from_url(
     const extPath = await downloadAndExtract(url);
     fnlog(`Downloaded and extracted ${url} to ${extPath}`);
     if (!extPath) {
-        return { output_version, output_path };
+        return { outputVersion, outputPath };
     }
 
     // Strip single directory from the path if that's the case
@@ -1030,47 +1030,47 @@ export async function install_program_from_url(
 
     // Create environment variable <tool name>_ROOT with the installation path
     for (const name of names) {
-        const env_var_name = `${name.toUpperCase()}_ROOT`;
-        core.exportVariable(env_var_name, extPath);
+        const envVarName = `${name.toUpperCase()}_ROOT`;
+        core.exportVariable(envVarName, extPath);
     }
 
     // Install to prefix or to cache directory
-    let final_install_prefix: string;
-    if (install_prefix) {
-        fnlog(`Moving ${extPath} to ${install_prefix}`);
-        const move_ok = await moveWithPermissions(extPath, install_prefix);
-        if (!move_ok) {
-            fnlog(`Failed to move ${extPath} to ${install_prefix}. Aborting.`);
-            return { output_version, output_path };
+    let finalInstallPrefix: string;
+    if (installPrefix) {
+        fnlog(`Moving ${extPath} to ${installPrefix}`);
+        const moveOk = await moveWithPermissions(extPath, installPrefix);
+        if (!moveOk) {
+            fnlog(`Failed to move ${extPath} to ${installPrefix}. Aborting.`);
+            return { outputVersion, outputPath };
         }
-        final_install_prefix = install_prefix;
+        finalInstallPrefix = installPrefix;
     } else {
         // Cache
-        final_install_prefix = await tc.cacheDir(extPath, names[0], coercedVersion.toString());
-        fnlog(`Caching ${names[0]} in ${final_install_prefix}`);
+        finalInstallPrefix = await tc.cacheDir(extPath, names[0], coercedVersion.toString());
+        fnlog(`Caching ${names[0]} in ${finalInstallPrefix}`);
     }
 
-    fnlog(`Installed in ${final_install_prefix}`);
-    if (update_environment) {
-        core.addPath(final_install_prefix);
-        const bin_path = path.join(final_install_prefix, 'bin');
-        if (fs.existsSync(bin_path)) {
-            core.addPath(bin_path);
+    fnlog(`Installed in ${finalInstallPrefix}`);
+    if (updateEnvironment) {
+        core.addPath(finalInstallPrefix);
+        const binPath = path.join(finalInstallPrefix, 'bin');
+        if (fs.existsSync(binPath)) {
+            core.addPath(binPath);
         }
     }
 
     // Recursively iterate subdirectories of extPath looking for ${name} executable
     fnlog(`Looking for ${names.join(', ')} binary in ${extPath} subdirectories`);
-    const installPrefixSubdirectories = [final_install_prefix, path.join(final_install_prefix, 'bin')].concat(getAllSubdirectories(final_install_prefix));
-    fnlog(`Looking for ${names.join(', ')} binary in installed ${final_install_prefix} subdirectories`);
-    const result = await find_program_in_paths(installPrefixSubdirectories, names, '*', check_latest, true);
-    if (result.output_path) {
-        fnlog(`Found ${names.join(', ')} binary in ${result.output_path}`);
+    const installPrefixSubdirectories = [finalInstallPrefix, path.join(finalInstallPrefix, 'bin')].concat(getAllSubdirectories(finalInstallPrefix));
+    fnlog(`Looking for ${names.join(', ')} binary in installed ${finalInstallPrefix} subdirectories`);
+    const result = await findProgramInPaths(installPrefixSubdirectories, names, '*', checkLatest, true);
+    if (result.outputPath) {
+        fnlog(`Found ${names.join(', ')} binary in ${result.outputPath}`);
     }
-    output_version = result.output_version;
-    output_path = result.output_path;
+    outputVersion = result.outputVersion;
+    outputPath = result.outputPath;
 
-    return { output_version, output_path };
+    return { outputVersion, outputPath };
 }
 
 /**
@@ -1080,7 +1080,7 @@ export async function install_program_from_url(
  * @returns Object containing path, version, and found status
  */
 async function main(inputs: SetupProgramInputs): Promise<Record<string, unknown>> {
-    const fnlog = trace_commands.scoped('setup-program');
+    const fnlog = traceCommands.scoped('setup-program');
 
     // Set cache directory
     if (process.platform === 'darwin') {
@@ -1091,40 +1091,40 @@ async function main(inputs: SetupProgramInputs): Promise<Record<string, unknown>
     }
 
     // Path program version
-    let output_path: string | null = null;
-    let output_version: string | null = null;
+    let outputPath: string | null = null;
+    let outputVersion: string | null = null;
 
     // Setup path program
     if (inputs.path && inputs.path.length > 0) {
         core.startGroup('🔍 Searching in user provided paths');
         core.info(`Searching for ${inputs.name} ${inputs.version} in paths [${inputs.path.join(',')}]`);
-        const result = await find_program_in_path(inputs.path, inputs.version, inputs.check_latest);
-        output_version = result.output_version;
-        output_path = result.output_path;
+        const result = await findProgramInPath(inputs.path, inputs.version, inputs.checkLatest);
+        outputVersion = result.outputVersion;
+        outputPath = result.outputPath;
         core.endGroup();
     }
 
     // Setup system program
-    if (output_path === null) {
+    if (outputPath === null) {
         core.startGroup('🔍 Searching in system paths');
         core.info(`Searching for ${inputs.name} ${inputs.version} in PATH`);
-        const result = await find_program_in_system_paths(inputs.path, inputs.name, inputs.version, inputs.check_latest);
-        output_version = result.output_version;
-        output_path = result.output_path;
+        const result = await findProgramInSystemPaths(inputs.path, inputs.name, inputs.version, inputs.checkLatest);
+        outputVersion = result.outputVersion;
+        outputPath = result.outputPath;
         core.endGroup();
     }
 
     // Setup APT program
-    if (output_version === null && process.platform === 'linux') {
+    if (outputVersion === null && process.platform === 'linux') {
         core.startGroup('📦 Searching with APT');
         core.info(`Searching for ${inputs.name} ${inputs.version} with APT`);
-        const result = await find_program_with_apt(inputs.name, inputs.version, inputs.check_latest);
-        output_version = result.output_version;
-        output_path = result.output_path;
+        const result = await findProgramWithApt(inputs.name, inputs.version, inputs.checkLatest);
+        outputVersion = result.outputVersion;
+        outputPath = result.outputPath;
         core.endGroup();
     } else {
-        if (output_version !== null) {
-            fnlog(`Skipping APT step because ${inputs.name} ${output_version} was already found in ${output_path}`);
+        if (outputVersion !== null) {
+            fnlog(`Skipping APT step because ${inputs.name} ${outputVersion} was already found in ${outputPath}`);
         } else if (process.platform !== 'linux') {
             fnlog(`Skipping APT step because platform is ${process.platform}`);
         }
@@ -1132,48 +1132,48 @@ async function main(inputs: SetupProgramInputs): Promise<Record<string, unknown>
 
     // Install program
     const url = inputs.url || null;
-    const install_prefix = inputs.install_prefix || null;
-    if (output_version === null && url !== null) {
+    const installPrefix = inputs.installPrefix || null;
+    if (outputVersion === null && url !== null) {
         core.startGroup('🚚 Downloading and Installing');
         core.info(`Fetching ${inputs.name} ${inputs.version} from URL`);
-        const result = await install_program_from_url(
+        const result = await installProgramFromUrl(
             inputs.name,
             inputs.version,
-            inputs.check_latest,
+            inputs.checkLatest,
             url,
-            inputs.update_environment,
-            install_prefix);
-        output_version = result.output_version;
-        output_path = result.output_path;
+            inputs.updateEnvironment,
+            installPrefix);
+        outputVersion = result.outputVersion;
+        outputPath = result.outputPath;
         core.endGroup();
     } else {
-        if (output_version !== null) {
-            fnlog(`Skipping download step because ${inputs.name} ${output_version} was already found in ${output_path}`);
+        if (outputVersion !== null) {
+            fnlog(`Skipping download step because ${inputs.name} ${outputVersion} was already found in ${outputPath}`);
         } else if (url === null) {
             fnlog(`Skipping download step because no URL was provided. URL: ${url}`);
         }
     }
 
     // Parse Final program / Setup version / Outputs
-    if (output_path) {
-        const semverVersion = output_version !== null ?
-            semver.coerce(output_version, { loose: true }) :
+    if (outputPath) {
+        const semverVersion = outputVersion !== null ?
+            semver.coerce(outputVersion, { loose: true }) :
             semver.coerce('0.0.0', { loose: true });
         if (semverVersion) {
             return {
-                path: output_path,
-                dir: path.dirname(output_path),
+                path: outputPath,
+                dir: path.dirname(outputPath),
                 version: semverVersion.toString(),
-                version_major: semverVersion.major,
-                version_minor: semverVersion.minor,
-                version_patch: semverVersion.patch,
+                versionMajor: semverVersion.major,
+                versionMinor: semverVersion.minor,
+                versionPatch: semverVersion.patch,
                 found: true
             };
         }
     }
 
     core.setOutput('found', false);
-    if (inputs.fail_on_error) {
+    if (inputs.failOnError) {
         core.setFailed('Cannot find program');
     } else {
         core.info('Cannot find program');

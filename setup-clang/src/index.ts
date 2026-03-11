@@ -11,11 +11,11 @@ import * as semver from 'semver';
 import * as fs from 'fs';
 import * as exec from '@actions/exec';
 import * as path from 'path';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 import { runAction } from 'action-schema';
 
 // Type imports
-import { Inputs, MainOutputs } from './types';
+import { type Inputs, type MainOutputs } from './types';
 export type { Inputs, MainOutputs };
 
 // Schema imports
@@ -26,11 +26,10 @@ export { inputsSchema, outputsSchema };
 export { removeClangPrefix } from './schema';
 
 // Module imports
-import { clangDownloadCandidates, install_program_from_clang_urls } from './download';
+import { clangDownloadCandidates, installProgramFromClangUrls } from './download';
 import { installCompanionPackages } from './companion-packages';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const setup_program = require('setup-program');
+import * as setup_program from 'setup-program';
 
 /**
  * Sets up Clang compiler on the runner with the specified version.
@@ -44,17 +43,17 @@ const setup_program = require('setup-program');
  *                  semver ranges for flexible version matching.
  * @param paths - Array of paths to search for existing Clang installations before
  *                attempting installation
- * @param check_latest - If true, checks for the latest available version matching
+ * @param checkLatest - If true, checks for the latest available version matching
  *                       the version constraint
- * @param update_environment - If true, updates PATH and environment variables to
+ * @param updateEnvironment - If true, updates PATH and environment variables to
  *                             make the compiler available for subsequent steps
  * @returns Object containing paths to clang/clang++, version info, and environment changes
  */
 export async function main(
     version: string,
     paths: string[],
-    check_latest: boolean,
-    update_environment: boolean
+    checkLatest: boolean,
+    updateEnvironment: boolean
 ): Promise<MainOutputs> {
     core.startGroup('🔎 Find clang versions');
     if (process.platform === 'darwin') {
@@ -72,38 +71,38 @@ export async function main(
     core.endGroup();
 
     // Path program version
-    let output_path: string | null = null;
-    let output_version: string | null = null;
-    let installed_apt_package: string | null = null;
+    let outputPath: string | null = null;
+    let outputVersion: string | null = null;
+    let installedAptPackage: string | null = null;
 
     // Setup path program
     if (paths.length > 0) {
         core.startGroup('🔍 Find clang in specified paths');
         core.info(`Searching for Clang ${version} in paths [${paths.join(',')}]`);
-        const result = await setup_program.find_program_in_path(paths, version, check_latest);
-        output_version = result.output_version;
-        output_path = result.output_path;
+        const result = await setup_program.findProgramInPath(paths, version, checkLatest);
+        outputVersion = result.outputVersion;
+        outputPath = result.outputPath;
         core.endGroup();
     }
 
     // Setup system program
-    if (!output_path) {
+    if (!outputPath) {
         core.startGroup('📁 Find clang in system paths');
         core.info(`Searching for Clang ${version} in PATH`);
-        trace_commands.log(`Arguments: ${paths}, ['clang++'], ${version}, ${check_latest}`);
-        const result = await setup_program.find_program_in_system_paths(
+        traceCommands.log(`Arguments: ${paths}, ['clang++'], ${version}, ${checkLatest}`);
+        const result = await setup_program.findProgramInSystemPaths(
             paths,
             ['clang++'],
             version,
-            check_latest
+            checkLatest
         );
-        output_version = result.output_version;
-        output_path = result.output_path;
+        outputVersion = result.outputVersion;
+        outputPath = result.outputPath;
         core.endGroup();
     }
 
     // Setup APT program
-    if (!output_version && process.platform === 'linux') {
+    if (!outputVersion && process.platform === 'linux') {
         core.startGroup('📦 Find clang with APT');
         core.info(`Searching for Clang ${version} with APT`);
 
@@ -114,22 +113,22 @@ export async function main(
             .filter((value): value is number => value !== undefined && value >= 10)
             .filter((value, index, self) => self.indexOf(value) === index)
             .sort((a, b) => b - a);
-        trace_commands.log(`All version major candidates: [${allVersionMajors.join(', ')}]`);
+        traceCommands.log(`All version major candidates: [${allVersionMajors.join(', ')}]`);
 
         const ubuntuName = setup_program.getCurrentUbuntuName() as string | null;
-        trace_commands.log(`Ubuntu version name: ${ubuntuName}`);
-        trace_commands.log(`allVersionMajors.length: ${allVersionMajors.length}`);
+        traceCommands.log(`Ubuntu version name: ${ubuntuName}`);
+        traceCommands.log(`allVersionMajors.length: ${allVersionMajors.length}`);
         if (ubuntuName !== null && allVersionMajors.length !== 0) {
             core.info(
                 `Adding APT repositories for Clang ${version} major versions [${allVersionMajors.join(', ')}]`
             );
 
             // Adding a key requires gnupg
-            await setup_program.find_program_with_apt(['gnupg'], '*', true);
+            await setup_program.findProgramWithApt(['gnupg'], '*', true);
 
             // Download repo key
-            const gpg_key_url = 'https://apt.llvm.org/llvm-snapshot.gpg.key';
-            const keyPath = await tc.downloadTool(gpg_key_url);
+            const gpgKeyUrl = 'https://apt.llvm.org/llvm-snapshot.gpg.key';
+            const keyPath = await tc.downloadTool(gpgKeyUrl);
             if (setup_program.isSudoRequired()) {
                 await setup_program.ensureSudoIsAvailable();
                 await exec.exec(`sudo -n sudo apt-key add "${keyPath}"`, [], { ignoreReturnCode: true });
@@ -138,29 +137,29 @@ export async function main(
             }
 
             // add-apt-repository requires installing software-properties-common
-            await setup_program.find_program_with_apt(['software-properties-common'], '*', true);
-            let add_apt_repository_path: string | null = null;
+            await setup_program.findProgramWithApt(['software-properties-common'], '*', true);
+            let addAptRepositoryPath: string | null = null;
             try {
-                add_apt_repository_path = await io.which('add-apt-repository');
-                trace_commands.log(`add-apt-repository found at ${add_apt_repository_path}`);
+                addAptRepositoryPath = await io.which('add-apt-repository');
+                traceCommands.log(`add-apt-repository found at ${addAptRepositoryPath}`);
             } catch {
-                add_apt_repository_path = null;
+                addAptRepositoryPath = null;
             }
 
             // Add APT repositories
-            if (add_apt_repository_path !== null && add_apt_repository_path !== '') {
+            if (addAptRepositoryPath !== null && addAptRepositoryPath !== '') {
                 for (const major of allVersionMajors) {
                     const ReleaseFileURL = `https://apt.llvm.org/${ubuntuName}/dists/llvm-toolchain-${ubuntuName}-${major}/Release`;
-                    trace_commands.log(`Checking if ${ReleaseFileURL} exists`);
+                    traceCommands.log(`Checking if ${ReleaseFileURL} exists`);
                     if (!(await setup_program.urlExists(ReleaseFileURL))) {
-                        trace_commands.log(
+                        traceCommands.log(
                             `Skipping repository for major version ${major} because ${ReleaseFileURL} does not exist`
                         );
                         continue;
                     }
                     await setup_program.ensureAddAptRepositoryIsAvailable();
                     const repo = `deb https://apt.llvm.org/${ubuntuName}/ llvm-toolchain-${ubuntuName}-${major} main`;
-                    trace_commands.log(`Adding repository "${repo}"`);
+                    traceCommands.log(`Adding repository "${repo}"`);
                     if (setup_program.isSudoRequired()) {
                         await exec.exec(`sudo -n add-apt-repository -y "${repo}"`, [], {
                             ignoreReturnCode: true
@@ -173,113 +172,113 @@ export async function main(
         }
 
         core.info(`Searching for Clang ${version} with APT`);
-        const result = await setup_program.find_program_with_apt(['clang'], version, check_latest);
-        output_version = result.output_version;
-        output_path = result.output_path;
-        installed_apt_package = result.installed_package ?? null;
+        const result = await setup_program.findProgramWithApt(['clang'], version, checkLatest);
+        outputVersion = result.outputVersion;
+        outputPath = result.outputPath;
+        installedAptPackage = result.installedPackage ?? null;
         core.endGroup();
     } else {
-        if (output_version !== null) {
-            trace_commands.log(
-                `Skipping APT step because Clang ${output_version} was already found in ${output_path}`
+        if (outputVersion !== null) {
+            traceCommands.log(
+                `Skipping APT step because Clang ${outputVersion} was already found in ${outputPath}`
             );
         } else if (process.platform !== 'linux') {
-            trace_commands.log(`Skipping APT step because platform is ${process.platform}`);
+            traceCommands.log(`Skipping APT step because platform is ${process.platform}`);
         }
     }
 
-    // If output_version === null, and it gets installed at all, it will be installed from a URL
-    const will_install_from_url = output_version === null;
-    if (output_version === null) {
+    // If outputVersion === null, and it gets installed at all, it will be installed from a URL
+    const willInstallFromUrl = outputVersion === null;
+    if (outputVersion === null) {
         core.startGroup('⬇️ Download clang');
-        const { version_candidates, ubuntu_versions } = clangDownloadCandidates(
+        const { versionCandidates, ubuntuVersions } = clangDownloadCandidates(
             version,
             allVersions,
-            check_latest
+            checkLatest
         );
-        const result = await install_program_from_clang_urls(
-            ubuntu_versions,
-            version_candidates,
+        const result = await installProgramFromClangUrls(
+            ubuntuVersions,
+            versionCandidates,
             version,
-            check_latest,
-            update_environment,
-            output_version,
-            output_path
+            checkLatest,
+            updateEnvironment,
+            outputVersion,
+            outputPath
         );
-        output_version = result.output_version;
-        output_path = result.output_path;
+        outputVersion = result.outputVersion;
+        outputPath = result.outputPath;
         core.endGroup();
     } else {
-        trace_commands.log(
-            `Skipping download step because Clang ${output_version} was already found in ${output_path}`
+        traceCommands.log(
+            `Skipping download step because Clang ${outputVersion} was already found in ${outputPath}`
         );
     }
 
     // Install companion packages for tool parity (llvm-symbolizer, sanitizer runtimes)
-    let symbolizer_path: string | null = null;
-    if (output_version) {
+    let symbolizerPath: string | null = null;
+    if (outputVersion) {
         core.startGroup('🔧 Install companion packages');
-        const companionResult = await installCompanionPackages(output_version, installed_apt_package, will_install_from_url);
-        symbolizer_path = companionResult.symbolizerPath;
+        const companionResult = await installCompanionPackages(outputVersion, installedAptPackage, willInstallFromUrl);
+        symbolizerPath = companionResult.symbolizerPath;
         core.endGroup();
 
         // Set sanitizer symbolizer environment variables if symbolizer was found
-        if (symbolizer_path && update_environment) {
-            core.info(`Setting sanitizer symbolizer path to ${symbolizer_path}`);
-            core.exportVariable('ASAN_SYMBOLIZER_PATH', symbolizer_path);
-            core.exportVariable('MSAN_SYMBOLIZER_PATH', symbolizer_path);
-            core.exportVariable('TSAN_SYMBOLIZER_PATH', symbolizer_path);
-            core.exportVariable('UBSAN_SYMBOLIZER_PATH', symbolizer_path);
+        if (symbolizerPath && updateEnvironment) {
+            core.info(`Setting sanitizer symbolizer path to ${symbolizerPath}`);
+            core.exportVariable('ASAN_SYMBOLIZER_PATH', symbolizerPath);
+            core.exportVariable('MSAN_SYMBOLIZER_PATH', symbolizerPath);
+            core.exportVariable('TSAN_SYMBOLIZER_PATH', symbolizerPath);
+            core.exportVariable('UBSAN_SYMBOLIZER_PATH', symbolizerPath);
         }
     }
 
     // Create outputs
-    let cc: string | null = output_path;
-    let cxx: string | null = output_path;
+    let cc: string | null = outputPath;
+    let cxx: string | null = outputPath;
     let bindir = '';
     let dir = '';
     let release = '0.0.0';
-    let version_major = 0;
-    let version_minor = 0;
-    let version_patch = 0;
+    let versionMajor = 0;
+    let versionMinor = 0;
+    let versionPatch = 0;
 
-    if (output_path) {
-        const path_basename = path.basename(output_path);
-        if (path_basename.startsWith('clang++')) {
-            cc = path.join(path.dirname(output_path), path_basename.replace('clang++', 'clang'));
-        } else if (path_basename.startsWith('clang')) {
-            cxx = path.join(path.dirname(output_path), path_basename.replace('clang', 'clang++'));
+    if (outputPath) {
+        const pathBasename = path.basename(outputPath);
+        if (pathBasename.startsWith('clang++')) {
+            cc = path.join(path.dirname(outputPath), pathBasename.replace('clang++', 'clang'));
+        } else if (pathBasename.startsWith('clang')) {
+            cxx = path.join(path.dirname(outputPath), pathBasename.replace('clang', 'clang++'));
         }
 
         if (cc && !fs.existsSync(cc)) {
-            trace_commands.log(`Could not find ${cc}, using ${output_path} as cc instead`);
-            cc = output_path;
+            traceCommands.log(`Could not find ${cc}, using ${outputPath} as cc instead`);
+            cc = outputPath;
         }
 
         if (cxx && !fs.existsSync(cxx)) {
-            trace_commands.log(`Could not find ${cxx}, using ${output_path} as cxx instead`);
-            cxx = output_path;
+            traceCommands.log(`Could not find ${cxx}, using ${outputPath} as cxx instead`);
+            cxx = outputPath;
         }
 
         const semverV =
-            output_version !== null
-                ? semver.parse(output_version, { loose: true })
+            outputVersion !== null
+                ? semver.parse(outputVersion, { loose: true })
                 : semver.parse('0.0.0', { loose: true });
 
         if (semverV) {
             release = semverV.toString();
-            version_major = semverV.major;
-            version_minor = semverV.minor;
-            version_patch = semverV.patch;
+            versionMajor = semverV.major;
+            versionMinor = semverV.minor;
+            versionPatch = semverV.patch;
         }
 
-        bindir = path.dirname(output_path);
-        if (update_environment) {
+        bindir = path.dirname(outputPath);
+        if (updateEnvironment) {
             core.addPath(bindir);
         }
         dir = path.dirname(bindir);
 
-        if (will_install_from_url) {
+        if (willInstallFromUrl) {
             // If it's installed from the url, we need to add the lib dirs to LD_LIBRARY_PATH,
             // or it won't be able to find the default shared libraries
             let LD_LIBRARY_PATH = process.env.LD_LIBRARY_PATH;
@@ -287,37 +286,37 @@ export async function main(
             if (LD_LIBRARY_PATH !== null && LD_LIBRARY_PATH !== undefined) {
                 LD_LIBRARY_PATHS = LD_LIBRARY_PATH.split(':').filter((x) => x !== '');
             }
-            const lib_dirs = [path.join(dir, 'lib')];
-            for (const lib_dir of lib_dirs) {
-                if (fs.existsSync(lib_dir)) {
-                    if (!LD_LIBRARY_PATHS.includes(lib_dir)) {
-                        trace_commands.log(`Adding ${lib_dir} to LD_LIBRARY_PATH`);
-                        LD_LIBRARY_PATHS.push(lib_dir);
+            const libDirs = [path.join(dir, 'lib')];
+            for (const libDir of libDirs) {
+                if (fs.existsSync(libDir)) {
+                    if (!LD_LIBRARY_PATHS.includes(libDir)) {
+                        traceCommands.log(`Adding ${libDir} to LD_LIBRARY_PATH`);
+                        LD_LIBRARY_PATHS.push(libDir);
                     } else {
-                        trace_commands.log(`Skipping ${lib_dir} because it is already in LD_LIBRARY_PATH`);
+                        traceCommands.log(`Skipping ${libDir} because it is already in LD_LIBRARY_PATH`);
                     }
                 } else {
-                    trace_commands.log(`Skipping ${lib_dir} because it does not exist`);
+                    traceCommands.log(`Skipping ${libDir} because it does not exist`);
                 }
             }
             LD_LIBRARY_PATH = LD_LIBRARY_PATHS.join(':');
             if (LD_LIBRARY_PATH !== process.env.LD_LIBRARY_PATH) {
-                trace_commands.log(`Setting LD_LIBRARY_PATH to ${LD_LIBRARY_PATH}`);
+                traceCommands.log(`Setting LD_LIBRARY_PATH to ${LD_LIBRARY_PATH}`);
                 core.exportVariable('LD_LIBRARY_PATH', LD_LIBRARY_PATH);
             }
         }
     }
     return {
-        output_path,
+        outputPath,
         cc,
         cxx,
         bindir,
         dir,
         version: release,
-        version_major,
-        version_minor,
-        version_patch,
-        symbolizer_path
+        versionMajor,
+        versionMinor,
+        versionPatch,
+        symbolizerPath
     };
 }
 
@@ -335,12 +334,12 @@ runAction({
         const outputs = await main(
             inputs.version,
             inputs.path,
-            inputs.check_latest,
-            inputs.update_environment
+            inputs.checkLatest,
+            inputs.updateEnvironment
         );
 
         // Validate that Clang was found
-        if (!outputs.output_path) {
+        if (!outputs.outputPath) {
             core.setFailed('Cannot setup Clang');
         }
 

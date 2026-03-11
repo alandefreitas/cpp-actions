@@ -11,7 +11,7 @@ import * as process from 'process'
 import { runAction } from 'action-schema'
 
 // Type imports and re-exports
-import { Inputs, Outputs, MainOutputs, BuildOutputsMetadata } from './types'
+import { type Inputs, type Outputs, type MainOutputs, type BuildOutputsMetadata } from './types'
 export type { Inputs, Outputs, MainOutputs, BuildOutputsMetadata }
 
 // Schema imports
@@ -72,22 +72,22 @@ async function configureMSVCEnvironment(arch: string, sdk: string, toolset: stri
 
     // There are all sorts of way the architectures are called. In addition to
     // values supported by Microsoft Visual C++, recognize some common aliases.
-    let arch_aliases: Record<string, string> = {
+    const archAliases: Record<string, string> = {
         'win32': 'x86',
         'win64': 'x64',
         'x86_64': 'x64',
         'x86-64': 'x64'
     }
     // Ignore case when matching as that's what humans expect.
-    if (arch.toLowerCase() in arch_aliases) {
-        arch = arch_aliases[arch.toLowerCase()]
+    if (arch.toLowerCase() in archAliases) {
+        arch = archAliases[arch.toLowerCase()]
     }
 
     // Due to the way Microsoft Visual C++ is configured, we have to resort to the following hack:
     // Call the configuration batch file and then output *all* the environment variables.
 
     const args: string[] = [arch]
-    if (uwp == 'true') {
+    if (uwp === 'true') {
         args.push('uwp')
     }
     if (sdk) {
@@ -113,23 +113,23 @@ async function configureMSVCEnvironment(arch: string, sdk: string, toolset: stri
     if (resolvedToolset) {
         args.push(`-vcvars_ver=${resolvedToolset}`)
     }
-    if (spectre == 'true') {
+    if (spectre === 'true') {
         args.push('-vcvars_spectre_libs=spectre')
     }
     const vcvars = `"${vcvarsallPath}" ${args.join(' ')}`
     core.debug(`vcvars command-line: ${vcvars}`)
 
-    const cmd_output_string = child_process.execSync(`set && cls && ${vcvars} && cls && set`, {shell: 'cmd'}).toString()
-    const cmd_output_parts = cmd_output_string.split('\f')
+    const cmdOutputString = child_process.execSync(`set && cls && ${vcvars} && cls && set`, {shell: 'cmd'}).toString()
+    const cmdOutputParts = cmdOutputString.split('\f')
 
-    const old_environment = cmd_output_parts[0].split('\r\n')
-    const vcvars_output = cmd_output_parts[1].split('\r\n')
-    const new_environment = cmd_output_parts[2].split('\r\n')
+    const oldEnvironment = cmdOutputParts[0].split('\r\n')
+    const vcvarsOutput = cmdOutputParts[1].split('\r\n')
+    const newEnvironment = cmdOutputParts[2].split('\r\n')
 
     // If vsvars.bat is given an incorrect command line, it will print out
     // an error and *still* exit successfully. Parse out errors from output
     // which don't look like environment variables, and fail if appropriate.
-    const error_messages = vcvars_output.filter((line) => {
+    const errorMessages = vcvarsOutput.filter((line) => {
         if (line.match(/^\[ERROR.*\]/)) {
             // Don't print this particular line which will be confusing in output.
             if (!line.match(/Error in script usage. The correct usage is:$/)) {
@@ -138,15 +138,15 @@ async function configureMSVCEnvironment(arch: string, sdk: string, toolset: stri
         }
         return false
     })
-    if (error_messages.length > 0) {
-        throw new Error('invalid parameters' + '\r\n' + error_messages.join('\r\n'))
+    if (errorMessages.length > 0) {
+        throw new Error('invalid parameters' + '\r\n' + errorMessages.join('\r\n'))
     }
 
     // Convert old environment lines into a dictionary for easier lookup.
-    let old_env_vars: Record<string, string> = {}
-    for (let string of old_environment) {
+    const oldEnvVars: Record<string, string> = {}
+    for (const string of oldEnvironment) {
         const [name, value] = string.split('=')
-        old_env_vars[name] = value
+        oldEnvVars[name] = value
     }
     core.endGroup()
 
@@ -154,25 +154,27 @@ async function configureMSVCEnvironment(arch: string, sdk: string, toolset: stri
     // These are the variables set by vsvars.bat. Also export everything
     // that was not there during the first sweep: those are new variables.
     core.startGroup('📘 Environment Variables')
-    for (let string of new_environment) {
+    for (const string of newEnvironment) {
         // vsvars.bat likes to print some fluff at the beginning.
         // Skip lines that don't look like environment variables.
         if (!string.includes('=')) {
             continue
         }
-        let [name, new_value] = string.split('=')
-        let old_value = old_env_vars[name]
-        // For new variables "old_value === undefined".
-        if (new_value !== old_value) {
+        const parts = string.split('=')
+        const name = parts[0]
+        let newValue = parts[1]
+        const oldValue = oldEnvVars[name]
+        // For new variables "oldValue === undefined".
+        if (newValue !== oldValue) {
             core.info(`Setting ${name}`)
             // Special case for a bunch of PATH-like variables: vcvarsall.bat
             // just prepends its stuff without checking if its already there.
             // This makes repeated invocations of this action fail after some
             // point, when the environment variable overflows. Avoid that.
             if (isPathVariable(name)) {
-                new_value = deduplicatePathValue(new_value)
+                newValue = deduplicatePathValue(newValue)
             }
-            core.exportVariable(name, new_value)
+            core.exportVariable(name, newValue)
         }
     }
 
@@ -244,7 +246,7 @@ runAction({
             inputs.toolset,
             inputs.uwp,
             inputs.spectre,
-            inputs.visual_studio_version
+            inputs.visualStudioVersion
         )
 
         return outputs

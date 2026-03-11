@@ -40,18 +40,18 @@ export interface Message {
  */
 export interface Inputs {
     /** Path to the CMake executable */
-    cmake_path: string;
+    cmakePath: string;
     /** CMake version to use */
-    cmake_version: string;
+    cmakeVersion: string;
     /** Path to the source directory */
-    source_dir: string;
+    sourceDir: string;
     url: string;
-    git_repository: string;
-    git_tag: string;
-    download_dir: string;
+    gitRepository: string;
+    gitTag: string;
+    downloadDir: string;
     patches: string[];
     /** Base build directory (suffixes added for non-main factor combinations) */
-    build_dir: string;
+    buildDir: string;
     preset: string;
     cc: string;
     ccflags: string;
@@ -62,35 +62,35 @@ export interface Inputs {
     shared: boolean | undefined;
     toolchain: string;
     generator: string;
-    generator_toolset: string;
-    generator_architecture: string;
+    generatorToolset: string;
+    generatorArchitecture: string;
     arch: string;
-    build_type: string;
-    build_target: (string | null)[];
+    buildType: string;
+    buildTarget: (string | null)[];
     /** Extra CMake arguments - array for single config, map for combinatorial factor */
-    extra_args: string[] | Record<string, string[]>;
-    export_compile_commands: boolean | undefined;
+    extraArgs: string[] | Record<string, string[]>;
+    exportCompileCommands: boolean | undefined;
     jobs: number;
-    run_tests: boolean | undefined;
-    configure_tests_flag: string;
-    test_all_cxxstd: boolean;
-    ctest_timeout: number | undefined;
+    runTests: boolean | undefined;
+    configureTestsFlag: string;
+    testAllCxxstd: boolean;
+    ctestTimeout: number | undefined;
     install: boolean | undefined;
-    install_all_cxxstd: boolean | undefined;
+    installAllCxxstd: boolean | undefined;
     /** Base install prefix (suffixes added for non-main factor combinations) */
-    install_prefix: string;
+    installPrefix: string;
     package: boolean | undefined;
-    package_all_cxxstd: boolean;
-    package_name: string;
+    packageAllCxxstd: boolean;
+    packageName: string;
     /** Base package directory (suffixes added for non-main factor combinations) */
-    package_dir: string;
-    package_vendor: string;
-    package_generators: string[];
-    package_artifact: boolean | undefined;
-    package_retention_days: number;
-    create_annotations: boolean | undefined;
-    ref_source_dir: string;
-    trace_commands: boolean;
+    packageDir: string;
+    packageVendor: string;
+    packageGenerators: string[];
+    packageArtifact: boolean | undefined;
+    packageRetentionDays: number;
+    createAnnotations: boolean | undefined;
+    refSourceDir: string;
+    traceCommands: boolean;
 }
 
 /**
@@ -102,18 +102,18 @@ export interface Inputs {
  */
 export interface ResolvedInputs {
     /** Path to the CMake executable */
-    cmake_path: string;
+    cmakePath: string;
     /** CMake version to use */
-    cmake_version: string;
+    cmakeVersion: string;
     /** Path to the source directory */
-    source_dir: string;
+    sourceDir: string;
     url: string;
-    git_repository: string;
-    git_tag: string;
-    download_dir: string;
+    gitRepository: string;
+    gitTag: string;
+    downloadDir: string;
     patches: string[];
     /** Resolved build directory for this entry (includes factor suffix if needed) */
-    build_dir: string;
+    buildDir: string;
     preset: string;
     cc: string;
     ccflags: string;
@@ -124,44 +124,44 @@ export interface ResolvedInputs {
     shared: boolean | undefined;
     toolchain: string;
     generator: string;
-    generator_toolset: string;
-    generator_architecture: string;
+    generatorToolset: string;
+    generatorArchitecture: string;
     arch: string;
-    build_type: string;
+    buildType: string;
     /** Build targets to compile (internal loop, not a combinatorial factor) */
-    build_target: (string | null)[];
+    buildTarget: (string | null)[];
     /** Resolved extra CMake arguments (always an array) */
-    extra_args: string[];
-    export_compile_commands: boolean | undefined;
+    extraArgs: string[];
+    exportCompileCommands: boolean | undefined;
     jobs: number;
-    run_tests: boolean | undefined;
-    configure_tests_flag: string;
-    ctest_timeout: number | undefined;
+    runTests: boolean | undefined;
+    configureTestsFlag: string;
+    ctestTimeout: number | undefined;
     install: boolean | undefined;
     /** Resolved install prefix for this entry (includes factor suffix if needed) */
-    install_prefix: string;
+    installPrefix: string;
     package: boolean | undefined;
-    package_name: string;
+    packageName: string;
     /** Resolved package directory for this entry (includes factor suffix if needed) */
-    package_dir: string;
-    package_vendor: string;
+    packageDir: string;
+    packageVendor: string;
     /** Package generators to use (internal loop, not a combinatorial factor) */
-    package_generators: string[];
-    package_artifact: boolean | undefined;
-    package_retention_days: number;
-    create_annotations: boolean | undefined;
-    ref_source_dir: string;
-    trace_commands: boolean;
-    /** Key identifying the extra_args configuration (undefined if extra_args was an array) */
+    packageGenerators: string[];
+    packageArtifact: boolean | undefined;
+    packageRetentionDays: number;
+    createAnnotations: boolean | undefined;
+    refSourceDir: string;
+    traceCommands: boolean;
+    /** Key identifying the extraArgs configuration (undefined if extraArgs was an array) */
     extra_args_key?: string;
     /** Whether this is the main/default entry (gets exact user paths without suffixes) */
     is_main_entry: boolean;
     /** Run tests for all cxxstd values (true) or only main entry (false) */
-    test_all_cxxstd: boolean;
+    testAllCxxstd: boolean;
     /** Install for all cxxstd values (true) or only main entry (false) */
-    install_all_cxxstd: boolean | undefined;
+    installAllCxxstd: boolean | undefined;
     /** Package for all cxxstd values (true) or only main entry (false) */
-    package_all_cxxstd: boolean;
+    packageAllCxxstd: boolean;
 }
 
 /**
@@ -173,15 +173,15 @@ export interface SetupCMakeOutputs {
     /** Directory containing CMake */
     dir: string;
     /** Maximum supported CMake preset version */
-    supported_presets_version: number;
+    supportedPresetsVersion: number;
     /** Whether CMake supports --build <path-to-build> */
-    supports_path_to_build?: boolean;
+    supportsPathToBuild?: boolean;
     /** Whether CMake supports multiple --target arguments */
-    supports_build_multiple_targets?: boolean;
+    supportsBuildMultipleTargets?: boolean;
     /** Whether CMake supports parallel builds */
-    supports_parallel_build?: boolean;
+    supportsParallelBuild?: boolean;
     /** Whether CMake supports cmake --install */
-    supports_cmake_install?: boolean;
+    supportsCmakeInstall?: boolean;
 }
 
 /**
@@ -189,13 +189,13 @@ export interface SetupCMakeOutputs {
  */
 export interface ResolvedParameters {
     /** Primary C++ standard version being used */
-    main_cxxstd: string | null;
+    mainCxxstd: string | null;
     /** Whether the generator supports multiple configurations */
-    generator_is_multi_config: boolean;
+    generatorIsMultiConfig: boolean;
     /** Path to the CTest executable */
-    ctest_path: string;
+    ctestPath: string;
     /** Path to the CPack executable */
-    cpack_path: string;
+    cpackPath: string;
 }
 
 /**

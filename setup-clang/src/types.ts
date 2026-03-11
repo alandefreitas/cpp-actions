@@ -17,41 +17,41 @@ export type Inputs = InferInputs<typeof inputsSchema>;
  * Candidate versions and Ubuntu releases for Clang download attempts.
  */
 export interface ClangDownloadCandidates {
-    version_candidates: string[];
-    ubuntu_versions: string[];
+    versionCandidates: string[];
+    ubuntuVersions: string[];
 }
 
 /**
  * LLVM project URLs for downloading Clang releases.
  */
 export interface ClangUrls {
-    llvm_project_url: string;
-    llvm_releases_url: string;
-    old_llvm_releases_url: string;
+    llvmProjectUrl: string;
+    llvmReleasesUrl: string;
+    oldLlvmReleasesUrl: string;
 }
 
 /**
  * Result of a program search operation.
  */
 export interface ProgramResult {
-    output_version: string | null;
-    output_path: string | null;
+    outputVersion: string | null;
+    outputPath: string | null;
 }
 
 /**
  * Output values produced by Clang setup.
  */
 export interface MainOutputs {
-    output_path: string | null;
+    outputPath: string | null;
     cc: string | null;
     cxx: string | null;
     bindir: string;
     dir: string;
     version: string;
-    version_major: number;
-    version_minor: number;
-    version_patch: number;
-    symbolizer_path: string | null;
+    versionMajor: number;
+    versionMinor: number;
+    versionPatch: number;
+    symbolizerPath: string | null;
 }
 
 /**

@@ -27,8 +27,7 @@ import * as io from '@actions/io';
 import * as exec from '@actions/exec';
 import * as fs from 'fs';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const setup_program = require('setup-program');
+import * as setup_program from 'setup-program';
 
 import { ensureGit } from './index';
 import { describePrettyErrors } from 'pretty-errors/test-helper';

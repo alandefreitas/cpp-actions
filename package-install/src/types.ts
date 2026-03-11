@@ -17,6 +17,6 @@ export type Inputs = InferInputs<typeof inputsSchema>;
  * Output values from vcpkg installation.
  */
 export interface VcpkgOutputs {
-    vcpkg_executable?: string;
-    vcpkg_toolchain?: string;
+    vcpkgExecutable?: string;
+    vcpkgToolchain?: string;
 }

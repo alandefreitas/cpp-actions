@@ -5,7 +5,7 @@
  */
 
 import * as axios from 'axios';
-import { Commit, GitHubUser, Tag } from './types';
+import { type Commit, GitHubUser, type Tag } from './types';
 
 /**
  * Extracts the repository owner from a GitHub URL.
@@ -123,7 +123,7 @@ export async function getGithubTags(repoUrl: string | undefined, tagPattern: Reg
     while (true) {
         const params = {
             page: page,
-            per_page: perPage
+            perPage: perPage
         };
 
         try {
@@ -234,44 +234,44 @@ export async function getGithubUsername(email: string, accessToken: string): Pro
  */
 export async function populateGithubUsernames(commits: Commit[], accessToken: string): Promise<void> {
     for (const commit of commits) {
-        if (!commit.gh_username) {
+        if (!commit.ghUsername) {
             continue;
         }
-        let ghUsername = commit.gh_username;
-        let ghName = commit.gh_name;
+        const ghUsername = commit.ghUsername;
+        let ghName = commit.ghName;
         if (!ghName) {
             ghName = await getGithubProfileName(ghUsername, accessToken);
         }
         if (ghName) {
-            commit.gh_name = ghName;
+            commit.ghName = ghName;
             for (const commit2 of commits) {
-                if (commit2.author_email === commit.author_email) {
-                    commit2.gh_username = ghUsername;
-                    commit2.gh_name = ghName;
+                if (commit2.authorEmail === commit.authorEmail) {
+                    commit2.ghUsername = ghUsername;
+                    commit2.ghName = ghName;
                 }
             }
         }
     }
 
     for (const commit of commits) {
-        if (commit.gh_username) {
+        if (commit.ghUsername) {
             continue;
         }
-        if (!commit.author_email) {
+        if (!commit.authorEmail) {
             continue;
         }
-        const ghUsername = await getGithubUsername(commit.author_email, accessToken);
+        const ghUsername = await getGithubUsername(commit.authorEmail, accessToken);
         if (!ghUsername) {
             continue;
         }
         const ghName = await getGithubProfileName(ghUsername, accessToken);
         if (ghName) {
-            commit.gh_username = ghUsername;
-            commit.gh_name = ghName;
+            commit.ghUsername = ghUsername;
+            commit.ghName = ghName;
             for (const commit2 of commits) {
-                if (commit2.author_email === commit.author_email) {
-                    commit2.gh_username = ghUsername;
-                    commit2.gh_name = ghName;
+                if (commit2.authorEmail === commit.authorEmail) {
+                    commit2.ghUsername = ghUsername;
+                    commit2.ghName = ghName;
                 }
             }
         }
@@ -349,7 +349,7 @@ export async function checkUserInstitution(repoUrl: string, username: string, ac
             const organizations: { login: string }[] = [];
             let page = 1;
             while (true) {
-                const orgsUrl = `${organizationsUrl}?page=${page}&per_page=100`;
+                const orgsUrl = `${organizationsUrl}?page=${page}&perPage=100`;
                 const orgsResponse = await axios.default.get(orgsUrl, { headers });
                 if (orgsResponse.status === 200) {
                     const orgsData = orgsResponse.data;
@@ -398,36 +398,36 @@ export async function populateIssueData(commits: Commit[], repoUrl: string | und
     }
 
     for (const commit of commits) {
-        if (commit.gh_username) {
-            if (!authors[commit.gh_username]) {
-                authors[commit.gh_username] = new GitHubUser();
-                authors[commit.gh_username].username = commit.gh_username;
-                authors[commit.gh_username].name = commit.gh_name;
-                authors[commit.gh_username].commits = 1;
-                authors[commit.gh_username].commits_perc = 1 / commits.length;
-                if (repoOwner && repoOwner === commit.gh_username) {
-                    authors[commit.gh_username].is_owner = true;
+        if (commit.ghUsername) {
+            if (!authors[commit.ghUsername]) {
+                authors[commit.ghUsername] = new GitHubUser();
+                authors[commit.ghUsername].username = commit.ghUsername;
+                authors[commit.ghUsername].name = commit.ghName;
+                authors[commit.ghUsername].commits = 1;
+                authors[commit.ghUsername].commitsPerc = 1 / commits.length;
+                if (repoOwner && repoOwner === commit.ghUsername) {
+                    authors[commit.ghUsername].isOwner = true;
                 }
-                authors[commit.gh_username].is_admin = await checkGithubAdminPermissions(repoUrl, commit.gh_username, accessToken);
-                authors[commit.gh_username].is_affiliated = await checkUserInstitution(repoUrl, commit.gh_username, accessToken);
+                authors[commit.ghUsername].isAdmin = await checkGithubAdminPermissions(repoUrl, commit.ghUsername, accessToken);
+                authors[commit.ghUsername].isAffiliated = await checkUserInstitution(repoUrl, commit.ghUsername, accessToken);
             } else {
-                authors[commit.gh_username].commits += 1;
-                authors[commit.gh_username].commits_perc = authors[commit.gh_username].commits / commits.length;
+                authors[commit.ghUsername].commits += 1;
+                authors[commit.ghUsername].commitsPerc = authors[commit.ghUsername].commits / commits.length;
             }
         }
 
-        if (commit.gh_issue_username) {
-            if (!authors[commit.gh_issue_username]) {
-                authors[commit.gh_issue_username] = new GitHubUser();
-                authors[commit.gh_issue_username].username = commit.gh_issue_username;
-                authors[commit.gh_issue_username].name = await getGithubProfileName(commit.gh_issue_username, accessToken);
-                authors[commit.gh_issue_username].commits = 0;
-                authors[commit.gh_issue_username].commits_perc = 0;
-                if (repoOwner && repoOwner === commit.gh_issue_username) {
-                    authors[commit.gh_issue_username].is_owner = true;
+        if (commit.ghIssueUsername) {
+            if (!authors[commit.ghIssueUsername]) {
+                authors[commit.ghIssueUsername] = new GitHubUser();
+                authors[commit.ghIssueUsername].username = commit.ghIssueUsername;
+                authors[commit.ghIssueUsername].name = await getGithubProfileName(commit.ghIssueUsername, accessToken);
+                authors[commit.ghIssueUsername].commits = 0;
+                authors[commit.ghIssueUsername].commitsPerc = 0;
+                if (repoOwner && repoOwner === commit.ghIssueUsername) {
+                    authors[commit.ghIssueUsername].isOwner = true;
                 }
-                authors[commit.gh_issue_username].is_admin = await checkGithubAdminPermissions(repoUrl, commit.gh_issue_username, accessToken);
-                authors[commit.gh_issue_username].is_affiliated = await checkUserInstitution(repoUrl, commit.gh_issue_username, accessToken);
+                authors[commit.ghIssueUsername].isAdmin = await checkGithubAdminPermissions(repoUrl, commit.ghIssueUsername, accessToken);
+                authors[commit.ghIssueUsername].isAffiliated = await checkUserInstitution(repoUrl, commit.ghIssueUsername, accessToken);
             }
         }
     }

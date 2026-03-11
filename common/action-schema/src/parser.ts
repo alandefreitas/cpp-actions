@@ -11,16 +11,20 @@ import * as gh_inputs from 'gh-inputs';
 import type { ActionInputsSchema, InferInputs, InputSchema, InputTypeToTS } from './types';
 
 /**
- * Converts a snake_case key to kebab-case for GitHub Actions input names.
+ * Converts a snake_case or camelCase key to kebab-case for GitHub Actions.
  *
- * Schema keys use snake_case (TypeScript convention), while action.yml uses
+ * Schema keys use camelCase (TypeScript convention), while action.yml uses
  * kebab-case (GitHub Actions convention). This function bridges the two.
+ * Also handles legacy snake_case keys for backwards compatibility.
  *
- * @param key - The snake_case key (e.g., 'check_latest')
+ * @param key - The camelCase or snake_case key (e.g., 'checkLatest' or 'checkLatest')
  * @returns The kebab-case name (e.g., 'check-latest')
  */
 export function toKebabCase(key: string): string {
-    return key.replace(/_/g, '-');
+    return key
+        .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+        .replace(/_/g, '-')
+        .toLowerCase();
 }
 
 /**
@@ -127,7 +131,7 @@ function extractInput<T extends InputSchema>(
  * const inputs: Inputs = {
  *     version: gh_inputs.getInput('version', { defaultValue: '*' }),
  *     path: gh_inputs.getArray('path', /[:;]/),
- *     check_latest: gh_inputs.getBoolean('check-latest'),
+ *     checkLatest: gh_inputs.getBoolean('check-latest'),
  *     // ... etc
  * };
  * ```
@@ -145,13 +149,13 @@ function extractInput<T extends InputSchema>(
  * const schema = {
  *     version: { type: 'string' as const, default: '*', description: '...' },
  *     path: { type: 'string[]' as const, splitter: /[:;]/, description: '...' },
- *     check_latest: { type: 'boolean' as const, default: false, description: '...' }
+ *     checkLatest: { type: 'boolean' as const, default: false, description: '...' }
  * } satisfies ActionInputsSchema;
  *
  * const inputs = parseInputs(schema);
  * // inputs.version is string
  * // inputs.path is string[]
- * // inputs.check_latest is boolean
+ * // inputs.checkLatest is boolean
  * ```
  */
 export function parseInputs<S extends ActionInputsSchema>(schema: S): InferInputs<S> {

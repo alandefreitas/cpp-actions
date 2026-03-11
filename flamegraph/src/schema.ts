@@ -19,7 +19,7 @@ import {
 export const inputsSchema = {
     ...baseInputs,
 
-    source_dir: {
+    sourceDir: {
         type: 'path' as const,
         default: '.',
         description: `The source directory used to generate time-traces.
@@ -27,7 +27,7 @@ export const inputsSchema = {
 Relative paths in the report will be relative to the current working directory.`
     },
 
-    build_dir: {
+    buildDir: {
         type: 'path' as const,
         default: '.',
         description: `The directory with the time-traces.
@@ -40,7 +40,7 @@ be scanned in all subdirectories of the source-dir.
 If this is a relative path, it will be made relative to the current working directory.`
     },
 
-    output_path: {
+    outputPath: {
         type: 'path' as const,
         default: 'combined-traces.json',
         description: `The path where the combined traces will be stored.
@@ -48,7 +48,7 @@ If this is a relative path, it will be made relative to the current working dire
 If this is a relative path, it will be made relative to the build-dir.`
     },
 
-    report_path: {
+    reportPath: {
         type: 'path' as const,
         default: 'time-trace-report.md',
         description: `The path where the report will be stored.
@@ -56,13 +56,13 @@ If this is a relative path, it will be made relative to the build-dir.`
 If this is a relative path, it will be made relative to the build-dir.`
     },
 
-    generate_svg: {
+    generateSvg: {
         type: 'boolean' as const,
         default: true,
         description: 'Generate an SVG file with the output.'
     },
 
-    generate_report: {
+    generateReport: {
         type: 'boolean' as const,
         default: true,
         description: `Generate a markdown report analyzing compilation times.
@@ -73,7 +73,7 @@ The report includes:
 - Symbol analysis showing which templates and functions are slowest to parse/instantiate`
     },
 
-    update_summary: {
+    updateSummary: {
         type: 'boolean' as const,
         default: true,
         description: `Update the GitHub Actions job summary with the time-trace report.
@@ -82,13 +82,13 @@ When enabled, the compilation time analysis is displayed directly in the
 workflow run summary, making it easy to review without downloading artifacts.`
     },
 
-    github_token: {
+    githubToken: {
         type: 'string' as const,
         default: '',
         description: 'The GitHub token used to upload the artifacts.'
     },
 
-    upload_artifact: {
+    uploadArtifact: {
         type: 'boolean' as const,
         default: true,
         description: `Upload combined traces and visualizations as a GitHub Actions artifact.
@@ -104,10 +104,10 @@ The artifact includes:
  * Output schema for the flamegraph action.
  */
 export const outputsSchema = {
-    traces_path: {
+    tracesPath: {
         description: 'The absolute path to combined traces.'
     },
-    svg_path: {
+    svgPath: {
         description: 'The absolute path to svg file.'
     }
 } satisfies ActionOutputsSchema;

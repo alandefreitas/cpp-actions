@@ -8,13 +8,12 @@ import * as core from '@actions/core';
 import * as exec from '@actions/exec';
 import * as tc from '@actions/tool-cache';
 import * as io from '@actions/io';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 
-import { Inputs } from './types';
+import { type Inputs } from './types';
 import { formatTime, semverGteLoose } from './utils';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const setup_program = require('setup-program');
+import * as setup_program from 'setup-program';
 
 /**
  * Installs apt sources, keys, and packages with retries and version-aware flags.
@@ -23,35 +22,35 @@ const setup_program = require('setup-program');
  * configuration, and package installation with retry logic.
  *
  * @param inputs - Configuration inputs for APT package installation
- * @throws Error if package installation fails and ignore_missing is false
+ * @throws Error if package installation fails and ignoreMissing is false
  */
-export async function apt_get_main(inputs: Inputs): Promise<void> {
-    const fnlog = trace_commands.scoped('apt_get_main');
+export async function aptGetMain(inputs: Inputs): Promise<void> {
+    const fnlog = traceCommands.scoped('aptGetMain');
 
     core.startGroup('🔍 Find apt-get');
     fnlog(`Check if apt-get is installed`);
-    const apt_get_path = await io.which('apt-get', true);
-    const sudo_required = setup_program.isSudoRequired();
-    const sudoPrefix = sudo_required ? 'sudo ' : '';
-    core.info(`🧩 apt-get-path: ${apt_get_path}`);
-    core.info(`🧩 sudo-required: ${sudo_required}`);
+    const aptGetPath = await io.which('apt-get', true);
+    const sudoRequired = setup_program.isSudoRequired();
+    const sudoPrefix = sudoRequired ? 'sudo ' : '';
+    core.info(`🧩 apt-get-path: ${aptGetPath}`);
+    core.info(`🧩 sudo-required: ${sudoRequired}`);
 
     core.endGroup();
 
-    if (inputs.apt_get_source_keys.length > 0) {
+    if (inputs.aptGetSourceKeys.length > 0) {
         core.startGroup('🔑 Install apt-get source keys');
-        for (const key of inputs.apt_get_source_keys) {
+        for (const key of inputs.aptGetSourceKeys) {
             let retryTime = 2000;
-            for (let i = 0; i < inputs.apt_get_retries; i++) {
+            for (let i = 0; i < inputs.aptGetRetries; i++) {
                 core.info(`Add key ${key}`);
-                const key_path = await tc.downloadTool(key);
-                const exitCode = await exec.exec(`${sudoPrefix} apt-key add ${key_path}`, [], {
-                    ignoreReturnCode: i !== inputs.apt_get_retries - 1
+                const keyPath = await tc.downloadTool(key);
+                const exitCode = await exec.exec(`${sudoPrefix} apt-key add ${keyPath}`, [], {
+                    ignoreReturnCode: i !== inputs.aptGetRetries - 1
                 });
                 if (exitCode === 0) {
                     break;
                 }
-                if (i !== inputs.apt_get_retries - 1) {
+                if (i !== inputs.aptGetRetries - 1) {
                     core.info(`Failed to add key ${key}, retrying in ${formatTime(retryTime)}`);
                     await new Promise((resolve) => setTimeout(resolve, retryTime));
                     retryTime *= 2;
@@ -61,7 +60,7 @@ export async function apt_get_main(inputs: Inputs): Promise<void> {
         core.endGroup();
     }
 
-    if (inputs.apt_get_sources.length > 0) {
+    if (inputs.aptGetSources.length > 0) {
         core.startGroup('🌐 Install apt-get sources');
 
         // Get the version of software-properties-common
@@ -79,11 +78,11 @@ export async function apt_get_main(inputs: Inputs): Promise<void> {
         const aptAddRepoHasSourceArgs = semverGteLoose(softwarePropertiesCommonVersion, '0.98.10');
 
         // Iterate through each source and attempt to add it with retries
-        for (const source of inputs.apt_get_sources) {
+        for (const source of inputs.aptGetSources) {
             let retryTime = 2000;
 
             // Construct the arguments
-            let aptAddRepoArgs = [...aptAddRepoCommonArgs];
+            const aptAddRepoArgs = [...aptAddRepoCommonArgs];
 
             // Modify arguments based on source type
             if (aptAddRepoHasSourceArgs) {
@@ -100,17 +99,17 @@ export async function apt_get_main(inputs: Inputs): Promise<void> {
             }
             aptAddRepoArgs.push(source);
 
-            for (let i = 0; i < inputs.apt_get_retries; i++) {
+            for (let i = 0; i < inputs.aptGetRetries; i++) {
                 try {
                     // Execute the apt-add-repository command
                     const exitCode = await exec.exec(`${sudoPrefix} -E apt-add-repository ${aptAddRepoArgs.join(' ')}`, [], {
-                        ignoreReturnCode: i !== inputs.apt_get_retries - 1
+                        ignoreReturnCode: i !== inputs.aptGetRetries - 1
                     });
                     if (exitCode === 0) {
                         core.info(`Added source ${source}`);
                         break;
                     }
-                    if (i !== inputs.apt_get_retries - 1) {
+                    if (i !== inputs.aptGetRetries - 1) {
                         core.info(`Failed to add source ${source}, retrying in ${formatTime(retryTime)}`);
                         await new Promise((resolve) => setTimeout(resolve, retryTime));
                         retryTime *= 2;
@@ -126,9 +125,9 @@ export async function apt_get_main(inputs: Inputs): Promise<void> {
     }
 
     // Add architectures
-    if (inputs.apt_get_add_architecture.length > 0) {
+    if (inputs.aptGetAddArchitecture.length > 0) {
         core.startGroup('📦 Add architectures');
-        for (const arch of inputs.apt_get_add_architecture) {
+        for (const arch of inputs.aptGetAddArchitecture) {
             await exec.exec(`${sudoPrefix} dpkg --add-architecture ${arch}`, []);
         }
         core.endGroup();
@@ -137,16 +136,16 @@ export async function apt_get_main(inputs: Inputs): Promise<void> {
     // Update apt-get
     // $sudo_prefix apt-get -o Acquire::Retries=${{ inputs.apt-get-retries }} update
     core.startGroup('♻️ Update apt-get');
-    await exec.exec(`${sudoPrefix} apt-get -o Acquire::Retries=${inputs.apt_get_retries} update`, []);
+    await exec.exec(`${sudoPrefix} apt-get -o Acquire::Retries=${inputs.aptGetRetries} update`, []);
     core.endGroup();
 
     // Install packages
-    if (inputs.apt_get_ignore_missing || !inputs.apt_get_bulk_install) {
+    if (inputs.aptGetIgnoreMissing || !inputs.aptGetBulkInstall) {
         for (const pkg of inputs.apt_get) {
             core.startGroup('📦 Install apt-get package: ' + pkg);
-            const args = inputs.apt_get_ignore_missing ?
-                ['-o', 'Acquire::Retries=' + inputs.apt_get_retries, '--ignore-missing', 'install', '-y', pkg] :
-                ['-o', 'Acquire::Retries=' + inputs.apt_get_retries, 'install', '-y', pkg];
+            const args = inputs.aptGetIgnoreMissing ?
+                ['-o', 'Acquire::Retries=' + inputs.aptGetRetries, '--ignore-missing', 'install', '-y', pkg] :
+                ['-o', 'Acquire::Retries=' + inputs.aptGetRetries, 'install', '-y', pkg];
             const exitCode = await exec.exec(`${sudoPrefix} apt-get`, args, {
                 env: {
                     // set the DEBIAN_FRONTEND environment variable to
@@ -158,7 +157,7 @@ export async function apt_get_main(inputs: Inputs): Promise<void> {
                 },
                 ignoreReturnCode: true
             });
-            if (exitCode !== 0 && !inputs.apt_get_ignore_missing) {
+            if (exitCode !== 0 && !inputs.aptGetIgnoreMissing) {
                 core.endGroup();
                 throw new Error(`Failed to install package ${pkg}`);
             }
@@ -166,7 +165,7 @@ export async function apt_get_main(inputs: Inputs): Promise<void> {
         }
     } else {
         core.startGroup('📦 Install apt-get packages');
-        await exec.exec(`${sudoPrefix} apt-get -o Acquire::Retries=${inputs.apt_get_retries} install -y ${inputs.apt_get.join(' ')}`, []);
+        await exec.exec(`${sudoPrefix} apt-get -o Acquire::Retries=${inputs.aptGetRetries} install -y ${inputs.apt_get.join(' ')}`, []);
         core.endGroup();
     }
 }

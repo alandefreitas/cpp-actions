@@ -6,10 +6,9 @@
 
 import * as semver from 'semver';
 
-import { Inputs, MatrixEntry } from './types';
+import { type Inputs, type MatrixEntry } from './types';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const setup_program = require('setup-program');
+import * as setup_program from 'setup-program';
 
 /**
  * Applies latest factors to the matrix by duplicating latest entry.
@@ -24,25 +23,25 @@ export function applyLatestFactors(matrix: MatrixEntry[], inputs: Inputs, latest
     // Apply latest factors for this compiler.
     // We duplicate the latest entry for each latest factor and set the
     // property to true for each duplicated entry.
-    if (compilerName in inputs.latest_factors) {
+    if (compilerName in inputs.latestFactors) {
         // Duplicate latest entry for each latest factor and set properties
-        for (const factor of inputs.latest_factors[compilerName]) {
-            let latest_copy = { ...matrix[latestIdx] };
-            latest_copy['is-main'] = false;
-            for (const composite_factor of factor.split('+')) {
-                latest_copy[composite_factor.toLowerCase()] = true;
+        for (const factor of inputs.latestFactors[compilerName]) {
+            const latestCopy = { ...matrix[latestIdx] };
+            latestCopy['is-main'] = false;
+            for (const compositeFactor of factor.split('+')) {
+                latestCopy[compositeFactor.toLowerCase()] = true;
             }
-            latest_copy['has-factors'] = true;
-            latest_copy['name'] += ` (${factor})`;
-            matrix.push(latest_copy);
+            latestCopy['has-factors'] = true;
+            latestCopy['name'] += ` (${factor})`;
+            matrix.push(latestCopy);
         }
 
         // Set the property to false for all other entries
         for (let i = 0; i < matrix.length; i++) {
-            for (const factor of inputs.latest_factors[compilerName]) {
-                for (const composite_factor of factor.split('+')) {
-                    if (!(composite_factor.toLowerCase() in matrix[i])) {
-                        matrix[i][composite_factor.toLowerCase()] = false;
+            for (const factor of inputs.latestFactors[compilerName]) {
+                for (const compositeFactor of factor.split('+')) {
+                    if (!(compositeFactor.toLowerCase() in matrix[i])) {
+                        matrix[i][compositeFactor.toLowerCase()] = false;
                     }
                 }
             }
@@ -71,8 +70,8 @@ export function applyVariantFactors(matrix: MatrixEntry[], inputs: Inputs, lates
         // Apply each variant factor to the intermediary entries
         for (const factor of inputs.factors[compilerName]) {
             if (variantIdx !== earliestIdx) {
-                for (const composite_factor of factor.split('+')) {
-                    matrix[variantIdx][composite_factor.toLowerCase()] = true;
+                for (const compositeFactor of factor.split('+')) {
+                    matrix[variantIdx][compositeFactor.toLowerCase()] = true;
                 }
                 matrix[variantIdx]['name'] += ` (${factor})`;
                 matrix[variantIdx]['has-factors'] = true;
@@ -81,22 +80,22 @@ export function applyVariantFactors(matrix: MatrixEntry[], inputs: Inputs, lates
                 // If we reached the earliest entry by doing that,
                 // we need to duplicate the latest entry to apply new
                 // factors
-                let latest_copy = { ...matrix[latestIdx] };
-                latest_copy['is-main'] = false;
-                for (const composite_factor of factor.split('+')) {
-                    latest_copy[composite_factor.toLowerCase()] = true;
+                const latestCopy = { ...matrix[latestIdx] };
+                latestCopy['is-main'] = false;
+                for (const compositeFactor of factor.split('+')) {
+                    latestCopy[compositeFactor.toLowerCase()] = true;
                 }
-                latest_copy['name'] += ` (${factor})`;
-                latest_copy['has-factors'] = true;
-                matrix.push(latest_copy);
+                latestCopy['name'] += ` (${factor})`;
+                latestCopy['has-factors'] = true;
+                matrix.push(latestCopy);
             }
         }
         // Set the property to false for all other entries
         for (let i = 0; i < matrix.length; i++) {
             for (const factor of inputs.factors[compilerName]) {
-                for (const composite_factor of factor.split('+')) {
-                    if (!(composite_factor.toLowerCase() in matrix[i])) {
-                        matrix[i][composite_factor.toLowerCase()] = false;
+                for (const compositeFactor of factor.split('+')) {
+                    if (!(compositeFactor.toLowerCase() in matrix[i])) {
+                        matrix[i][compositeFactor.toLowerCase()] = false;
                     }
                 }
             }
@@ -117,25 +116,25 @@ export function applyCombinatorialFactors(matrix: MatrixEntry[], inputs: Inputs,
     // Apply combinatorial factors for this compiler
     // For each entry, we create a copy that set that factor to true
     // Here we go:
-    if (compilerName in inputs.combinatorial_factors) {
+    if (compilerName in inputs.combinatorialFactors) {
         // Apply each combinatorial factor to each entry
-        for (const factor of inputs.combinatorial_factors[compilerName]) {
+        for (const factor of inputs.combinatorialFactors[compilerName]) {
             for (let i = earliestIdx; i < latestIdx + 1; i++) {
-                let entry_copy = { ...matrix[i] };
-                for (const composite_factor of factor.split('+')) {
-                    entry_copy[composite_factor.toLowerCase()] = true;
+                const entryCopy = { ...matrix[i] };
+                for (const compositeFactor of factor.split('+')) {
+                    entryCopy[compositeFactor.toLowerCase()] = true;
                 }
-                entry_copy['name'] += ` (${factor})`;
-                entry_copy['has-factors'] = true;
-                matrix.push(entry_copy);
+                entryCopy['name'] += ` (${factor})`;
+                entryCopy['has-factors'] = true;
+                matrix.push(entryCopy);
             }
         }
         // Set the property to false for all other entries
         for (let i = 0; i < matrix.length; i++) {
-            for (const factor of inputs.combinatorial_factors[compilerName]) {
-                for (const composite_factor of factor.split('+')) {
-                    if (!(composite_factor.toLowerCase() in matrix[i])) {
-                        matrix[i][composite_factor.toLowerCase()] = false;
+            for (const factor of inputs.combinatorialFactors[compilerName]) {
+                for (const compositeFactor of factor.split('+')) {
+                    if (!(compositeFactor.toLowerCase() in matrix[i])) {
+                        matrix[i][compositeFactor.toLowerCase()] = false;
                     }
                 }
             }
@@ -160,14 +159,14 @@ export async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): P
     entry['arch'] = normalizedArch;
 
     // Flags for asan
-    let sanitizers: string[] = [];
-    let supportsAsan = ['gcc', 'clang', 'msvc'].includes(entry['compiler']);
+    const sanitizers: string[] = [];
+    const supportsAsan = ['gcc', 'clang', 'msvc'].includes(entry['compiler']);
     if ('asan' in entry && entry['asan'] === true && supportsAsan) {
         sanitizers.push('address');
     }
 
     // Flags for ubsan
-    let supportsSanitizers = ['gcc', 'clang'].includes(entry['compiler']);
+    const supportsSanitizers = ['gcc', 'clang'].includes(entry['compiler']);
     let needsUbsanOptions = false;
     if ('ubsan' in entry && entry['ubsan'] === true && supportsSanitizers) {
         sanitizers.push('undefined');
@@ -241,16 +240,16 @@ export async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): P
 
     if (sanitizers.length !== 0 || lsanExtraFlags !== '') {
         const hasSanitizers = sanitizers.length !== 0;
-        let sanitizer_flags = '';
+        let sanitizerFlags = '';
         if (hasSanitizers) {
-            const sanitizers_str = sanitizers.join(',');
-            sanitizer_flags = entry['compiler'] === 'msvc' ?
-                ` /fsanitize=${sanitizers_str}` :
-                ` -fsanitize=${sanitizers_str} -fno-sanitize-recover=${sanitizers_str} -fno-omit-frame-pointer`;
+            const sanitizersStr = sanitizers.join(',');
+            sanitizerFlags = entry['compiler'] === 'msvc' ?
+                ` /fsanitize=${sanitizersStr}` :
+                ` -fsanitize=${sanitizersStr} -fno-sanitize-recover=${sanitizersStr} -fno-omit-frame-pointer`;
         }
-        entry['cxxflags'] += sanitizer_flags + lsanExtraFlags + cfiExtraFlags;
-        entry['ccflags'] += sanitizer_flags + lsanExtraFlags + cfiExtraFlags;
-        entry['build-type'] = inputs.sanitizer_build_type || 'Release';
+        entry['cxxflags'] += sanitizerFlags + lsanExtraFlags + cfiExtraFlags;
+        entry['ccflags'] += sanitizerFlags + lsanExtraFlags + cfiExtraFlags;
+        entry['build-type'] = inputs.sanitizerBuildType || 'Release';
     }
 
     // Flags for coverage
@@ -272,7 +271,7 @@ export async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): P
             entry['cxxflags'] += ' -m32';
             entry['ccflags'] += ' -m32';
         }
-        entry['build-type'] = inputs.x86_build_type || 'Release';
+        entry['build-type'] = inputs.x86BuildType || 'Release';
     }
 
     // Flags for time-trace
@@ -313,14 +312,14 @@ export async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): P
     entry['ccflags'] = entry['ccflags'].trim();
 
     // Include vcpkg triplet recommendations (vcpkg help triplet)
-    const arch_prefix = entry['arch'] || 'x64';
+    const archPrefix = entry['arch'] || 'x64';
     if (['msvc', 'clang-cl'].includes(entry['compiler'])) {
-        entry['triplet'] = `${arch_prefix}-windows`;
+        entry['triplet'] = `${archPrefix}-windows`;
     } else if (entry['compiler'] === 'mingw') {
-        entry['triplet'] = `${arch_prefix}-mingw-static`;
+        entry['triplet'] = `${archPrefix}-mingw-static`;
     } else if (entry['compiler'] === 'apple-clang') {
-        entry['triplet'] = `${arch_prefix}-osx`;
+        entry['triplet'] = `${archPrefix}-osx`;
     } else {
-        entry['triplet'] = `${arch_prefix}-linux`;
+        entry['triplet'] = `${archPrefix}-linux`;
     }
 }

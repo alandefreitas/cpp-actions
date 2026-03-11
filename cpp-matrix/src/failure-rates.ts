@@ -4,10 +4,10 @@
  * @module failure-rates
  */
 
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 import * as httpClient from '@actions/http-client';
 
-import { FailureRates, MatrixEntry, WorkflowJob, WorkflowRun } from './types';
+import { type FailureRates, type MatrixEntry, type WorkflowJob, type WorkflowRun } from './types';
 
 /**
  * API Design Note (Dec 2025):
@@ -41,7 +41,7 @@ import { FailureRates, MatrixEntry, WorkflowJob, WorkflowRun } from './types';
  * @returns Map of job names to failure rates (0.0 to 1.0), or null if unavailable
  */
 export async function fetchFailureRates(numRuns: number, token: string): Promise<FailureRates | null> {
-    const fnlog = trace_commands.scoped('fetchFailureRates');
+    const fnlog = traceCommands.scoped('fetchFailureRates');
 
     const effectiveToken = token || process.env.GITHUB_TOKEN;
     if (!effectiveToken) {
@@ -81,7 +81,7 @@ export async function fetchFailureRates(numRuns: number, token: string): Promise
         });
 
         // Fetch recent workflow runs
-        const runsUrl = `https://api.github.com/repos/${repository}/actions/workflows/${workflowFile}/runs?per_page=${numRuns}&status=completed`;
+        const runsUrl = `https://api.github.com/repos/${repository}/actions/workflows/${workflowFile}/runs?perPage=${numRuns}&status=completed`;
         fnlog(`Fetching workflow runs from: ${runsUrl}`);
 
         const runsResponse = await client.get(runsUrl);
@@ -106,7 +106,7 @@ export async function fetchFailureRates(numRuns: number, token: string): Promise
 
         // Fetch jobs for all runs in parallel
         const jobPromises = runs.map(async (run) => {
-            const jobsUrl = `https://api.github.com/repos/${repository}/actions/runs/${run.id}/jobs?per_page=100`;
+            const jobsUrl = `https://api.github.com/repos/${repository}/actions/runs/${run.id}/jobs?perPage=100`;
             try {
                 const jobsResponse = await client.get(jobsUrl);
                 if (jobsResponse.message.statusCode !== 200) {
@@ -116,7 +116,7 @@ export async function fetchFailureRates(numRuns: number, token: string): Promise
                 const jobsBody = await jobsResponse.readBody();
                 const jobsData = JSON.parse(jobsBody);
                 return (jobsData.jobs || []) as WorkflowJob[];
-            } catch (error) {
+            } catch {
                 fnlog(`Error fetching jobs for run ${run.id}`);
                 return [];
             }
@@ -170,7 +170,7 @@ export async function fetchFailureRates(numRuns: number, token: string): Promise
  * @param failureRates - Map of job names to failure rates
  */
 export function sortByFailureRate(matrix: MatrixEntry[], failureRates: FailureRates): void {
-    const fnlog = trace_commands.scoped('sortByFailureRate');
+    const fnlog = traceCommands.scoped('sortByFailureRate');
 
     if (Object.keys(failureRates).length === 0) {
         fnlog('No failure rate data available, skipping sort');

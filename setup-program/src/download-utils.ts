@@ -10,9 +10,9 @@ import * as os from 'os';
 import * as tc from '@actions/tool-cache';
 import * as io from '@actions/io';
 import * as exec from '@actions/exec';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 
-import { ExecOutput } from './types';
+import { type ExecOutput } from './types';
 
 /**
  * Extracts a tar archive to a destination directory.
@@ -27,7 +27,7 @@ import { ExecOutput } from './types';
  * @throws Error if extraction fails
  */
 export async function extractTar(tarPath: string, destPath: string | undefined, flags: string | undefined = undefined): Promise<string> {
-    const fnlog = trace_commands.scoped('extractTar');
+    const fnlog = traceCommands.scoped('extractTar');
 
     const IS_WINDOWS = process.platform === 'win32';
     if (!IS_WINDOWS) {
@@ -128,7 +128,7 @@ export async function extractTar(tarPath: string, destPath: string | undefined, 
  * @returns Path to the extracted contents, or undefined if extraction failed
  */
 export async function downloadAndExtract(url: string, destPath: string | undefined = undefined): Promise<string | undefined> {
-    const fnlog = trace_commands.scoped('downloadAndExtract');
+    const fnlog = traceCommands.scoped('downloadAndExtract');
 
     let extPath: string | undefined = undefined;
     try {
@@ -169,16 +169,16 @@ export async function downloadAndExtract(url: string, destPath: string | undefin
         if (url.endsWith('.zip')) {
             extPath = await tc.extractZip(toolPath, destPath);
         } else if (url.endsWith('.tar')) {
-            const flags = trace_commands.enabled() ? '-vx' : '-x';
+            const flags = traceCommands.enabled() ? '-vx' : '-x';
             extPath = await extractTar(toolPath, destPath, flags);
         } else if (url.endsWith('.tar.gz')) {
-            const flags = trace_commands.enabled() ? '-vxz' : '-xz';
+            const flags = traceCommands.enabled() ? '-vxz' : '-xz';
             extPath = await extractTar(toolPath, destPath, flags);
         } else if (url.endsWith('.tar.xz')) {
-            const flags = trace_commands.enabled() ? '-vxJ' : '-xJ';
+            const flags = traceCommands.enabled() ? '-vxJ' : '-xJ';
             extPath = await extractTar(toolPath, destPath, flags);
         } else if (url.endsWith('.tar.bz2')) {
-            const flags = trace_commands.enabled() ? '-vxj' : '-xj';
+            const flags = traceCommands.enabled() ? '-vxj' : '-xj';
             extPath = await extractTar(toolPath, destPath, flags);
         } else if (url.endsWith('.7z')) {
             extPath = await tc.extract7z(toolPath, destPath);
@@ -207,7 +207,7 @@ export async function downloadAndExtract(url: string, destPath: string | undefin
  * @returns True if a directory was stripped, false otherwise
  */
 export async function stripSingleDirectoryFromPath(dirPath: string): Promise<boolean> {
-    const fnlog = trace_commands.scoped('stripSingleDirectoryFromPath');
+    const fnlog = traceCommands.scoped('stripSingleDirectoryFromPath');
 
     fnlog(`Checking if ${dirPath} contains a single directory`);
     const files = fs.readdirSync(dirPath);

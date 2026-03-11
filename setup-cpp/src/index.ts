@@ -4,18 +4,15 @@ import * as semver from 'semver';
 import * as fs from 'fs';
 import * as exec from '@actions/exec';
 import * as path from 'path';
-import * as trace_commands from 'trace-commands';
+import * as traceCommands from 'trace-commands';
 import { runAction } from 'action-schema';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const setup_gcc = require('setup-gcc');
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const setup_clang = require('setup-clang');
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const setup_msvc = require('setup-msvc');
+import * as setup_gcc from 'setup-gcc';
+import * as setup_clang from 'setup-clang';
+import * as setup_msvc from 'setup-msvc';
 
 // Type imports and re-exports
-import { NormalizedCompiler, Inputs, SetupResult } from './types';
+import { type NormalizedCompiler, type Inputs, type SetupResult } from './types';
 export type { NormalizedCompiler, Inputs, SetupResult }
 
 // Schema imports
@@ -40,16 +37,16 @@ export { inputsSchema, outputsSchema };
  */
 export function normalizeCompiler(compiler: string, version: string): NormalizedCompiler {
     const parts = compiler.split(/-|\s/);
-    const num_parts = parts.length;
+    const numParts = parts.length;
 
     // Split compiler from version in the compiler name
     // If the compiler is something like "gcc-10.2.0", we need to split it
-    if (num_parts !== 1 && /[\d\\.]+/.test(parts[num_parts - 1])) {
+    if (numParts !== 1 && /[\d\\.]+/.test(parts[numParts - 1])) {
         compiler = parts[0];
-        for (let i = 1; i < num_parts - 1; i++) {
+        for (let i = 1; i < numParts - 1; i++) {
             compiler += `-${parts[i]}`;
         }
-        version = parts[num_parts - 1];
+        version = parts[numParts - 1];
     }
 
     // Normalize compiler name
@@ -134,47 +131,47 @@ async function main(inputs: Inputs): Promise<Record<string, unknown>> {
     // Normalize compiler and version
     const { compiler, version } = normalizeCompiler(inputs.compiler, inputs.version);
 
-    let output_path: string | null = null;
+    let outputPath: string | null = null;
     let cc: string | null = null;
     let cxx: string | null = null;
     let bindir: string | null = null;
     let dir: string | null = null;
     let release: string | null = null;
-    let version_major: number | null = null;
-    let version_minor: number | null = null;
-    let version_patch: number | null = null;
+    let versionMajor: number | null = null;
+    let versionMinor: number | null = null;
+    let versionPatch: number | null = null;
 
     if (['clang', 'gcc'].includes(compiler) && process.platform === 'linux') {
-        trace_commands.log(`compiler: ${compiler}... forwarding to setup ${compiler} action.`);
+        traceCommands.log(`compiler: ${compiler}... forwarding to setup ${compiler} action.`);
         let setupResult: SetupResult | null = null;
         if (compiler === 'clang') {
             setupResult = await setup_clang.main(
                 version,
                 inputs.path,
-                inputs.check_latest,
-                inputs.update_environment
+                inputs.checkLatest,
+                inputs.updateEnvironment
             );
         } else if (compiler === 'gcc') {
             setupResult = await setup_gcc.main(
                 version,
                 inputs.path,
-                inputs.check_latest,
-                inputs.update_environment
+                inputs.checkLatest,
+                inputs.updateEnvironment
             );
         }
         if (setupResult !== null) {
-            output_path = setupResult.output_path;
+            outputPath = setupResult.outputPath ?? null;
             cc = setupResult.cc;
             cxx = setupResult.cxx;
             bindir = setupResult.bindir;
             dir = setupResult.dir;
-            release = setupResult.release;
-            version_major = setupResult.version_major;
-            version_minor = setupResult.version_minor;
-            version_patch = setupResult.version_patch;
+            release = setupResult.release ?? null;
+            versionMajor = setupResult.versionMajor;
+            versionMinor = setupResult.versionMinor;
+            versionPatch = setupResult.versionPatch;
         }
     } else if (compiler === 'msvc') {
-        trace_commands.log(`compiler: ${compiler}... forwarding to setup-msvc.`);
+        traceCommands.log(`compiler: ${compiler}... forwarding to setup-msvc.`);
         const arch = resolveMSVCArch(normalizedArch, process.env['PROCESSOR_ARCHITECTURE']);
         let msvcOutputs: SetupResult;
         try {
@@ -193,72 +190,72 @@ async function main(inputs: Inputs): Promise<Record<string, unknown>> {
         }
         core.startGroup('📗 MSVC Environment Variables');
         for (const [key, value] of Object.entries(process.env)) {
-            trace_commands.log(`${key}: ${value}`);
+            traceCommands.log(`${key}: ${value}`);
         }
         core.endGroup();
-        output_path = msvcOutputs.cc;
+        outputPath = msvcOutputs.cc;
         cc = msvcOutputs.cc;
         cxx = msvcOutputs.cxx;
         bindir = msvcOutputs.bindir;
         dir = msvcOutputs.dir;
-        release = msvcOutputs.release;
-        version_major = msvcOutputs.version_major;
-        version_minor = msvcOutputs.version_minor;
-        version_patch = msvcOutputs.version_patch;
+        release = msvcOutputs.release ?? null;
+        versionMajor = msvcOutputs.versionMajor;
+        versionMinor = msvcOutputs.versionMinor;
+        versionPatch = msvcOutputs.versionPatch;
     } else if (['mingw', 'mingw32', 'mingw64', 'gcc', 'clang', 'clang-cl'].includes(compiler)) {
         core.startGroup(`🔍 Searching for ${compiler}`);
-        trace_commands.log(`compiler: ${compiler}... looking for compiler in PATH.`);
-        let which_arg: string;
+        traceCommands.log(`compiler: ${compiler}... looking for compiler in PATH.`);
+        let whichArg: string;
         if (['mingw', 'mingw32', 'mingw64', 'gcc'].includes(compiler)) {
-            which_arg = 'gcc';
+            whichArg = 'gcc';
         } else if (compiler === 'clang' && process.platform === 'win32') {
-            which_arg = 'clang-cl';
+            whichArg = 'clang-cl';
         } else {
-            which_arg = compiler;
+            whichArg = compiler;
         }
         // Check if executable exists
-        let compiler_path: string | null;
+        let compilerPath: string | null;
         try {
-            compiler_path = await io.which(which_arg);
+            compilerPath = await io.which(whichArg);
         } catch {
-            compiler_path = null;
+            compilerPath = null;
         }
-        if (compiler_path === null || compiler_path === '') {
-            core.setFailed(`Cannot find ${which_arg}`);
+        if (compilerPath === null || compilerPath === '') {
+            core.setFailed(`Cannot find ${whichArg}`);
         } else {
             // Set outputs
-            output_path = compiler_path;
-            cc = compiler_path;
-            cxx = compiler_path.replace(/gcc/g, 'g++').replace(/clang/g, 'clang++');
+            outputPath = compilerPath;
+            cc = compilerPath;
+            cxx = compilerPath.replace(/gcc/g, 'g++').replace(/clang/g, 'clang++');
             if (!fs.existsSync(cxx)) {
                 cxx = cc;
             }
-            bindir = path.dirname(output_path);
+            bindir = path.dirname(outputPath);
             dir = path.dirname(bindir);
 
             // Get version
-            const { exitCode, stdout } = await exec.getExecOutput(`"${output_path}"`, ['--version']);
-            const version_output = stdout.trim();
+            const { exitCode, stdout } = await exec.getExecOutput(`"${outputPath}"`, ['--version']);
+            const versionOutput = stdout.trim();
             if (exitCode !== 0) {
-                trace_commands.log(`Path program ${output_path} --version exited with code ${exitCode}`);
+                traceCommands.log(`Path program ${outputPath} --version exited with code ${exitCode}`);
                 release = '0.0.0';
-                version_major = 0;
-                version_minor = 0;
-                version_patch = 0;
+                versionMajor = 0;
+                versionMinor = 0;
+                versionPatch = 0;
             } else {
-                const version_regexes = [/(\d+\.\d+\.\d+)/, /(\d+\.\d+)/, /(\d+)/];
-                for (const version_regex of version_regexes) {
-                    const version_matches = version_output.match(version_regex);
-                    if (version_matches !== null) {
-                        const version_str = version_matches[1];
-                        const parsedVersion = semver.coerce(version_str, { loose: true });
+                const versionRegexes = [/(\d+\.\d+\.\d+)/, /(\d+\.\d+)/, /(\d+)/];
+                for (const versionRegex of versionRegexes) {
+                    const versionMatches = versionOutput.match(versionRegex);
+                    if (versionMatches !== null) {
+                        const versionStr = versionMatches[1];
+                        const parsedVersion = semver.coerce(versionStr, { loose: true });
                         if (parsedVersion === null) {
                             continue;
                         }
                         release = parsedVersion.toString();
-                        version_major = parsedVersion.major;
-                        version_minor = parsedVersion.minor;
-                        version_patch = parsedVersion.patch;
+                        versionMajor = parsedVersion.major;
+                        versionMinor = parsedVersion.minor;
+                        versionPatch = parsedVersion.patch;
                         break;
                     }
                 }
@@ -268,16 +265,16 @@ async function main(inputs: Inputs): Promise<Record<string, unknown>> {
     }
 
     // Return outputs
-    if (output_path !== null && output_path !== undefined) {
+    if (outputPath !== null && outputPath !== undefined) {
         return {
             cc,
             cxx,
             bindir,
             dir,
             version: release,
-            version_major,
-            version_minor,
-            version_patch
+            versionMajor,
+            versionMinor,
+            versionPatch
         };
     }
 
