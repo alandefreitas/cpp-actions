@@ -80,6 +80,9 @@ export interface Inputs {
     ccflags: CompilerSuggestion[];
     cxxflags: CompilerSuggestion[];
     install: CompilerSuggestion[];
+    append_ccflags: CompilerSuggestion[];
+    append_cxxflags: CompilerSuggestion[];
+    append_install: CompilerSuggestion[];
     triplets: CompilerSuggestion[];
     build_types: CompilerSuggestion[];
     default_build_type: string;

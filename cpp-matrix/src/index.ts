@@ -50,6 +50,7 @@ import {
     setCompilerContainerNoVersion,
     isArrayOfObjects,
     setSuggestion,
+    appendSuggestion,
     applyForcedFactors,
     setCompilerContainer,
     setCompilerB2Toolset,
@@ -330,6 +331,9 @@ export async function generateMatrix(inputs: Inputs): Promise<MatrixEntry[]> {
         setSuggestion(entry, 'install', inputs.install, entry.version);
         setSuggestion(entry, 'triplet', inputs.triplets, entry.version);
         setSuggestion(entry, 'build-type', inputs.build_types, entry.version);
+        appendSuggestion(entry, 'ccflags', inputs.append_ccflags, entry.version);
+        appendSuggestion(entry, 'cxxflags', inputs.append_cxxflags, entry.version);
+        appendSuggestion(entry, 'install', inputs.append_install, entry.version);
         applyForcedFactors(entry, inputs.force_factors, entry.version);
     }
     printMatrix();
@@ -792,6 +796,9 @@ function convertRawInputs(raw: RawInputs): Inputs {
         ccflags: parseCompilerSuggestions(raw.ccflags, compilerKeys),
         cxxflags: parseCompilerSuggestions(raw.cxxflags, compilerKeys),
         install: parseCompilerSuggestions(raw.install, compilerKeys),
+        append_ccflags: parseCompilerSuggestions(raw.append_ccflags, compilerKeys),
+        append_cxxflags: parseCompilerSuggestions(raw.append_cxxflags, compilerKeys),
+        append_install: parseCompilerSuggestions(raw.append_install, compilerKeys),
         triplets: parseCompilerSuggestions(raw.triplets, compilerKeys),
         build_types: parseCompilerSuggestions(raw.build_types, compilerKeys),
 

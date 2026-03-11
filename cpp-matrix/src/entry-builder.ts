@@ -162,6 +162,48 @@ export function setSuggestion(entry: MatrixEntry, key: string, suggestionMap: Co
 }
 
 /**
+ * Appends a suggestion value to an existing matrix entry field.
+ *
+ * Unlike {@link setSuggestion} which replaces the value, this function
+ * appends the suggestion value to the existing value with a space separator.
+ * This is useful for accumulative fields like `install`, `ccflags`, and
+ * `cxxflags` where `setRecommendedFlags` already builds up values from
+ * factors.
+ *
+ * @param entry - Matrix entry to update
+ * @param key - Key to append to on the entry
+ * @param suggestionMap - Array of suggestions to match against
+ * @param subrange - Version subrange for matching
+ * @returns True if a suggestion was appended
+ */
+export function appendSuggestion(entry: MatrixEntry, key: string, suggestionMap: CompilerSuggestion[], subrange: string): boolean {
+    if (isArrayOfObjects(suggestionMap)) {
+        let appended = false;
+        for (const userSuggestion of suggestionMap) {
+            if (userSuggestion.factor !== undefined && userSuggestion.compiler === entry.compiler) {
+                const factor_key = userSuggestion.factor.toLowerCase();
+                if (entry[factor_key]) {
+                    const existing = typeof entry[key] === 'string' ? entry[key].trim() : '';
+                    entry[key] = existing ? `${existing} ${userSuggestion.value}` : userSuggestion.value;
+                    appended = true;
+                }
+            }
+        }
+        for (const userSuggestion of suggestionMap) {
+            if (userSuggestion.range !== undefined && userSuggestion.compiler === entry.compiler) {
+                if (semver.subset(subrange, userSuggestion.range)) {
+                    const existing = typeof entry[key] === 'string' ? entry[key].trim() : '';
+                    entry[key] = existing ? `${existing} ${userSuggestion.value}` : userSuggestion.value;
+                    appended = true;
+                }
+            }
+        }
+        return appended;
+    }
+    return false;
+}
+
+/**
  * Applies forced factors from suggestions to a matrix entry.
  *
  * @param entry - Matrix entry to update

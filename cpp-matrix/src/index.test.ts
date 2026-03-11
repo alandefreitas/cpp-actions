@@ -50,6 +50,9 @@ function makeDefaultMatrixInputs(overrides: Partial<Inputs> = {}): Inputs {
         ccflags: [],
         cxxflags: [],
         install: [],
+        append_ccflags: [],
+        append_cxxflags: [],
+        append_install: [],
         triplets: [],
         build_types: [],
         default_build_type: 'Release',
@@ -274,6 +277,328 @@ test('generates entries for compilers with no known versions', async () => {
     } finally {
         warnSpy.mockRestore();
     }
+});
+
+describe('setRecommendedFlags sanitizer factors', () => {
+    test('asan on gcc produces -fsanitize=address', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compiler_versions: { gcc: '>=13' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            max_standards: 1,
+            latest_factors: { gcc: ['Asan'] }
+        });
+        const matrix = await generateMatrix(inputs);
+        const entry = matrix.find(e => e.compiler === 'gcc' && e.asan === true);
+        expect(entry).toBeDefined();
+        expect(entry?.cxxflags).toContain('-fsanitize=address');
+        expect(entry?.cxxflags).toContain('-fno-sanitize-recover=address');
+        expect(entry?.cxxflags).toContain('-fno-omit-frame-pointer');
+        expect(entry?.ccflags).toContain('-fsanitize=address');
+    });
+
+    test('asan on msvc produces /fsanitize=address', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compiler_versions: { msvc: '>=14' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            max_standards: 1,
+            latest_factors: { msvc: ['Asan'] }
+        });
+        const matrix = await generateMatrix(inputs);
+        const entry = matrix.find(e => e.compiler === 'msvc' && e.asan === true);
+        expect(entry).toBeDefined();
+        expect(entry?.cxxflags).toContain('/fsanitize=address');
+    });
+
+    test('ubsan on gcc produces -fsanitize=undefined and UBSAN_OPTIONS', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compiler_versions: { gcc: '>=13' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            max_standards: 1,
+            latest_factors: { gcc: ['UBSan'] }
+        });
+        const matrix = await generateMatrix(inputs);
+        const entry = matrix.find(e => e.compiler === 'gcc' && e.ubsan === true);
+        expect(entry).toBeDefined();
+        expect(entry?.cxxflags).toContain('-fsanitize=undefined');
+        expect(entry?.env).toHaveProperty('UBSAN_OPTIONS', 'print_stacktrace=1');
+    });
+
+    test('tsan on clang produces -fsanitize=thread', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compiler_versions: { clang: '>=16' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            max_standards: 1,
+            latest_factors: { clang: ['TSan'] }
+        });
+        const matrix = await generateMatrix(inputs);
+        const entry = matrix.find(e => e.compiler === 'clang' && e.tsan === true);
+        expect(entry).toBeDefined();
+        expect(entry?.cxxflags).toContain('-fsanitize=thread');
+    });
+
+    test('msan on clang produces -fsanitize=memory', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compiler_versions: { clang: '>=16' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            max_standards: 1,
+            latest_factors: { clang: ['MSan'] }
+        });
+        const matrix = await generateMatrix(inputs);
+        const entry = matrix.find(e => e.compiler === 'clang' && e.msan === true);
+        expect(entry).toBeDefined();
+        expect(entry?.cxxflags).toContain('-fsanitize=memory');
+    });
+
+    test('intsan on clang produces -fsanitize=integer', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compiler_versions: { clang: '>=16' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            max_standards: 1,
+            latest_factors: { clang: ['IntSan'] }
+        });
+        const matrix = await generateMatrix(inputs);
+        const entry = matrix.find(e => e.compiler === 'clang' && e.intsan === true);
+        expect(entry).toBeDefined();
+        expect(entry?.cxxflags).toContain('-fsanitize=integer');
+        expect(entry?.cxxflags).toContain('-fno-sanitize-recover=integer');
+        expect(entry?.env).toHaveProperty('UBSAN_OPTIONS', 'print_stacktrace=1');
+    });
+
+    test('intsan on gcc produces individual integer checks', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compiler_versions: { gcc: '>=13' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            max_standards: 1,
+            latest_factors: { gcc: ['IntSan'] }
+        });
+        const matrix = await generateMatrix(inputs);
+        const entry = matrix.find(e => e.compiler === 'gcc' && e.intsan === true);
+        expect(entry).toBeDefined();
+        expect(entry?.cxxflags).toContain('signed-integer-overflow');
+        expect(entry?.cxxflags).toContain('integer-divide-by-zero');
+        expect(entry?.cxxflags).toContain('shift');
+        expect(entry?.cxxflags).not.toContain('-fsanitize=integer');
+        expect(entry?.env).toHaveProperty('UBSAN_OPTIONS', 'print_stacktrace=1');
+    });
+
+    test('boundsan on clang produces -fsanitize=bounds', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compiler_versions: { clang: '>=16' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            max_standards: 1,
+            latest_factors: { clang: ['BoundSan'] }
+        });
+        const matrix = await generateMatrix(inputs);
+        const entry = matrix.find(e => e.compiler === 'clang' && e.boundsan === true);
+        expect(entry).toBeDefined();
+        expect(entry?.cxxflags).toContain('-fsanitize=bounds');
+        expect(entry?.env).toHaveProperty('UBSAN_OPTIONS', 'print_stacktrace=1');
+    });
+
+    test('boundsan on gcc produces -fsanitize=bounds', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compiler_versions: { gcc: '>=13' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            max_standards: 1,
+            latest_factors: { gcc: ['BoundSan'] }
+        });
+        const matrix = await generateMatrix(inputs);
+        const entry = matrix.find(e => e.compiler === 'gcc' && e.boundsan === true);
+        expect(entry).toBeDefined();
+        expect(entry?.cxxflags).toContain('-fsanitize=bounds');
+    });
+
+    test('lsan on clang produces -fsanitize=leak with LSAN_OPTIONS', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compiler_versions: { clang: '>=16' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            max_standards: 1,
+            latest_factors: { clang: ['LSan'] }
+        });
+        const matrix = await generateMatrix(inputs);
+        const entry = matrix.find(e => e.compiler === 'clang' && e.lsan === true);
+        expect(entry).toBeDefined();
+        expect(entry?.cxxflags).toContain('-fsanitize=leak');
+        expect(entry?.cxxflags).toContain('-fno-sanitize-recover=leak');
+        expect(entry?.env).toHaveProperty('LSAN_OPTIONS');
+    });
+
+    test('lsan on gcc produces -fsanitize=leak without -fno-sanitize-recover=leak', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compiler_versions: { gcc: '>=13' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            max_standards: 1,
+            latest_factors: { gcc: ['LSan'] }
+        });
+        const matrix = await generateMatrix(inputs);
+        const entry = matrix.find(e => e.compiler === 'gcc' && e.lsan === true);
+        expect(entry).toBeDefined();
+        expect(entry?.cxxflags).toContain('-fsanitize=leak');
+        expect(entry?.cxxflags).not.toContain('-fno-sanitize-recover=leak');
+        expect(entry?.env).toHaveProperty('LSAN_OPTIONS');
+    });
+
+    test('cfi on clang produces -fsanitize=cfi with LTO and visibility flags', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compiler_versions: { clang: '>=16' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            max_standards: 1,
+            latest_factors: { clang: ['CFI'] }
+        });
+        const matrix = await generateMatrix(inputs);
+        const entry = matrix.find(e => e.compiler === 'clang' && e.cfi === true);
+        expect(entry).toBeDefined();
+        expect(entry?.cxxflags).toContain('-fsanitize=cfi');
+        expect(entry?.cxxflags).toContain('-flto');
+        expect(entry?.cxxflags).toContain('-fvisibility=hidden');
+        expect(entry?.cxxflags).toContain('-fno-sanitize-trap=cfi');
+        expect(entry?.env).toHaveProperty('UBSAN_OPTIONS', 'print_stacktrace=1');
+    });
+
+    test('composite factor ASan+UBSan produces combined flags', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compiler_versions: { clang: '>=16' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            max_standards: 1,
+            latest_factors: { clang: ['ASan+UBSan'] }
+        });
+        const matrix = await generateMatrix(inputs);
+        const entry = matrix.find(e => e.compiler === 'clang' && e.asan === true && e.ubsan === true);
+        expect(entry).toBeDefined();
+        expect(entry?.cxxflags).toContain('address');
+        expect(entry?.cxxflags).toContain('undefined');
+    });
+
+    test('sanitizer entries use sanitizer_build_type', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compiler_versions: { gcc: '>=13' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            max_standards: 1,
+            latest_factors: { gcc: ['Asan'] },
+            sanitizer_build_type: 'RelWithDebInfo'
+        });
+        const matrix = await generateMatrix(inputs);
+        const entry = matrix.find(e => e.compiler === 'gcc' && e.asan === true);
+        expect(entry).toBeDefined();
+        expect(entry?.['build-type']).toBe('RelWithDebInfo');
+    });
+
+    test('non-sanitizer entries have false for sanitizer factor booleans', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compiler_versions: { gcc: '>=13' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            max_standards: 1,
+            latest_factors: { gcc: ['Asan'] }
+        });
+        const matrix = await generateMatrix(inputs);
+        const nonAsanEntries = matrix.filter(e => e.compiler === 'gcc' && e.asan !== true);
+        expect(nonAsanEntries.length).toBeGreaterThan(0);
+        for (const entry of nonAsanEntries) {
+            expect(entry.asan).toBe(false);
+        }
+    });
+});
+
+describe('append suggestions', () => {
+    test('append-install adds packages without replacing generated values', async () => {
+        const compilerVersions = { gcc: '>=13' };
+        const inputs = makeDefaultMatrixInputs({
+            compiler_versions: compilerVersions,
+            standards: normalizeCppVersionRequirement('>=17'),
+            max_standards: 1,
+            latest_factors: { gcc: ['Coverage'] },
+            append_install: parseCompilerSuggestions(
+                ['gcc Coverage: extra-pkg'],
+                Object.keys(compilerVersions)
+            )
+        });
+        const matrix = await generateMatrix(inputs);
+        const entry = matrix.find(e => e.compiler === 'gcc' && e.coverage === true);
+        expect(entry).toBeDefined();
+        expect(entry?.install).toContain('lcov');
+        expect(entry?.install).toContain('extra-pkg');
+    });
+
+    test('append-cxxflags adds flags without replacing sanitizer flags', async () => {
+        const compilerVersions = { gcc: '>=13' };
+        const inputs = makeDefaultMatrixInputs({
+            compiler_versions: compilerVersions,
+            standards: normalizeCppVersionRequirement('>=17'),
+            max_standards: 1,
+            latest_factors: { gcc: ['Asan'] },
+            append_cxxflags: parseCompilerSuggestions(
+                ['gcc Asan: -Wextra'],
+                Object.keys(compilerVersions)
+            )
+        });
+        const matrix = await generateMatrix(inputs);
+        const entry = matrix.find(e => e.compiler === 'gcc' && e.asan === true);
+        expect(entry).toBeDefined();
+        expect(entry?.cxxflags).toContain('-fsanitize=address');
+        expect(entry?.cxxflags).toContain('-Wextra');
+    });
+
+    test('append-ccflags adds flags without replacing sanitizer flags', async () => {
+        const compilerVersions = { gcc: '>=13' };
+        const inputs = makeDefaultMatrixInputs({
+            compiler_versions: compilerVersions,
+            standards: normalizeCppVersionRequirement('>=17'),
+            max_standards: 1,
+            latest_factors: { gcc: ['Asan'] },
+            append_ccflags: parseCompilerSuggestions(
+                ['gcc Asan: -Wextra'],
+                Object.keys(compilerVersions)
+            )
+        });
+        const matrix = await generateMatrix(inputs);
+        const entry = matrix.find(e => e.compiler === 'gcc' && e.asan === true);
+        expect(entry).toBeDefined();
+        expect(entry?.ccflags).toContain('-fsanitize=address');
+        expect(entry?.ccflags).toContain('-Wextra');
+    });
+
+    test('multiple append rules stack on the same entry', async () => {
+        const compilerVersions = { gcc: '>=13' };
+        const inputs = makeDefaultMatrixInputs({
+            compiler_versions: compilerVersions,
+            standards: normalizeCppVersionRequirement('>=17'),
+            max_standards: 1,
+            latest_factors: { gcc: ['Asan'] },
+            append_install: parseCompilerSuggestions(
+                ['gcc Asan: pkg-a', 'gcc >=13: pkg-b'],
+                Object.keys(compilerVersions)
+            )
+        });
+        const matrix = await generateMatrix(inputs);
+        const entry = matrix.find(e => e.compiler === 'gcc' && e.asan === true);
+        expect(entry).toBeDefined();
+        expect(entry?.install).toContain('pkg-a');
+        expect(entry?.install).toContain('pkg-b');
+    });
+
+    test('replace install followed by append works correctly', async () => {
+        const compilerVersions = { gcc: '>=13' };
+        const inputs = makeDefaultMatrixInputs({
+            compiler_versions: compilerVersions,
+            standards: normalizeCppVersionRequirement('>=17'),
+            max_standards: 1,
+            latest_factors: { gcc: ['Asan'] },
+            install: parseCompilerSuggestions(
+                ['gcc Asan: replaced-pkg'],
+                Object.keys(compilerVersions)
+            ),
+            append_install: parseCompilerSuggestions(
+                ['gcc Asan: appended-pkg'],
+                Object.keys(compilerVersions)
+            )
+        });
+        const matrix = await generateMatrix(inputs);
+        const entry = matrix.find(e => e.compiler === 'gcc' && e.asan === true);
+        expect(entry).toBeDefined();
+        expect(entry?.install).toContain('replaced-pkg');
+        expect(entry?.install).toContain('appended-pkg');
+        expect(entry?.install).not.toContain('lcov');
+    });
 });
 
 describe('Handlebars helpers', () => {
