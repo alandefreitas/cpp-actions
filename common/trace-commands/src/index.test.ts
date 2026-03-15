@@ -52,6 +52,25 @@ describe('trace-commands', () => {
         });
     });
 
+    describe('scoped', () => {
+        it('should return a function that logs with the given prefix', () => {
+            traceModule.setTraceCommands(true);
+            const scopedLog = traceModule.scoped('myModule');
+            scopedLog('hello');
+
+            expect(core.info).toHaveBeenCalledWith('myModule: hello');
+        });
+
+        it('should respect trace disabled state', () => {
+            traceModule.setTraceCommands(false);
+            const scopedLog = traceModule.scoped('myModule');
+            scopedLog('hello');
+
+            expect(core.debug).toHaveBeenCalledWith('myModule: hello');
+            expect(core.info).not.toHaveBeenCalled();
+        });
+    });
+
     describe('enabled', () => {
         it('should return current trace state', () => {
             traceModule.setTraceCommands(false);
@@ -59,6 +78,12 @@ describe('trace-commands', () => {
 
             traceModule.setTraceCommands(true);
             expect(traceModule.enabled()).toBe(true);
+        });
+    });
+
+    describe('traceCommands export', () => {
+        it('should export the traceCommands flag', () => {
+            expect(typeof traceModule.traceCommands).toBe('boolean');
         });
     });
 });

@@ -1,6 +1,17 @@
 import * as actionSchema from './index';
-import { parseInputs } from './parser';
-import { generateInputsSection, generateOutputsSection } from './generators/action-yml';
+import { parseInputs, createInputParser } from './parser';
+import {
+    generateInputsSection,
+    generateOutputsSection,
+    updateActionYml,
+    updateMultipleActionYmls
+} from './generators/action-yml';
+import { createActionRunner, createActionMain, runAction } from './runner';
+import {
+    createSetupInputs,
+    createCompilerPrefixRemover,
+    createCompilerOutputs
+} from './shared-schemas';
 import type { ActionInputsSchema, ActionOutputsSchema, InferInputs } from './types';
 
 // Mock gh-inputs
@@ -36,9 +47,19 @@ jest.mock('pretty-errors', () => ({
     reportAndSetFailed: jest.fn()
 }));
 
+// Mock fs for action-yml tests
+jest.mock('fs', () => ({
+    existsSync: jest.fn(),
+    readFileSync: jest.fn(),
+    writeFileSync: jest.fn()
+}));
+
 import * as ghInputs from 'gh-inputs';
+import * as core from '@actions/core';
+import * as fs from 'fs';
 
 const mockedGhInputs = ghInputs as jest.Mocked<typeof ghInputs>;
+const mockedFs = fs as jest.Mocked<typeof fs>;
 
 describe('action-schema', () => {
     beforeEach(() => {
@@ -856,6 +877,672 @@ describe('action-schema', () => {
             const example: Inputs = { strategy: 'git' };
 
             expect(example.strategy).toBe('git');
+        });
+    });
+
+    describe('createActionRunner', () => {
+        const schema = {
+            traceCommands: {
+                type: 'boolean' as const,
+                default: false,
+                description: 'Trace commands'
+            },
+            version: {
+                type: 'string' as const,
+                default: '*',
+                description: 'Version'
+            }
+        } satisfies ActionInputsSchema;
+
+        it('should parse inputs, log them, call main, and set outputs', async () => {
+            mockedGhInputs.getBoolean.mockReturnValue(false);
+            mockedGhInputs.getInput.mockReturnValue('1.2.3');
+
+            const mainFn = jest.fn().mockResolvedValue({ cc: '/usr/bin/gcc', cxx: '/usr/bin/g++' });
+
+            const run = createActionRunner({
+                inputsSchema: schema,
+                title: 'Test Action',
+                main: mainFn
+            });
+
+            await run();
+
+            expect(core.startGroup).toHaveBeenCalledWith('📥 Action Inputs');
+            expect(mockedGhInputs.printInputObject).toHaveBeenCalled();
+            expect(core.endGroup).toHaveBeenCalledTimes(2);
+            expect(mainFn).toHaveBeenCalledWith(expect.objectContaining({ version: '1.2.3' }));
+            expect(core.startGroup).toHaveBeenCalledWith('📤 Action Outputs');
+            expect(mockedGhInputs.setOutputObject).toHaveBeenCalledWith({ cc: '/usr/bin/gcc', cxx: '/usr/bin/g++' });
+        });
+
+        it('should enable trace commands when traceCommands input is true', async () => {
+            mockedGhInputs.getBoolean.mockReturnValue(true);
+            mockedGhInputs.getInput.mockReturnValue('*');
+
+            const traceCommandsMock = require('trace-commands');
+
+            const run = createActionRunner({
+                inputsSchema: schema,
+                title: 'Test Action',
+                main: jest.fn().mockResolvedValue({})
+            });
+
+            await run();
+
+            expect(traceCommandsMock.setTraceCommands).toHaveBeenCalledWith(true);
+        });
+
+        it('should not enable trace commands when traceCommands input is false', async () => {
+            mockedGhInputs.getBoolean.mockReturnValue(false);
+            mockedGhInputs.getInput.mockReturnValue('*');
+
+            const traceCommandsMock = require('trace-commands');
+
+            const run = createActionRunner({
+                inputsSchema: schema,
+                title: 'Test Action',
+                main: jest.fn().mockResolvedValue({})
+            });
+
+            await run();
+
+            expect(traceCommandsMock.setTraceCommands).not.toHaveBeenCalled();
+        });
+
+        it('should call setFailed when validateOutputs returns false', async () => {
+            mockedGhInputs.getBoolean.mockReturnValue(false);
+            mockedGhInputs.getInput.mockReturnValue('*');
+
+            const run = createActionRunner({
+                inputsSchema: schema,
+                title: 'Test Action',
+                main: jest.fn().mockResolvedValue({ cc: '' }),
+                validateOutputs: () => false
+            });
+
+            await run();
+
+            expect(core.setFailed).toHaveBeenCalledWith('Test Action failed: output validation failed');
+            expect(mockedGhInputs.setOutputObject).not.toHaveBeenCalled();
+        });
+
+        it('should use custom failureMessage when validateOutputs returns false', async () => {
+            mockedGhInputs.getBoolean.mockReturnValue(false);
+            mockedGhInputs.getInput.mockReturnValue('*');
+
+            const run = createActionRunner({
+                inputsSchema: schema,
+                title: 'Test Action',
+                main: jest.fn().mockResolvedValue({}),
+                validateOutputs: () => false,
+                failureMessage: 'Custom failure message'
+            });
+
+            await run();
+
+            expect(core.setFailed).toHaveBeenCalledWith('Custom failure message');
+        });
+
+        it('should proceed normally when validateOutputs returns true', async () => {
+            mockedGhInputs.getBoolean.mockReturnValue(false);
+            mockedGhInputs.getInput.mockReturnValue('*');
+
+            const run = createActionRunner({
+                inputsSchema: schema,
+                title: 'Test Action',
+                main: jest.fn().mockResolvedValue({ result: 'ok' }),
+                validateOutputs: () => true
+            });
+
+            await run();
+
+            expect(core.setFailed).not.toHaveBeenCalled();
+            expect(mockedGhInputs.setOutputObject).toHaveBeenCalledWith({ result: 'ok' });
+        });
+    });
+
+    describe('runAction', () => {
+        const schema = {
+            traceCommands: {
+                type: 'boolean' as const,
+                default: false,
+                description: 'Trace commands'
+            }
+        } satisfies ActionInputsSchema;
+
+        it('should skip execution when callerModule is not the main module', () => {
+            const mainFn = jest.fn();
+
+            runAction({
+                inputsSchema: schema,
+                title: 'Test Action',
+                main: mainFn,
+                callerModule: { id: 'not-main' } as NodeModule
+            });
+
+            expect(mainFn).not.toHaveBeenCalled();
+        });
+
+        it('should execute when callerModule is not provided', async () => {
+            mockedGhInputs.getBoolean.mockReturnValue(false);
+
+            const mainFn = jest.fn().mockResolvedValue({});
+
+            runAction({
+                inputsSchema: schema,
+                title: 'Test Action',
+                main: mainFn
+            });
+
+            // Wait for async execution
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            expect(mainFn).toHaveBeenCalled();
+        });
+
+        it('should call reportAndSetFailed when main throws', async () => {
+            mockedGhInputs.getBoolean.mockReturnValue(false);
+
+            const error = new Error('Action failed');
+            const mainFn = jest.fn().mockRejectedValue(error);
+            const prettyErrors = require('pretty-errors');
+
+            runAction({
+                inputsSchema: schema,
+                title: 'My Action',
+                main: mainFn
+            });
+
+            // Wait for async execution
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            expect(prettyErrors.reportAndSetFailed).toHaveBeenCalledWith(
+                error,
+                { title: 'My Action failed' }
+            );
+        });
+    });
+
+    describe('createActionMain', () => {
+        const schema = {
+            traceCommands: {
+                type: 'boolean' as const,
+                default: false,
+                description: 'Trace commands'
+            }
+        } satisfies ActionInputsSchema;
+
+        it('should return a callable async function', async () => {
+            mockedGhInputs.getBoolean.mockReturnValue(false);
+
+            const mainFn = jest.fn().mockResolvedValue({ result: 'ok' });
+
+            const main = createActionMain({
+                inputsSchema: schema,
+                title: 'Test Action',
+                main: mainFn
+            });
+
+            expect(typeof main).toBe('function');
+            await main();
+
+            expect(mainFn).toHaveBeenCalled();
+        });
+
+        it('should catch errors and call reportAndSetFailed', async () => {
+            mockedGhInputs.getBoolean.mockReturnValue(false);
+
+            const error = new Error('Boom');
+            const mainFn = jest.fn().mockRejectedValue(error);
+            const prettyErrors = require('pretty-errors');
+
+            const main = createActionMain({
+                inputsSchema: schema,
+                title: 'My Action',
+                main: mainFn
+            });
+
+            await main();
+
+            expect(prettyErrors.reportAndSetFailed).toHaveBeenCalledWith(
+                error,
+                { title: 'My Action failed' }
+            );
+        });
+    });
+
+    describe('createSetupInputs', () => {
+        it('should customize descriptions with tool name', () => {
+            const inputs = createSetupInputs('CMake');
+
+            expect(inputs.version.description).toContain('CMake');
+            expect(inputs.path.description).toContain('CMake');
+            expect(inputs.checkLatest.description).toContain('CMake');
+        });
+
+        it('should preserve base input types and defaults', () => {
+            const inputs = createSetupInputs('GCC');
+
+            expect(inputs.traceCommands.type).toBe('boolean');
+            expect(inputs.traceCommands.default).toBe(false);
+            expect(inputs.version.type).toBe('string');
+            expect(inputs.version.default).toBe('*');
+            expect(inputs.path.type).toBe('string[]');
+            expect(inputs.checkLatest.type).toBe('boolean');
+            expect(inputs.checkLatest.default).toBe(false);
+            expect(inputs.updateEnvironment.type).toBe('boolean');
+            expect(inputs.updateEnvironment.default).toBe(true);
+        });
+    });
+
+    describe('createCompilerPrefixRemover', () => {
+        it('should remove cc prefix with dash', () => {
+            const remove = createCompilerPrefixRemover('gcc', 'g++');
+            expect(remove('gcc-12')).toBe('12');
+        });
+
+        it('should remove cxx prefix with dash', () => {
+            const remove = createCompilerPrefixRemover('gcc', 'g++');
+            expect(remove('g++-12')).toBe('12');
+        });
+
+        it('should remove cc prefix with space', () => {
+            const remove = createCompilerPrefixRemover('gcc', 'g++');
+            expect(remove('gcc 12')).toBe('12');
+        });
+
+        it('should remove cxx prefix with space', () => {
+            const remove = createCompilerPrefixRemover('gcc', 'g++');
+            expect(remove('g++ 12')).toBe('12');
+        });
+
+        it('should return version unchanged when no prefix matches', () => {
+            const remove = createCompilerPrefixRemover('gcc', 'g++');
+            expect(remove('14')).toBe('14');
+        });
+
+        it('should work with clang prefixes', () => {
+            const remove = createCompilerPrefixRemover('clang', 'clang++');
+            expect(remove('clang-15')).toBe('15');
+            expect(remove('clang++-15')).toBe('15');
+            expect(remove('clang 16')).toBe('16');
+            expect(remove('clang++ 16')).toBe('16');
+            expect(remove('17')).toBe('17');
+        });
+    });
+
+    describe('createCompilerOutputs', () => {
+        it('should customize descriptions with tool and compiler names', () => {
+            const outputs = createCompilerOutputs('GCC', 'gcc', 'g++');
+
+            expect(outputs.cc.description).toContain('gcc');
+            expect(outputs.cxx.description).toContain('g++');
+            expect(outputs.dir.description).toContain('GCC');
+            expect(outputs.version.description).toContain('GCC');
+            expect(outputs.versionMajor.description).toContain('GCC');
+            expect(outputs.versionMinor.description).toContain('GCC');
+            expect(outputs.versionPatch.description).toContain('GCC');
+        });
+
+        it('should return all required output fields', () => {
+            const outputs = createCompilerOutputs('Clang', 'clang', 'clang++');
+
+            expect(outputs).toHaveProperty('cc');
+            expect(outputs).toHaveProperty('cxx');
+            expect(outputs).toHaveProperty('dir');
+            expect(outputs).toHaveProperty('version');
+            expect(outputs).toHaveProperty('versionMajor');
+            expect(outputs).toHaveProperty('versionMinor');
+            expect(outputs).toHaveProperty('versionPatch');
+        });
+    });
+
+    describe('parseInputs - multiline type', () => {
+        it('should parse multiline inputs', () => {
+            mockedGhInputs.getMultilineInput.mockReturnValue(['line1', 'line2', 'line3']);
+
+            const schema = {
+                content: {
+                    type: 'multiline' as const,
+                    default: [] as string[],
+                    description: 'Multiline content'
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = parseInputs(schema);
+
+            expect(result.content).toEqual(['line1', 'line2', 'line3']);
+            expect(mockedGhInputs.getMultilineInput).toHaveBeenCalledWith(
+                'content',
+                expect.any(Object)
+            );
+        });
+    });
+
+    describe('createInputParser', () => {
+        it('should return a reusable parser function', () => {
+            mockedGhInputs.getInput.mockReturnValue('hello');
+
+            const schema = {
+                name: {
+                    type: 'string' as const,
+                    default: '',
+                    description: 'Name'
+                }
+            } satisfies ActionInputsSchema;
+
+            const parser = createInputParser(schema);
+            expect(typeof parser).toBe('function');
+
+            const result = parser();
+            expect(result.name).toBe('hello');
+        });
+    });
+
+    describe('generateInputsSection - additional types', () => {
+        it('should handle number defaults', () => {
+            const schema = {
+                retries: {
+                    type: 'number' as const,
+                    default: 3,
+                    description: 'Number of retries'
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = generateInputsSection(schema);
+
+            expect(result.retries.default).toBe('3');
+        });
+
+        it('should handle map defaults', () => {
+            const schema = {
+                env: {
+                    type: 'map' as const,
+                    default: { CC: 'gcc', CXX: 'g++' } as Record<string, string>,
+                    description: 'Environment variables'
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = generateInputsSection(schema);
+
+            expect(result.env.default).toBe('CC: gcc\nCXX: g++');
+        });
+
+        it('should handle empty map defaults', () => {
+            const schema = {
+                env: {
+                    type: 'map' as const,
+                    default: {} as Record<string, string>,
+                    description: 'Environment variables'
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = generateInputsSection(schema);
+
+            expect(result.env.default).toBe('');
+        });
+
+        it('should handle multiline defaults', () => {
+            const schema = {
+                lines: {
+                    type: 'multiline' as const,
+                    default: ['first', 'second'],
+                    description: 'Lines'
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = generateInputsSection(schema);
+
+            expect(result.lines.default).toBe('first\nsecond');
+        });
+
+        it('should handle tribool defaults', () => {
+            const schema = {
+                flag: {
+                    type: 'tribool' as const,
+                    default: true,
+                    description: 'A tribool flag'
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = generateInputsSection(schema);
+
+            expect(result.flag.default).toBe('true');
+        });
+
+        it('should handle path defaults', () => {
+            const schema = {
+                dir: {
+                    type: 'path' as const,
+                    default: '/usr/local',
+                    description: 'Directory'
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = generateInputsSection(schema);
+
+            expect(result.dir.default).toBe('/usr/local');
+        });
+
+        it('should omit default when undefined', () => {
+            const schema = {
+                name: {
+                    type: 'string' as const,
+                    required: true,
+                    description: 'Required input with no default'
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = generateInputsSection(schema);
+
+            expect(result.name.default).toBeUndefined();
+            expect(result.name.required).toBe(true);
+        });
+    });
+
+    describe('updateActionYml', () => {
+        const sampleActionYml = `name: 'Test Action'
+description: 'A test action'
+inputs:
+  old-input:
+    description: 'Old input'
+    required: false
+    default: 'old'
+outputs:
+  old-output:
+    description: 'Old output'
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
+`;
+
+        beforeEach(() => {
+            jest.clearAllMocks();
+        });
+
+        it('should update inputs section from schema', async () => {
+            mockedFs.existsSync.mockReturnValue(true);
+            mockedFs.readFileSync.mockReturnValue(sampleActionYml);
+
+            const inputsSchema = {
+                version: {
+                    type: 'string' as const,
+                    default: '*',
+                    description: 'Version to use'
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = await updateActionYml({
+                actionYmlPath: '/test/action.yml',
+                inputsSchema
+            });
+
+            expect(result.inputsCount).toBe(1);
+            expect(result.modified).toBe(true);
+            expect(result.content).toContain('version');
+            expect(mockedFs.writeFileSync).toHaveBeenCalled();
+        });
+
+        it('should update outputs section from schema', async () => {
+            mockedFs.existsSync.mockReturnValue(true);
+            mockedFs.readFileSync.mockReturnValue(sampleActionYml);
+
+            const outputsSchema = {
+                path: {
+                    description: 'Installation path'
+                }
+            } satisfies ActionOutputsSchema;
+
+            const result = await updateActionYml({
+                actionYmlPath: '/test/action.yml',
+                outputsSchema
+            });
+
+            expect(result.outputsCount).toBe(1);
+            expect(result.modified).toBe(true);
+            expect(result.content).toContain('path');
+        });
+
+        it('should perform dry run without writing', async () => {
+            mockedFs.existsSync.mockReturnValue(true);
+            mockedFs.readFileSync.mockReturnValue(sampleActionYml);
+
+            const inputsSchema = {
+                newInput: {
+                    type: 'string' as const,
+                    default: 'val',
+                    description: 'New input'
+                }
+            } satisfies ActionInputsSchema;
+
+            const result = await updateActionYml({
+                actionYmlPath: '/test/action.yml',
+                inputsSchema,
+                dryRun: true
+            });
+
+            expect(result.modified).toBe(true);
+            expect(mockedFs.writeFileSync).not.toHaveBeenCalled();
+        });
+
+        it('should throw when file does not exist', async () => {
+            mockedFs.existsSync.mockReturnValue(false);
+
+            await expect(
+                updateActionYml({ actionYmlPath: '/nonexistent/action.yml' })
+            ).rejects.toThrow('action.yml not found');
+        });
+
+        it('should report not modified when content is unchanged', async () => {
+            mockedFs.existsSync.mockReturnValue(true);
+            mockedFs.readFileSync.mockReturnValue(sampleActionYml);
+
+            // No schemas provided, so nothing changes
+            const result = await updateActionYml({
+                actionYmlPath: '/test/action.yml'
+            });
+
+            expect(result.inputsCount).toBe(0);
+            expect(result.outputsCount).toBe(0);
+            expect(mockedFs.writeFileSync).not.toHaveBeenCalled();
+        });
+
+        it('should update both inputs and outputs together', async () => {
+            mockedFs.existsSync.mockReturnValue(true);
+            mockedFs.readFileSync.mockReturnValue(sampleActionYml);
+
+            const inputsSchema = {
+                version: {
+                    type: 'string' as const,
+                    default: '*',
+                    description: 'Version'
+                },
+                checkLatest: {
+                    type: 'boolean' as const,
+                    default: false,
+                    description: 'Check latest'
+                }
+            } satisfies ActionInputsSchema;
+
+            const outputsSchema = {
+                cc: { description: 'C compiler' },
+                cxx: { description: 'C++ compiler' }
+            } satisfies ActionOutputsSchema;
+
+            const result = await updateActionYml({
+                actionYmlPath: '/test/action.yml',
+                inputsSchema,
+                outputsSchema
+            });
+
+            expect(result.inputsCount).toBe(2);
+            expect(result.outputsCount).toBe(2);
+            expect(result.modified).toBe(true);
+        });
+    });
+
+    describe('updateMultipleActionYmls', () => {
+        const sampleYml = `name: 'Action'
+description: 'An action'
+inputs: {}
+outputs: {}
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
+`;
+
+        beforeEach(() => {
+            jest.clearAllMocks();
+        });
+
+        it('should update multiple action.yml files', async () => {
+            mockedFs.existsSync.mockReturnValue(true);
+            mockedFs.readFileSync.mockReturnValue(sampleYml);
+
+            const actions = [
+                {
+                    actionYmlPath: '/action1/action.yml',
+                    inputsSchema: {
+                        version: {
+                            type: 'string' as const,
+                            default: '*',
+                            description: 'Version'
+                        }
+                    } satisfies ActionInputsSchema
+                },
+                {
+                    actionYmlPath: '/action2/action.yml',
+                    outputsSchema: {
+                        result: { description: 'Result' }
+                    } satisfies ActionOutputsSchema
+                }
+            ];
+
+            const results = await updateMultipleActionYmls(actions);
+
+            expect(results).toHaveLength(2);
+            expect(results[0].inputsCount).toBe(1);
+            expect(results[1].outputsCount).toBe(1);
+        });
+
+        it('should support dry run for multiple files', async () => {
+            mockedFs.existsSync.mockReturnValue(true);
+            mockedFs.readFileSync.mockReturnValue(sampleYml);
+
+            const actions = [
+                {
+                    actionYmlPath: '/action1/action.yml',
+                    inputsSchema: {
+                        v: { type: 'string' as const, default: '', description: 'V' }
+                    } satisfies ActionInputsSchema
+                }
+            ];
+
+            const results = await updateMultipleActionYmls(actions, true);
+
+            expect(results).toHaveLength(1);
+            expect(mockedFs.writeFileSync).not.toHaveBeenCalled();
         });
     });
 });

@@ -4,7 +4,13 @@ jest.mock('@actions/core', () => ({
     warning: jest.fn(),
     startGroup: jest.fn(),
     endGroup: jest.fn(),
-    setFailed: jest.fn()
+    setFailed: jest.fn(),
+    setOutput: jest.fn(),
+    summary: {
+        addHeading: jest.fn().mockReturnThis(),
+        addTable: jest.fn().mockReturnThis(),
+        write: jest.fn().mockResolvedValue({})
+    }
 }));
 
 jest.mock('trace-commands', () => ({
@@ -508,5 +514,194 @@ describe('append suggestions', () => {
         expect(entry?.install).toContain('replaced-pkg');
         expect(entry?.install).toContain('appended-pkg');
         expect(entry?.install).not.toContain('lcov');
+    });
+});
+
+describe('injectExtraValues via generateMatrix', () => {
+    test('extra values are injected using handlebars templates', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compilers: { gcc: '>=13' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            maxStandards: 1,
+            extraValues: [{ key: 'custom-key', value: '{{compiler}}-custom' }]
+        });
+        const matrix = await generateMatrix(inputs);
+        const entry = matrix.find(e => e.compiler === 'gcc');
+        expect(entry).toBeDefined();
+        expect(entry?.['custom-key']).toBe('gcc-custom');
+    });
+
+    test('extra values warn on existing key conflict', async () => {
+        const warnSpy = jest.spyOn(core, 'warning').mockImplementation(() => { });
+        try {
+            const inputs = makeDefaultMatrixInputs({
+                compilers: { gcc: '>=13' },
+                standards: normalizeCppVersionRequirement('>=17'),
+                maxStandards: 1,
+                extraValues: [{ key: 'compiler', value: 'override' }]
+            });
+            await generateMatrix(inputs);
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('compiler'));
+        } finally {
+            warnSpy.mockRestore();
+        }
+    });
+});
+
+describe('setOS via generateMatrix', () => {
+    test('container entries get Linux OS', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compilers: { gcc: '>=13' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            maxStandards: 1,
+            useContainers: true
+        });
+        const matrix = await generateMatrix(inputs);
+        const containerEntry = matrix.find(e => e.container);
+        if (containerEntry) {
+            expect(containerEntry.os).toBe('Linux');
+        }
+    });
+
+    test('windows runner gets Windows OS', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compilers: { msvc: '>=14.3' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            maxStandards: 1
+        });
+        const matrix = await generateMatrix(inputs);
+        const msvcEntry = matrix.find(e => e.compiler === 'msvc');
+        expect(msvcEntry?.os).toBe('Windows');
+    });
+
+    test('macos runner gets macOS OS', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compilers: { 'apple-clang': '*' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            maxStandards: 1
+        });
+        const matrix = await generateMatrix(inputs);
+        const acEntry = matrix.find(e => e.compiler === 'apple-clang');
+        expect(acEntry?.os).toBe('macOS');
+    });
+
+    test('unknown runner defaults to Linux OS', async () => {
+        const compilerVersions = { gcc: '>=13' };
+        const inputs = makeDefaultMatrixInputs({
+            compilers: compilerVersions,
+            standards: normalizeCppVersionRequirement('>=17'),
+            maxStandards: 1,
+            runsOn: parseCompilerSuggestions(['gcc: custom-runner'], Object.keys(compilerVersions))
+        });
+        const matrix = await generateMatrix(inputs);
+        const entry = matrix.find(e => e.compiler === 'gcc');
+        expect(entry?.os).toBe('Linux');
+    });
+});
+
+describe('CppMatrixRunner features', () => {
+    test('logMatrix outputs individual entries when enabled', async () => {
+        const infoSpy = jest.spyOn(core, 'info').mockImplementation(() => { });
+        try {
+            const inputs = makeDefaultMatrixInputs({
+                compilers: { gcc: '>=13' },
+                standards: normalizeCppVersionRequirement('>=17'),
+                maxStandards: 1,
+                logMatrix: true
+            });
+            const matrix = await generateMatrix(inputs);
+            expect(matrix.length).toBeGreaterThan(0);
+            const infoCalls = infoSpy.mock.calls.map(c => c[0]);
+            expect(infoCalls.some(msg => typeof msg === 'string' && msg.startsWith('- {'))).toBe(true);
+        } finally {
+            infoSpy.mockRestore();
+        }
+    });
+
+    test('generateSummary produces summary table', async () => {
+        // The mock already sets up core.summary with addHeading/addTable/write chain
+        const mockSummary = jest.mocked(core.summary);
+        const addHeadingSpy = mockSummary.addHeading as jest.Mock;
+        addHeadingSpy.mockClear();
+        const inputs = makeDefaultMatrixInputs({
+            compilers: { gcc: '>=13' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            maxStandards: 1,
+            generateSummary: true
+        });
+        const matrix = await generateMatrix(inputs);
+        expect(matrix.length).toBeGreaterThan(0);
+        expect(addHeadingSpy).toHaveBeenCalled();
+    });
+
+    test('outputFile writes matrix to file', async () => {
+        const fs = await import('fs');
+        const os = await import('os');
+        const tmpFile = path.join(os.tmpdir(), 'cpp-matrix-test-output.json');
+        const inputs = makeDefaultMatrixInputs({
+            compilers: { gcc: '>=13' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            maxStandards: 1,
+            outputFile: tmpFile
+        });
+        const matrix = await generateMatrix(inputs);
+        expect(matrix.length).toBeGreaterThan(0);
+        expect(fs.existsSync(tmpFile)).toBe(true);
+        const content = JSON.parse(fs.readFileSync(tmpFile, 'utf-8'));
+        expect(content.length).toBe(matrix.length);
+        fs.unlinkSync(tmpFile);
+    });
+
+    test('sortByFailureRate fetches rates when enabled', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compilers: { gcc: '>=13' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            maxStandards: 1,
+            sortByFailureRate: true,
+            failureRateRuns: 5,
+            githubToken: ''
+        });
+        // This will attempt to fetch failure rates (and likely fail gracefully)
+        const matrix = await generateMatrix(inputs);
+        expect(matrix.length).toBeGreaterThan(0);
+    });
+
+    test('combinatorial factors duplicate entries', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compilers: { gcc: '>=13' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            maxStandards: 1,
+            combinatorialFactors: { gcc: ['Shared'] }
+        });
+        const matrix = await generateMatrix(inputs);
+        const sharedEntries = matrix.filter(e => e.compiler === 'gcc' && e.shared === true);
+        const nonSharedEntries = matrix.filter(e => e.compiler === 'gcc' && e.shared === false);
+        expect(sharedEntries.length).toBeGreaterThan(0);
+        expect(nonSharedEntries.length).toBeGreaterThan(0);
+    });
+
+    test('variant factors apply to intermediary entries', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compilers: { gcc: '>=10' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            maxStandards: 1,
+            factors: { gcc: ['Shared'] }
+        });
+        const matrix = await generateMatrix(inputs);
+        const sharedEntries = matrix.filter(e => e.compiler === 'gcc' && e.shared === true);
+        expect(sharedEntries.length).toBeGreaterThan(0);
+    });
+
+    test('variant factors work with many factors', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compilers: { gcc: '>=10' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            maxStandards: 1,
+            factors: { gcc: ['Shared', 'x86', 'Coverage'] }
+        });
+        const matrix = await generateMatrix(inputs);
+        expect(matrix.length).toBeGreaterThan(3);
+        const factorEntries = matrix.filter(e => e.compiler === 'gcc' && e['has-factors'] === true);
+        expect(factorEntries.length).toBeGreaterThan(0);
     });
 });

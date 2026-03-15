@@ -288,7 +288,7 @@ export function resolvePreset(inputs: Inputs, setupCMakeOutputs: SetupCMakeOutpu
     // until there is no more inheritance to apply. The field can be a string
     // or an array of strings.
     const inheritedPresetNames: string[] = [];
-    while (mainPreset['inherits']) {
+    while (mainPreset['inherits'] && (mainPreset['inherits'] as string[]).length > 0) {
         const inherits = [...(mainPreset['inherits'] as string[])];
         for (const inherit of inherits) {
             if (inheritedPresetNames.includes(inherit)) {

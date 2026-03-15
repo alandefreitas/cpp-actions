@@ -1,0 +1,855 @@
+jest.mock('@actions/core', () => ({
+    info: jest.fn(),
+    debug: jest.fn(),
+    warning: jest.fn(),
+    startGroup: jest.fn(),
+    endGroup: jest.fn(),
+    setFailed: jest.fn()
+}));
+
+jest.mock('trace-commands', () => ({
+    log: jest.fn(),
+    scoped: jest.fn(() => jest.fn()),
+    setTraceCommands: jest.fn()
+}));
+
+import * as path from 'path';
+import * as process from 'process';
+
+const cacheDir = path.join(__dirname, '..', 'test-data', 'cache');
+process.env.CPP_MATRIX_CACHE_DIR = cacheDir;
+
+import * as semver from 'semver';
+import { type MatrixEntry, type CompilerSuggestion } from './types';
+import {
+    setEntrySemverComponents,
+    setCompilerExecutableNames,
+    setCompilerExecutableNamesNoVersion,
+    setCompilerContainerNoVersion,
+    isArrayOfObjects,
+    setSuggestion,
+    appendSuggestion,
+    applyForcedFactors,
+    setCompilerContainer,
+    setCompilerB2Toolset,
+    runsOnLabels,
+    inferVisualStudioGeneratorFromRunsOn,
+    setCompilerCMakeGenerator,
+    setEntryVersionFlags,
+    setEntryName
+} from './entry-builder';
+
+function makeEntry(overrides: Partial<MatrixEntry> = {}): MatrixEntry {
+    return {
+        name: '',
+        compiler: 'gcc',
+        version: '12',
+        env: {},
+        'is-latest': false,
+        'is-main': false,
+        'is-earliest': false,
+        'is-intermediary': false,
+        'has-major': true,
+        'has-minor': true,
+        'has-patch': true,
+        'subrange-policy': 'one-per-major',
+        ...overrides
+    };
+}
+
+function makeInputs(overrides: Record<string, unknown> = {}) {
+    return { useContainers: false, ...overrides } as any;
+}
+
+describe('setEntrySemverComponents', () => {
+    test('same major, same minor, same patch', () => {
+        const entry = makeEntry();
+        const v = semver.parse('12.3.4')!;
+        setEntrySemverComponents(entry, v, v);
+        expect(entry.major).toBe(12);
+        expect(entry.minor).toBe(3);
+        expect(entry.patch).toBe(4);
+    });
+
+    test('same major, same minor, different patch', () => {
+        const entry = makeEntry();
+        setEntrySemverComponents(entry, semver.parse('12.3.1')!, semver.parse('12.3.5')!);
+        expect(entry.major).toBe(12);
+        expect(entry.minor).toBe(3);
+        expect(entry.patch).toBe('*');
+    });
+
+    test('same major, different minor', () => {
+        const entry = makeEntry();
+        setEntrySemverComponents(entry, semver.parse('12.1.0')!, semver.parse('12.3.0')!);
+        expect(entry.major).toBe(12);
+        expect(entry.minor).toBe('*');
+        expect(entry.patch).toBe('*');
+    });
+
+    test('different major sets all wildcards', () => {
+        const entry = makeEntry();
+        setEntrySemverComponents(entry, semver.parse('11.0.0')!, semver.parse('12.0.0')!);
+        expect(entry.major).toBe('*');
+        expect(entry.minor).toBe('*');
+        expect(entry.patch).toBe('*');
+    });
+
+    test('null versions does nothing', () => {
+        const entry = makeEntry();
+        setEntrySemverComponents(entry, null, null);
+        expect(entry.major).toBeUndefined();
+    });
+});
+
+describe('setCompilerExecutableNames', () => {
+    test('gcc >= 5 uses major only', () => {
+        const entry = makeEntry();
+        setCompilerExecutableNames(entry, 'gcc', semver.parse('12.0.0')!);
+        expect(entry.cc).toBe('gcc-12');
+        expect(entry.cxx).toBe('g++-12');
+    });
+
+    test('gcc < 5 uses major.minor', () => {
+        const entry = makeEntry();
+        setCompilerExecutableNames(entry, 'gcc', semver.parse('4.8.0')!);
+        expect(entry.cc).toBe('gcc-4.8');
+        expect(entry.cxx).toBe('g++-4.8');
+    });
+
+    test('clang >= 7 uses major only', () => {
+        const entry = makeEntry();
+        setCompilerExecutableNames(entry, 'clang', semver.parse('16.0.0')!);
+        expect(entry.cc).toBe('clang-16');
+        expect(entry.cxx).toBe('clang++-16');
+    });
+
+    test('clang < 7 uses major.minor', () => {
+        const entry = makeEntry();
+        setCompilerExecutableNames(entry, 'clang', semver.parse('6.0.0')!);
+        expect(entry.cc).toBe('clang-6.0');
+        expect(entry.cxx).toBe('clang++-6.0');
+    });
+
+    test('apple-clang uses plain names', () => {
+        const entry = makeEntry();
+        setCompilerExecutableNames(entry, 'apple-clang', semver.parse('14.0.0')!);
+        expect(entry.cc).toBe('clang');
+        expect(entry.cxx).toBe('clang++');
+    });
+
+    test('clang-cl uses clang-cl names', () => {
+        const entry = makeEntry();
+        setCompilerExecutableNames(entry, 'clang-cl', semver.parse('16.0.0')!);
+        expect(entry.cc).toBe('clang-cl');
+        expect(entry.cxx).toBe('clang++-cl');
+    });
+
+    test('mingw uses gcc/g++', () => {
+        const entry = makeEntry();
+        setCompilerExecutableNames(entry, 'mingw', semver.parse('12.0.0')!);
+        expect(entry.cc).toBe('gcc');
+        expect(entry.cxx).toBe('g++');
+    });
+});
+
+describe('setCompilerExecutableNamesNoVersion', () => {
+    test('apple-clang sets clang/clang++', () => {
+        const entry = makeEntry();
+        setCompilerExecutableNamesNoVersion(entry, 'apple-clang');
+        expect(entry.cc).toBe('clang');
+        expect(entry.cxx).toBe('clang++');
+    });
+
+    test('clang-cl sets clang-cl names', () => {
+        const entry = makeEntry();
+        setCompilerExecutableNamesNoVersion(entry, 'clang-cl');
+        expect(entry.cc).toBe('clang-cl');
+        expect(entry.cxx).toBe('clang++-cl');
+    });
+
+    test('mingw sets gcc/g++', () => {
+        const entry = makeEntry();
+        setCompilerExecutableNamesNoVersion(entry, 'mingw');
+        expect(entry.cc).toBe('gcc');
+        expect(entry.cxx).toBe('g++');
+    });
+
+    test('gcc does not set names', () => {
+        const entry = makeEntry();
+        setCompilerExecutableNamesNoVersion(entry, 'gcc');
+        expect(entry.cc).toBeUndefined();
+        expect(entry.cxx).toBeUndefined();
+    });
+});
+
+describe('setCompilerContainerNoVersion', () => {
+    test('apple-clang sets macos-14', () => {
+        const entry = makeEntry();
+        setCompilerContainerNoVersion(entry, 'apple-clang');
+        expect(entry['runs-on']).toBe('macos-14');
+    });
+
+    test('mingw sets windows-2022', () => {
+        const entry = makeEntry();
+        setCompilerContainerNoVersion(entry, 'mingw');
+        expect(entry['runs-on']).toBe('windows-2022');
+    });
+
+    test('clang-cl sets windows-2022', () => {
+        const entry = makeEntry();
+        setCompilerContainerNoVersion(entry, 'clang-cl');
+        expect(entry['runs-on']).toBe('windows-2022');
+    });
+
+    test('gcc does not set runs-on', () => {
+        const entry = makeEntry();
+        setCompilerContainerNoVersion(entry, 'gcc');
+        expect(entry['runs-on']).toBeUndefined();
+    });
+});
+
+describe('isArrayOfObjects', () => {
+    test('array of objects returns true', () => {
+        expect(isArrayOfObjects([{ a: 1 }])).toBe(true);
+    });
+
+    test('empty array returns false', () => {
+        expect(isArrayOfObjects([])).toBe(false);
+    });
+
+    test('array of strings returns false', () => {
+        expect(isArrayOfObjects(['a', 'b'])).toBe(false);
+    });
+
+    test('non-array returns false', () => {
+        expect(isArrayOfObjects('test')).toBe(false);
+    });
+});
+
+describe('setSuggestion', () => {
+    test('matches by factor', () => {
+        const entry = makeEntry({ compiler: 'gcc', asan: true });
+        const suggestions: CompilerSuggestion[] = [
+            { compiler: 'gcc', factor: 'asan', value: '-fsanitize=address' }
+        ];
+        const result = setSuggestion(entry, 'cxxflags', suggestions, '12');
+        expect(result).toBe(true);
+        expect(entry.cxxflags).toBe('-fsanitize=address');
+    });
+
+    test('factor not present skips', () => {
+        const entry = makeEntry({ compiler: 'gcc' });
+        const suggestions: CompilerSuggestion[] = [
+            { compiler: 'gcc', factor: 'asan', value: '-fsanitize=address' }
+        ];
+        const result = setSuggestion(entry, 'cxxflags', suggestions, '12');
+        expect(result).toBe(false);
+    });
+
+    test('matches by range', () => {
+        const entry = makeEntry({ compiler: 'gcc' });
+        const suggestions: CompilerSuggestion[] = [
+            { compiler: 'gcc', range: '>=10', value: 'ubuntu-22.04' }
+        ];
+        const result = setSuggestion(entry, 'runs-on', suggestions, '12');
+        expect(result).toBe(true);
+        expect(entry['runs-on']).toBe('ubuntu-22.04');
+    });
+
+    test('range not matching returns false', () => {
+        const entry = makeEntry({ compiler: 'gcc' });
+        const suggestions: CompilerSuggestion[] = [
+            { compiler: 'gcc', range: '>=15', value: 'ubuntu-24.04' }
+        ];
+        const result = setSuggestion(entry, 'runs-on', suggestions, '12');
+        expect(result).toBe(false);
+    });
+
+    test('wrong compiler skips', () => {
+        const entry = makeEntry({ compiler: 'clang' });
+        const suggestions: CompilerSuggestion[] = [
+            { compiler: 'gcc', range: '>=10', value: 'ubuntu-22.04' }
+        ];
+        const result = setSuggestion(entry, 'runs-on', suggestions, '12');
+        expect(result).toBe(false);
+    });
+
+    test('empty array returns false', () => {
+        const entry = makeEntry();
+        expect(setSuggestion(entry, 'runs-on', [] as any, '12')).toBe(false);
+    });
+});
+
+describe('appendSuggestion', () => {
+    test('appends by factor to existing value', () => {
+        const entry = makeEntry({ compiler: 'gcc', asan: true, cxxflags: '-Wall' });
+        const suggestions: CompilerSuggestion[] = [
+            { compiler: 'gcc', factor: 'asan', value: '-fsanitize=address' }
+        ];
+        const result = appendSuggestion(entry, 'cxxflags', suggestions, '12');
+        expect(result).toBe(true);
+        expect(entry.cxxflags).toBe('-Wall -fsanitize=address');
+    });
+
+    test('appends by factor to empty value', () => {
+        const entry = makeEntry({ compiler: 'gcc', asan: true });
+        const suggestions: CompilerSuggestion[] = [
+            { compiler: 'gcc', factor: 'asan', value: '-fsanitize=address' }
+        ];
+        appendSuggestion(entry, 'cxxflags', suggestions, '12');
+        expect(entry.cxxflags).toBe('-fsanitize=address');
+    });
+
+    test('appends by range to existing value', () => {
+        const entry = makeEntry({ compiler: 'gcc', cxxflags: '-Wall' });
+        const suggestions: CompilerSuggestion[] = [
+            { compiler: 'gcc', range: '>=10', value: '-Wextra' }
+        ];
+        const result = appendSuggestion(entry, 'cxxflags', suggestions, '12');
+        expect(result).toBe(true);
+        expect(entry.cxxflags).toBe('-Wall -Wextra');
+    });
+
+    test('appends by range to empty', () => {
+        const entry = makeEntry({ compiler: 'gcc' });
+        const suggestions: CompilerSuggestion[] = [
+            { compiler: 'gcc', range: '>=10', value: '-Wextra' }
+        ];
+        appendSuggestion(entry, 'cxxflags', suggestions, '12');
+        expect(entry.cxxflags).toBe('-Wextra');
+    });
+
+    test('factor not present skips', () => {
+        const entry = makeEntry({ compiler: 'gcc' });
+        const suggestions: CompilerSuggestion[] = [
+            { compiler: 'gcc', factor: 'asan', value: '-fsanitize=address' }
+        ];
+        const result = appendSuggestion(entry, 'cxxflags', suggestions, '12');
+        expect(result).toBe(false);
+    });
+
+    test('empty array returns false', () => {
+        const entry = makeEntry();
+        expect(appendSuggestion(entry, 'cxxflags', [] as any, '12')).toBe(false);
+    });
+
+    test('appends both factor and range matches', () => {
+        const entry = makeEntry({ compiler: 'gcc', asan: true });
+        const suggestions: CompilerSuggestion[] = [
+            { compiler: 'gcc', factor: 'asan', value: '-fsanitize=address' },
+            { compiler: 'gcc', range: '>=10', value: '-Werror' }
+        ];
+        appendSuggestion(entry, 'cxxflags', suggestions, '12');
+        expect(entry.cxxflags).toBe('-fsanitize=address -Werror');
+    });
+});
+
+describe('applyForcedFactors', () => {
+    test('applies factor match', () => {
+        const entry = makeEntry({ compiler: 'gcc', coverage: true });
+        const suggestions: CompilerSuggestion[] = [
+            { compiler: 'gcc', factor: 'coverage', value: 'Asan' }
+        ];
+        const result = applyForcedFactors(entry, suggestions, '12');
+        expect(result).toBe(true);
+        expect(entry.asan).toBe(true);
+    });
+
+    test('applies range match', () => {
+        const entry = makeEntry({ compiler: 'gcc' });
+        const suggestions: CompilerSuggestion[] = [
+            { compiler: 'gcc', range: '>=10', value: 'Ubsan' }
+        ];
+        const result = applyForcedFactors(entry, suggestions, '12');
+        expect(result).toBe(true);
+        expect(entry.ubsan).toBe(true);
+    });
+
+    test('factor not present skips to range', () => {
+        const entry = makeEntry({ compiler: 'gcc' });
+        const suggestions: CompilerSuggestion[] = [
+            { compiler: 'gcc', factor: 'asan', value: 'Ubsan' },
+            { compiler: 'gcc', range: '>=10', value: 'Tsan' }
+        ];
+        const result = applyForcedFactors(entry, suggestions, '12');
+        expect(result).toBe(true);
+        expect(entry.tsan).toBe(true);
+    });
+
+    test('empty array returns false', () => {
+        const entry = makeEntry();
+        expect(applyForcedFactors(entry, [] as any, '12')).toBe(false);
+    });
+
+    test('no match returns false', () => {
+        const entry = makeEntry({ compiler: 'gcc' });
+        const suggestions: CompilerSuggestion[] = [
+            { compiler: 'clang', range: '>=10', value: 'Asan' }
+        ];
+        expect(applyForcedFactors(entry, suggestions, '12')).toBe(false);
+    });
+});
+
+describe('setCompilerContainer', () => {
+    test('gcc >= 15 uses ubuntu 25.04 container', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs(), 'gcc', semver.parse('15.0.0')!, '15');
+        expect(entry['runs-on']).toBe('ubuntu-22.04');
+        // ubuntu:25.04 has major >= 20, so no volumes added
+        expect(entry.container).toBe('ubuntu:25.04');
+    });
+
+    test('gcc >= 14 uses ubuntu 24.04 container', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs(), 'gcc', semver.parse('14.0.0')!, '14');
+        expect(entry.container).toBe('ubuntu:24.04');
+    });
+
+    test('gcc >= 13 uses ubuntu 24.04 container', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs(), 'gcc', semver.parse('13.0.0')!, '13');
+        expect(entry.container).toBe('ubuntu:24.04');
+    });
+
+    test('gcc >= 9 without containers does not set container', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs({ useContainers: false }), 'gcc', semver.parse('12.0.0')!, '12');
+        expect(entry['runs-on']).toBe('ubuntu-22.04');
+        expect(entry.container).toBeUndefined();
+    });
+
+    test('gcc >= 9 with containers uses ubuntu 22.04', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs({ useContainers: true }), 'gcc', semver.parse('12.0.0')!, '12');
+        expect(entry.container).toBe('ubuntu:22.04');
+    });
+
+    test('gcc >= 7 without containers uses ubuntu-20.04', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs({ useContainers: false }), 'gcc', semver.parse('8.0.0')!, '8');
+        expect(entry['runs-on']).toBe('ubuntu-20.04');
+        expect(entry.container).toBeUndefined();
+    });
+
+    test('gcc >= 7 with containers uses ubuntu:20.04', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs({ useContainers: true }), 'gcc', semver.parse('8.0.0')!, '8');
+        expect(entry['runs-on']).toBe('ubuntu-22.04');
+        // ubuntu:20.04 major >= 20, no volumes
+        expect(entry.container).toBe('ubuntu:20.04');
+    });
+
+    test('gcc < 7 uses ubuntu:18.04 with volumes', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs(), 'gcc', semver.parse('6.0.0')!, '6');
+        expect(entry['runs-on']).toBe('ubuntu-22.04');
+        expect(entry.container).toEqual({
+            image: 'ubuntu:18.04',
+            volumes: ['/node20217:/node20217:rw,rshared', '/node20217:/__e/node20:ro,rshared']
+        });
+    });
+
+    test('clang >= 17 uses ubuntu 24.04', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs(), 'clang', semver.parse('17.0.0')!, '17');
+        expect(entry.container).toBe('ubuntu:24.04');
+    });
+
+    test('clang >= 16 uses ubuntu 24.04', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs(), 'clang', semver.parse('16.0.0')!, '16');
+        expect(entry.container).toBe('ubuntu:24.04');
+    });
+
+    test('clang >= 15 without containers', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs({ useContainers: false }), 'clang', semver.parse('15.0.0')!, '15');
+        expect(entry['runs-on']).toBe('ubuntu-22.04');
+        expect(entry.container).toBeUndefined();
+    });
+
+    test('clang >= 15 with containers uses ubuntu 22.04', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs({ useContainers: true }), 'clang', semver.parse('15.0.0')!, '15');
+        expect(entry.container).toBe('ubuntu:22.04');
+    });
+
+    test('clang >= 12 <15 always uses container', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs({ useContainers: false }), 'clang', semver.parse('14.0.0')!, '14');
+        expect(entry['runs-on']).toBe('ubuntu-22.04');
+        expect(entry.container).toBe('ubuntu:22.04');
+    });
+
+    test('clang >= 6 without containers', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs({ useContainers: false }), 'clang', semver.parse('10.0.0')!, '10');
+        expect(entry['runs-on']).toBe('ubuntu-20.04');
+    });
+
+    test('clang >= 6 with containers uses ubuntu:20.04', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs({ useContainers: true }), 'clang', semver.parse('10.0.0')!, '10');
+        expect(entry['runs-on']).toBe('ubuntu-22.04');
+        // ubuntu:20.04 major >= 20, no volumes
+        expect(entry.container).toBe('ubuntu:20.04');
+    });
+
+    test('clang >= 3.9 uses ubuntu:18.04', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs(), 'clang', semver.parse('5.0.0')!, '5');
+        expect(entry.container).toEqual({
+            image: 'ubuntu:18.04',
+            volumes: ['/node20217:/node20217:rw,rshared', '/node20217:/__e/node20:ro,rshared']
+        });
+    });
+
+    test('clang < 3.9 uses ubuntu:16.04', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs(), 'clang', semver.parse('3.5.0')!, '3.5');
+        expect(entry.container).toEqual({
+            image: 'ubuntu:16.04',
+            volumes: ['/node20217:/node20217:rw,rshared', '/node20217:/__e/node20:ro,rshared']
+        });
+    });
+
+    test('msvc >= 14.42 uses windows-2025', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs(), 'msvc', semver.parse('14.42.0')!, '14.42');
+        expect(entry['runs-on']).toBe('windows-2025');
+    });
+
+    test('msvc < 14.42 uses windows-2022', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs(), 'msvc', semver.parse('14.29.30133')!, '14.29');
+        expect(entry['runs-on']).toBe('windows-2022');
+    });
+
+    test('apple-clang uses macos-14', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs(), 'apple-clang', semver.parse('14.0.0')!, '14');
+        expect(entry['runs-on']).toBe('macos-14');
+    });
+
+    test('mingw uses windows-2022', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs(), 'mingw', semver.parse('12.0.0')!, '12');
+        expect(entry['runs-on']).toBe('windows-2022');
+    });
+
+    test('clang-cl uses windows-2022', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs(), 'clang-cl', semver.parse('16.0.0')!, '16');
+        expect(entry['runs-on']).toBe('windows-2022');
+    });
+
+    test('container with object config keeps object', () => {
+        const entry = makeEntry({ container: { image: 'ubuntu:22.04' } });
+        setCompilerContainer(entry, makeInputs({ useContainers: true }), 'gcc', semver.parse('12.0.0')!, '12');
+        // The container gets set to string 'ubuntu:22.04' and stays string (>= 20)
+        expect(entry.container).toBe('ubuntu:22.04');
+    });
+
+    test('container object with old ubuntu gets volumes added', () => {
+        // Pre-existing object container with old ubuntu — the object branch of line 326
+        const entry = makeEntry({ container: { image: 'ubuntu:18.04' } });
+        // apple-clang doesn't overwrite container, so the pre-existing object survives
+        setCompilerContainer(entry, makeInputs(), 'apple-clang', semver.parse('14.0.0')!, '14');
+        expect(entry.container).toEqual({
+            image: 'ubuntu:18.04',
+            volumes: ['/node20217:/node20217:rw,rshared', '/node20217:/__e/node20:ro,rshared']
+        });
+    });
+});
+
+describe('setCompilerB2Toolset', () => {
+    test('gcc sets b2-toolset to gcc', () => {
+        const entry = makeEntry();
+        setCompilerB2Toolset(entry, makeInputs(), 'gcc', '12');
+        expect(entry['b2-toolset']).toBe('gcc');
+    });
+
+    test('mingw sets b2-toolset to gcc', () => {
+        const entry = makeEntry();
+        setCompilerB2Toolset(entry, makeInputs(), 'mingw', '12');
+        expect(entry['b2-toolset']).toBe('gcc');
+    });
+
+    test('clang sets b2-toolset to clang', () => {
+        const entry = makeEntry();
+        setCompilerB2Toolset(entry, makeInputs(), 'clang', '16');
+        expect(entry['b2-toolset']).toBe('clang');
+    });
+
+    test('apple-clang sets b2-toolset to clang', () => {
+        const entry = makeEntry();
+        setCompilerB2Toolset(entry, makeInputs(), 'apple-clang', '14');
+        expect(entry['b2-toolset']).toBe('clang');
+    });
+
+    test('msvc sets b2-toolset to msvc', () => {
+        const entry = makeEntry();
+        setCompilerB2Toolset(entry, makeInputs(), 'msvc', '14.29');
+        expect(entry['b2-toolset']).toBe('msvc');
+    });
+
+    test('clang-cl sets b2-toolset to clang-win', () => {
+        const entry = makeEntry();
+        setCompilerB2Toolset(entry, makeInputs(), 'clang-cl', '16');
+        expect(entry['b2-toolset']).toBe('clang-win');
+    });
+});
+
+describe('runsOnLabels', () => {
+    test('string runs-on returns array', () => {
+        const entry = makeEntry({ 'runs-on': 'ubuntu-22.04' });
+        expect(runsOnLabels(entry)).toEqual(['ubuntu-22.04']);
+    });
+
+    test('array runs-on returns lowercase', () => {
+        const entry = makeEntry({ 'runs-on': ['Windows-2022', 'self-hosted'] });
+        expect(runsOnLabels(entry)).toEqual(['windows-2022', 'self-hosted']);
+    });
+
+    test('no runs-on returns empty', () => {
+        const entry = makeEntry();
+        delete entry['runs-on'];
+        expect(runsOnLabels(entry)).toEqual([]);
+    });
+
+    test('filters non-string labels', () => {
+        const entry = makeEntry({ 'runs-on': [42, 'ubuntu-22.04'] as any });
+        expect(runsOnLabels(entry)).toEqual(['ubuntu-22.04']);
+    });
+});
+
+describe('inferVisualStudioGeneratorFromRunsOn', () => {
+    test('windows-2022 returns VS 17 2022', () => {
+        const entry = makeEntry({ 'runs-on': 'windows-2022' });
+        expect(inferVisualStudioGeneratorFromRunsOn(entry)).toBe('Visual Studio 17 2022');
+    });
+
+    test('windows-2025 returns VS 17 2022', () => {
+        const entry = makeEntry({ 'runs-on': 'windows-2025' });
+        expect(inferVisualStudioGeneratorFromRunsOn(entry)).toBe('Visual Studio 17 2022');
+    });
+
+    test('windows-2019 returns VS 16 2019', () => {
+        const entry = makeEntry({ 'runs-on': 'windows-2019' });
+        expect(inferVisualStudioGeneratorFromRunsOn(entry)).toBe('Visual Studio 16 2019');
+    });
+
+    test('windows-2016 returns VS 15 2017', () => {
+        const entry = makeEntry({ 'runs-on': 'windows-2016' });
+        expect(inferVisualStudioGeneratorFromRunsOn(entry)).toBe('Visual Studio 15 2017');
+    });
+
+    test('windows-2017 returns VS 15 2017', () => {
+        const entry = makeEntry({ 'runs-on': 'windows-2017' });
+        expect(inferVisualStudioGeneratorFromRunsOn(entry)).toBe('Visual Studio 15 2017');
+    });
+
+    test('ubuntu returns null', () => {
+        const entry = makeEntry({ 'runs-on': 'ubuntu-22.04' });
+        expect(inferVisualStudioGeneratorFromRunsOn(entry)).toBeNull();
+    });
+
+    test('no runs-on returns null', () => {
+        const entry = makeEntry();
+        expect(inferVisualStudioGeneratorFromRunsOn(entry)).toBeNull();
+    });
+});
+
+describe('setCompilerCMakeGenerator', () => {
+    test('msvc with windows-2022 runs-on uses VS 17', () => {
+        const entry = makeEntry({ 'runs-on': 'windows-2022' });
+        const v = semver.parse('14.29.30133')!;
+        setCompilerCMakeGenerator(entry, makeInputs(), 'msvc', v, v, '14.29');
+        expect(entry.generator).toBe('Visual Studio 17 2022');
+    });
+
+    test('msvc with no runs-on uses year-based generator for 2022', () => {
+        const entry = makeEntry();
+        delete entry['runs-on'];
+        const v = semver.parse('14.30.0')!;
+        setCompilerCMakeGenerator(entry, makeInputs(), 'msvc', v, v, '14.30');
+        expect(entry.generator).toBe('Visual Studio 17 2022');
+    });
+
+    test('msvc with 2019 version', () => {
+        const entry = makeEntry();
+        delete entry['runs-on'];
+        const v = semver.parse('14.20.0')!;
+        setCompilerCMakeGenerator(entry, makeInputs(), 'msvc', v, v, '14.20');
+        expect(entry.generator).toBe('Visual Studio 16 2019');
+    });
+
+    test('msvc with 2017 version', () => {
+        const entry = makeEntry();
+        delete entry['runs-on'];
+        const v = semver.parse('14.1.0')!;
+        setCompilerCMakeGenerator(entry, makeInputs(), 'msvc', v, v, '14.1');
+        expect(entry.generator).toBe('Visual Studio 15 2017');
+    });
+
+    test('msvc with 2015 version', () => {
+        const entry = makeEntry();
+        delete entry['runs-on'];
+        const v = semver.parse('14.0.0')!;
+        setCompilerCMakeGenerator(entry, makeInputs(), 'msvc', v, v, '14.0');
+        expect(entry.generator).toBe('Visual Studio 14 2015');
+    });
+
+    test('msvc with 2013 version', () => {
+        const entry = makeEntry();
+        delete entry['runs-on'];
+        const v = semver.parse('12.0.0')!;
+        setCompilerCMakeGenerator(entry, makeInputs(), 'msvc', v, v, '12');
+        expect(entry.generator).toBe('Visual Studio 12 2013');
+    });
+
+    test('msvc with 2012 version', () => {
+        const entry = makeEntry();
+        delete entry['runs-on'];
+        const v = semver.parse('11.0.0')!;
+        setCompilerCMakeGenerator(entry, makeInputs(), 'msvc', v, v, '11');
+        expect(entry.generator).toBe('Visual Studio 11 2012');
+    });
+
+    test('msvc with 2010 version', () => {
+        const entry = makeEntry();
+        delete entry['runs-on'];
+        const v = semver.parse('10.0.0')!;
+        setCompilerCMakeGenerator(entry, makeInputs(), 'msvc', v, v, '10');
+        expect(entry.generator).toBe('Visual Studio 10 2010');
+    });
+
+    test('msvc with 2008 version', () => {
+        const entry = makeEntry();
+        delete entry['runs-on'];
+        const v = semver.parse('9.0.0')!;
+        setCompilerCMakeGenerator(entry, makeInputs(), 'msvc', v, v, '9');
+        expect(entry.generator).toBe('Visual Studio 9 2008');
+    });
+
+    test('msvc with 2005 version', () => {
+        const entry = makeEntry();
+        delete entry['runs-on'];
+        const v = semver.parse('8.0.0')!;
+        setCompilerCMakeGenerator(entry, makeInputs(), 'msvc', v, v, '8');
+        expect(entry.generator).toBe('Visual Studio 8 2005');
+    });
+
+    test('msvc with different min/max years does not set generator', () => {
+        const entry = makeEntry();
+        delete entry['runs-on'];
+        const min = semver.parse('14.0.0')!;
+        const max = semver.parse('14.30.0')!;
+        setCompilerCMakeGenerator(entry, makeInputs(), 'msvc', min, max, '14');
+        expect(entry.generator).toBeUndefined();
+    });
+
+    test('mingw sets MinGW Makefiles', () => {
+        const entry = makeEntry();
+        const v = semver.parse('12.0.0')!;
+        setCompilerCMakeGenerator(entry, makeInputs(), 'mingw', v, v, '12');
+        expect(entry.generator).toBe('MinGW Makefiles');
+    });
+
+    test('clang-cl sets ClangCL toolset', () => {
+        const entry = makeEntry();
+        const v = semver.parse('16.0.0')!;
+        setCompilerCMakeGenerator(entry, makeInputs(), 'clang-cl', v, v, '16');
+        expect(entry['generator-toolset']).toBe('ClangCL');
+    });
+
+    test('gcc does not set generator', () => {
+        const entry = makeEntry();
+        const v = semver.parse('12.0.0')!;
+        setCompilerCMakeGenerator(entry, makeInputs(), 'gcc', v, v, '12');
+        expect(entry.generator).toBeUndefined();
+    });
+});
+
+describe('setEntryVersionFlags', () => {
+    test('latest entry in list', () => {
+        const entry = makeEntry({ major: 12, minor: 0, patch: 0 });
+        setEntryVersionFlags(entry, 2, ['10', '11', '12'], semver.parse('12.0.0')!, semver.parse('12.0.0')!);
+        expect(entry['is-latest']).toBe(true);
+        expect(entry['is-main']).toBe(true);
+        expect(entry['is-earliest']).toBe(false);
+        expect(entry['is-intermediary']).toBe(false);
+    });
+
+    test('earliest entry in list', () => {
+        const entry = makeEntry({ major: 10, minor: 0, patch: 0 });
+        setEntryVersionFlags(entry, 0, ['10', '11', '12'], semver.parse('10.0.0')!, semver.parse('10.0.0')!);
+        expect(entry['is-latest']).toBe(false);
+        expect(entry['is-earliest']).toBe(true);
+        expect(entry['is-intermediary']).toBe(false);
+    });
+
+    test('intermediary entry', () => {
+        const entry = makeEntry({ major: 11, minor: 0, patch: 0 });
+        setEntryVersionFlags(entry, 1, ['10', '11', '12'], semver.parse('11.0.0')!, semver.parse('11.0.0')!);
+        expect(entry['is-intermediary']).toBe(true);
+    });
+
+    test('wildcard major sets system-version policy', () => {
+        const entry = makeEntry({ major: '*' });
+        setEntryVersionFlags(entry, 0, ['*'], null, null);
+        expect(entry['subrange-policy']).toBe('system-version');
+        expect(entry['has-major']).toBe(false);
+    });
+
+    test('single subrange sets one-per-major', () => {
+        const entry = makeEntry({ major: 12, minor: 0, patch: 0 });
+        setEntryVersionFlags(entry, 0, ['12'], semver.parse('12.0.0')!, semver.parse('12.0.0')!);
+        expect(entry['subrange-policy']).toBe('one-per-major');
+    });
+
+    test('different major in min/max sets one-per-major', () => {
+        const entry = makeEntry({ major: 10, minor: '*', patch: '*' });
+        setEntryVersionFlags(entry, 0, ['10', '12'], semver.parse('10.0.0')!, semver.parse('12.0.0')!);
+        expect(entry['subrange-policy']).toBe('one-per-major');
+    });
+
+    test('same major sets one-per-minor', () => {
+        const entry = makeEntry({ major: 14, minor: '*', patch: '*' });
+        setEntryVersionFlags(entry, 0, ['14.29', '14.30'], semver.parse('14.29.0')!, semver.parse('14.30.0')!);
+        expect(entry['subrange-policy']).toBe('one-per-minor');
+    });
+
+    test('null versions with has-major true sets one-per-major', () => {
+        const entry = makeEntry({ major: 12 });
+        setEntryVersionFlags(entry, 0, ['12', '13'], null, null);
+        expect(entry['subrange-policy']).toBe('one-per-major');
+    });
+});
+
+describe('setEntryName', () => {
+    test('compiler only', () => {
+        const entry = makeEntry();
+        setEntryName(entry, 'gcc', '*', []);
+        expect(entry.name).toBe('GCC');
+    });
+
+    test('compiler with version', () => {
+        const entry = makeEntry();
+        setEntryName(entry, 'gcc', '12', []);
+        expect(entry.name).toBe('GCC 12');
+    });
+
+    test('compiler with version and single cxx', () => {
+        const entry = makeEntry();
+        setEntryName(entry, 'clang', '16', ['20']);
+        expect(entry.name).toBe('Clang 16: C++20');
+    });
+
+    test('compiler with version and multiple cxx', () => {
+        const entry = makeEntry();
+        setEntryName(entry, 'msvc', '14.29', ['14', '17', '20']);
+        expect(entry.name).toBe('MSVC 14.29: C++14-20');
+    });
+});

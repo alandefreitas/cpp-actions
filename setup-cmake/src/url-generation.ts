@@ -26,9 +26,9 @@ export function generateCMakeURL(version: string, architecture: string, fnlog: (
     const systemOs = (process.env['RUNNER_OS'] || process.platform).toLowerCase();
     let urlOs = systemOs;
     // Put it in the same format as the GitHub Actions runner
-    if (urlOs === 'darwin') {
+    if (urlOs === 'darwin' || urlOs === 'macos') {
         urlOs = 'macos';
-    } else if (urlOs === 'win32') {
+    } else if (urlOs === 'win32' || urlOs === 'windows') {
         urlOs = 'windows';
     } else {
         urlOs = 'linux';
@@ -69,7 +69,7 @@ export function generateCMakeURL(version: string, architecture: string, fnlog: (
     }
 
     // Form complete URL
-    const urlExtension = (systemOs === 'windows') ? 'zip' : 'tar.gz';
+    const urlExtension = (systemOs === 'windows' || systemOs === 'win32') ? 'zip' : 'tar.gz';
     const cmakeBasename = `cmake-${version}-${urlOs}-${urlArch}`;
     const cmakeFilename = `${cmakeBasename}.${urlExtension}`;
     const cmakeUrl = `https://cmake.org/files/v${major}.${minor}/${cmakeFilename}`;

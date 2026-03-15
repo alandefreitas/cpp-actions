@@ -93,24 +93,6 @@ function hasThrowStatements(node: FunctionDeclaration | MethodDeclaration): bool
     return body.getDescendantsOfKind(SyntaxKind.ThrowStatement).length > 0;
 }
 
-/**
- * Checks if a declaration is exported.
- *
- * @param node - The node to check
- * @returns True if the declaration is exported
- */
-function _isExported(node: Node): boolean {
-    if (Node.isFunctionDeclaration(node) || Node.isClassDeclaration(node) ||
-        Node.isInterfaceDeclaration(node) || Node.isTypeAliasDeclaration(node)) {
-        return node.isExported();
-    }
-
-    if (Node.isVariableStatement(node)) {
-        return node.isExported();
-    }
-
-    return false;
-}
 
 /**
  * Extracts declaration info from a function declaration.

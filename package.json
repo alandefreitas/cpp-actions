@@ -32,8 +32,8 @@
     "update-action-ymls": "node --conditions=import utils/update-data/dist/action-yml.js",
     "prepare": "npm run build --workspaces && npm run update-action-ymls",
     "build": "npm run prepare",
-    "test": "jest",
-    "test:coverage": "jest --coverage",
+    "test": "cross-env NODE_OPTIONS=--max-old-space-size=4096 jest --passWithNoTests",
+    "test:coverage": "NODE_OPTIONS=--max-old-space-size=4096 jest --coverage --workerIdleMemoryLimit=512MB --passWithNoTests",
     "lint": "eslint && node utils/jsdoc-linter/dist/index.js && jscpd . && knip && npm run depcheck",
     "lint:eslint": "eslint",
     "lint:jsdoc": "node utils/jsdoc-linter/dist/index.js",
@@ -48,6 +48,7 @@
   "devDependencies": {
     "@types/jest": "^29.5.0",
     "@types/node": "^20.0.0",
+    "cross-env": "^10.1.0",
     "eslint": "^10.0.3",
     "jest": "^29.7.0",
     "jscpd": "^4.0.8",

@@ -1,0 +1,40 @@
+# Codecov configuration
+# https://docs.codecov.io/docs/codecov-yaml
+
+coverage:
+  status:
+    # Overall project coverage check
+    project:
+      default:
+        # Allow up to 1% drop in overall coverage before failing
+        threshold: 1%
+    # Coverage check on changed lines in PRs
+    patch:
+      default:
+        # New/changed code in PRs must have at least 80% coverage
+        target: 80%
+
+comment:
+  # Post coverage summary as a PR comment
+  layout: "reach,diff,flags,files"
+  behavior: default
+  require_changes: false
+
+flags:
+  typescript:
+    paths:
+      - "common/"
+      - "b2-workflow/"
+      - "boost-clone/"
+      - "cmake-workflow/"
+      - "cpp-matrix/"
+      - "create-changelog/"
+      - "flamegraph/"
+      - "package-install/"
+      - "setup-clang/"
+      - "setup-cmake/"
+      - "setup-cpp/"
+      - "setup-gcc/"
+      - "setup-msvc/"
+      - "setup-program/"
+      - "utils/"

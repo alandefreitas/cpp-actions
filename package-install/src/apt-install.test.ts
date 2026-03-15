@@ -1,0 +1,444 @@
+import { aptGetMain } from './apt-install';
+import { type Inputs } from './schema';
+import * as exec from '@actions/exec';
+import * as tc from '@actions/tool-cache';
+import * as io from '@actions/io';
+
+jest.mock('@actions/core', () => ({
+    info: jest.fn(),
+    debug: jest.fn(),
+    error: jest.fn(),
+    setFailed: jest.fn(),
+    startGroup: jest.fn(),
+    endGroup: jest.fn()
+}));
+
+jest.mock('@actions/exec', () => ({
+    exec: jest.fn(),
+    getExecOutput: jest.fn()
+}));
+
+jest.mock('@actions/tool-cache', () => ({
+    downloadTool: jest.fn()
+}));
+
+jest.mock('@actions/io', () => ({
+    which: jest.fn()
+}));
+
+jest.mock('trace-commands', () => ({
+    scoped: jest.fn(() => jest.fn())
+}));
+
+jest.mock('setup-program', () => ({
+    isSudoRequired: jest.fn(() => false)
+}));
+
+const mockExec = exec.exec as jest.MockedFunction<typeof exec.exec>;
+const mockGetExecOutput = exec.getExecOutput as jest.MockedFunction<typeof exec.getExecOutput>;
+const mockDownloadTool = tc.downloadTool as jest.MockedFunction<typeof tc.downloadTool>;
+const mockWhich = io.which as jest.MockedFunction<typeof io.which>;
+
+/**
+ * Creates a default Inputs object for testing with optional overrides.
+ *
+ * @param overrides - Partial input values to override defaults
+ * @returns Complete Inputs object
+ */
+function makeInputs(overrides: Partial<Inputs> = {}): Inputs {
+    return {
+        traceCommands: false,
+        vcpkg: [],
+        apt_get: [],
+        cxx: '',
+        cxxflags: '',
+        cc: '',
+        ccflags: '',
+        vcpkgTriplet: '',
+        vcpkgDir: '',
+        vcpkgBranch: 'master',
+        vcpkgCache: true,
+        vcpkgForceInstall: false,
+        aptGetRetries: 3,
+        aptGetSources: [],
+        aptGetSourceKeys: [],
+        aptGetIgnoreMissing: false,
+        aptGetAddArchitecture: [],
+        aptGetBulkInstall: false,
+        ...overrides
+    };
+}
+
+describe('aptGetMain', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.useFakeTimers();
+        mockWhich.mockResolvedValue('/usr/bin/apt-get');
+        mockExec.mockResolvedValue(0);
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('finds apt-get and runs update with no packages', async () => {
+        const inputs = makeInputs();
+        await aptGetMain(inputs);
+
+        expect(mockWhich).toHaveBeenCalledWith('apt-get', true);
+        // Should call apt-get update
+        expect(mockExec).toHaveBeenCalledWith(
+            expect.stringContaining('apt-get -o Acquire::Retries=3 update'),
+            []
+        );
+    });
+
+    it('uses sudo prefix when sudo is required', async () => {
+        const setup_program = require('setup-program');
+        setup_program.isSudoRequired.mockReturnValue(true);
+
+        const inputs = makeInputs();
+        await aptGetMain(inputs);
+
+        expect(mockExec).toHaveBeenCalledWith(
+            expect.stringContaining('sudo'),
+            []
+        );
+
+        setup_program.isSudoRequired.mockReturnValue(false);
+    });
+
+    describe('source keys', () => {
+        it('installs source keys with retry on success', async () => {
+            mockDownloadTool.mockResolvedValue('/tmp/key');
+            mockExec.mockResolvedValue(0);
+
+            const inputs = makeInputs({
+                aptGetSourceKeys: ['https://example.com/key.gpg'],
+                aptGetRetries: 3
+            });
+            await aptGetMain(inputs);
+
+            expect(mockDownloadTool).toHaveBeenCalledWith('https://example.com/key.gpg');
+            expect(mockExec).toHaveBeenCalledWith(
+                expect.stringContaining('apt-key add /tmp/key'),
+                [],
+                expect.objectContaining({ ignoreReturnCode: true })
+            );
+        });
+
+        it('retries on key add failure then succeeds', async () => {
+            mockDownloadTool.mockResolvedValue('/tmp/key');
+            // First attempt fails, second succeeds
+            mockExec
+                .mockResolvedValueOnce(1) // key add fail
+                .mockResolvedValue(0);    // key add success, then update
+
+            const inputs = makeInputs({
+                aptGetSourceKeys: ['https://example.com/key.gpg'],
+                aptGetRetries: 2
+            });
+            const promise = aptGetMain(inputs);
+            await jest.advanceTimersByTimeAsync(10000);
+            await promise;
+
+            // downloadTool called twice (once per retry)
+            expect(mockDownloadTool).toHaveBeenCalledTimes(2);
+        });
+
+        it('does not ignore return code on last retry', async () => {
+            mockDownloadTool.mockResolvedValue('/tmp/key');
+            mockExec.mockResolvedValue(0);
+
+            const inputs = makeInputs({
+                aptGetSourceKeys: ['https://example.com/key.gpg'],
+                aptGetRetries: 2
+            });
+            await aptGetMain(inputs);
+
+            // First call to exec for key add should have ignoreReturnCode: true (not last retry)
+            expect(mockExec).toHaveBeenCalledWith(
+                expect.stringContaining('apt-key add'),
+                [],
+                expect.objectContaining({ ignoreReturnCode: true })
+            );
+        });
+    });
+
+    describe('apt-get sources', () => {
+        beforeEach(() => {
+            mockGetExecOutput.mockResolvedValue({
+                exitCode: 0,
+                stdout: '0.99.0',
+                stderr: ''
+            });
+        });
+
+        it('throws if dpkg-query fails', async () => {
+            mockGetExecOutput.mockResolvedValue({
+                exitCode: 1,
+                stdout: '',
+                stderr: 'error'
+            });
+
+            const inputs = makeInputs({
+                aptGetSources: ['ppa:test/ppa']
+            });
+
+            await expect(aptGetMain(inputs)).rejects.toThrow(
+                'Failed to get the version of software-properties-common'
+            );
+        });
+
+        it('adds ppa source with -P flag for new software-properties-common', async () => {
+            mockGetExecOutput.mockResolvedValue({
+                exitCode: 0,
+                stdout: '0.99.0',
+                stderr: ''
+            });
+            mockExec.mockResolvedValue(0);
+
+            const inputs = makeInputs({
+                aptGetSources: ['ppa:test/ppa'],
+                aptGetRetries: 1
+            });
+            await aptGetMain(inputs);
+
+            // Version 0.99.0 >= 0.98.10, so -P flag should be used
+            // Version 0.99.0 >= 0.96.24.20, so -n flag should be used
+            expect(mockExec).toHaveBeenCalledWith(
+                expect.stringContaining('apt-add-repository -y -n -P ppa:test/ppa'),
+                [],
+                expect.anything()
+            );
+        });
+
+        it('adds deb source with -S flag', async () => {
+            mockExec.mockResolvedValue(0);
+
+            const inputs = makeInputs({
+                aptGetSources: ['deb http://example.com/repo stable main'],
+                aptGetRetries: 1
+            });
+            await aptGetMain(inputs);
+
+            expect(mockExec).toHaveBeenCalledWith(
+                expect.stringContaining('-S deb http://example.com/repo stable main'),
+                [],
+                expect.anything()
+            );
+        });
+
+        it('adds URI source with -U flag', async () => {
+            mockExec.mockResolvedValue(0);
+
+            const inputs = makeInputs({
+                aptGetSources: ['https://example.com/repo'],
+                aptGetRetries: 1
+            });
+            await aptGetMain(inputs);
+
+            expect(mockExec).toHaveBeenCalledWith(
+                expect.stringContaining('-U https://example.com/repo'),
+                [],
+                expect.anything()
+            );
+        });
+
+        it('omits -n and source flags for old software-properties-common', async () => {
+            mockGetExecOutput.mockResolvedValue({
+                exitCode: 0,
+                stdout: '0.92.0',
+                stderr: ''
+            });
+            mockExec.mockResolvedValue(0);
+
+            const inputs = makeInputs({
+                aptGetSources: ['ppa:test/ppa'],
+                aptGetRetries: 1
+            });
+            await aptGetMain(inputs);
+
+            // Version 0.92.0 < 0.96.24.20 — no -n flag
+            // Version 0.92.0 < 0.98.10 — no -P/-S/-U flags
+            expect(mockExec).toHaveBeenCalledWith(
+                expect.stringContaining('apt-add-repository -y ppa:test/ppa'),
+                [],
+                expect.anything()
+            );
+        });
+
+        it('retries source add on non-zero exit code', async () => {
+            mockExec
+                .mockResolvedValueOnce(1) // source add fail
+                .mockResolvedValue(0);    // source add success, then update
+
+            const inputs = makeInputs({
+                aptGetSources: ['ppa:test/ppa'],
+                aptGetRetries: 2
+            });
+            const promise = aptGetMain(inputs);
+            await jest.advanceTimersByTimeAsync(10000);
+            await promise;
+
+            // apt-add-repository called twice
+            const addRepoCalls = mockExec.mock.calls.filter(
+                c => typeof c[0] === 'string' && c[0].includes('apt-add-repository')
+            );
+            expect(addRepoCalls.length).toBe(2);
+        });
+
+        it('retries source add on exception', async () => {
+            // First exec call for apt-add-repository throws, second succeeds
+            let callCount = 0;
+            mockExec.mockImplementation(async (cmd) => {
+                if (typeof cmd === 'string' && cmd.includes('apt-add-repository')) {
+                    callCount++;
+                    if (callCount === 1) {
+                        throw new Error('network error');
+                    }
+                }
+                return 0;
+            });
+
+            const inputs = makeInputs({
+                aptGetSources: ['ppa:test/ppa'],
+                aptGetRetries: 2
+            });
+            const promise = aptGetMain(inputs);
+            await jest.advanceTimersByTimeAsync(10000);
+            await promise;
+
+            expect(callCount).toBe(2);
+        });
+    });
+
+    describe('architectures', () => {
+        it('adds architectures with dpkg', async () => {
+            const inputs = makeInputs({
+                aptGetAddArchitecture: ['i386', 'arm64']
+            });
+            await aptGetMain(inputs);
+
+            expect(mockExec).toHaveBeenCalledWith(
+                expect.stringContaining('dpkg --add-architecture i386'),
+                []
+            );
+            expect(mockExec).toHaveBeenCalledWith(
+                expect.stringContaining('dpkg --add-architecture arm64'),
+                []
+            );
+        });
+    });
+
+    describe('package installation', () => {
+        it('installs packages individually when aptGetBulkInstall is false', async () => {
+            const inputs = makeInputs({
+                apt_get: ['pkg1', 'pkg2'],
+                aptGetBulkInstall: false
+            });
+            await aptGetMain(inputs);
+
+            // Each package installed separately
+            const installCalls = mockExec.mock.calls.filter(
+                c => Array.isArray(c[1]) && c[1].includes('install')
+            );
+            expect(installCalls.length).toBe(2);
+        });
+
+        it('installs packages in bulk when aptGetBulkInstall is true and ignoreMissing is false', async () => {
+            const inputs = makeInputs({
+                apt_get: ['pkg1', 'pkg2'],
+                aptGetBulkInstall: true,
+                aptGetIgnoreMissing: false
+            });
+            await aptGetMain(inputs);
+
+            expect(mockExec).toHaveBeenCalledWith(
+                expect.stringContaining('install -y pkg1 pkg2'),
+                []
+            );
+        });
+
+        it('uses --ignore-missing when aptGetIgnoreMissing is true', async () => {
+            const inputs = makeInputs({
+                apt_get: ['pkg1'],
+                aptGetIgnoreMissing: true
+            });
+            await aptGetMain(inputs);
+
+            const installCall = mockExec.mock.calls.find(
+                c => Array.isArray(c[1]) && c[1].includes('--ignore-missing')
+            );
+            expect(installCall).toBeDefined();
+        });
+
+        it('throws on failed install when ignoreMissing is false', async () => {
+            mockExec.mockImplementation(async (_cmd, args) => {
+                if (Array.isArray(args) && args.includes('install')) {
+                    return 1;
+                }
+                return 0;
+            });
+
+            const inputs = makeInputs({
+                apt_get: ['bad-pkg'],
+                aptGetIgnoreMissing: false,
+                aptGetBulkInstall: false
+            });
+
+            await expect(aptGetMain(inputs)).rejects.toThrow(
+                'Failed to install package bad-pkg'
+            );
+        });
+
+        it('does not throw on failed install when ignoreMissing is true', async () => {
+            mockExec.mockImplementation(async (_cmd, args) => {
+                if (Array.isArray(args) && args.includes('install')) {
+                    return 1;
+                }
+                return 0;
+            });
+
+            const inputs = makeInputs({
+                apt_get: ['bad-pkg'],
+                aptGetIgnoreMissing: true
+            });
+
+            // Should not throw
+            await aptGetMain(inputs);
+        });
+
+        it('installs individually when ignoreMissing is true even with bulk flag', async () => {
+            const inputs = makeInputs({
+                apt_get: ['pkg1', 'pkg2'],
+                aptGetIgnoreMissing: true,
+                aptGetBulkInstall: true
+            });
+            await aptGetMain(inputs);
+
+            // ignoreMissing takes precedence: installs individually
+            const installCalls = mockExec.mock.calls.filter(
+                c => Array.isArray(c[1]) && c[1].includes('install')
+            );
+            expect(installCalls.length).toBe(2);
+        });
+
+        it('sets DEBIAN_FRONTEND=noninteractive for individual installs', async () => {
+            const inputs = makeInputs({
+                apt_get: ['pkg1']
+            });
+            await aptGetMain(inputs);
+
+            const installCall = mockExec.mock.calls.find(
+                c => Array.isArray(c[1]) && c[1].includes('install')
+            );
+            expect(installCall).toBeDefined();
+            expect(installCall![2]).toEqual(expect.objectContaining({
+                env: expect.objectContaining({
+                    DEBIAN_FRONTEND: 'noninteractive'
+                })
+            }));
+        });
+    });
+});

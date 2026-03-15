@@ -394,7 +394,7 @@ class SetupCppRunner {
  * @param inputs - Configuration inputs for the action
  * @returns Object containing compiler paths and version info
  */
-async function main(inputs: Inputs): Promise<Record<string, unknown>> {
+export async function main(inputs: Inputs): Promise<Record<string, unknown>> {
     return new SetupCppRunner(inputs).run();
 }
 
