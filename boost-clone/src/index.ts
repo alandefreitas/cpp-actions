@@ -11,6 +11,7 @@ import * as path from 'path';
 import * as os from 'os';
 import * as traceCommands from 'trace-commands';
 import { runAction } from 'action-schema';
+import { ExpectedError } from 'pretty-errors';
 
 // Type imports
 import type { Inputs, CloneStrategy } from './schema';
@@ -725,7 +726,7 @@ runAction({
         const outputs = await main(inputs);
 
         if (!outputs.boostDir) {
-            core.setFailed('Cannot clone Boost');
+            throw new ExpectedError('Cannot clone Boost. Check the output above for details.', 'Boost Clone Failed');
         }
 
         return outputs;

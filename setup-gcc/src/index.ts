@@ -6,6 +6,7 @@ import * as exec from '@actions/exec';
 import * as path from 'path';
 import * as traceCommands from 'trace-commands';
 import { runAction } from 'action-schema';
+import { ExpectedError } from 'pretty-errors';
 
 import * as setup_program from 'setup-program';
 
@@ -100,7 +101,7 @@ class SetupGccRunner {
         }
 
         if (process.platform !== 'linux') {
-            core.setFailed('This action is only supported on Linux');
+            throw new ExpectedError('This action is only supported on Linux', 'Unsupported Platform');
         }
 
         this.allVersions = await setup_program.findGCCVersions();
@@ -343,7 +344,10 @@ runAction({
 
         // Validate that GCC was found
         if (!outputs.outputPath) {
-            core.setFailed('Cannot setup GCC');
+            throw new ExpectedError(
+                'Cannot setup GCC: no suitable version was found in the specified paths, system paths, APT, or release binaries. Check the version requirement and available versions.',
+                'GCC Setup Failed'
+            );
         }
 
         return outputs;

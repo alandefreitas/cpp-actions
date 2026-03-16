@@ -32,6 +32,12 @@ jest.mock('setup-program', () => ({
     PackagePreferenceTier: { UNVERSIONED: 1, RAW_VERSIONED: 2, OTHER_VERSIONED: 3 }
 }));
 
+const realExistsSync = jest.requireActual<typeof fs>('fs').existsSync;
+jest.mock('fs', () => ({
+    ...jest.requireActual('fs'),
+    existsSync: jest.fn((...args: Parameters<typeof fs.existsSync>) => realExistsSync(...args))
+}));
+
 import {
     findFileRecursive,
     hasSanitizerRuntimes,
@@ -110,6 +116,15 @@ describe('hasSanitizerRuntimes', () => {
 describe('findLlvmSymbolizer', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+    });
+
+    it('returns absolute path when existsSync finds symbolizer', async () => {
+        (fs.existsSync as jest.Mock).mockImplementation((p: string) => {
+            return String(p).includes('llvm-symbolizer');
+        });
+        const result = await findLlvmSymbolizer(14);
+        expect(result).toMatch(/llvm-symbolizer/);
+        (fs.existsSync as jest.Mock).mockReturnValue(false);
     });
 
     it('returns null when symbolizer not found anywhere', async () => {

@@ -3,6 +3,7 @@ import * as semver from 'semver';
 import * as path from 'path';
 import * as traceCommands from 'trace-commands';
 import { runAction } from 'action-schema';
+import { ExpectedError } from 'pretty-errors';
 
 import { type SetupProgramInputs } from './types';
 
@@ -231,7 +232,7 @@ class SetupProgramRunner {
 
         core.setOutput('found', false);
         if (this.inputs.failOnError) {
-            core.setFailed('Cannot find program');
+            throw new ExpectedError('Cannot find program. Ensure the program is installed and available in PATH.', 'Program Not Found');
         } else {
             core.info('Cannot find program');
         }

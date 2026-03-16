@@ -1,5 +1,6 @@
 import * as path from 'path';
 import { describePrettyErrors } from 'pretty-errors/test-helper';
+import { ExpectedError } from 'pretty-errors';
 
 jest.mock('@actions/core', () => ({
     info: jest.fn(),
@@ -122,15 +123,15 @@ describe('setup-gcc main', () => {
         expect(result.version).toBe('0.0.0');
     });
 
-    it('calls setFailed on non-linux platforms', async () => {
+    it('throws ExpectedError on non-linux platforms', async () => {
         Object.defineProperty(process, 'platform', { value: 'win32', writable: true });
-        await main(makeInputs());
-        expect(core.setFailed).toHaveBeenCalledWith('This action is only supported on Linux');
+        await expect(main(makeInputs())).rejects.toThrow(ExpectedError);
+        await expect(main(makeInputs())).rejects.toThrow('This action is only supported on Linux');
     });
 
-    it('sets AGENT_TOOLSDIRECTORY on darwin', async () => {
+    it('sets AGENT_TOOLSDIRECTORY on darwin but throws ExpectedError', async () => {
         Object.defineProperty(process, 'platform', { value: 'darwin', writable: true });
-        await main(makeInputs());
+        await expect(main(makeInputs())).rejects.toThrow(ExpectedError);
         expect(process.env['AGENT_TOOLSDIRECTORY']).toBe('/Users/runner/hostedtoolcache');
     });
 
@@ -173,9 +174,9 @@ describe('setup-gcc main', () => {
         );
     });
 
-    it('skips APT on non-linux platform', async () => {
+    it('throws ExpectedError on non-linux platform before reaching APT', async () => {
         Object.defineProperty(process, 'platform', { value: 'win32', writable: true });
-        await main(makeInputs());
+        await expect(main(makeInputs())).rejects.toThrow(ExpectedError);
         expect(mockFindProgramWithApt).not.toHaveBeenCalled();
     });
 

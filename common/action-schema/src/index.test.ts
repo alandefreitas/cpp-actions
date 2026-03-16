@@ -7,6 +7,7 @@ import {
     updateMultipleActionYmls
 } from './generators/action-yml';
 import { createActionRunner, createActionMain, runAction } from './runner';
+import { ExpectedError } from 'pretty-errors';
 import {
     createSetupInputs,
     createCompilerPrefixRemover,
@@ -44,7 +45,8 @@ jest.mock('@actions/core', () => ({
 
 // Mock pretty-errors
 jest.mock('pretty-errors', () => ({
-    reportAndSetFailed: jest.fn()
+    reportAndSetFailed: jest.fn(),
+    ExpectedError: jest.requireActual('pretty-errors').ExpectedError
 }));
 
 // Mock fs for action-yml tests
@@ -950,7 +952,7 @@ describe('action-schema', () => {
             expect(traceCommandsMock.setTraceCommands).not.toHaveBeenCalled();
         });
 
-        it('should call setFailed when validateOutputs returns false', async () => {
+        it('should throw ExpectedError when validateOutputs returns false', async () => {
             mockedGhInputs.getBoolean.mockReturnValue(false);
             mockedGhInputs.getInput.mockReturnValue('*');
 
@@ -961,9 +963,8 @@ describe('action-schema', () => {
                 validateOutputs: () => false
             });
 
-            await run();
-
-            expect(core.setFailed).toHaveBeenCalledWith('Test Action failed: output validation failed');
+            await expect(run()).rejects.toThrow(ExpectedError);
+            await expect(run()).rejects.toThrow('Test Action failed: output validation failed');
             expect(mockedGhInputs.setOutputObject).not.toHaveBeenCalled();
         });
 
@@ -979,9 +980,8 @@ describe('action-schema', () => {
                 failureMessage: 'Custom failure message'
             });
 
-            await run();
-
-            expect(core.setFailed).toHaveBeenCalledWith('Custom failure message');
+            await expect(run()).rejects.toThrow(ExpectedError);
+            await expect(run()).rejects.toThrow('Custom failure message');
         });
 
         it('should proceed normally when validateOutputs returns true', async () => {
@@ -995,9 +995,7 @@ describe('action-schema', () => {
                 validateOutputs: () => true
             });
 
-            await run();
-
-            expect(core.setFailed).not.toHaveBeenCalled();
+            await expect(run()).resolves.not.toThrow();
             expect(mockedGhInputs.setOutputObject).toHaveBeenCalledWith({ result: 'ok' });
         });
     });

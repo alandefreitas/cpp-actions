@@ -6,6 +6,7 @@ import * as exec from '@actions/exec';
 import * as path from 'path';
 import * as traceCommands from 'trace-commands';
 import { runAction } from 'action-schema';
+import { ExpectedError } from 'pretty-errors';
 
 import * as setup_gcc from 'setup-gcc';
 import * as setup_clang from 'setup-clang';
@@ -249,7 +250,8 @@ class SetupCppRunner {
     /**
      * Sets up MSVC by delegating to the setup-msvc action.
      *
-     * @returns true if setup succeeded, false if it failed
+     * @returns true if setup succeeded
+     * @throws {ExpectedError} If MSVC setup fails
      */
     private async setupMsvc(): Promise<boolean> {
         traceCommands.log(`compiler: ${this.compiler}... forwarding to setup-msvc.`);
@@ -267,8 +269,7 @@ class SetupCppRunner {
                 traceCommands: this.inputs.traceCommands
             });
         } catch (error) {
-            core.setFailed((error as Error).message);
-            return false;
+            throw new ExpectedError((error as Error).message, 'MSVC Setup Failed');
         }
         core.startGroup('📗 MSVC Environment Variables');
         for (const [key, value] of Object.entries(process.env)) {
@@ -301,18 +302,18 @@ class SetupCppRunner {
             compilerPath = null;
         }
         if (compilerPath === null || compilerPath === '') {
-            core.setFailed(`Cannot find ${whichArg}`);
-        } else {
-            this.outputPath = compilerPath;
-            this.cc = compilerPath;
-            this.cxx = compilerPath.replace(/gcc/g, 'g++').replace(/clang/g, 'clang++');
-            if (!fs.existsSync(this.cxx)) {
-                this.cxx = this.cc;
-            }
-            this.bindir = path.dirname(this.outputPath);
-            this.dir = path.dirname(this.bindir);
-            await this.detectVersionFromPath();
+            core.endGroup();
+            throw new ExpectedError(`Cannot find ${whichArg}. Ensure the compiler is installed and available in PATH.`, 'Compiler Not Found');
         }
+        this.outputPath = compilerPath;
+        this.cc = compilerPath;
+        this.cxx = compilerPath.replace(/gcc/g, 'g++').replace(/clang/g, 'clang++');
+        if (!fs.existsSync(this.cxx)) {
+            this.cxx = this.cc;
+        }
+        this.bindir = path.dirname(this.outputPath);
+        this.dir = path.dirname(this.bindir);
+        await this.detectVersionFromPath();
         core.endGroup();
     }
 
@@ -383,8 +384,7 @@ class SetupCppRunner {
                 versionPatch: this.versionPatch
             };
         }
-        core.setFailed(`Cannot setup ${this.compiler}`);
-        return {};
+        throw new ExpectedError(`Cannot setup ${this.compiler}. Check that the compiler is installed and the version is available.`, 'Compiler Setup Failed');
     }
 }
 

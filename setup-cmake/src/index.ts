@@ -10,6 +10,7 @@ import * as semver from 'semver';
 import * as path from 'path';
 import * as traceCommands from 'trace-commands';
 import { runAction } from 'action-schema';
+import { ExpectedError } from 'pretty-errors';
 
 import * as setup_program from 'setup-program';
 
@@ -368,7 +369,7 @@ runAction({
         const outputs = await main(inputs);
 
         if (!outputs.path) {
-            core.setFailed('Cannot setup CMake');
+            throw new ExpectedError('Cannot setup CMake. Check the output above for details.', 'Setup CMake Failed');
         }
 
         return outputs;

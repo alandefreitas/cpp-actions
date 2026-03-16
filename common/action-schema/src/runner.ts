@@ -14,7 +14,7 @@
 import * as core from '@actions/core';
 import * as traceCommands from 'trace-commands';
 import * as gh_inputs from 'gh-inputs';
-import { reportAndSetFailed } from 'pretty-errors';
+import { reportAndSetFailed, ExpectedError } from 'pretty-errors';
 import { parseInputs } from './parser';
 import type { ActionInputsSchema, InferInputs, RunnerOptions } from './types';
 
@@ -82,8 +82,7 @@ export function createActionRunner<
 
         // Validate outputs if validator provided
         if (validateOutputs && !validateOutputs(outputs)) {
-            core.setFailed(failureMessage ?? `${title} failed: output validation failed`);
-            return;
+            throw new ExpectedError(failureMessage ?? `${title} failed: output validation failed`, `${title} Failed`);
         }
 
         // Log and set outputs

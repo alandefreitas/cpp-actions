@@ -41,7 +41,6 @@ jest.mock('fs', () => ({
     existsSync: jest.fn()
 }));
 
-import * as core from '@actions/core';
 import * as io from '@actions/io';
 import * as exec from '@actions/exec';
 import * as fs from 'fs';
@@ -50,9 +49,8 @@ import * as setup_clang from 'setup-clang';
 import * as setup_msvc from 'setup-msvc';
 import { normalizeCompiler, resolveMSVCArch, main } from './index';
 import type { Inputs } from './schema';
+import { ExpectedError } from 'pretty-errors';
 import { describePrettyErrors } from 'pretty-errors/test-helper';
-
-const mockSetFailed = core.setFailed as jest.MockedFunction<typeof core.setFailed>;
 const mockWhich = io.which as jest.MockedFunction<typeof io.which>;
 const mockGetExecOutput = exec.getExecOutput as jest.MockedFunction<typeof exec.getExecOutput>;
 const mockExistsSync = fs.existsSync as jest.MockedFunction<typeof fs.existsSync>;
@@ -249,14 +247,12 @@ describe('main (SetupCppRunner)', () => {
             }));
         });
 
-        it('returns empty when setup returns null result', async () => {
+        it('throws ExpectedError when setup returns null result', async () => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             mockGccMain.mockResolvedValue(null as any);
 
-            const result = await main(makeInputs({ compiler: 'gcc', version: '99' }));
-
-            expect(mockSetFailed).toHaveBeenCalledWith('Cannot setup gcc');
-            expect(result).toEqual({});
+            await expect(main(makeInputs({ compiler: 'gcc', version: '99' }))).rejects.toThrow(ExpectedError);
+            await expect(main(makeInputs({ compiler: 'gcc', version: '99' }))).rejects.toThrow('Cannot setup gcc');
         });
     });
 
@@ -296,13 +292,11 @@ describe('main (SetupCppRunner)', () => {
             }));
         });
 
-        it('returns empty on MSVC setup failure', async () => {
+        it('throws ExpectedError on MSVC setup failure', async () => {
             mockMsvcMain.mockRejectedValue(new Error('MSVC not found'));
 
-            const result = await main(makeInputs({ compiler: 'msvc', version: '*' }));
-
-            expect(mockSetFailed).toHaveBeenCalledWith('MSVC not found');
-            expect(result).toEqual({});
+            await expect(main(makeInputs({ compiler: 'msvc', version: '*' }))).rejects.toThrow(ExpectedError);
+            await expect(main(makeInputs({ compiler: 'msvc', version: '*' }))).rejects.toThrow('MSVC not found');
         });
     });
 
@@ -369,25 +363,20 @@ describe('main (SetupCppRunner)', () => {
             }));
         });
 
-        it('sets failed when compiler not found in PATH', async () => {
+        it('throws ExpectedError when compiler not found in PATH', async () => {
             Object.defineProperty(process, 'platform', { value: 'darwin' });
             mockWhich.mockResolvedValue('');
 
-            const result = await main(makeInputs({ compiler: 'clang', version: '*' }));
-
-            expect(mockSetFailed).toHaveBeenCalledWith('Cannot find clang');
-            expect(mockSetFailed).toHaveBeenCalledWith('Cannot setup clang');
-            expect(result).toEqual({});
+            await expect(main(makeInputs({ compiler: 'clang', version: '*' }))).rejects.toThrow(ExpectedError);
+            await expect(main(makeInputs({ compiler: 'clang', version: '*' }))).rejects.toThrow('Cannot find clang');
         });
 
-        it('handles io.which throwing', async () => {
+        it('throws ExpectedError when io.which throws', async () => {
             Object.defineProperty(process, 'platform', { value: 'darwin' });
             mockWhich.mockRejectedValue(new Error('not found'));
 
-            const result = await main(makeInputs({ compiler: 'clang', version: '*' }));
-
-            expect(mockSetFailed).toHaveBeenCalledWith('Cannot find clang');
-            expect(result).toEqual({});
+            await expect(main(makeInputs({ compiler: 'clang', version: '*' }))).rejects.toThrow(ExpectedError);
+            await expect(main(makeInputs({ compiler: 'clang', version: '*' }))).rejects.toThrow('Cannot find clang');
         });
 
         it('handles --version failing with non-zero exit', async () => {

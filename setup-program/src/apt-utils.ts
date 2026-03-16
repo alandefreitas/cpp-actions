@@ -11,6 +11,7 @@ import * as io from '@actions/io';
 import * as exec from '@actions/exec';
 import * as semver from 'semver';
 import * as traceCommands from 'trace-commands';
+import { ExpectedError } from 'pretty-errors';
 
 import { type ProgramResult, type ExecOutput } from './types';
 
@@ -110,7 +111,7 @@ export function getPackagePreferenceTier(packageName: string, baseNames: string[
  * @param version - Semver version constraint (e.g., ">=10", "14.0.0", "*")
  * @param checkLatest - If true, prefer latest matching version; if false, prefer earliest
  * @returns The best matching package info, or null if no match found
- * @throws Error if apt-cache search or showpkg commands fail
+ * @throws ExpectedError if apt-cache search or showpkg commands fail
  */
 export async function searchAptPackages(
     names: string[],
@@ -126,7 +127,7 @@ export async function searchAptPackages(
         fnlog(`Searching for packages matching ${searchExpression}`);
         const output: ExecOutput = await exec.getExecOutput('apt-cache', ['search', `^${searchExpression}$`]);
         if (output.exitCode !== 0) {
-            throw new Error(`Failed to run apt-cache search. Exit code ${output.exitCode}`);
+            throw new ExpectedError(`Failed to run apt-cache search (exit code ${output.exitCode}). Check that APT package lists are up to date.`, 'APT Search Failed');
         }
         fnlog(`apt-cache search. Exit code ${output.exitCode}`);
         const aptOutput = output.stdout.trim();
@@ -149,7 +150,7 @@ export async function searchAptPackages(
     for (const packageName of packageNames) {
         const output: ExecOutput = await exec.getExecOutput('apt-cache', ['showpkg', packageName], { silent: true });
         if (output.exitCode !== 0) {
-            throw new Error(`Failed to run "apt-cache showpkg '${packageName}'"`);
+            throw new ExpectedError(`Failed to run "apt-cache showpkg '${packageName}'" (exit code ${output.exitCode}). Check that APT package lists are up to date.`, 'APT Package Query Failed');
         }
         if (output.stdout.trim() === '') {
             fnlog('No output from apt-cache showpkg ' + packageName);

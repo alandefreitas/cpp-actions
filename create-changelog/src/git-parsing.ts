@@ -11,6 +11,7 @@ import * as core from '@actions/core';
 import * as exec from '@actions/exec';
 import * as axios from 'axios';
 import * as traceCommands from 'trace-commands';
+import { ExpectedError } from 'pretty-errors';
 
 import {
     Commit,
@@ -649,7 +650,7 @@ export async function processCommits(projectPath: string, repoUrl: string | unde
                 : `${unconventionalCommits.length} unconventional commits`;
 
             if (checkUnconventional === 'error') {
-                core.setFailed(message);
+                throw new ExpectedError(message, 'Conventional Commits');
             } else {
                 core.warning(message, { title: 'Conventional Commits' });
             }

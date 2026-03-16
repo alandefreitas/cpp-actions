@@ -1,6 +1,7 @@
 import * as path from 'path';
 import { main } from './index';
 import { describePrettyErrors } from 'pretty-errors/test-helper';
+import { ExpectedError } from 'pretty-errors';
 import type { Inputs } from './schema';
 
 // ─── Mocks ──────────────────────────────────────────────────────────
@@ -141,9 +142,9 @@ describe('setup-clang', () => {
             expect(mockSetupProgram.findClangVersions).toHaveBeenCalled();
         });
 
-        it('sets AGENT_TOOLSDIRECTORY on darwin', async () => {
+        it('sets AGENT_TOOLSDIRECTORY on darwin but throws ExpectedError', async () => {
             Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
-            await main(makeInputs());
+            await expect(main(makeInputs())).rejects.toThrow(ExpectedError);
             expect(process.env['AGENT_TOOLSDIRECTORY']).toBe('/Users/runner/hostedtoolcache');
         });
 
@@ -153,10 +154,10 @@ describe('setup-clang', () => {
             expect(process.env['RUNNER_TOOL_CACHE']).toBe('/custom/tools');
         });
 
-        it('calls setFailed on non-linux', async () => {
+        it('throws ExpectedError on non-linux', async () => {
             Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
-            await main(makeInputs());
-            expect(mockCore.setFailed).toHaveBeenCalledWith('This action is only supported on Linux');
+            await expect(main(makeInputs())).rejects.toThrow(ExpectedError);
+            await expect(main(makeInputs())).rejects.toThrow('This action is only supported on Linux');
         });
     });
 
@@ -213,9 +214,9 @@ describe('setup-clang', () => {
             expect(mockSetupProgram.findProgramWithApt).not.toHaveBeenCalled();
         });
 
-        it('skips APT on non-linux platforms', async () => {
+        it('throws ExpectedError on non-linux platforms before reaching APT', async () => {
             Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
-            await main(makeInputs());
+            await expect(main(makeInputs())).rejects.toThrow(ExpectedError);
             expect(mockSetupProgram.findProgramWithApt).not.toHaveBeenCalled();
         });
 

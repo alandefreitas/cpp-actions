@@ -13,6 +13,7 @@ import * as exec from '@actions/exec';
 import * as path from 'path';
 import * as traceCommands from 'trace-commands';
 import { runAction } from 'action-schema';
+import { ExpectedError } from 'pretty-errors';
 
 // Schema imports
 import { inputsSchema, outputsSchema } from './schema';
@@ -113,7 +114,7 @@ class SetupClangRunner {
             process.env['RUNNER_TOOL_CACHE'] = process.env['AGENT_TOOLSDIRECTORY'];
         }
         if (process.platform !== 'linux') {
-            core.setFailed('This action is only supported on Linux');
+            throw new ExpectedError('This action is only supported on Linux', 'Unsupported Platform');
         }
 
         this.allVersions = await setup_program.findClangVersions();
@@ -438,7 +439,10 @@ runAction({
 
         // Validate that Clang was found
         if (!outputs.outputPath) {
-            core.setFailed('Cannot setup Clang');
+            throw new ExpectedError(
+                'Cannot setup Clang: no suitable version was found in the specified paths, system paths, APT, or release binaries. Check the version requirement and available versions.',
+                'Clang Setup Failed'
+            );
         }
 
         return outputs;

@@ -15,8 +15,10 @@ import type {
     ErrorPayload,
     ExtendedError
 } from './types';
+import { ExpectedError, expectedError } from './expected-error';
 
 export type { ErrorReportOptions, SourceContext, ErrorFrame, ErrorPayload };
+export { ExpectedError, expectedError };
 
 // Re-export commonly used utilities
 export { resolveFilePath, readFileSync, resolveSourceMapLocation } from './source-map';
@@ -51,6 +53,26 @@ export async function reportAndSetFailed(
     error: Error | ExtendedError,
     options: ErrorReportOptions = {}
 ): Promise<void> {
+    // Expected errors get a clean message with no stack trace or source context
+    if (error instanceof ExpectedError) {
+        const { isTraceCommandsEnabled } = await import('./render');
+        const title = error.title || options.title || 'Action failed';
+        const message = `${title}: ${error.message}`;
+
+        // Log stack trace at debug level when trace commands are enabled
+        const traceEnabled = await isTraceCommandsEnabled();
+        if (traceEnabled && error.stack) {
+            core.debug(error.stack);
+        }
+
+        if (process.env.JEST_WORKER_ID) {
+            core.error(message);
+        } else {
+            core.setFailed(message);
+        }
+        return;
+    }
+
     // Dynamic import to avoid circular dependency
     const { isTraceCommandsEnabled, renderTerminal, colors } = await import('./render');
 

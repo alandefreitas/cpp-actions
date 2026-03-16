@@ -12,6 +12,7 @@ import * as fs from 'fs';
 import * as exec from '@actions/exec';
 import * as semver from 'semver';
 import * as traceCommands from 'trace-commands';
+import { ExpectedError } from 'pretty-errors';
 import gccDefaultTags from '../gcc-tags.json';
 import clangDefaultTags from '../clang-tags.json';
 import cmakeDefaultTags from '../cmake-tags.json';
@@ -82,7 +83,7 @@ export async function findGit(): Promise<string | null> {
  * @param repo - Git repository URL (e.g., "https://github.com/llvm/llvm-project")
  * @param options - Configuration options for retries and fallback tags
  * @returns Array of tag reference strings (e.g., ["refs/tags/v1.0.0"])
- * @throws Error if max retries reached and no default tags provided
+ * @throws ExpectedError if max retries reached and no default tags provided
  */
 export async function fetchGitTags(repo: string, options: FetchGitTagsOptions = {}): Promise<string[]> {
     const { maxRetries = 10, defaultTags = [] } = options;
@@ -104,7 +105,7 @@ export async function fetchGitTags(repo: string, options: FetchGitTagsOptions = 
             if (defaultTags.length > 0) {
                 return defaultTags;
             }
-            throw new Error('Git not found');
+            throw new ExpectedError('Git not found. Ensure Git is installed and available in PATH.', 'Git Not Found');
         }
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
@@ -113,7 +114,7 @@ export async function fetchGitTags(repo: string, options: FetchGitTagsOptions = 
                     exitCode, stdout
                 }: ExecOutput = await exec.getExecOutput(`"${gitPath}"`, args, { silent: true });
                 if (exitCode !== 0) {
-                    throw new Error('Git exited with non-zero exit code: ' + exitCode);
+                    throw new ExpectedError(`Git ls-remote failed with exit code ${exitCode}. Check the repository URL and network connectivity.`, 'Git Tag Fetch Failed');
                 }
                 const stdoutTrimmed = stdout.trim();
                 const tags = stdoutTrimmed.split('\n').filter(tag => tag.trim() !== '');
@@ -144,7 +145,7 @@ export async function fetchGitTags(repo: string, options: FetchGitTagsOptions = 
                         return defaultTags;
                     } else {
                         const errorMessage = error instanceof Error ? error.message : String(error);
-                        throw new Error('Max retries reached. Error fetching Git tags: ' + errorMessage);
+                        throw new ExpectedError(`Max retries reached fetching Git tags: ${errorMessage}. Check the repository URL and network connectivity.`, 'Git Tag Fetch Failed');
                     }
                 }
             }
@@ -152,7 +153,7 @@ export async function fetchGitTags(repo: string, options: FetchGitTagsOptions = 
         return defaultTags;
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        throw new Error('Error fetching Git tags: ' + errorMessage);
+        throw new ExpectedError(`Error fetching Git tags: ${errorMessage}`, 'Git Tag Fetch Failed');
     }
 }
 
@@ -248,13 +249,13 @@ export async function findCMakeVersions(): Promise<string[]> {
  * @param destPath - Local directory path for the cloned repository
  * @param ref - Optional branch, tag, or commit hash to checkout
  * @param options - Clone options (shallow clone by default)
- * @throws Error if Git is not available or cloning fails
+ * @throws ExpectedError if Git is not available or cloning fails
  */
 export async function cloneGitRepo(repo: string, destPath: string, ref: string | undefined = undefined, options: CloneGitRepoOptions = { shallow: true }): Promise<void> {
     try {
         const gitPath = await findGit();
         if (!gitPath) {
-            throw new Error('Git not found');
+            throw new ExpectedError('Git not found. Ensure Git is installed and available in PATH.', 'Git Not Found');
         }
         // Clean the destPath
         if (fs.existsSync(destPath)) {
@@ -299,6 +300,6 @@ export async function cloneGitRepo(repo: string, destPath: string, ref: string |
         }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        throw new Error('Error cloning Git repository: ' + errorMessage);
+        throw new ExpectedError(`Error cloning Git repository: ${errorMessage}`, 'Git Clone Failed');
     }
 }

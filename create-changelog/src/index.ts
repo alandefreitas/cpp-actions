@@ -1,6 +1,7 @@
 import * as core from '@actions/core';
 import * as traceCommands from 'trace-commands';
 import { runAction } from 'action-schema';
+import { ExpectedError } from 'pretty-errors';
 
 import {
     type Commit,
@@ -291,7 +292,7 @@ class CreateChangelogRunner {
                 .write();
             fnlog('Summary written successfully.');
         } catch (error) {
-            core.setFailed(`Failed to write summary: ${(error as Error).message}`);
+            throw new ExpectedError(`Failed to write summary: ${(error as Error).message}`, 'Summary Write Failed');
         }
     }
 }

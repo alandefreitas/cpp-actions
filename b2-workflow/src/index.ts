@@ -11,6 +11,7 @@ import * as exec from '@actions/exec';
 import * as io from '@actions/io';
 import * as os from 'os';
 import * as traceCommands from 'trace-commands';
+import { ExpectedError } from 'pretty-errors';
 import { runAction } from 'action-schema';
 
 // Schema imports
@@ -74,7 +75,7 @@ class B2WorkflowRunner {
     /**
      * Runs the full B2 workflow pipeline.
      *
-     * @throws Error if B2 bootstrap, headers, or build fails
+     * @throws ExpectedError if B2 bootstrap, headers, or build fails
      */
     async run(): Promise<void> {
         this.deriveArchitecture();
@@ -136,7 +137,7 @@ class B2WorkflowRunner {
     /**
      * Bootstraps the B2 build system from the source directory.
      *
-     * @throws Error if B2 bootstrap fails
+     * @throws ExpectedError if B2 bootstrap fails
      */
     private async bootstrapB2(): Promise<void> {
         const fnlog = traceCommands.scoped('bootstrapB2');
@@ -153,7 +154,7 @@ class B2WorkflowRunner {
                 ignoreReturnCode: true
             });
             if (exitCode !== 0) {
-                throw new Error(`B2 bootstrap failed with exit code ${exitCode}`);
+                throw new ExpectedError(`B2 bootstrap failed with exit code ${exitCode}. Check the bootstrap output above for details.`, 'B2 Bootstrap Failed');
             }
         }
         process.env['CXX'] = prevCxx;
@@ -163,7 +164,7 @@ class B2WorkflowRunner {
     /**
      * Bootstraps Boost headers by running `b2 headers`.
      *
-     * @throws Error if B2 headers bootstrap fails
+     * @throws ExpectedError if B2 headers bootstrap fails
      */
     private async bootstrapHeaders(): Promise<void> {
         const fnlog = traceCommands.scoped('bootstrapHeaders');
@@ -178,7 +179,7 @@ class B2WorkflowRunner {
                 ignoreReturnCode: true
             });
             if (exitCode !== 0) {
-                throw new Error(`B2 headers failed with exit code ${exitCode}`);
+                throw new ExpectedError(`B2 headers failed with exit code ${exitCode}. Check the headers output above for details.`, 'B2 Headers Failed');
             }
         }
         core.endGroup();
@@ -190,7 +191,7 @@ class B2WorkflowRunner {
      * In B2, all the configure/build/test/install/package steps are
      * combined into a single invocation.
      *
-     * @throws Error if B2 build fails
+     * @throws ExpectedError if B2 build fails
      */
     private async buildAndTest(): Promise<void> {
         core.startGroup('🛠️ Build and Test');
@@ -210,7 +211,7 @@ class B2WorkflowRunner {
             ignoreReturnCode: true
         });
         if (exitCode !== 0) {
-            throw new Error(`B2 build failed with exit code ${exitCode}`);
+            throw new ExpectedError(`B2 build failed with exit code ${exitCode}. Check the build output above for details.`, 'B2 Build Failed');
         }
         core.endGroup();
     }
@@ -411,7 +412,7 @@ class B2WorkflowRunner {
  * Executes a Boost.Build (B2) workflow for building and testing C++ libraries.
  *
  * @param inputs - Parsed inputs from schema (transforms already applied)
- * @throws Error if B2 bootstrap, headers, or build fails
+ * @throws ExpectedError if B2 bootstrap, headers, or build fails
  */
 export async function main(inputs: Inputs): Promise<void> {
     return new B2WorkflowRunner(inputs).run();

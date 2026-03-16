@@ -11,6 +11,7 @@ import * as path from 'path';
 import * as exec from '@actions/exec';
 import * as io from '@actions/io';
 import * as traceCommands from 'trace-commands';
+import { ExpectedError } from 'pretty-errors';
 
 import { type ResolvedInputs, type SetupCMakeOutputs, type ResolvedParameters } from './types';
 
@@ -224,7 +225,7 @@ async function runConfigureStep(
         createCMakeConfigureAnnotations(stdout, entry);
     }
     if (exitCode !== 0) {
-        throw new Error(`CMake configure failed with exit code ${exitCode}`);
+        throw new ExpectedError(`CMake configure failed with exit code ${exitCode}. Check the configure output above for details.`, 'CMake Configure Failed');
     }
 }
 
@@ -283,7 +284,7 @@ async function runBuildStep(
             createCMakeBuildAnnotations(stdout, entry);
         }
         if (exitCode !== 0) {
-            throw new Error(`CMake build failed with exit code ${exitCode}`);
+            throw new ExpectedError(`CMake build failed with exit code ${exitCode}. Check the build output above for details.`, 'CMake Build Failed');
         }
     }
 }
@@ -340,7 +341,7 @@ async function runTestStep(
         createCMakeTestAnnotations(stdout, entry);
     }
     if (exitCode !== 0 && entry.runTests === true) {
-        throw new Error(`CMake tests failed with exit code ${exitCode}`);
+        throw new ExpectedError(`CMake tests failed with exit code ${exitCode}. Check the test output above for details.`, 'CMake Tests Failed');
     }
 }
 
@@ -395,7 +396,7 @@ async function runInstallStep(
         ignoreReturnCode: true
     });
     if (exitCode !== 0 && entry.install === true) {
-        throw new Error(`CMake install failed with exit code ${exitCode}`);
+        throw new ExpectedError(`CMake install failed with exit code ${exitCode}. Check the install output above for details.`, 'CMake Install Failed');
     }
 }
 
@@ -492,7 +493,7 @@ async function runPackageStep(
             fnlog(`useDefaultGenerators: ${useDefaultGenerators}`);
             const msg = `CPack (generator: ${packageGenerator}) failed with exit code ${exitCode}`;
             if (!useDefaultGenerators) {
-                throw new Error(msg);
+                throw new ExpectedError(`${msg}. Check the packaging output above for details.`, 'CPack Failed');
             } else {
                 // If we are using the default generators, then we
                 // can ignore the failure and continue with the

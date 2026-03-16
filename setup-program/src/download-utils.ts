@@ -11,6 +11,7 @@ import * as tc from '@actions/tool-cache';
 import * as io from '@actions/io';
 import * as exec from '@actions/exec';
 import * as traceCommands from 'trace-commands';
+import { ExpectedError } from 'pretty-errors';
 
 import { type ExecOutput } from './types';
 
@@ -24,7 +25,7 @@ import { type ExecOutput } from './types';
  * @param destPath - Destination directory for extraction
  * @param flags - Optional tar flags (e.g., "-xz" for gzip)
  * @returns Path to the extracted contents
- * @throws Error if extraction fails
+ * @throws ExpectedError if extraction fails
  */
 export async function extractTar(tarPath: string, destPath: string | undefined, flags: string | undefined = undefined): Promise<string> {
     const fnlog = traceCommands.scoped('extractTar');
@@ -61,7 +62,7 @@ export async function extractTar(tarPath: string, destPath: string | undefined, 
         const args = ['x', tarPath, `-o${firstDestPath}`].concat(flags.includes('v') ? ['-bb1'] : []);
         const { exitCode, stderr }: ExecOutput = await exec.getExecOutput(path7z, args);
         if (exitCode !== 0) {
-            throw new Error(`Failed to extract ${tarPath} to ${firstDestPath} with 7z: ${stderr}`);
+            throw new ExpectedError(`Failed to extract ${tarPath} to ${firstDestPath} with 7z (exit code ${exitCode}).\n${stderr}\nCheck the archive format and ensure 7z is installed correctly.`, 'Archive Extraction Failed');
         }
 
         async function copyFilesAndRemoveDir(sourcePath: string, destPath: string): Promise<string> {
@@ -104,7 +105,7 @@ export async function extractTar(tarPath: string, destPath: string | undefined, 
         const args2 = ['x', tarFile, `-o${secondDestPath}`].concat(flags.includes('v') ? ['-bb1'] : []);
         const { exitCode: exitCode2, stderr: stderr2 }: ExecOutput = await exec.getExecOutput(path7z, args2);
         if (exitCode2 !== 0) {
-            throw new Error(`Failed to extract ${tarFile} to ${secondDestPath} with 7z: ${stderr2}`);
+            throw new ExpectedError(`Failed to extract ${tarFile} to ${secondDestPath} with 7z (exit code ${exitCode2}).\n${stderr2}\nCheck the archive format and ensure 7z is installed correctly.`, 'Archive Extraction Failed');
         }
         if (secondDestPath !== finalDestPath) {
             await copyFilesAndRemoveDir(secondDestPath, finalDestPath);
