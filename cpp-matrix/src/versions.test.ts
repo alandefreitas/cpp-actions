@@ -178,6 +178,22 @@ describe('getSubrangePolicy', () => {
         expect(getSubrangePolicy('one-per-major-or-minor')).toBe(SubrangePolicies.ONE_PER_MAJOR_OR_MINOR);
     });
 
+    it('returns ONE_PER_UBUNTU_DEFAULT for "one-per-ubuntu-default"', () => {
+        expect(getSubrangePolicy('one-per-ubuntu-default')).toBe(SubrangePolicies.ONE_PER_UBUNTU_DEFAULT);
+    });
+
+    it('returns ONE_PER_UBUNTU_AVAILABLE for "one-per-ubuntu-available"', () => {
+        expect(getSubrangePolicy('one-per-ubuntu-available')).toBe(SubrangePolicies.ONE_PER_UBUNTU_AVAILABLE);
+    });
+
+    it('returns UBUNTU_DEFAULTS_AND_LATEST for "ubuntu-defaults-and-latest"', () => {
+        expect(getSubrangePolicy('ubuntu-defaults-and-latest')).toBe(SubrangePolicies.UBUNTU_DEFAULTS_AND_LATEST);
+    });
+
+    it('returns ONE_PER_VS_YEAR for "one-per-vs-year"', () => {
+        expect(getSubrangePolicy('one-per-vs-year')).toBe(SubrangePolicies.ONE_PER_VS_YEAR);
+    });
+
     it('defaults to ONE_PER_MAJOR for unknown policy', () => {
         expect(getSubrangePolicy('unknown')).toBe(SubrangePolicies.ONE_PER_MAJOR);
     });
@@ -194,6 +210,22 @@ describe('getSubrangePolicyStr', () => {
 
     it('returns "one-per-major-or-minor" for ONE_PER_MAJOR_OR_MINOR', () => {
         expect(getSubrangePolicyStr(SubrangePolicies.ONE_PER_MAJOR_OR_MINOR)).toBe('one-per-major-or-minor');
+    });
+
+    it('returns "one-per-ubuntu-default" for ONE_PER_UBUNTU_DEFAULT', () => {
+        expect(getSubrangePolicyStr(SubrangePolicies.ONE_PER_UBUNTU_DEFAULT)).toBe('one-per-ubuntu-default');
+    });
+
+    it('returns "one-per-ubuntu-available" for ONE_PER_UBUNTU_AVAILABLE', () => {
+        expect(getSubrangePolicyStr(SubrangePolicies.ONE_PER_UBUNTU_AVAILABLE)).toBe('one-per-ubuntu-available');
+    });
+
+    it('returns "ubuntu-defaults-and-latest" for UBUNTU_DEFAULTS_AND_LATEST', () => {
+        expect(getSubrangePolicyStr(SubrangePolicies.UBUNTU_DEFAULTS_AND_LATEST)).toBe('ubuntu-defaults-and-latest');
+    });
+
+    it('returns "one-per-vs-year" for ONE_PER_VS_YEAR', () => {
+        expect(getSubrangePolicyStr(SubrangePolicies.ONE_PER_VS_YEAR)).toBe('one-per-vs-year');
     });
 
     it('defaults to "one-per-major" for unknown value', () => {
@@ -341,5 +373,198 @@ describe('splitRanges', () => {
         const versions = ['9.1.0', '9.2.0', '9.3.0'];
         const result = splitRanges('>=9.1.1 <=9.3', versions, SubrangePolicies.ONE_PER_MINOR);
         expect(result).toStrictEqual(['9.2', '9.3']);
+    });
+});
+
+// Tests for Ubuntu-aware subrange policies.
+// These use real ubuntu-compiler-defaults.json data loaded via setup_program.
+// Note: getUbuntuDefaultVersions and getUbuntuAvailableVersions iterate ALL releases
+// (not just LTS), so the full data set applies here.
+// The data file has 20 Ubuntu releases (16.04 through 25.10):
+//   GCC defaults (all releases): 5(16.04), 6(16.10/17.04), 7(17.10/18.04), 8(18.10/19.04),
+//                 9(19.10/20.04), 10(20.10/21.04), 11(21.10/22.04), 12(22.10/23.04),
+//                 13(23.10/24.04), 14(24.10/25.04), 15(25.10)
+//   Unique GCC defaults: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+//   Clang defaults (all releases): 7(18.10), 8(19.04), 9(19.10), 10(20.04), 11(20.10),
+//                   12(21.04), 13(21.10), 14(22.04), 15(22.10/23.04), 16(23.10), 18(24.04),
+//                   19(24.10), 20(25.04/25.10)
+//   Unique Clang defaults: [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20]
+//   GCC available (all releases): [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+//   Clang available (all releases): [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
+
+describe('splitRanges ONE_PER_UBUNTU_DEFAULT', () => {
+    // GCC versions spanning multiple Ubuntu default majors
+    const gccVersions = ['9.1.0', '9.2.0', '9.3.0', '9.4.0', '9.5.0',
+        '10.1.0', '10.2.0', '10.3.0', '10.4.0', '10.5.0',
+        '11.1.0', '11.2.0', '11.3.0', '11.4.0',
+        '12.1.0', '12.2.0', '12.3.0',
+        '13.1.0', '13.2.0',
+        '14.1.0', '14.2.0'];
+
+    test('returns one subrange per Ubuntu default GCC version', () => {
+        // GCC defaults in range >=9: 9, 10, 11, 12, 13, 14
+        const result = splitRanges('>=9', gccVersions, SubrangePolicies.ONE_PER_UBUNTU_DEFAULT, 'gcc');
+        expect(result).toStrictEqual(['9', '10', '11', '12', '13', '14']);
+    });
+
+    test('excludes default versions outside user range', () => {
+        // Range >=11 excludes GCC 9, 10 defaults
+        const result = splitRanges('>=11', gccVersions, SubrangePolicies.ONE_PER_UBUNTU_DEFAULT, 'gcc');
+        expect(result).toStrictEqual(['11', '12', '13', '14']);
+    });
+
+    test('works with clang defaults', () => {
+        const clangVersions = ['10.0.0', '11.0.0', '12.0.0', '13.0.0', '14.0.0',
+            '15.0.0', '16.0.0', '17.0.0', '18.0.0', '19.0.0', '20.0.0'];
+        // Clang defaults: 10, 11, 12, 13, 14, 15, 16, 18, 19, 20
+        const result = splitRanges('>=10', clangVersions, SubrangePolicies.ONE_PER_UBUNTU_DEFAULT, 'clang');
+        expect(result).toStrictEqual(['10', '11', '12', '13', '14', '15', '16', '18', '19', '20']);
+    });
+
+    test('falls back to one-per-major when no defaults match range', () => {
+        // Range >=99 — no ubuntu defaults match
+        const result = splitRanges('>=99', gccVersions, SubrangePolicies.ONE_PER_UBUNTU_DEFAULT, 'gcc');
+        // No defaults match, and no versions satisfy >=99 either → ['*']
+        expect(result).toStrictEqual(['*']);
+    });
+
+    test('falls back to one-per-major for non-gcc/clang compiler', () => {
+        // MSVC has no ubuntu defaults
+        const msvcVersions = ['14.29.30133', '14.29.30140', '14.30.30704'];
+        const result = splitRanges('>=14.29', msvcVersions, SubrangePolicies.ONE_PER_UBUNTU_DEFAULT, 'msvc');
+        // Falls back to one-per-major → all are major 14
+        expect(result).toStrictEqual(['14']);
+    });
+
+    test('narrow range selects only matching defaults', () => {
+        // Range 11 - 13 includes defaults 11, 12, and 13
+        const result = splitRanges('>=11 <=13', gccVersions, SubrangePolicies.ONE_PER_UBUNTU_DEFAULT, 'gcc');
+        expect(result).toStrictEqual(['11', '12', '13']);
+    });
+
+    test('single default version in range', () => {
+        const result = splitRanges('>=12 <=13', gccVersions, SubrangePolicies.ONE_PER_UBUNTU_DEFAULT, 'gcc');
+        // GCC 12 and 13 are both defaults in this range
+        expect(result).toStrictEqual(['12', '13']);
+    });
+});
+
+describe('splitRanges ONE_PER_UBUNTU_AVAILABLE', () => {
+    const gccVersions = ['9.1.0', '10.1.0', '11.1.0', '12.1.0', '13.1.0', '14.1.0', '15.1.0'];
+
+    test('returns one subrange per available GCC version across all releases', () => {
+        // GCC available: 9,10 (20.04), 11,12 (22.04), 13,14 (24.04), 14,15 (25.04)
+        // Unique available: 9, 10, 11, 12, 13, 14, 15
+        const result = splitRanges('>=9', gccVersions, SubrangePolicies.ONE_PER_UBUNTU_AVAILABLE, 'gcc');
+        expect(result).toStrictEqual(['9', '10', '11', '12', '13', '14', '15']);
+    });
+
+    test('excludes versions outside user range', () => {
+        const result = splitRanges('>=12 <=14', gccVersions, SubrangePolicies.ONE_PER_UBUNTU_AVAILABLE, 'gcc');
+        expect(result).toStrictEqual(['12', '13', '14']);
+    });
+
+    test('is a superset of ubuntu defaults', () => {
+        const clangVersions = ['10.0.0', '11.0.0', '12.0.0', '13.0.0', '14.0.0',
+            '15.0.0', '16.0.0', '17.0.0', '18.0.0', '19.0.0', '20.0.0'];
+        // Clang available across all releases: 10,11,12,13,14,15,16,17,18,19,20
+        const available = splitRanges('>=10', clangVersions, SubrangePolicies.ONE_PER_UBUNTU_AVAILABLE, 'clang');
+        const defaults = splitRanges('>=10', clangVersions, SubrangePolicies.ONE_PER_UBUNTU_DEFAULT, 'clang');
+        // All defaults should be contained in available
+        for (const d of defaults) {
+            expect(available).toContain(d);
+        }
+        // Available should have more than just defaults
+        expect(available.length).toBeGreaterThanOrEqual(defaults.length);
+    });
+
+    test('falls back to one-per-major for non-gcc/clang compiler', () => {
+        const versions = ['9.1.0', '10.1.0', '11.1.0'];
+        const result = splitRanges('>=9', versions, SubrangePolicies.ONE_PER_UBUNTU_AVAILABLE, 'apple-clang');
+        expect(result).toStrictEqual(['9', '10', '11']);
+    });
+});
+
+describe('splitRanges UBUNTU_DEFAULTS_AND_LATEST', () => {
+    const gccVersions = ['9.1.0', '10.1.0', '11.1.0', '12.1.0', '13.1.0', '14.1.0', '15.1.0'];
+
+    test('includes Ubuntu defaults plus the latest available version', () => {
+        // GCC defaults in range: 9, 10, 11, 12, 13, 14, 15 — all are defaults
+        // GCC available in range: 9, 10, 11, 12, 13, 14, 15 — latest is 15, already a default
+        const result = splitRanges('>=9', gccVersions, SubrangePolicies.UBUNTU_DEFAULTS_AND_LATEST, 'gcc');
+        expect(result).toStrictEqual(['9', '10', '11', '12', '13', '14', '15']);
+    });
+
+    test('no duplicate when latest is already a default', () => {
+        // Range <=14: defaults in range are 9, 10, 11, 12, 13, 14. Latest available is 14 (already a default)
+        const result = splitRanges('>=9 <=14', gccVersions, SubrangePolicies.UBUNTU_DEFAULTS_AND_LATEST, 'gcc');
+        expect(result).toStrictEqual(['9', '10', '11', '12', '13', '14']);
+    });
+
+    test('adds latest even when only one default matches', () => {
+        // Range >=12 <=15: defaults 12, 13, 14, 15. Latest available is 15, already a default
+        const result = splitRanges('>=12 <=15', gccVersions, SubrangePolicies.UBUNTU_DEFAULTS_AND_LATEST, 'gcc');
+        expect(result).toStrictEqual(['12', '13', '14', '15']);
+    });
+
+    test('works with clang', () => {
+        const clangVersions = ['14.0.0', '15.0.0', '16.0.0', '17.0.0', '18.0.0', '19.0.0', '20.0.0'];
+        // Clang defaults in range: 14, 15, 16, 18, 19, 20. Latest available in range: 20, already a default
+        const result = splitRanges('>=14', clangVersions, SubrangePolicies.UBUNTU_DEFAULTS_AND_LATEST, 'clang');
+        expect(result).toStrictEqual(['14', '15', '16', '18', '19', '20']);
+    });
+
+    test('falls back to one-per-major for non-gcc/clang compiler', () => {
+        const versions = ['9.1.0', '10.1.0', '11.1.0'];
+        const result = splitRanges('>=9', versions, SubrangePolicies.UBUNTU_DEFAULTS_AND_LATEST, 'mingw');
+        // No ubuntu defaults or available versions for mingw → falls back to one-per-major
+        expect(result).toStrictEqual(['9', '10', '11']);
+    });
+});
+
+describe('splitRanges ONE_PER_VS_YEAR', () => {
+    test('groups MSVC versions by VS year and picks latest per year', () => {
+        // 14.20 = 2019, 14.29 = 2019, 14.30 = 2022, 14.42 = 2022
+        const msvcVersions = ['14.20.27508', '14.29.30133', '14.29.30140', '14.30.30704', '14.42.34433'];
+        const result = splitRanges('>=14.20', msvcVersions, SubrangePolicies.ONE_PER_VS_YEAR, 'msvc');
+        // 2019: latest is 14.29.30140 → subrange "14.29"
+        // 2022: latest is 14.42.34433 → subrange "14.42"
+        expect(result).toStrictEqual(['14.29', '14.42']);
+    });
+
+    test('single VS year returns single subrange', () => {
+        const msvcVersions = ['14.30.30704', '14.42.34433'];
+        const result = splitRanges('>=14.30', msvcVersions, SubrangePolicies.ONE_PER_VS_YEAR, 'msvc');
+        // Both are 2022 → latest is 14.42
+        expect(result).toStrictEqual(['14.42']);
+    });
+
+    test('three VS years', () => {
+        const msvcVersions = ['14.1.25017', '14.16.27023', '14.20.27508', '14.29.30133', '14.30.30704', '14.42.34433'];
+        const result = splitRanges('>=14.1', msvcVersions, SubrangePolicies.ONE_PER_VS_YEAR, 'msvc');
+        // 2017: latest 14.16 → "14.16"
+        // 2019: latest 14.29 → "14.29"
+        // 2022: latest 14.42 → "14.42"
+        expect(result).toStrictEqual(['14.16', '14.29', '14.42']);
+    });
+
+    test('falls back to one-per-major for non-MSVC compiler', () => {
+        const gccVersions = ['9.1.0', '10.1.0', '11.1.0'];
+        const result = splitRanges('>=9', gccVersions, SubrangePolicies.ONE_PER_VS_YEAR, 'gcc');
+        // Falls back to one-per-major
+        expect(result).toStrictEqual(['9', '10', '11']);
+    });
+
+    test('excludes versions outside user range', () => {
+        const msvcVersions = ['14.20.27508', '14.29.30133', '14.30.30704', '14.42.34433'];
+        const result = splitRanges('>=14.30', msvcVersions, SubrangePolicies.ONE_PER_VS_YEAR, 'msvc');
+        // Only 2022 versions are in range
+        expect(result).toStrictEqual(['14.42']);
+    });
+
+    test('returns ["*"] when no versions satisfy range', () => {
+        const msvcVersions = ['14.20.27508'];
+        const result = splitRanges('>=14.30', msvcVersions, SubrangePolicies.ONE_PER_VS_YEAR, 'msvc');
+        expect(result).toStrictEqual(['*']);
     });
 });

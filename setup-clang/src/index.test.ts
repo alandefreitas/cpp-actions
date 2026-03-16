@@ -222,54 +222,60 @@ describe('setup-clang', () => {
 
         it('adds APT repositories when ubuntu name available', async () => {
             await main(makeInputs({ version: '>=15.0.0' }));
-            // Should call findProgramWithApt for gnupg and software-properties-common
+            // Should call findProgramWithApt for gnupg
             expect(mockSetupProgram.findProgramWithApt).toHaveBeenCalledWith(['gnupg'], '*', true);
-            expect(mockSetupProgram.findProgramWithApt).toHaveBeenCalledWith(['software-properties-common'], '*', true);
         });
 
-        it('downloads GPG key and adds it without sudo when not required', async () => {
+        it('downloads GPG key and installs with gpg --dearmor', async () => {
             await main(makeInputs({ version: '>=15.0.0' }));
             expect(mockTc.downloadTool).toHaveBeenCalledWith('https://apt.llvm.org/llvm-snapshot.gpg.key');
             expect(mockExec.exec).toHaveBeenCalledWith(
-                expect.stringContaining('apt-key add'),
+                expect.stringContaining('gpg --dearmor'),
                 [],
                 expect.objectContaining({ ignoreReturnCode: true })
             );
         });
 
-        it('uses sudo for GPG key when sudo is required', async () => {
+        it('uses sudo for gpg --dearmor when sudo is required', async () => {
             mockSetupProgram.isSudoRequired.mockReturnValue(true);
             await main(makeInputs({ version: '>=15.0.0' }));
             expect(mockExec.exec).toHaveBeenCalledWith(
-                expect.stringMatching(/^sudo -n sudo apt-key add/),
+                expect.stringMatching(/^sudo -n gpg --dearmor/),
                 [],
                 expect.objectContaining({ ignoreReturnCode: true })
             );
         });
 
-        it('adds repository with add-apt-repository', async () => {
-            (mockIo.which as jest.Mock).mockResolvedValue('/usr/bin/add-apt-repository');
+        it('adds repository via sources.list.d file', async () => {
             await main(makeInputs({ version: '>=15.0.0' }));
             expect(mockExec.exec).toHaveBeenCalledWith(
-                expect.stringContaining('add-apt-repository -y'),
+                expect.stringContaining('tee /etc/apt/sources.list.d/llvm-'),
                 [],
                 expect.objectContaining({ ignoreReturnCode: true })
             );
         });
 
-        it('uses sudo for add-apt-repository when required', async () => {
-            (mockIo.which as jest.Mock).mockResolvedValue('/usr/bin/add-apt-repository');
+        it('uses sudo for repository file when required', async () => {
             mockSetupProgram.isSudoRequired.mockReturnValue(true);
             await main(makeInputs({ version: '>=15.0.0' }));
             expect(mockExec.exec).toHaveBeenCalledWith(
-                expect.stringMatching(/^sudo -n add-apt-repository -y/),
+                expect.stringContaining('sudo -n tee /etc/apt/sources.list.d/llvm-'),
                 [],
                 expect.objectContaining({ ignoreReturnCode: true })
             );
         });
 
-        it('skips add-apt-repository when which throws', async () => {
-            (mockIo.which as jest.Mock).mockRejectedValue(new Error('not found'));
+        it('runs apt-get update after adding repositories', async () => {
+            await main(makeInputs({ version: '>=15.0.0' }));
+            expect(mockExec.exec).toHaveBeenCalledWith(
+                expect.stringContaining('apt-get update'),
+                [],
+                expect.objectContaining({ ignoreReturnCode: true })
+            );
+        });
+
+        it('skips repository when Release file does not exist', async () => {
+            mockSetupProgram.urlExists.mockResolvedValue(false);
             await main(makeInputs({ version: '>=15.0.0' }));
             // Should still call findProgramWithApt for clang (the final search)
             expect(mockSetupProgram.findProgramWithApt).toHaveBeenCalledWith(

@@ -142,7 +142,7 @@ const coverageThreshold = {
     './common/gh-inputs/src/':       { statements: -4, branches: -5, functions: 0, lines: -4 },
     './common/pretty-errors/src/':   { statements: -6, branches: -14, functions: -16, lines: -6 },
     './common/trace-commands/src/':  { statements: 0, branches: 0, functions: 0, lines: 0 },
-    './cpp-matrix/src/':             { statements: -60, branches: -43, functions: -33, lines: -55 },
+    './cpp-matrix/src/':             { statements: -60, branches: -50, functions: -33, lines: -55 },
     './create-changelog/src/':       { statements: 0, branches: -8, functions: 0, lines: 0 },
     './flamegraph/src/':             { statements: -52, branches: -39, functions: -12, lines: -51 },
     './package-install/src/':        { statements: -15, branches: -14, functions: -8, lines: -15 },

@@ -17,7 +17,11 @@ import * as traceCommands from 'trace-commands';
 export const SubrangePolicies = {
     ONE_PER_MAJOR: 0,
     ONE_PER_MINOR: 1,
-    ONE_PER_MAJOR_OR_MINOR: 2
+    ONE_PER_MAJOR_OR_MINOR: 2,
+    ONE_PER_UBUNTU_DEFAULT: 3,
+    ONE_PER_UBUNTU_AVAILABLE: 4,
+    UBUNTU_DEFAULTS_AND_LATEST: 5,
+    ONE_PER_VS_YEAR: 6
 } as const;
 
 /**
@@ -26,6 +30,7 @@ export const SubrangePolicies = {
 export type SubrangePolicy = typeof SubrangePolicies[keyof typeof SubrangePolicies];
 
 import * as setup_program from 'setup-program';
+import { type UbuntuCompilerDefaults } from 'setup-program';
 
 const defaultCacheDir = process.env.CPP_MATRIX_CACHE_DIR || path.join(__dirname, '..', 'var', 'cache', 'cpp-matrix');
 setup_program.setVersionsCacheDir(defaultCacheDir);
@@ -160,6 +165,14 @@ export function getSubrangePolicy(policyStr: string): SubrangePolicy {
         return SubrangePolicies.ONE_PER_MINOR;
     } else if (policyStr === 'one-per-major-or-minor') {
         return SubrangePolicies.ONE_PER_MAJOR_OR_MINOR;
+    } else if (policyStr === 'one-per-ubuntu-default') {
+        return SubrangePolicies.ONE_PER_UBUNTU_DEFAULT;
+    } else if (policyStr === 'one-per-ubuntu-available') {
+        return SubrangePolicies.ONE_PER_UBUNTU_AVAILABLE;
+    } else if (policyStr === 'ubuntu-defaults-and-latest') {
+        return SubrangePolicies.UBUNTU_DEFAULTS_AND_LATEST;
+    } else if (policyStr === 'one-per-vs-year') {
+        return SubrangePolicies.ONE_PER_VS_YEAR;
     }
     return SubrangePolicies.ONE_PER_MAJOR;
 }
@@ -177,8 +190,69 @@ export function getSubrangePolicyStr(policy: SubrangePolicy): string {
         return 'one-per-minor';
     } else if (policy === SubrangePolicies.ONE_PER_MAJOR_OR_MINOR) {
         return 'one-per-major-or-minor';
+    } else if (policy === SubrangePolicies.ONE_PER_UBUNTU_DEFAULT) {
+        return 'one-per-ubuntu-default';
+    } else if (policy === SubrangePolicies.ONE_PER_UBUNTU_AVAILABLE) {
+        return 'one-per-ubuntu-available';
+    } else if (policy === SubrangePolicies.UBUNTU_DEFAULTS_AND_LATEST) {
+        return 'ubuntu-defaults-and-latest';
+    } else if (policy === SubrangePolicies.ONE_PER_VS_YEAR) {
+        return 'one-per-vs-year';
     }
     return 'one-per-major';
+}
+
+/**
+ * Collects unique default compiler major versions from the ubuntu-compiler-defaults data.
+ *
+ * Iterates through all Ubuntu releases in the defaults data and returns the set of
+ * unique default major versions for the specified compiler family.
+ *
+ * @param defaults - The ubuntu compiler defaults data
+ * @param compiler - Compiler family name ('gcc' or 'clang')
+ * @returns Array of unique default major version numbers, sorted ascending
+ */
+function getUbuntuDefaultVersions(defaults: UbuntuCompilerDefaults, compiler: string): number[] {
+    const compilerKey = compiler === 'gcc' || compiler === 'clang' ? compiler : null;
+    if (!compilerKey) {
+        return [];
+    }
+    const defaultMajors = new Set<number>();
+    for (const release of Object.values(defaults.releases)) {
+        const info = release[compilerKey];
+        if (info && info.default_version) {
+            defaultMajors.add(parseInt(info.default_version, 10));
+        }
+    }
+    return [...defaultMajors].sort((a, b) => a - b);
+}
+
+/**
+ * Collects all unique available compiler major versions from the ubuntu-compiler-defaults data.
+ *
+ * Iterates through all Ubuntu releases and returns every unique major version found
+ * in any release's available_versions list for the specified compiler family.
+ * This is a superset of the default versions returned by {@link getUbuntuDefaultVersions}.
+ *
+ * @param defaults - The ubuntu compiler defaults data
+ * @param compiler - Compiler family name ('gcc' or 'clang')
+ * @returns Array of unique available major version numbers, sorted ascending
+ */
+function getUbuntuAvailableVersions(defaults: UbuntuCompilerDefaults, compiler: string): number[] {
+    const compilerKey = compiler === 'gcc' || compiler === 'clang' ? compiler : null;
+    if (!compilerKey) {
+        return [];
+    }
+    const availableMajors = new Set<number>();
+    for (const release of Object.values(defaults.releases)) {
+        const info = release[compilerKey];
+        if (info && info.available_versions) {
+            for (const entry of info.available_versions) {
+                availableMajors.add(entry.major);
+            }
+        }
+    }
+    return [...availableMajors].sort((a, b) => a - b);
 }
 
 /**
@@ -190,9 +264,10 @@ export function getSubrangePolicyStr(policy: SubrangePolicy): string {
  * @param range - Semver version range to split (e.g., ">=10", "^14.0")
  * @param versions - Array of available version strings to select from
  * @param policy - Selection policy determining how many versions to include
+ * @param compilerName - Optional compiler name, required for Ubuntu-aware policies
  * @returns Array of specific version strings selected from the range
  */
-export function splitRanges(range: string, versions: string[], policy: SubrangePolicy = SubrangePolicies.ONE_PER_MAJOR): string[] {
+export function splitRanges(range: string, versions: string[], policy: SubrangePolicy = SubrangePolicies.ONE_PER_MAJOR, compilerName?: string): string[] {
     const fnlog = traceCommands.scoped('splitRanges');
 
     if (versions.length === 0) {
@@ -346,7 +421,7 @@ export function splitRanges(range: string, versions: string[], policy: SubrangeP
                 // a <= requirement
                 const earliestMinorVersions = minorVersions.slice(0, rangeMinorVersions.length);
                 if (arraysHaveSameElements(earliestMinorVersions, rangeMinorVersions)) {
-                    subranges.push(`${i}.${j} - ${latestMinorVersions[0].toString()}`);
+                    subranges.push(`${i}.${j} - ${earliestMinorVersions[earliestMinorVersions.length - 1].toString()}`);
                     continue;
                 }
 
@@ -357,6 +432,130 @@ export function splitRanges(range: string, versions: string[], policy: SubrangeP
                 const toStr = minorVersions[toIdx].toString();
                 subranges.push(`${fromStr} - ${toStr}`);
             }
+        }
+    }
+
+    if (effectivePolicy === SubrangePolicies.ONE_PER_UBUNTU_DEFAULT) {
+        fnlog('Effective policy: ONE_PER_UBUNTU_DEFAULT');
+        const defaults = setup_program.loadUbuntuCompilerDefaults();
+        const defaultMajors = getUbuntuDefaultVersions(defaults, compilerName || '');
+        fnlog(`Ubuntu default majors for ${compilerName}: ${defaultMajors}`);
+
+        for (const major of defaultMajors) {
+            const majorRange = major.toString();
+            // Check if any version matching this major also satisfies the user's range
+            const matchingVersions = rangeVersions.filter(v => v.major === major);
+            if (matchingVersions.length === 0) {
+                continue;
+            }
+            // Use just the major version as the subrange (same pattern as ONE_PER_MAJOR)
+            subranges.push(majorRange);
+        }
+
+        // If no ubuntu defaults matched, fall back to one-per-major behavior
+        if (subranges.length === 0) {
+            fnlog('No Ubuntu defaults matched the range, falling back to one-per-major');
+            return splitRanges(range, versions, SubrangePolicies.ONE_PER_MAJOR, compilerName);
+        }
+    }
+
+    if (effectivePolicy === SubrangePolicies.ONE_PER_UBUNTU_AVAILABLE) {
+        fnlog('Effective policy: ONE_PER_UBUNTU_AVAILABLE');
+        const defaults = setup_program.loadUbuntuCompilerDefaults();
+        const availableMajors = getUbuntuAvailableVersions(defaults, compilerName || '');
+        fnlog(`Ubuntu available majors for ${compilerName}: ${availableMajors}`);
+
+        for (const major of availableMajors) {
+            const majorRange = major.toString();
+            // Check if any version matching this major also satisfies the user's range
+            const matchingVersions = rangeVersions.filter(v => v.major === major);
+            if (matchingVersions.length === 0) {
+                continue;
+            }
+            // Use just the major version as the subrange (same pattern as ONE_PER_UBUNTU_DEFAULT)
+            subranges.push(majorRange);
+        }
+
+        // If no ubuntu available versions matched, fall back to one-per-major behavior
+        if (subranges.length === 0) {
+            fnlog('No Ubuntu available versions matched the range, falling back to one-per-major');
+            return splitRanges(range, versions, SubrangePolicies.ONE_PER_MAJOR, compilerName);
+        }
+    }
+
+    if (effectivePolicy === SubrangePolicies.UBUNTU_DEFAULTS_AND_LATEST) {
+        fnlog('Effective policy: UBUNTU_DEFAULTS_AND_LATEST');
+        const defaults = setup_program.loadUbuntuCompilerDefaults();
+        const defaultMajors = getUbuntuDefaultVersions(defaults, compilerName || '');
+        fnlog(`Ubuntu default majors for ${compilerName}: ${defaultMajors}`);
+
+        // Collect the ubuntu default versions that match the user's range
+        const selectedMajors = new Set<number>();
+        for (const major of defaultMajors) {
+            const matchingVersions = rangeVersions.filter(v => v.major === major);
+            if (matchingVersions.length > 0) {
+                selectedMajors.add(major);
+                subranges.push(major.toString());
+            }
+        }
+
+        // Add the latest version that is actually available in Ubuntu repos.
+        // We use the highest version from ubuntu-compiler-defaults rather than
+        // the highest git tag, because git tags may include unreleased versions.
+        const availableMajors = getUbuntuAvailableVersions(defaults, compilerName || '');
+        const latestAvailable = availableMajors.filter(m => rangeVersions.some(v => v.major === m));
+        if (latestAvailable.length > 0) {
+            const latestMajor = latestAvailable[latestAvailable.length - 1];
+            if (!selectedMajors.has(latestMajor)) {
+                subranges.push(latestMajor.toString());
+            }
+        }
+
+        // If no versions matched at all, fall back to one-per-major behavior
+        if (subranges.length === 0) {
+            fnlog('No Ubuntu defaults or latest matched the range, falling back to one-per-major');
+            return splitRanges(range, versions, SubrangePolicies.ONE_PER_MAJOR, compilerName);
+        }
+    }
+
+    if (effectivePolicy === SubrangePolicies.ONE_PER_VS_YEAR) {
+        fnlog('Effective policy: ONE_PER_VS_YEAR');
+
+        // For non-MSVC compilers, fall back to one-per-major
+        if (compilerName !== 'msvc') {
+            fnlog(`one-per-vs-year is not applicable to ${compilerName}, falling back to one-per-major`);
+            return splitRanges(range, versions, SubrangePolicies.ONE_PER_MAJOR, compilerName);
+        }
+
+        // Group versions in range by Visual Studio year
+        const yearGroups = new Map<string, semver.SemVer[]>();
+        for (const v of rangeVersions) {
+            const year = getVisualCppYear(v);
+            if (!year) {
+                continue;
+            }
+            if (!yearGroups.has(year)) {
+                yearGroups.set(year, []);
+            }
+            yearGroups.get(year)!.push(v);
+        }
+
+        // Sort years and pick the latest version within each year group
+        const sortedYears = [...yearGroups.keys()].sort();
+        for (const year of sortedYears) {
+            const group = yearGroups.get(year)!;
+            // Sort by semver descending and pick the latest
+            group.sort((a, b) => semver.compare(b, a));
+            const latest = group[0];
+            // Use the minor version as the subrange (e.g., "14.44") since MSVC versions
+            // share the same major (14) and differ by minor
+            subranges.push(`${latest.major}.${latest.minor}`);
+        }
+
+        // If no versions matched, fall back to one-per-major
+        if (subranges.length === 0) {
+            fnlog('No VS year groups matched the range, falling back to one-per-major');
+            return splitRanges(range, versions, SubrangePolicies.ONE_PER_MAJOR, compilerName);
         }
     }
 

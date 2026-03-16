@@ -7,6 +7,7 @@ import * as path from 'path';
 import { fetchAllTags } from './tags';
 import { generateUbuntuVersionsJson } from './ubuntu-versions';
 import { generateBoostDeps } from './boost-deps';
+import { updateUbuntuCompilerDefaults } from './ubuntu-compiler-defaults';
 
 // Re-export runner utilities for consumers (e.g. utils/docs)
 export { runCommand } from './runner';
@@ -30,12 +31,17 @@ async function main(): Promise<void> {
         console.error('Warning: Ubuntu versions generation failed');
     }
 
+    const compilerDefaultsOk = await updateUbuntuCompilerDefaults(rootDir);
+    if (!compilerDefaultsOk) {
+        console.error('Warning: Ubuntu compiler defaults generation failed');
+    }
+
     const boostOk = await generateBoostDeps(rootDir);
     if (!boostOk) {
         console.error('Warning: Boost deps generation failed');
     }
 
-    if (!tagsOk || !ubuntuOk || !boostOk) {
+    if (!tagsOk || !ubuntuOk || !compilerDefaultsOk || !boostOk) {
         process.exit(1);
     }
 

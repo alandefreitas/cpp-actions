@@ -242,9 +242,10 @@ class CppMatrixRunner {
             const compilerName = normalizeCompilerName(compilerName0);
             fnlog(`Find versions for ${compilerName}`);
             const allCompilerVersions = await findCompilerVersions(compilerName);
-            const subrangePolicyStr = this.inputs.subrangePolicy[compilerName] || this.inputs.subrangePolicy[''] || 'one-per-major';
+            const compilerDefault = (compilerName === 'gcc' || compilerName === 'clang') ? 'ubuntu-defaults-and-latest' : 'one-per-major';
+            const subrangePolicyStr = this.inputs.subrangePolicy[compilerName] || this.inputs.subrangePolicy[''] || compilerDefault;
             fnlog(`Subrange policy for ${compilerName}: ${subrangePolicyStr}`);
-            const subranges = splitRanges(range, allCompilerVersions, getSubrangePolicy(subrangePolicyStr));
+            const subranges = splitRanges(range, allCompilerVersions, getSubrangePolicy(subrangePolicyStr), compilerName);
             fnlog(`${compilerName} sub-ranges: ${JSON.stringify(subranges)}`);
 
             // Iterate over subranges and generate an entry for each

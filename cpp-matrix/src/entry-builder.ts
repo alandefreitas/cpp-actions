@@ -10,6 +10,7 @@ import { type CompilerSuggestion, type MatrixEntry } from './types';
 import { type Inputs } from './schema';
 import { getVisualCppYear } from './versions';
 import { humanizeCompilerName } from './compiler-support';
+import { loadUbuntuCompilerDefaults } from 'setup-program';
 
 /**
  * Sets the semver components (major, minor, patch) on a matrix entry.
@@ -240,7 +241,148 @@ export function applyForcedFactors(entry: MatrixEntry, suggestionMap: CompilerSu
 }
 
 /**
+ * Finds the best Ubuntu release for a given compiler major version using
+ * ubuntu-compiler-defaults.json data.
+ *
+ * Selection priority:
+ * 1. The release where the version is the build-essential / meta-package default
+ *    (is_default: true). If multiple releases have it as default, the newest is chosen.
+ * 2. The newest stable LTS release that has the version available in its default repos.
+ *
+ * @param compilerName - Compiler family name ('gcc' or 'clang')
+ * @param majorVersion - Major version number to look up
+ * @returns Ubuntu version string (e.g., "22.04") or null if no release provides this version
+ */
+export function findBestUbuntuRelease(compilerName: string, majorVersion: number): string {
+    const compilerKey = compilerName === 'gcc' || compilerName === 'clang' ? compilerName : null;
+    const defaults = loadUbuntuCompilerDefaults();
+
+    let ltsDefault: number = 0;
+    let ltsAvailable: number = 0;
+    let newestLts: number = 0;
+    let newestRelease: number = 0;
+
+    // First pass: find newest LTS and newest release overall
+    for (const version of Object.keys(defaults.releases)) {
+        const releaseNum = parseFloat(version);
+        const isLts = Math.round((releaseNum % 1) * 100) === 4 && Math.floor(releaseNum) % 2 === 0;
+        if (isLts && releaseNum > newestLts) {
+            newestLts = releaseNum;
+        }
+        if (releaseNum > newestRelease) {
+            newestRelease = releaseNum;
+        }
+    }
+
+    // Only the newest non-LTS release is usable — older ones are EOL
+    // with their apt repos removed from archive.ubuntu.com.
+    let currentDefault: number = 0;
+    let currentAvailable: number = 0;
+
+    for (const [version, release] of Object.entries(defaults.releases)) {
+        const releaseNum = parseFloat(version);
+        const isLts = Math.round((releaseNum % 1) * 100) === 4 && Math.floor(releaseNum) % 2 === 0;
+
+        if (!compilerKey) {
+            continue;
+        }
+
+        const info = release[compilerKey];
+        if (!info) {
+            continue;
+        }
+
+        const hasVersion = info.available_versions.some(v => v.major === majorVersion);
+        if (!hasVersion) {
+            continue;
+        }
+
+        const isDefault = info.available_versions.some(v => v.major === majorVersion && v.is_default);
+
+        if (isLts) {
+            if (isDefault && releaseNum > ltsDefault) {
+                ltsDefault = releaseNum;
+            }
+            if (releaseNum > ltsAvailable) {
+                ltsAvailable = releaseNum;
+            }
+        } else if (releaseNum === newestRelease) {
+            // Only use the newest non-LTS release (the only one guaranteed active)
+            if (isDefault) {
+                currentDefault = releaseNum;
+            }
+            currentAvailable = releaseNum;
+        }
+    }
+
+    // Priority:
+    // 1. LTS where it's the build-essential default (stable + no PPA needed)
+    // 2. LTS where it's available (stable + apt install gcc-N works)
+    // 3. Current (newest) non-LTS where it's the default
+    // 4. Current (newest) non-LTS where it's available
+    // 5. Newest LTS (fallback for versions not in any release — PPA needed)
+    const best = ltsDefault || ltsAvailable || currentDefault || currentAvailable || newestLts || 24.04;
+    return best.toFixed(2);
+}
+
+/**
+ * Applies data-driven Ubuntu container/runner selection for GCC and Clang compilers.
+ *
+ * Uses ubuntu-compiler-defaults.json to find the best Ubuntu release for the
+ * requested compiler version. For releases newer than the default runner (22.04),
+ * a container is always used. For 22.04, a container is used only when
+ * {@link Inputs.useContainers} is enabled. For older releases, the matching
+ * runner is used directly or a container on the 22.04 runner.
+ *
+ * @param entry - Matrix entry to update
+ * @param inputs - Action inputs
+ * @param compilerName - Compiler name ('gcc' or 'clang')
+ * @param minSubrangeVersion - Minimum version in the subrange
+ * @returns True if a data-driven selection was made, false to fall back to hardcoded logic
+ */
+function applyUbuntuAutoSelect(entry: MatrixEntry, inputs: Inputs, compilerName: string, minSubrangeVersion: semver.SemVer): void {
+    const bestRelease = findBestUbuntuRelease(compilerName, minSubrangeVersion.major);
+
+    // Clang 12–14 on ubuntu-22.04 runners require container isolation due to
+    // incompatible libstdc++ versions shipped on the runner image.
+    if (compilerName === 'clang'
+        && minSubrangeVersion.major >= 12
+        && minSubrangeVersion.major < 15
+        && bestRelease === '22.04') {
+        entry['runs-on'] = 'ubuntu-22.04';
+        entry['container'] = 'ubuntu:22.04';
+        return;
+    }
+
+    const releaseNum = parseFloat(bestRelease);
+    if (releaseNum > 22.04) {
+        // Newer than the default runner — always use a container
+        entry['runs-on'] = 'ubuntu-22.04';
+        entry['container'] = `ubuntu:${bestRelease}`;
+    } else if (releaseNum === 22.04) {
+        entry['runs-on'] = 'ubuntu-22.04';
+        if (inputs.useContainers) {
+            entry['container'] = `ubuntu:${bestRelease}`;
+        }
+    } else {
+        // Older than default runner
+        if (!inputs.useContainers) {
+            entry['runs-on'] = `ubuntu-${bestRelease}`;
+        } else {
+            entry['runs-on'] = 'ubuntu-22.04';
+            entry['container'] = `ubuntu:${bestRelease}`;
+        }
+    }
+}
+
+
+/**
  * Sets the container and runs-on configuration for a matrix entry.
+ *
+ * For GCC and Clang, this first consults ubuntu-compiler-defaults.json to find
+ * which Ubuntu release provides the requested compiler version natively. If the
+ * data has a match, the container/runner is set based on that release. Otherwise,
+ * hardcoded fallback rules are used for versions not covered by the data.
  *
  * @param entry - Matrix entry to update
  * @param inputs - Action inputs
@@ -250,63 +392,8 @@ export function applyForcedFactors(entry: MatrixEntry, suggestionMap: CompilerSu
  */
 export function setCompilerContainer(entry: MatrixEntry, inputs: Inputs, compilerName: string, minSubrangeVersion: semver.SemVer, _subrange: string): void {
     // runs-on / container
-    if (compilerName === 'gcc') {
-        if (semver.satisfies(minSubrangeVersion, '>=15')) {
-            entry['runs-on'] = 'ubuntu-22.04';
-            entry['container'] = 'ubuntu:25.04';
-        } else if (semver.satisfies(minSubrangeVersion, '>=14')) {
-            entry['runs-on'] = 'ubuntu-22.04';
-            entry['container'] = 'ubuntu:24.04';
-        } else if (semver.satisfies(minSubrangeVersion, '>=13')) {
-            entry['runs-on'] = 'ubuntu-22.04';
-            entry['container'] = 'ubuntu:24.04';
-        } else if (semver.satisfies(minSubrangeVersion, '>=9')) {
-            entry['runs-on'] = 'ubuntu-22.04';
-            if (inputs.useContainers) {
-                entry['container'] = 'ubuntu:22.04';
-            }
-        } else if (semver.satisfies(minSubrangeVersion, '>=7')) {
-            if (!inputs.useContainers) {
-                entry['runs-on'] = 'ubuntu-20.04';
-            } else {
-                entry['runs-on'] = 'ubuntu-22.04';
-                entry['container'] = 'ubuntu:20.04';
-            }
-        } else {
-            entry['runs-on'] = 'ubuntu-22.04';
-            entry['container'] = 'ubuntu:18.04';
-        }
-    } else if (compilerName === 'clang') {
-        if (semver.satisfies(minSubrangeVersion, '>=17')) {
-            entry['runs-on'] = 'ubuntu-22.04';
-            entry['container'] = 'ubuntu:24.04';
-        } else if (semver.satisfies(minSubrangeVersion, '>=16')) {
-            entry['runs-on'] = 'ubuntu-22.04';
-            entry['container'] = 'ubuntu:24.04';
-        } else if (semver.satisfies(minSubrangeVersion, '>=15')) {
-            entry['runs-on'] = 'ubuntu-22.04';
-            if (inputs.useContainers) {
-                entry['container'] = 'ubuntu:22.04';
-            }
-        } else if (semver.satisfies(minSubrangeVersion, '>=12')) {
-            // Clang >=12 <15 require a container to isolate
-            // incompatible libstdc++ versions
-            entry['runs-on'] = 'ubuntu-22.04';
-            entry['container'] = 'ubuntu:22.04';
-        } else if (semver.satisfies(minSubrangeVersion, '>=6')) {
-            if (!inputs.useContainers) {
-                entry['runs-on'] = 'ubuntu-20.04';
-            } else {
-                entry['runs-on'] = 'ubuntu-22.04';
-                entry['container'] = 'ubuntu:20.04';
-            }
-        } else if (semver.satisfies(minSubrangeVersion, '>=3.9')) {
-            entry['runs-on'] = 'ubuntu-22.04';
-            entry['container'] = 'ubuntu:18.04';
-        } else {
-            entry['runs-on'] = 'ubuntu-22.04';
-            entry['container'] = 'ubuntu:16.04';
-        }
+    if (compilerName === 'gcc' || compilerName === 'clang') {
+        applyUbuntuAutoSelect(entry, inputs, compilerName, minSubrangeVersion);
     } else if (compilerName === 'msvc') {
         if (semver.satisfies(minSubrangeVersion, '>=14.42')) {
             entry['runs-on'] = 'windows-2025';

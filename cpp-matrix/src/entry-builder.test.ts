@@ -31,6 +31,7 @@ import {
     appendSuggestion,
     applyForcedFactors,
     setCompilerContainer,
+    findBestUbuntuRelease,
     setCompilerB2Toolset,
     runsOnLabels,
     inferVisualStudioGeneratorFromRunsOn,
@@ -392,103 +393,115 @@ describe('applyForcedFactors', () => {
 });
 
 describe('setCompilerContainer', () => {
-    test('gcc >= 15 uses ubuntu 25.04 container', () => {
+    test('gcc >= 15 uses non-LTS where it is the default (25.10)', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs(), 'gcc', semver.parse('15.0.0')!, '15');
         expect(entry['runs-on']).toBe('ubuntu-22.04');
-        // ubuntu:25.04 has major >= 20, so no volumes added
-        expect(entry.container).toBe('ubuntu:25.04');
+        // GCC 15 is default on 25.10 — apt install gcc works there without PPA
+        expect(entry.container).toBe('ubuntu:25.10');
     });
 
-    test('gcc >= 14 uses ubuntu 24.04 container', () => {
+    test('gcc >= 14 uses ubuntu 24.04 container (available on LTS)', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs(), 'gcc', semver.parse('14.0.0')!, '14');
+        // GCC 14 is available on 24.04 (LTS) but not default; newest available LTS = 24.04
         expect(entry.container).toBe('ubuntu:24.04');
     });
 
     test('gcc >= 13 uses ubuntu 24.04 container', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs(), 'gcc', semver.parse('13.0.0')!, '13');
+        // GCC 13 is default on 23.10 and 24.04; newest default is 24.04
         expect(entry.container).toBe('ubuntu:24.04');
     });
 
-    test('gcc >= 9 without containers does not set container', () => {
+    test('gcc 12 uses ubuntu 24.04 container (newest LTS where available)', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs({ useContainers: false }), 'gcc', semver.parse('12.0.0')!, '12');
+        // GCC 12 is available on 22.04 and 24.04 (LTS); not default on any LTS
+        // Newest available LTS = 24.04; releaseNum 24.04 > 22.04 means a container is always used
         expect(entry['runs-on']).toBe('ubuntu-22.04');
-        expect(entry.container).toBeUndefined();
+        expect(entry.container).toBe('ubuntu:24.04');
     });
 
-    test('gcc >= 9 with containers uses ubuntu 22.04', () => {
+    test('gcc 12 with containers uses ubuntu 24.04', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs({ useContainers: true }), 'gcc', semver.parse('12.0.0')!, '12');
-        expect(entry.container).toBe('ubuntu:22.04');
+        expect(entry.container).toBe('ubuntu:24.04');
     });
 
-    test('gcc >= 7 without containers uses ubuntu-20.04', () => {
+    test('gcc 8 without containers uses ubuntu-20.04', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs({ useContainers: false }), 'gcc', semver.parse('8.0.0')!, '8');
+        // GCC 8 is available on 18.04 and 20.04 (LTS); not default on any LTS
+        // Newest available LTS = 20.04; releaseNum 20.04 < 22.04, useContainers false
         expect(entry['runs-on']).toBe('ubuntu-20.04');
         expect(entry.container).toBeUndefined();
     });
 
-    test('gcc >= 7 with containers uses ubuntu:20.04', () => {
+    test('gcc 8 with containers uses ubuntu:20.04 (no volumes, major >= 20)', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs({ useContainers: true }), 'gcc', semver.parse('8.0.0')!, '8');
         expect(entry['runs-on']).toBe('ubuntu-22.04');
-        // ubuntu:20.04 major >= 20, no volumes
+        // ubuntu:20.04 major is 20 (>= 20), so no volumes needed
         expect(entry.container).toBe('ubuntu:20.04');
     });
 
-    test('gcc < 7 uses ubuntu:18.04 with volumes', () => {
+    test('gcc 6 without containers uses ubuntu-18.04', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs(), 'gcc', semver.parse('6.0.0')!, '6');
-        expect(entry['runs-on']).toBe('ubuntu-22.04');
-        expect(entry.container).toEqual({
-            image: 'ubuntu:18.04',
-            volumes: ['/node20217:/node20217:rw,rshared', '/node20217:/__e/node20:ro,rshared']
-        });
-    });
-
-    test('clang >= 17 uses ubuntu 24.04', () => {
-        const entry = makeEntry();
-        setCompilerContainer(entry, makeInputs(), 'clang', semver.parse('17.0.0')!, '17');
-        expect(entry.container).toBe('ubuntu:24.04');
-    });
-
-    test('clang >= 16 uses ubuntu 24.04', () => {
-        const entry = makeEntry();
-        setCompilerContainer(entry, makeInputs(), 'clang', semver.parse('16.0.0')!, '16');
-        expect(entry.container).toBe('ubuntu:24.04');
-    });
-
-    test('clang >= 15 without containers', () => {
-        const entry = makeEntry();
-        setCompilerContainer(entry, makeInputs({ useContainers: false }), 'clang', semver.parse('15.0.0')!, '15');
-        expect(entry['runs-on']).toBe('ubuntu-22.04');
+        // GCC 6 is available on 18.04 (LTS); not default on any LTS
+        // releaseNum 18.04 < 22.04, useContainers false → runs-on = ubuntu-18.04
+        expect(entry['runs-on']).toBe('ubuntu-18.04');
         expect(entry.container).toBeUndefined();
     });
 
-    test('clang >= 15 with containers uses ubuntu 22.04', () => {
+    test('clang 17 uses ubuntu 24.04 container (newest LTS where available)', () => {
         const entry = makeEntry();
-        setCompilerContainer(entry, makeInputs({ useContainers: true }), 'clang', semver.parse('15.0.0')!, '15');
-        expect(entry.container).toBe('ubuntu:22.04');
+        setCompilerContainer(entry, makeInputs(), 'clang', semver.parse('17.0.0')!, '17');
+        // Clang 17 is available on 24.04 (LTS); not default on any LTS
+        expect(entry.container).toBe('ubuntu:24.04');
     });
 
-    test('clang >= 12 <15 always uses container', () => {
+    test('clang 16 uses ubuntu 24.04 container (available on LTS)', () => {
         const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs(), 'clang', semver.parse('16.0.0')!, '16');
+        // Clang 16 is available on 24.04 (LTS); not default on any LTS
+        expect(entry.container).toBe('ubuntu:24.04');
+    });
+
+    test('clang 15 always uses container (24.04 > 22.04)', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs({ useContainers: false }), 'clang', semver.parse('15.0.0')!, '15');
+        // Clang 15 is available on 24.04 (LTS); not default on any LTS
+        // releaseNum 24.04 > 22.04 means a container is always used
+        expect(entry['runs-on']).toBe('ubuntu-22.04');
+        expect(entry.container).toBe('ubuntu:24.04');
+    });
+
+    test('clang 15 with containers also uses ubuntu 24.04', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs({ useContainers: true }), 'clang', semver.parse('15.0.0')!, '15');
+        expect(entry.container).toBe('ubuntu:24.04');
+    });
+
+    test('clang 14 forces container even without useContainers (libstdc++ compat)', () => {
+        const entry = makeEntry();
+        // Clang 14 is default on 22.04; the special clang 12-14 check forces
+        // container isolation due to incompatible libstdc++ on the runner image
         setCompilerContainer(entry, makeInputs({ useContainers: false }), 'clang', semver.parse('14.0.0')!, '14');
         expect(entry['runs-on']).toBe('ubuntu-22.04');
         expect(entry.container).toBe('ubuntu:22.04');
     });
 
-    test('clang >= 6 without containers', () => {
+    test('clang 10 without containers uses ubuntu-20.04', () => {
         const entry = makeEntry();
+        // Clang 10 is default on 20.04; releaseNum=20.04 < 22.04
         setCompilerContainer(entry, makeInputs({ useContainers: false }), 'clang', semver.parse('10.0.0')!, '10');
         expect(entry['runs-on']).toBe('ubuntu-20.04');
     });
 
-    test('clang >= 6 with containers uses ubuntu:20.04', () => {
+    test('clang 10 with containers uses ubuntu:20.04', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs({ useContainers: true }), 'clang', semver.parse('10.0.0')!, '10');
         expect(entry['runs-on']).toBe('ubuntu-22.04');
@@ -496,22 +509,76 @@ describe('setCompilerContainer', () => {
         expect(entry.container).toBe('ubuntu:20.04');
     });
 
-    test('clang >= 3.9 uses ubuntu:18.04', () => {
+    test('clang 7 available on LTS 20.04, with containers uses ubuntu:20.04', () => {
         const entry = makeEntry();
-        setCompilerContainer(entry, makeInputs(), 'clang', semver.parse('5.0.0')!, '5');
-        expect(entry.container).toEqual({
-            image: 'ubuntu:18.04',
-            volumes: ['/node20217:/node20217:rw,rshared', '/node20217:/__e/node20:ro,rshared']
-        });
+        // Clang 7 is available on 20.04 (LTS); not default on any LTS
+        // releaseNum=20.04 < 22.04, useContainers=true
+        setCompilerContainer(entry, makeInputs({ useContainers: true }), 'clang', semver.parse('7.0.0')!, '7');
+        expect(entry['runs-on']).toBe('ubuntu-22.04');
+        // ubuntu:20.04 major is 20 (>= 20), so no volumes needed
+        expect(entry.container).toBe('ubuntu:20.04');
     });
 
-    test('clang < 3.9 uses ubuntu:16.04', () => {
+    test('clang 7 without containers uses ubuntu-20.04', () => {
+        const entry = makeEntry();
+        // Clang 7 is available on 20.04 (LTS); not default on any LTS
+        // useContainers:false → runs-on = ubuntu-20.04
+        setCompilerContainer(entry, makeInputs({ useContainers: false }), 'clang', semver.parse('7.0.0')!, '7');
+        expect(entry['runs-on']).toBe('ubuntu-20.04');
+    });
+
+    test('clang 14 with containers on 22.04 sets container', () => {
+        const entry = makeEntry();
+        // Clang 14 is default on 22.04; releaseNum=22.04, useContainers:true
+        // The special clang 12-14 check requires bestRelease === '22.04' (exact),
+        // but raw key is "22.04", so it falls through to releaseNum === 22.04 with useContainers
+        setCompilerContainer(entry, makeInputs({ useContainers: true }), 'clang', semver.parse('14.0.0')!, '14');
+        expect(entry['runs-on']).toBe('ubuntu-22.04');
+        expect(entry.container).toBe('ubuntu:22.04');
+    });
+
+    test('gcc 16 uses newest release (not in any release)', () => {
+        const entry = makeEntry();
+        // GCC 16 is not in any release → falls back to newest release (25.10)
+        setCompilerContainer(entry, makeInputs({ useContainers: false }), 'gcc', semver.parse('16.0.0')!, '16');
+        expect(entry['runs-on']).toBe('ubuntu-22.04');
+        expect(entry.container).toBe('ubuntu:24.04');
+    });
+
+    test('gcc 16 with containers uses newest release', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs({ useContainers: true }), 'gcc', semver.parse('16.0.0')!, '16');
+        expect(entry['runs-on']).toBe('ubuntu-22.04');
+        expect(entry.container).toBe('ubuntu:24.04');
+    });
+
+    test('clang 6 uses newest release (not in any release)', () => {
+        const entry = makeEntry();
+        // Clang 6 is not available on any release in the data → newest release (25.10)
+        setCompilerContainer(entry, makeInputs({ useContainers: false }), 'clang', semver.parse('6.0.0')!, '6');
+        expect(entry['runs-on']).toBe('ubuntu-22.04');
+        expect(entry.container).toBe('ubuntu:24.04');
+    });
+
+    test('clang 6 with containers uses newest release', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs({ useContainers: true }), 'clang', semver.parse('6.0.0')!, '6');
+        expect(entry['runs-on']).toBe('ubuntu-22.04');
+        expect(entry.container).toBe('ubuntu:24.04');
+    });
+
+    test('clang 5 uses newest release (not in any release)', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs(), 'clang', semver.parse('5.0.0')!, '5');
+        expect(entry['runs-on']).toBe('ubuntu-22.04');
+        expect(entry.container).toBe('ubuntu:24.04');
+    });
+
+    test('clang 3.5 uses newest release (not in any release)', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs(), 'clang', semver.parse('3.5.0')!, '3.5');
-        expect(entry.container).toEqual({
-            image: 'ubuntu:16.04',
-            volumes: ['/node20217:/node20217:rw,rshared', '/node20217:/__e/node20:ro,rshared']
-        });
+        expect(entry['runs-on']).toBe('ubuntu-22.04');
+        expect(entry.container).toBe('ubuntu:24.04');
     });
 
     test('msvc >= 14.42 uses windows-2025', () => {
@@ -544,11 +611,11 @@ describe('setCompilerContainer', () => {
         expect(entry['runs-on']).toBe('windows-2022');
     });
 
-    test('container with object config keeps object', () => {
+    test('container with object config gets overwritten by data-driven selection', () => {
         const entry = makeEntry({ container: { image: 'ubuntu:22.04' } });
         setCompilerContainer(entry, makeInputs({ useContainers: true }), 'gcc', semver.parse('12.0.0')!, '12');
-        // The container gets set to string 'ubuntu:22.04' and stays string (>= 20)
-        expect(entry.container).toBe('ubuntu:22.04');
+        // GCC 12 is available on 24.04 (LTS, > 22.04), so data-driven selection sets container to ubuntu:24.04
+        expect(entry.container).toBe('ubuntu:24.04');
     });
 
     test('container object with old ubuntu gets volumes added', () => {
@@ -851,5 +918,85 @@ describe('setEntryName', () => {
         const entry = makeEntry();
         setEntryName(entry, 'msvc', '14.29', ['14', '17', '20']);
         expect(entry.name).toBe('MSVC 14.29: C++14-20');
+    });
+});
+
+// Tests for findBestUbuntuRelease auto-select logic.
+// Uses real ubuntu-compiler-defaults.json data, but only LTS releases are considered.
+// LTS releases: 16.04, 18.04, 20.04, 22.04, 24.04
+// Note: some releases have point versions in their keys (e.g. "16.04", "18.04",
+// "20.04", "22.04", "24.04"), and findBestUbuntuRelease returns the raw key.
+//   GCC defaults (LTS only): 5(16.04), 7(18.04), 9(20.04), 11(22.04), 13(24.04)
+//   GCC available (LTS only): 5,6,7,8(18.04), 7,8,9,10(20.04),
+//                              9,10,11,12(22.04), 9,10,11,12,13,14(24.04)
+//   Unique GCC available: [5,6,7,8,9,10,11,12,13,14]
+//   Clang defaults (LTS only): 10(20.04), 14(22.04), 18(24.04)
+//   Clang available (LTS only): 7,8,9,10(20.04), 11,12,13,14(22.04),
+//                                14,15,16,17,18(24.04)
+//   Unique Clang available: [7,8,9,10,11,12,13,14,15,16,17,18]
+
+describe('findBestUbuntuRelease', () => {
+    test('returns release where GCC version is the default', () => {
+        // GCC 11 is the default on 21.10 and 22.04; newest default is 22.04
+        expect(findBestUbuntuRelease('gcc', 11)).toBe('22.04');
+    });
+
+    test('returns release where GCC version is the default (24.04)', () => {
+        // GCC 13 is the default on 23.10 and 24.04; newest default is 24.04
+        expect(findBestUbuntuRelease('gcc', 13)).toBe('24.04');
+    });
+
+    test('returns newest LTS where version is available (not default on any LTS)', () => {
+        // GCC 14 is available on 24.04 (LTS) but not default there (13 is default)
+        // Not default on any LTS → returns newest available LTS = 24.04
+        expect(findBestUbuntuRelease('gcc', 14)).toBe('24.04');
+    });
+
+    test('returns newest LTS where version is available when not default on any LTS', () => {
+        // GCC 10 is available on 20.04, 22.04, 24.04 (LTS) but not default on any
+        // Newest available LTS = 24.04
+        expect(findBestUbuntuRelease('gcc', 10)).toBe('24.04');
+    });
+
+    test('returns newest available LTS for non-default version', () => {
+        // GCC 12 is available on 22.04 and 24.04 (LTS) but not default on any
+        // Newest available LTS = 24.04
+        expect(findBestUbuntuRelease('gcc', 12)).toBe('24.04');
+    });
+
+    test('returns newest LTS when no LTS has the version', () => {
+        // GCC 99 is not in any LTS → falls back to newest LTS (24.04)
+        expect(findBestUbuntuRelease('gcc', 99)).toBe('24.04');
+    });
+
+    test('works with clang', () => {
+        // Clang 14 is default on 22.04
+        expect(findBestUbuntuRelease('clang', 14)).toBe('22.04');
+    });
+
+    test('clang version available in multiple releases prefers default', () => {
+        // Clang 18 is default on 24.04, available (non-default) on 24.10, 25.04, 25.10
+        expect(findBestUbuntuRelease('clang', 18)).toBe('24.04');
+    });
+
+    test('clang version available on LTS but not default on any LTS', () => {
+        // Clang 16 is available on 24.04 (LTS) but not default (18 is default)
+        // Not default on any LTS → returns newest available LTS = 24.04
+        expect(findBestUbuntuRelease('clang', 16)).toBe('24.04');
+    });
+
+    test('returns newest LTS for non-gcc/clang compilers', () => {
+        expect(findBestUbuntuRelease('msvc', 14)).toBe('24.04');
+        expect(findBestUbuntuRelease('apple-clang', 14)).toBe('24.04');
+        expect(findBestUbuntuRelease('mingw', 12)).toBe('24.04');
+    });
+
+    test('returns newest LTS for unknown compiler', () => {
+        expect(findBestUbuntuRelease('unknown', 11)).toBe('24.04');
+    });
+
+    test('newest default release wins when multiple have it as default', () => {
+        // GCC 9 is default on 19.10 and 20.04; newest default is 20.04
+        expect(findBestUbuntuRelease('gcc', 9)).toBe('20.04');
     });
 });

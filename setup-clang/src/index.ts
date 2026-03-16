@@ -5,7 +5,6 @@
  */
 
 import * as core from '@actions/core';
-import * as io from '@actions/io';
 import * as tc from '@actions/tool-cache';
 import * as semver from 'semver';
 import * as fs from 'fs';
@@ -195,52 +194,37 @@ class SetupClangRunner {
                 `Adding APT repositories for Clang ${this.inputs.version} major versions [${allVersionMajors.join(', ')}]`
             );
 
-            // Adding a key requires gnupg
+            // Download and install repo signing key using modern signed-by approach
+            // (apt-key was removed in Ubuntu 24.10+)
             await setup_program.findProgramWithApt(['gnupg'], '*', true);
-
-            // Download repo key
             const gpgKeyUrl = 'https://apt.llvm.org/llvm-snapshot.gpg.key';
             const keyPath = await tc.downloadTool(gpgKeyUrl);
-            if (setup_program.isSudoRequired()) {
+            const keyringPath = '/etc/apt/keyrings/llvm-snapshot.gpg';
+            const sudo = setup_program.isSudoRequired() ? 'sudo -n' : '';
+            if (sudo) {
                 await setup_program.ensureSudoIsAvailable();
-                await exec.exec(`sudo -n sudo apt-key add "${keyPath}"`, [], { ignoreReturnCode: true });
-            } else {
-                await exec.exec(`apt-key add "${keyPath}"`, [], { ignoreReturnCode: true });
             }
+            await exec.exec(`${sudo} mkdir -p /etc/apt/keyrings`.trim(), [], { ignoreReturnCode: true });
+            await exec.exec(`${sudo} gpg --dearmor -o ${keyringPath} ${keyPath}`.trim(), [], { ignoreReturnCode: true });
 
-            // add-apt-repository requires installing software-properties-common
-            await setup_program.findProgramWithApt(['software-properties-common'], '*', true);
-            let addAptRepositoryPath: string | null = null;
-            try {
-                addAptRepositoryPath = await io.which('add-apt-repository');
-                traceCommands.log(`add-apt-repository found at ${addAptRepositoryPath}`);
-            } catch {
-                addAptRepositoryPath = null;
-            }
-
-            // Add APT repositories
-            if (addAptRepositoryPath !== null && addAptRepositoryPath !== '') {
-                for (const major of allVersionMajors) {
-                    const ReleaseFileURL = `https://apt.llvm.org/${ubuntuName}/dists/llvm-toolchain-${ubuntuName}-${major}/Release`;
-                    traceCommands.log(`Checking if ${ReleaseFileURL} exists`);
-                    if (!(await setup_program.urlExists(ReleaseFileURL))) {
-                        traceCommands.log(
-                            `Skipping repository for major version ${major} because ${ReleaseFileURL} does not exist`
-                        );
-                        continue;
-                    }
-                    await setup_program.ensureAddAptRepositoryIsAvailable();
-                    const repo = `deb https://apt.llvm.org/${ubuntuName}/ llvm-toolchain-${ubuntuName}-${major} main`;
-                    traceCommands.log(`Adding repository "${repo}"`);
-                    if (setup_program.isSudoRequired()) {
-                        await exec.exec(`sudo -n add-apt-repository -y "${repo}"`, [], {
-                            ignoreReturnCode: true
-                        });
-                    } else {
-                        await exec.exec(`add-apt-repository -y "${repo}"`, [], { ignoreReturnCode: true });
-                    }
+            // Add APT repositories with signed-by
+            for (const major of allVersionMajors) {
+                const ReleaseFileURL = `https://apt.llvm.org/${ubuntuName}/dists/llvm-toolchain-${ubuntuName}-${major}/Release`;
+                traceCommands.log(`Checking if ${ReleaseFileURL} exists`);
+                if (!(await setup_program.urlExists(ReleaseFileURL))) {
+                    traceCommands.log(
+                        `Skipping repository for major version ${major} because ${ReleaseFileURL} does not exist`
+                    );
+                    continue;
                 }
+                const repoLine = `deb [signed-by=${keyringPath}] https://apt.llvm.org/${ubuntuName}/ llvm-toolchain-${ubuntuName}-${major} main`;
+                const listFile = `/etc/apt/sources.list.d/llvm-${major}.list`;
+                traceCommands.log(`Adding repository "${repoLine}" to ${listFile}`);
+                await exec.exec(`bash -c '${sudo} tee ${listFile} <<< "${repoLine}" > /dev/null'`.trim(), [], {
+                    ignoreReturnCode: true
+                });
             }
+            await exec.exec(`${sudo} apt-get update`.trim(), [], { ignoreReturnCode: true });
         }
 
         core.info(`Searching for Clang ${this.inputs.version} with APT`);

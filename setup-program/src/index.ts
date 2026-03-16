@@ -76,6 +76,15 @@ export {
     getCurrentUbuntuName
 } from './ubuntu-utils';
 
+// Re-export Ubuntu compiler defaults parser and types for external consumers
+export {
+    type UbuntuCompilerDefaults,
+    type CompilerInfo,
+    type ReleaseCompilerData,
+    type CompilerVersionEntry,
+    loadUbuntuCompilerDefaults
+} from './ubuntu-compiler-defaults';
+
 // Re-export URL installation for external consumers
 export { installProgramFromUrl } from './url-install';
 
