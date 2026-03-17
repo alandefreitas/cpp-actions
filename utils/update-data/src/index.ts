@@ -8,6 +8,8 @@ import { fetchAllTags } from './tags';
 import { generateUbuntuVersionsJson } from './ubuntu-versions';
 import { generateBoostDeps } from './boost-deps';
 import { updateUbuntuCompilerDefaults } from './ubuntu-compiler-defaults';
+import { updateMacOSXcodeDefaults } from './macos-xcode-defaults';
+import { updateRunnerImages } from './runner-images';
 
 // Re-export runner utilities for consumers (e.g. utils/docs)
 export { runCommand } from './runner';
@@ -20,6 +22,11 @@ async function main(): Promise<void> {
     const rootDir = path.resolve(__dirname, '../../..');
 
     console.log('==== Updating external data ====');
+
+    const runnerImagesOk = await updateRunnerImages(rootDir);
+    if (!runnerImagesOk) {
+        console.error('Warning: Runner images discovery failed');
+    }
 
     const tagsOk = await fetchAllTags(rootDir);
     if (!tagsOk) {
@@ -36,12 +43,17 @@ async function main(): Promise<void> {
         console.error('Warning: Ubuntu compiler defaults generation failed');
     }
 
+    const macosOk = await updateMacOSXcodeDefaults(rootDir);
+    if (!macosOk) {
+        console.error('Warning: macOS Xcode defaults generation failed');
+    }
+
     const boostOk = await generateBoostDeps(rootDir);
     if (!boostOk) {
         console.error('Warning: Boost deps generation failed');
     }
 
-    if (!tagsOk || !ubuntuOk || !compilerDefaultsOk || !boostOk) {
+    if (!runnerImagesOk || !tagsOk || !ubuntuOk || !compilerDefaultsOk || !macosOk || !boostOk) {
         process.exit(1);
     }
 

@@ -12,6 +12,7 @@ import * as setup_gcc from 'setup-gcc';
 import * as setup_clang from 'setup-clang';
 import * as setup_msvc from 'setup-msvc';
 import * as setup_program from 'setup-program';
+import { scanInstalledXcodes } from './apple-clang-utils';
 
 // Schema imports
 import { type Inputs, inputsSchema, outputsSchema } from './schema';
@@ -50,7 +51,8 @@ export interface SetupResult {
  *
  * Supported compiler families:
  * - GCC: gcc, g++ → normalized to "gcc"
- * - Clang: clang, apple-clang, appleclang → normalized to "clang" (or "clang-cl" on Windows)
+ * - Apple Clang: apple-clang, appleclang → normalized to "apple-clang"
+ * - Clang: clang → normalized to "clang" (or "clang-cl" on Windows)
  * - MSVC: msvc, cl → normalized to "msvc"
  *
  * @param compiler - The compiler name, possibly with embedded version (e.g., "gcc-10")
@@ -75,7 +77,9 @@ export function normalizeCompiler(compiler: string, version: string): Normalized
     compiler = compiler.toLowerCase();
     if (compiler.startsWith('gcc') || compiler.startsWith('g++')) {
         compiler = 'gcc';
-    } else if (compiler.startsWith('clang') || compiler.startsWith('apple-clang') || compiler.startsWith('appleclang')) {
+    } else if (compiler === 'apple-clang' || compiler.startsWith('appleclang')) {
+        compiler = 'apple-clang';
+    } else if (compiler.startsWith('clang')) {
         if (process.platform === 'win32') {
             compiler = 'clang-cl';
         } else {
@@ -199,6 +203,7 @@ class SetupCppRunner {
      * Executes the compiler setup pipeline.
      *
      * @returns Output map with compiler paths and version info, or empty on failure
+     * @throws {ExpectedError} If apple-clang is requested on a non-macOS platform
      */
     async run(): Promise<Record<string, unknown>> {
         this.normalizedArch = normalizeMSVCArchToken(this.inputs.arch);
@@ -213,6 +218,15 @@ class SetupCppRunner {
             if (!success) {
                 return {};
             }
+        } else if (this.compiler === 'apple-clang' && process.platform !== 'darwin') {
+            throw new ExpectedError(
+                'Apple Clang is only available on macOS',
+                'Unsupported Platform'
+            );
+        } else if (this.compiler === 'apple-clang' && this.version && this.version !== '*') {
+            await this.setupAppleClang();
+        } else if (this.compiler === 'apple-clang') {
+            await this.setupAppleClangDefault();
         } else if (['mingw', 'mingw32', 'mingw64', 'gcc', 'clang', 'clang-cl'].includes(this.compiler)) {
             await this.searchPathCompiler();
         }
@@ -282,6 +296,222 @@ class SetupCppRunner {
         this.applySetupResult(msvcOutputs);
         this.outputPath = msvcOutputs.cc;
         return true;
+    }
+
+    /**
+     * Sets up Apple Clang by selecting the Xcode installation whose Apple Clang
+     * version satisfies the requested version range.
+     *
+     * Scans installed Xcodes, matches by version, sets DEVELOPER_DIR, and
+     * falls back to xcode-select if DEVELOPER_DIR alone is insufficient.
+     *
+     * @throws {ExpectedError} If no installed Xcode matches the requested version
+     */
+    private async setupAppleClang(): Promise<void> {
+        core.startGroup(`🍎 Setting up Apple Clang ${this.version}`);
+        traceCommands.log(`compiler: apple-clang version ${this.version}... scanning installed Xcodes.`);
+
+        const installedXcodes = await scanInstalledXcodes();
+        if (installedXcodes.length === 0) {
+            core.endGroup();
+            throw new ExpectedError(
+                'No Xcode installations found in /Applications/',
+                'Apple Clang Setup Failed'
+            );
+        }
+
+        // Match installed Xcodes against requested version
+        const isJustMajor = /^\d+$/.test(this.version);
+        const matching = installedXcodes.filter((x) => {
+            const v = semver.coerce(x.appleClangVersion);
+            if (!v) {
+                return false;
+            }
+            if (isJustMajor) {
+                return v.major === parseInt(this.version, 10);
+            }
+            const range = semver.validRange(this.version);
+            if (range) {
+                return semver.satisfies(v, this.version);
+            }
+            const requestedCoerced = semver.coerce(this.version);
+            return requestedCoerced ? semver.eq(v, requestedCoerced) : false;
+        });
+
+        if (matching.length === 0) {
+            core.endGroup();
+            throw new ExpectedError(
+                `No installed Xcode has Apple Clang version matching '${this.version}'. ` +
+                `Available: ${installedXcodes.map((x) => `${x.appleClangVersion} (Xcode ${x.xcodeVersion})`).join(', ')}`,
+                'Apple Clang Version Not Found'
+            );
+        }
+
+        // Pick the first match (scanInstalledXcodes returns sorted by Apple Clang version descending)
+        const selected = matching[0];
+        const developerDir = `${selected.xcodePath}/Contents/Developer`;
+
+        traceCommands.log(`Selected Xcode ${selected.xcodeVersion} at ${selected.xcodePath} (Apple Clang ${selected.appleClangVersion})`);
+
+        // Set DEVELOPER_DIR for this process and future steps
+        core.exportVariable('DEVELOPER_DIR', developerDir);
+        process.env['DEVELOPER_DIR'] = developerDir;
+
+        // Verify the selection works
+        const verifyResult = await exec.getExecOutput('xcrun', ['clang', '--version'], {
+            ignoreReturnCode: true,
+            silent: true
+        });
+
+        if (verifyResult.exitCode !== 0) {
+            core.warning('DEVELOPER_DIR did not work, falling back to xcode-select');
+            await exec.exec('sudo', ['-n', 'xcode-select', '-s', selected.xcodePath], {
+                ignoreReturnCode: true
+            });
+        }
+
+        // Resolve cc and cxx paths
+        const ccResult = await exec.getExecOutput('xcrun', ['--find', 'clang'], {
+            silent: true,
+            ignoreReturnCode: true
+        });
+        const cxxResult = await exec.getExecOutput('xcrun', ['--find', 'clang++'], {
+            silent: true,
+            ignoreReturnCode: true
+        });
+
+        this.cc = ccResult.stdout.trim();
+        this.cxx = cxxResult.stdout.trim();
+        if (!this.cc) {
+            core.endGroup();
+            throw new ExpectedError(
+                'xcrun --find clang returned empty path. Ensure the selected Xcode is valid.',
+                'Apple Clang Setup Failed'
+            );
+        }
+        this.outputPath = this.cc;
+        this.bindir = path.dirname(this.cc);
+        this.dir = path.dirname(this.bindir);
+
+        // Set version from the selected Xcode's Apple Clang version
+        const parsedVersion = semver.coerce(selected.appleClangVersion);
+        if (parsedVersion) {
+            this.release = parsedVersion.toString();
+            this.versionMajor = parsedVersion.major;
+            this.versionMinor = parsedVersion.minor;
+            this.versionPatch = parsedVersion.patch;
+        }
+
+        core.endGroup();
+
+        await this.logCompilerTargetInfo();
+    }
+
+    /**
+     * Sets up Apple Clang using the runner's default Xcode (no switching).
+     *
+     * Detects the current Apple Clang version via `xcrun clang --version` and
+     * resolves cc/cxx paths via `xcrun --find`. Does not modify DEVELOPER_DIR
+     * or call xcode-select.
+     *
+     * @throws {ExpectedError} If xcrun clang --version fails or cannot parse version
+     */
+    private async setupAppleClangDefault(): Promise<void> {
+        core.startGroup('🍎 Detecting default Apple Clang');
+        traceCommands.log('compiler: apple-clang (wildcard)... using runner default Xcode.');
+
+        // Detect current Apple Clang version
+        const versionResult = await exec.getExecOutput('xcrun', ['clang', '--version'], {
+            ignoreReturnCode: true,
+            silent: true
+        });
+
+        if (versionResult.exitCode !== 0) {
+            core.endGroup();
+            throw new ExpectedError(
+                'Failed to run xcrun clang --version. Ensure Xcode or Command Line Tools are installed.',
+                'Apple Clang Detection Failed'
+            );
+        }
+
+        const versionMatch = versionResult.stdout.match(/Apple clang version (\d+\.\d+\.\d+)/);
+        if (!versionMatch) {
+            core.endGroup();
+            throw new ExpectedError(
+                'Could not parse Apple Clang version from xcrun clang --version output.',
+                'Apple Clang Detection Failed'
+            );
+        }
+
+        const parsedVersion = semver.coerce(versionMatch[1]);
+        if (parsedVersion) {
+            this.release = parsedVersion.toString();
+            this.versionMajor = parsedVersion.major;
+            this.versionMinor = parsedVersion.minor;
+            this.versionPatch = parsedVersion.patch;
+        }
+
+        // Resolve cc and cxx paths via xcrun
+        const ccResult = await exec.getExecOutput('xcrun', ['--find', 'clang'], {
+            silent: true,
+            ignoreReturnCode: true
+        });
+        const cxxResult = await exec.getExecOutput('xcrun', ['--find', 'clang++'], {
+            silent: true,
+            ignoreReturnCode: true
+        });
+
+        this.cc = ccResult.stdout.trim();
+        this.cxx = cxxResult.stdout.trim();
+        if (!this.cc) {
+            core.endGroup();
+            throw new ExpectedError(
+                'xcrun --find clang returned empty path. Ensure Xcode or Command Line Tools are installed.',
+                'Apple Clang Detection Failed'
+            );
+        }
+        this.outputPath = this.cc;
+        this.bindir = path.dirname(this.cc);
+        this.dir = path.dirname(this.bindir);
+
+        traceCommands.log(`Default Apple Clang ${this.release} at ${this.cc}`);
+        core.endGroup();
+
+        await this.logCompilerTargetInfo();
+    }
+
+    /**
+     * Logs Apple Clang target triple and supported targets as informational output.
+     *
+     * Runs `clang --print-target-triple` and `clang --print-targets` within a
+     * grouped log section. Failures are logged as warnings but do not fail the action.
+     */
+    private async logCompilerTargetInfo(): Promise<void> {
+        core.startGroup('\uD83C\uDFAF Compiler target info');
+        try {
+            const tripleResult = await exec.getExecOutput('xcrun', ['clang', '--print-target-triple'], {
+                ignoreReturnCode: true,
+                silent: true
+            });
+            if (tripleResult.exitCode === 0) {
+                core.info(`Target triple: ${tripleResult.stdout.trim()}`);
+            } else {
+                core.warning('Failed to get target triple from xcrun clang --print-target-triple');
+            }
+
+            const targetsResult = await exec.getExecOutput('xcrun', ['clang', '--print-targets'], {
+                ignoreReturnCode: true,
+                silent: true
+            });
+            if (targetsResult.exitCode === 0) {
+                core.info(`Supported targets:\n${targetsResult.stdout.trim()}`);
+            } else {
+                core.warning('Failed to get supported targets from xcrun clang --print-targets');
+            }
+        } catch {
+            core.warning('Failed to retrieve compiler target info');
+        }
+        core.endGroup();
     }
 
     /**

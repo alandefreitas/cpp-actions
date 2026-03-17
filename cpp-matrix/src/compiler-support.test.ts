@@ -44,6 +44,58 @@ describe('compilerSupportsStd', () => {
     test('msvc supports c++03 for any version', () => {
         expect(compilerSupportsStd('msvc', '14.0.0', 2003)).toBe(true);
     });
+
+    test('apple-clang supports c++03 for any version', () => {
+        expect(compilerSupportsStd('apple-clang', '13.0.0', 2003)).toBe(true);
+    });
+
+    describe('apple-clang C++ standard thresholds', () => {
+        // Apple Clang 13 supports C++11, C++14, C++17 but not C++20 or C++23
+        test('apple-clang 13 supports C++11', () => {
+            expect(compilerSupportsStd('apple-clang', '13.0.0', 2011)).toBe(true);
+        });
+        test('apple-clang 13 supports C++14', () => {
+            expect(compilerSupportsStd('apple-clang', '13.0.0', 2014)).toBe(true);
+        });
+        test('apple-clang 13 supports C++17', () => {
+            expect(compilerSupportsStd('apple-clang', '13.0.0', 2017)).toBe(true);
+        });
+        test('apple-clang 13 does not support C++20', () => {
+            expect(compilerSupportsStd('apple-clang', '13.0.0', 2020)).toBe(false);
+        });
+        test('apple-clang 13 does not support C++23', () => {
+            expect(compilerSupportsStd('apple-clang', '13.0.0', 2023)).toBe(false);
+        });
+
+        // Apple Clang 14 adds C++20 support
+        test('apple-clang 14 supports C++20', () => {
+            expect(compilerSupportsStd('apple-clang', '14.0.0', 2020)).toBe(true);
+        });
+        test('apple-clang 14 does not support C++23', () => {
+            expect(compilerSupportsStd('apple-clang', '14.0.0', 2023)).toBe(false);
+        });
+
+        // Apple Clang 15 same as 14
+        test('apple-clang 15 supports C++20', () => {
+            expect(compilerSupportsStd('apple-clang', '15.0.0', 2020)).toBe(true);
+        });
+        test('apple-clang 15 does not support C++23', () => {
+            expect(compilerSupportsStd('apple-clang', '15.0.0', 2023)).toBe(false);
+        });
+
+        // Apple Clang 16 adds C++23 support
+        test('apple-clang 16 supports C++23', () => {
+            expect(compilerSupportsStd('apple-clang', '16.0.0', 2023)).toBe(true);
+        });
+
+        // Apple Clang 17 supports all
+        test('apple-clang 17 supports C++23', () => {
+            expect(compilerSupportsStd('apple-clang', '17.0.0', 2023)).toBe(true);
+        });
+        test('apple-clang 17 supports C++11', () => {
+            expect(compilerSupportsStd('apple-clang', '17.0.0', 2011)).toBe(true);
+        });
+    });
 });
 
 describe('humanizeCompilerName', () => {

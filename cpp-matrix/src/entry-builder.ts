@@ -10,7 +10,7 @@ import { type CompilerSuggestion, type MatrixEntry } from './types';
 import { type Inputs } from './schema';
 import { getVisualCppYear } from './versions';
 import { humanizeCompilerName } from './compiler-support';
-import { loadUbuntuCompilerDefaults } from 'setup-program';
+import { loadUbuntuCompilerDefaults, loadMacOSXcodeDefaults } from 'setup-program';
 
 /**
  * Sets the semver components (major, minor, patch) on a matrix entry.
@@ -113,7 +113,7 @@ export function setCompilerContainerNoVersion(entry: MatrixEntry, compilerName: 
     // Set runs-on for compilers without known version information.
     // These compilers use the system-installed version on the runner.
     if (compilerName === 'apple-clang') {
-        entry['runs-on'] = 'macos-14';
+        entry['runs-on'] = findNewestMacOSRunner();
     } else if (['mingw', 'clang-cl'].includes(compilerName)) {
         entry['runs-on'] = 'windows-2022';
     }
@@ -326,6 +326,93 @@ export function findBestUbuntuRelease(compilerName: string, majorVersion: number
 }
 
 /**
+ * Finds the best macOS runner for a given Apple Clang major version using
+ * macos-xcode-defaults.json data.
+ *
+ * Selection priority:
+ * 1. The runner where the matching Xcode is the default (is_default: true).
+ *    If multiple runners have it as default, the newest runner is chosen.
+ * 2. The newest runner that has a matching Xcode version.
+ * 3. The newest available runner (fallback when no runner has the version).
+ *
+ * @param majorVersion - Apple Clang major version number to look up
+ * @returns macOS runner string (e.g., "macos-15") or "macos-14" if data is unavailable
+ */
+export function findBestMacOSRunner(majorVersion: number): string {
+    try {
+        const defaults = loadMacOSXcodeDefaults();
+        const runners = Object.keys(defaults.runners);
+
+        if (runners.length === 0) {
+            return 'macos-14';
+        }
+
+        // Parse runner number for sorting (e.g., "macos-15" → 15)
+        const runnerNum = (r: string): number => {
+            const m = r.match(/macos-(\d+)/);
+            return m ? parseInt(m[1], 10) : 0;
+        };
+
+        let bestDefault = '';
+        let bestAvailable = '';
+        let newestRunner = '';
+
+        for (const runner of runners) {
+            const num = runnerNum(runner);
+
+            // Track newest runner overall
+            if (!newestRunner || num > runnerNum(newestRunner)) {
+                newestRunner = runner;
+            }
+
+            const info = defaults.runners[runner];
+            for (const entry of info.xcode_versions) {
+                const clangMajor = parseInt(entry.apple_clang.split('.')[0], 10);
+                if (clangMajor !== majorVersion) {
+                    continue;
+                }
+
+                // Track runner where matching Xcode is the default
+                if (entry.is_default && (!bestDefault || num > runnerNum(bestDefault))) {
+                    bestDefault = runner;
+                }
+
+                // Track newest runner that has a matching version
+                if (!bestAvailable || num > runnerNum(bestAvailable)) {
+                    bestAvailable = runner;
+                }
+            }
+        }
+
+        return bestDefault || bestAvailable || newestRunner;
+    } catch {
+        return 'macos-14';
+    }
+}
+
+/**
+ * Finds the newest macOS runner from macos-xcode-defaults.json data.
+ *
+ * @returns The newest macOS runner string (e.g., "macos-15") or "macos-14" if data is unavailable
+ */
+export function findNewestMacOSRunner(): string {
+    try {
+        const defaults = loadMacOSXcodeDefaults();
+        const runners = Object.keys(defaults.runners);
+        if (runners.length === 0) {
+            return 'macos-14';
+        }
+        const runnerNum = (r: string): number => {
+            const m = r.match(/macos-(\d+)/);
+            return m ? parseInt(m[1], 10) : 0;
+        };
+        return runners.reduce((best, r) => runnerNum(r) > runnerNum(best) ? r : best);
+    } catch {
+        return 'macos-14';
+    }
+}
+
+/**
  * Applies data-driven Ubuntu container/runner selection for GCC and Clang compilers.
  *
  * Uses ubuntu-compiler-defaults.json to find the best Ubuntu release for the
@@ -403,7 +490,7 @@ export function setCompilerContainer(entry: MatrixEntry, inputs: Inputs, compile
             entry['runs-on'] = 'windows-2022';
         }
     } else if (compilerName === 'apple-clang') {
-        entry['runs-on'] = 'macos-14';
+        entry['runs-on'] = findBestMacOSRunner(minSubrangeVersion.major);
     } else if (['mingw', 'clang-cl'].includes(compilerName)) {
         entry['runs-on'] = 'windows-2022';
     }

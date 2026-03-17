@@ -242,7 +242,16 @@ class CppMatrixRunner {
             const compilerName = normalizeCompilerName(compilerName0);
             fnlog(`Find versions for ${compilerName}`);
             const allCompilerVersions = await findCompilerVersions(compilerName);
-            const compilerDefault = (compilerName === 'gcc' || compilerName === 'clang') ? 'ubuntu-defaults-and-latest' : 'one-per-major';
+            let compilerDefault: string;
+            if (compilerName === 'gcc' || compilerName === 'clang') {
+                compilerDefault = 'ubuntu-defaults-and-latest';
+            } else if (compilerName === 'msvc') {
+                compilerDefault = 'one-per-vs-year';
+            } else if (compilerName === 'apple-clang') {
+                compilerDefault = 'macos-defaults-and-latest';
+            } else {
+                compilerDefault = 'latest';
+            }
             const subrangePolicyStr = this.inputs.subrangePolicy[compilerName] || this.inputs.subrangePolicy[''] || compilerDefault;
             fnlog(`Subrange policy for ${compilerName}: ${subrangePolicyStr}`);
             const subranges = splitRanges(range, allCompilerVersions, getSubrangePolicy(subrangePolicyStr), compilerName);

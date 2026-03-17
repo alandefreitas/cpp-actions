@@ -105,21 +105,25 @@ When the compiler version requirements are provided, the action will break the r
         },
         description: `The policy to be used to break the compiler version requirements into sub-ranges of versions.
 
-The default policy for GCC and Clang is \`ubuntu-defaults-and-latest\`, which tests the default compiler version from each Ubuntu LTS release plus the latest available version. For all other compilers, the default is \`one-per-major\`. For instance, if the compiler requirements are \`gcc >=10\` and Ubuntu 22.04 defaults to GCC 11 and 24.04 defaults to GCC 13, entries are generated for GCC 11, GCC 13, and GCC 15 (latest). With \`one-per-major\`, \`gcc >=4.8\` generates entries for \`gcc >=4.8 <5\`, \`gcc >=5 <6\`, \`gcc >=6 <7\`, and so on.
+The default policy for GCC and Clang is \`ubuntu-defaults-and-latest\`, which tests the default compiler version from each Ubuntu LTS release plus the latest available version. The default for MSVC is \`one-per-vs-year\`, and for Apple Clang it is \`macos-defaults-and-latest\`. For all other compilers, the default is \`latest\`. For instance, if the compiler requirements are \`gcc >=10\` and Ubuntu 22.04 defaults to GCC 11 and 24.04 defaults to GCC 13, entries are generated for GCC 11, GCC 13, and GCC 15 (latest). With \`one-per-major\`, \`gcc >=4.8\` generates entries for \`gcc >=4.8 <5\`, \`gcc >=5 <6\`, \`gcc >=6 <7\`, and so on.
 
-The policy can be \`one-per-major\`, \`one-per-minor\`, \`one-per-major-or-minor\`, \`one-per-ubuntu-default\`, \`one-per-ubuntu-available\`, \`ubuntu-defaults-and-latest\`, or \`one-per-vs-year\`.
+The policy can be \`one-per-major\`, \`one-per-minor\`, \`one-per-major-or-minor\`, \`one-per-ubuntu-default\`, \`one-per-ubuntu-available\`, \`ubuntu-defaults-and-latest\`, \`one-per-vs-year\`, \`macos-defaults-and-latest\`, or \`latest\`.
 
 This input can be a single value for all compilers or a multi-line list of compiler-specific policies.
 
 Another policy is to break into major versions when the range contains multiple major versions and into minor versions when the range contains multiple minor versions. The name of this policy is \`one-per-major-or-minor\`.
 
-The \`one-per-ubuntu-default\` policy selects one version per unique default compiler version across all stable Ubuntu releases. For example, if Ubuntu 22.04 defaults to GCC 11 and Ubuntu 24.04 defaults to GCC 13, this policy returns subranges for GCC 11 and GCC 13. This is useful for testing exactly what users get out of the box on each Ubuntu release. Only applicable to GCC and Clang; for other compilers it falls back to \`one-per-major\`.
+The \`one-per-ubuntu-default\` policy selects one version per unique default compiler version across all stable Ubuntu releases. For example, if Ubuntu 22.04 defaults to GCC 11 and Ubuntu 24.04 defaults to GCC 13, this policy returns subranges for GCC 11 and GCC 13. This is useful for testing exactly what users get out of the box on each Ubuntu release. Only applicable to GCC and Clang; for other compilers it falls back to \`latest\`.
 
-The \`one-per-ubuntu-available\` policy selects one version per unique compiler version available in any stable Ubuntu release's default repositories. This is a superset of \`one-per-ubuntu-default\` — it includes not just the default versions but every compiler version installable via apt without PPAs. Only applicable to GCC and Clang; for other compilers it falls back to \`one-per-major\`.
+The \`one-per-ubuntu-available\` policy selects one version per unique compiler version available in any stable Ubuntu release's default repositories. This is a superset of \`one-per-ubuntu-default\` — it includes not just the default versions but every compiler version installable via apt without PPAs. Only applicable to GCC and Clang; for other compilers it falls back to \`latest\`.
 
-The \`ubuntu-defaults-and-latest\` policy combines the \`one-per-ubuntu-default\` results with the single latest available version of the compiler. If the latest version is already included in the Ubuntu defaults, no duplicate entry is created. This is the default policy for GCC and Clang when no explicit \`subrange-policy\` is set. For other compilers, \`one-per-major\` remains the default.
+The \`ubuntu-defaults-and-latest\` policy combines the \`one-per-ubuntu-default\` results with the single latest available version of the compiler. If the latest version is already included in the Ubuntu defaults, no duplicate entry is created. This is the default policy for GCC and Clang when no explicit \`subrange-policy\` is set.
 
-The \`one-per-vs-year\` policy groups MSVC versions by their Visual Studio release year (e.g., 2019, 2022) and selects the latest patch version within each year as the representative. This is useful for testing one MSVC toolset per Visual Studio release instead of every known MSVC version. Only applicable to MSVC; for other compilers it falls back to \`one-per-major\`.`
+The \`one-per-vs-year\` policy groups MSVC versions by their Visual Studio release year (e.g., 2019, 2022) and selects the latest patch version within each year as the representative. This is useful for testing one MSVC toolset per Visual Studio release instead of every known MSVC version. This is the default policy for MSVC. Only applicable to MSVC; for other compilers it falls back to \`latest\`.
+
+The \`macos-defaults-and-latest\` policy selects the Apple Clang versions that are the runner default on each macOS runner image, plus the latest available Apple Clang version. For example, if macos-14 defaults to Apple Clang 15 and macos-15 defaults to Apple Clang 16, and Apple Clang 17 is the latest available, entries are generated for 15, 16, and 17. This is the default policy for Apple Clang. Only applicable to Apple Clang; for other compilers it falls back to \`latest\`.
+
+The \`latest\` policy selects only the single highest version that satisfies the range. This is the default policy for compilers that do not have a platform-specific discovery mechanism (e.g., MinGW, clang-cl). If no versions are known for the compiler, it returns \`*\` so the runner's installed version is used.`
     },
 
     standards: {

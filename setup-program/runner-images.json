@@ -1,0 +1,47 @@
+{
+  "generated": "2026-03-17T00:00:00.000Z",
+  "source": "GitHub Contents API: actions/runner-images",
+  "runners": {
+    "ubuntu": [
+      {
+        "name": "ubuntu-22.04",
+        "version": "22.04",
+        "toolset_url": "https://raw.githubusercontent.com/actions/runner-images/main/images/ubuntu/toolsets/toolset-2204.json"
+      },
+      {
+        "name": "ubuntu-24.04",
+        "version": "24.04",
+        "toolset_url": "https://raw.githubusercontent.com/actions/runner-images/main/images/ubuntu/toolsets/toolset-2404.json"
+      }
+    ],
+    "macos": [
+      {
+        "name": "macos-14",
+        "version": "14",
+        "toolset_url": "https://raw.githubusercontent.com/actions/runner-images/main/images/macos/toolsets/toolset-14.json"
+      },
+      {
+        "name": "macos-15",
+        "version": "15",
+        "toolset_url": "https://raw.githubusercontent.com/actions/runner-images/main/images/macos/toolsets/toolset-15.json"
+      },
+      {
+        "name": "macos-26",
+        "version": "26",
+        "toolset_url": "https://raw.githubusercontent.com/actions/runner-images/main/images/macos/toolsets/toolset-26.json"
+      }
+    ],
+    "windows": [
+      {
+        "name": "windows-2022",
+        "version": "2022",
+        "toolset_url": "https://raw.githubusercontent.com/actions/runner-images/main/images/windows/toolsets/toolset-2022.json"
+      },
+      {
+        "name": "windows-2025",
+        "version": "2025",
+        "toolset_url": "https://raw.githubusercontent.com/actions/runner-images/main/images/windows/toolsets/toolset-2025.json"
+      }
+    ]
+  }
+}

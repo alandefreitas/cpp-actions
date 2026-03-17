@@ -32,6 +32,8 @@ import {
     applyForcedFactors,
     setCompilerContainer,
     findBestUbuntuRelease,
+    findBestMacOSRunner,
+    findNewestMacOSRunner,
     setCompilerB2Toolset,
     runsOnLabels,
     inferVisualStudioGeneratorFromRunsOn,
@@ -185,10 +187,11 @@ describe('setCompilerExecutableNamesNoVersion', () => {
 });
 
 describe('setCompilerContainerNoVersion', () => {
-    test('apple-clang sets macos-14', () => {
+    test('apple-clang uses newest runner from data', () => {
         const entry = makeEntry();
         setCompilerContainerNoVersion(entry, 'apple-clang');
-        expect(entry['runs-on']).toBe('macos-14');
+        // Newest runner in data is macos-15
+        expect(entry['runs-on']).toBe('macos-15');
     });
 
     test('mingw sets windows-2022', () => {
@@ -593,9 +596,10 @@ describe('setCompilerContainer', () => {
         expect(entry['runs-on']).toBe('windows-2022');
     });
 
-    test('apple-clang uses macos-14', () => {
+    test('apple-clang uses data-driven runner selection', () => {
         const entry = makeEntry();
-        setCompilerContainer(entry, makeInputs(), 'apple-clang', semver.parse('14.0.0')!, '14');
+        // Apple Clang 15 is default on macos-14
+        setCompilerContainer(entry, makeInputs(), 'apple-clang', semver.parse('15.0.0')!, '15');
         expect(entry['runs-on']).toBe('macos-14');
     });
 
@@ -622,7 +626,7 @@ describe('setCompilerContainer', () => {
         // Pre-existing object container with old ubuntu — the object branch of line 326
         const entry = makeEntry({ container: { image: 'ubuntu:18.04' } });
         // apple-clang doesn't overwrite container, so the pre-existing object survives
-        setCompilerContainer(entry, makeInputs(), 'apple-clang', semver.parse('14.0.0')!, '14');
+        setCompilerContainer(entry, makeInputs(), 'apple-clang', semver.parse('15.0.0')!, '15');
         expect(entry.container).toEqual({
             image: 'ubuntu:18.04',
             volumes: ['/node20217:/node20217:rw,rshared', '/node20217:/__e/node20:ro,rshared']
@@ -998,5 +1002,50 @@ describe('findBestUbuntuRelease', () => {
     test('newest default release wins when multiple have it as default', () => {
         // GCC 9 is default on 19.10 and 20.04; newest default is 20.04
         expect(findBestUbuntuRelease('gcc', 9)).toBe('20.04');
+    });
+});
+
+// Tests for findBestMacOSRunner / findNewestMacOSRunner auto-select logic.
+// Uses real macos-xcode-defaults.json data:
+//   macos-14: Apple Clang 15 (default via Xcode 15.4), 16 (Xcode 16.0)
+//   macos-15: Apple Clang 16 (default via Xcode 16.2), 17 (Xcode 16.3)
+describe('findBestMacOSRunner', () => {
+    test('Apple Clang 15 selects macos-14 (default Xcode)', () => {
+        // Apple Clang 15 is_default on macos-14 (Xcode 15.4)
+        expect(findBestMacOSRunner(15)).toBe('macos-14');
+    });
+
+    test('Apple Clang 16 selects macos-15 (default Xcode on newest runner)', () => {
+        // Apple Clang 16 is available on both macos-14 and macos-15
+        // It is_default on macos-15 (Xcode 16.2), so macos-15 wins
+        expect(findBestMacOSRunner(16)).toBe('macos-15');
+    });
+
+    test('Apple Clang 17 selects macos-15 (only runner with it)', () => {
+        // Apple Clang 17 is only available on macos-15 (Xcode 16.3, not default)
+        expect(findBestMacOSRunner(17)).toBe('macos-15');
+    });
+
+    test('unknown version falls back to newest runner', () => {
+        // Apple Clang 99 is not in any runner → newest runner = macos-15
+        expect(findBestMacOSRunner(99)).toBe('macos-15');
+    });
+
+    test('setCompilerContainer routes apple-clang 16 to macos-15', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs(), 'apple-clang', semver.parse('16.0.0')!, '16');
+        expect(entry['runs-on']).toBe('macos-15');
+    });
+
+    test('setCompilerContainer routes apple-clang 17 to macos-15', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs(), 'apple-clang', semver.parse('17.0.0')!, '17');
+        expect(entry['runs-on']).toBe('macos-15');
+    });
+});
+
+describe('findNewestMacOSRunner', () => {
+    test('returns newest runner from data', () => {
+        expect(findNewestMacOSRunner()).toBe('macos-15');
     });
 });

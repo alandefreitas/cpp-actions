@@ -85,6 +85,21 @@ export {
     loadUbuntuCompilerDefaults
 } from './ubuntu-compiler-defaults';
 
+// Re-export macOS Xcode defaults parser and types for external consumers
+export {
+    type MacOSXcodeDefaults,
+    type RunnerXcodeInfo,
+    type XcodeVersionEntry,
+    loadMacOSXcodeDefaults
+} from './macos-xcode-defaults';
+
+// Re-export runner images data and types for external consumers
+export {
+    type RunnerImagesData,
+    type RunnerImageEntry,
+    loadRunnerImages
+} from './runner-images';
+
 // Re-export URL installation for external consumers
 export { installProgramFromUrl } from './url-install';
 

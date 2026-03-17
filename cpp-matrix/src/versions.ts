@@ -21,7 +21,9 @@ export const SubrangePolicies = {
     ONE_PER_UBUNTU_DEFAULT: 3,
     ONE_PER_UBUNTU_AVAILABLE: 4,
     UBUNTU_DEFAULTS_AND_LATEST: 5,
-    ONE_PER_VS_YEAR: 6
+    ONE_PER_VS_YEAR: 6,
+    MACOS_DEFAULTS_AND_LATEST: 7,
+    LATEST: 8
 } as const;
 
 /**
@@ -30,7 +32,7 @@ export const SubrangePolicies = {
 export type SubrangePolicy = typeof SubrangePolicies[keyof typeof SubrangePolicies];
 
 import * as setup_program from 'setup-program';
-import { type UbuntuCompilerDefaults } from 'setup-program';
+import { type UbuntuCompilerDefaults, type MacOSXcodeDefaults } from 'setup-program';
 
 const defaultCacheDir = process.env.CPP_MATRIX_CACHE_DIR || path.join(__dirname, '..', 'var', 'cache', 'cpp-matrix');
 setup_program.setVersionsCacheDir(defaultCacheDir);
@@ -65,6 +67,29 @@ export function findMSVCVersions(): string[] {
 }
 
 /**
+ * Discovers unique Apple Clang versions from the macos-xcode-defaults data file.
+ *
+ * Iterates all runners in the data file, collects every `apple_clang` version
+ * string, deduplicates them, and returns the result sorted ascending by semver.
+ *
+ * @returns Array of unique Apple Clang version strings sorted ascending, or empty array if data is unavailable
+ */
+export function findAppleClangVersions(): string[] {
+    try {
+        const defaults: MacOSXcodeDefaults = setup_program.loadMacOSXcodeDefaults();
+        const versionSet = new Set<string>();
+        for (const runner of Object.values(defaults.runners)) {
+            for (const entry of runner.xcode_versions) {
+                versionSet.add(entry.apple_clang);
+            }
+        }
+        return [...versionSet].sort((a, b) => semver.compare(a, b));
+    } catch {
+        return [];
+    }
+}
+
+/**
  * Finds available versions for a given compiler.
  *
  * @param compiler - Compiler name
@@ -77,6 +102,8 @@ export async function findCompilerVersions(compiler: string): Promise<string[]> 
         return await setup_program.findClangVersions();
     } else if (compiler === 'msvc') {
         return findMSVCVersions();
+    } else if (compiler === 'apple-clang') {
+        return findAppleClangVersions();
     }
     return [];
 }
@@ -173,6 +200,10 @@ export function getSubrangePolicy(policyStr: string): SubrangePolicy {
         return SubrangePolicies.UBUNTU_DEFAULTS_AND_LATEST;
     } else if (policyStr === 'one-per-vs-year') {
         return SubrangePolicies.ONE_PER_VS_YEAR;
+    } else if (policyStr === 'macos-defaults-and-latest') {
+        return SubrangePolicies.MACOS_DEFAULTS_AND_LATEST;
+    } else if (policyStr === 'latest') {
+        return SubrangePolicies.LATEST;
     }
     return SubrangePolicies.ONE_PER_MAJOR;
 }
@@ -198,6 +229,10 @@ export function getSubrangePolicyStr(policy: SubrangePolicy): string {
         return 'ubuntu-defaults-and-latest';
     } else if (policy === SubrangePolicies.ONE_PER_VS_YEAR) {
         return 'one-per-vs-year';
+    } else if (policy === SubrangePolicies.MACOS_DEFAULTS_AND_LATEST) {
+        return 'macos-defaults-and-latest';
+    } else if (policy === SubrangePolicies.LATEST) {
+        return 'latest';
     }
     return 'one-per-major';
 }
@@ -249,6 +284,51 @@ function getUbuntuAvailableVersions(defaults: UbuntuCompilerDefaults, compiler: 
         if (info && info.available_versions) {
             for (const entry of info.available_versions) {
                 availableMajors.add(entry.major);
+            }
+        }
+    }
+    return [...availableMajors].sort((a, b) => a - b);
+}
+
+/**
+ * Collects the major versions of Apple Clang that are the runner default
+ * for at least one macOS runner image.
+ *
+ * A version is considered a "default" if its Xcode version is the runner's
+ * default Xcode (i.e., `is_default` is true in the xcode_versions entries).
+ *
+ * @param defaults - The macOS Xcode defaults data
+ * @returns Array of unique default Apple Clang major version numbers, sorted ascending
+ */
+function getMacOSDefaultAppleClangVersions(defaults: MacOSXcodeDefaults): number[] {
+    const defaultMajors = new Set<number>();
+    for (const runner of Object.values(defaults.runners)) {
+        for (const entry of runner.xcode_versions) {
+            if (entry.is_default) {
+                const parsed = semver.parse(entry.apple_clang);
+                if (parsed) {
+                    defaultMajors.add(parsed.major);
+                }
+            }
+        }
+    }
+    return [...defaultMajors].sort((a, b) => a - b);
+}
+
+/**
+ * Collects all unique Apple Clang major versions available across
+ * all macOS runner images.
+ *
+ * @param defaults - The macOS Xcode defaults data
+ * @returns Array of unique available Apple Clang major version numbers, sorted ascending
+ */
+function getMacOSAvailableAppleClangVersions(defaults: MacOSXcodeDefaults): number[] {
+    const availableMajors = new Set<number>();
+    for (const runner of Object.values(defaults.runners)) {
+        for (const entry of runner.xcode_versions) {
+            const parsed = semver.parse(entry.apple_clang);
+            if (parsed) {
+                availableMajors.add(parsed.major);
             }
         }
     }
@@ -452,10 +532,10 @@ export function splitRanges(range: string, versions: string[], policy: SubrangeP
             subranges.push(majorRange);
         }
 
-        // If no ubuntu defaults matched, fall back to one-per-major behavior
+        // If no ubuntu defaults matched, fall back to latest behavior
         if (subranges.length === 0) {
-            fnlog('No Ubuntu defaults matched the range, falling back to one-per-major');
-            return splitRanges(range, versions, SubrangePolicies.ONE_PER_MAJOR, compilerName);
+            fnlog('No Ubuntu defaults matched the range, falling back to latest');
+            return splitRanges(range, versions, SubrangePolicies.LATEST, compilerName);
         }
     }
 
@@ -476,10 +556,10 @@ export function splitRanges(range: string, versions: string[], policy: SubrangeP
             subranges.push(majorRange);
         }
 
-        // If no ubuntu available versions matched, fall back to one-per-major behavior
+        // If no ubuntu available versions matched, fall back to latest behavior
         if (subranges.length === 0) {
-            fnlog('No Ubuntu available versions matched the range, falling back to one-per-major');
-            return splitRanges(range, versions, SubrangePolicies.ONE_PER_MAJOR, compilerName);
+            fnlog('No Ubuntu available versions matched the range, falling back to latest');
+            return splitRanges(range, versions, SubrangePolicies.LATEST, compilerName);
         }
     }
 
@@ -511,20 +591,20 @@ export function splitRanges(range: string, versions: string[], policy: SubrangeP
             }
         }
 
-        // If no versions matched at all, fall back to one-per-major behavior
+        // If no versions matched at all, fall back to latest behavior
         if (subranges.length === 0) {
-            fnlog('No Ubuntu defaults or latest matched the range, falling back to one-per-major');
-            return splitRanges(range, versions, SubrangePolicies.ONE_PER_MAJOR, compilerName);
+            fnlog('No Ubuntu defaults or latest matched the range, falling back to latest');
+            return splitRanges(range, versions, SubrangePolicies.LATEST, compilerName);
         }
     }
 
     if (effectivePolicy === SubrangePolicies.ONE_PER_VS_YEAR) {
         fnlog('Effective policy: ONE_PER_VS_YEAR');
 
-        // For non-MSVC compilers, fall back to one-per-major
+        // For non-MSVC compilers, fall back to latest
         if (compilerName !== 'msvc') {
-            fnlog(`one-per-vs-year is not applicable to ${compilerName}, falling back to one-per-major`);
-            return splitRanges(range, versions, SubrangePolicies.ONE_PER_MAJOR, compilerName);
+            fnlog(`one-per-vs-year is not applicable to ${compilerName}, falling back to latest`);
+            return splitRanges(range, versions, SubrangePolicies.LATEST, compilerName);
         }
 
         // Group versions in range by Visual Studio year
@@ -552,10 +632,60 @@ export function splitRanges(range: string, versions: string[], policy: SubrangeP
             subranges.push(`${latest.major}.${latest.minor}`);
         }
 
-        // If no versions matched, fall back to one-per-major
+        // If no versions matched, fall back to latest
         if (subranges.length === 0) {
-            fnlog('No VS year groups matched the range, falling back to one-per-major');
-            return splitRanges(range, versions, SubrangePolicies.ONE_PER_MAJOR, compilerName);
+            fnlog('No VS year groups matched the range, falling back to latest');
+            return splitRanges(range, versions, SubrangePolicies.LATEST, compilerName);
+        }
+    }
+
+    if (effectivePolicy === SubrangePolicies.MACOS_DEFAULTS_AND_LATEST) {
+        fnlog('Effective policy: MACOS_DEFAULTS_AND_LATEST');
+
+        // For non-apple-clang compilers, fall back to latest
+        if (compilerName !== 'apple-clang') {
+            fnlog(`macos-defaults-and-latest is not applicable to ${compilerName}, falling back to latest`);
+            return splitRanges(range, versions, SubrangePolicies.LATEST, compilerName);
+        }
+
+        const defaults = setup_program.loadMacOSXcodeDefaults();
+        const defaultMajors = getMacOSDefaultAppleClangVersions(defaults);
+        fnlog(`macOS default Apple Clang majors: ${defaultMajors}`);
+
+        // Collect the macOS default versions that match the user's range
+        const selectedMajors = new Set<number>();
+        for (const major of defaultMajors) {
+            const matchingVersions = rangeVersions.filter(v => v.major === major);
+            if (matchingVersions.length > 0) {
+                selectedMajors.add(major);
+                subranges.push(major.toString());
+            }
+        }
+
+        // Add the latest version that is actually available on macOS runners
+        const availableMajors = getMacOSAvailableAppleClangVersions(defaults);
+        const latestAvailable = availableMajors.filter(m => rangeVersions.some(v => v.major === m));
+        if (latestAvailable.length > 0) {
+            const latestMajor = latestAvailable[latestAvailable.length - 1];
+            if (!selectedMajors.has(latestMajor)) {
+                subranges.push(latestMajor.toString());
+            }
+        }
+
+        // If no versions matched at all, fall back to latest behavior
+        if (subranges.length === 0) {
+            fnlog('No macOS defaults or latest matched the range, falling back to latest');
+            return splitRanges(range, versions, SubrangePolicies.LATEST, compilerName);
+        }
+    }
+
+    if (effectivePolicy === SubrangePolicies.LATEST) {
+        fnlog('Effective policy: LATEST');
+
+        // Return only the single highest version that satisfies the range
+        if (rangeVersions.length > 0) {
+            const latest = rangeVersions.sort((a, b) => semver.compare(b, a))[0];
+            subranges.push(`${latest.major}`);
         }
     }
 

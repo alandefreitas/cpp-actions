@@ -1,0 +1,65 @@
+{
+  "generated": "2026-03-17T00:00:00.000Z",
+  "source": "actions/runner-images toolsets + xcodereleases.com",
+  "runners": {
+    "macos-14": {
+      "default_xcode": "15.4",
+      "xcode_versions": [
+        {
+          "xcode": "15.4",
+          "build": "15F31d",
+          "apple_clang": "15.0.0",
+          "clang_build": "1500.3.9.4",
+          "is_default": true
+        },
+        {
+          "xcode": "15.3",
+          "build": "15E204a",
+          "apple_clang": "15.0.0",
+          "clang_build": "1500.3.9.4",
+          "is_default": false
+        },
+        {
+          "xcode": "16.0",
+          "build": "16A242d",
+          "apple_clang": "16.0.0",
+          "clang_build": "1600.0.26.4",
+          "is_default": false
+        }
+      ]
+    },
+    "macos-15": {
+      "default_xcode": "16.2",
+      "xcode_versions": [
+        {
+          "xcode": "16.0",
+          "build": "16A242d",
+          "apple_clang": "16.0.0",
+          "clang_build": "1600.0.26.4",
+          "is_default": false
+        },
+        {
+          "xcode": "16.1",
+          "build": "16B40",
+          "apple_clang": "16.0.0",
+          "clang_build": "1600.0.26.6",
+          "is_default": false
+        },
+        {
+          "xcode": "16.2",
+          "build": "16C5032a",
+          "apple_clang": "16.0.0",
+          "clang_build": "1600.0.26.8",
+          "is_default": true
+        },
+        {
+          "xcode": "16.3",
+          "build": "16E140",
+          "apple_clang": "17.0.0",
+          "clang_build": "1700.0.13.3",
+          "is_default": false
+        }
+      ]
+    }
+  }
+}

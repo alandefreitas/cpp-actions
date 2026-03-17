@@ -26,6 +26,7 @@ import {
     splitRanges,
     findMSVCVersions,
     findCompilerVersions,
+    findAppleClangVersions,
     getVisualCppYear,
     arraysHaveSameElements,
     getSubrangePolicy,
@@ -194,6 +195,14 @@ describe('getSubrangePolicy', () => {
         expect(getSubrangePolicy('one-per-vs-year')).toBe(SubrangePolicies.ONE_PER_VS_YEAR);
     });
 
+    it('returns MACOS_DEFAULTS_AND_LATEST for "macos-defaults-and-latest"', () => {
+        expect(getSubrangePolicy('macos-defaults-and-latest')).toBe(SubrangePolicies.MACOS_DEFAULTS_AND_LATEST);
+    });
+
+    it('returns LATEST for "latest"', () => {
+        expect(getSubrangePolicy('latest')).toBe(SubrangePolicies.LATEST);
+    });
+
     it('defaults to ONE_PER_MAJOR for unknown policy', () => {
         expect(getSubrangePolicy('unknown')).toBe(SubrangePolicies.ONE_PER_MAJOR);
     });
@@ -226,6 +235,14 @@ describe('getSubrangePolicyStr', () => {
 
     it('returns "one-per-vs-year" for ONE_PER_VS_YEAR', () => {
         expect(getSubrangePolicyStr(SubrangePolicies.ONE_PER_VS_YEAR)).toBe('one-per-vs-year');
+    });
+
+    it('returns "macos-defaults-and-latest" for MACOS_DEFAULTS_AND_LATEST', () => {
+        expect(getSubrangePolicyStr(SubrangePolicies.MACOS_DEFAULTS_AND_LATEST)).toBe('macos-defaults-and-latest');
+    });
+
+    it('returns "latest" for LATEST', () => {
+        expect(getSubrangePolicyStr(SubrangePolicies.LATEST)).toBe('latest');
     });
 
     it('defaults to "one-per-major" for unknown value', () => {
@@ -421,18 +438,18 @@ describe('splitRanges ONE_PER_UBUNTU_DEFAULT', () => {
         expect(result).toStrictEqual(['10', '11', '12', '13', '14', '15', '16', '18', '19', '20']);
     });
 
-    test('falls back to one-per-major when no defaults match range', () => {
+    test('falls back to latest when no defaults match range', () => {
         // Range >=99 — no ubuntu defaults match
         const result = splitRanges('>=99', gccVersions, SubrangePolicies.ONE_PER_UBUNTU_DEFAULT, 'gcc');
         // No defaults match, and no versions satisfy >=99 either → ['*']
         expect(result).toStrictEqual(['*']);
     });
 
-    test('falls back to one-per-major for non-gcc/clang compiler', () => {
+    test('falls back to latest for non-gcc/clang compiler', () => {
         // MSVC has no ubuntu defaults
         const msvcVersions = ['14.29.30133', '14.29.30140', '14.30.30704'];
         const result = splitRanges('>=14.29', msvcVersions, SubrangePolicies.ONE_PER_UBUNTU_DEFAULT, 'msvc');
-        // Falls back to one-per-major → all are major 14
+        // Falls back to latest → latest in range is 14.30.30704 → major 14
         expect(result).toStrictEqual(['14']);
     });
 
@@ -478,10 +495,11 @@ describe('splitRanges ONE_PER_UBUNTU_AVAILABLE', () => {
         expect(available.length).toBeGreaterThanOrEqual(defaults.length);
     });
 
-    test('falls back to one-per-major for non-gcc/clang compiler', () => {
+    test('falls back to latest for non-gcc/clang compiler', () => {
         const versions = ['9.1.0', '10.1.0', '11.1.0'];
         const result = splitRanges('>=9', versions, SubrangePolicies.ONE_PER_UBUNTU_AVAILABLE, 'apple-clang');
-        expect(result).toStrictEqual(['9', '10', '11']);
+        // Falls back to latest → latest in range is 11.1.0 → major 11
+        expect(result).toStrictEqual(['11']);
     });
 });
 
@@ -514,11 +532,11 @@ describe('splitRanges UBUNTU_DEFAULTS_AND_LATEST', () => {
         expect(result).toStrictEqual(['14', '15', '16', '18', '19', '20']);
     });
 
-    test('falls back to one-per-major for non-gcc/clang compiler', () => {
+    test('falls back to latest for non-gcc/clang compiler', () => {
         const versions = ['9.1.0', '10.1.0', '11.1.0'];
         const result = splitRanges('>=9', versions, SubrangePolicies.UBUNTU_DEFAULTS_AND_LATEST, 'mingw');
-        // No ubuntu defaults or available versions for mingw → falls back to one-per-major
-        expect(result).toStrictEqual(['9', '10', '11']);
+        // No ubuntu defaults or available versions for mingw → falls back to latest → 11
+        expect(result).toStrictEqual(['11']);
     });
 });
 
@@ -548,11 +566,11 @@ describe('splitRanges ONE_PER_VS_YEAR', () => {
         expect(result).toStrictEqual(['14.16', '14.29', '14.42']);
     });
 
-    test('falls back to one-per-major for non-MSVC compiler', () => {
+    test('falls back to latest for non-MSVC compiler', () => {
         const gccVersions = ['9.1.0', '10.1.0', '11.1.0'];
         const result = splitRanges('>=9', gccVersions, SubrangePolicies.ONE_PER_VS_YEAR, 'gcc');
-        // Falls back to one-per-major
-        expect(result).toStrictEqual(['9', '10', '11']);
+        // Falls back to latest → latest in range is 11.1.0 → major 11
+        expect(result).toStrictEqual(['11']);
     });
 
     test('excludes versions outside user range', () => {
@@ -566,5 +584,146 @@ describe('splitRanges ONE_PER_VS_YEAR', () => {
         const msvcVersions = ['14.20.27508'];
         const result = splitRanges('>=14.30', msvcVersions, SubrangePolicies.ONE_PER_VS_YEAR, 'msvc');
         expect(result).toStrictEqual(['*']);
+    });
+});
+
+describe('findAppleClangVersions', () => {
+    it('returns unique Apple Clang versions sorted ascending by semver', () => {
+        const versions = findAppleClangVersions();
+        // macos-xcode-defaults.json has: 15.0.0 (macos-14), 16.0.0 (macos-14/15), 17.0.0 (macos-15)
+        expect(versions).toStrictEqual(['15.0.0', '16.0.0', '17.0.0']);
+    });
+
+    it('deduplicates versions across runners', () => {
+        const versions = findAppleClangVersions();
+        // 16.0.0 appears on both macos-14 and macos-15 but should only appear once
+        const duplicates = versions.filter((v, i) => versions.indexOf(v) !== i);
+        expect(duplicates).toHaveLength(0);
+    });
+});
+
+describe('findCompilerVersions apple-clang', () => {
+    it('returns apple-clang versions', async () => {
+        const versions = await findCompilerVersions('apple-clang');
+        expect(versions.length).toBeGreaterThan(0);
+        expect(versions).toContain('15.0.0');
+        expect(versions).toContain('16.0.0');
+        expect(versions).toContain('17.0.0');
+    });
+});
+
+describe('splitRanges with apple-clang versions', () => {
+    it('works with one-per-major policy', () => {
+        const versions = ['15.0.0', '16.0.0', '17.0.0'];
+        const result = splitRanges('>=15', versions, SubrangePolicies.ONE_PER_MAJOR, 'apple-clang');
+        expect(result).toStrictEqual(['15', '16', '17']);
+    });
+
+    it('restricts to range', () => {
+        const versions = ['15.0.0', '16.0.0', '17.0.0'];
+        const result = splitRanges('>=16', versions, SubrangePolicies.ONE_PER_MAJOR, 'apple-clang');
+        expect(result).toStrictEqual(['16', '17']);
+    });
+
+    it('handles single version range', () => {
+        const versions = ['15.0.0', '16.0.0', '17.0.0'];
+        const result = splitRanges('16', versions, SubrangePolicies.ONE_PER_MAJOR, 'apple-clang');
+        expect(result).toStrictEqual(['16']);
+    });
+});
+
+// Tests for MACOS_DEFAULTS_AND_LATEST subrange policy.
+// These use real macos-xcode-defaults.json data loaded via setup_program.
+// The data file has:
+//   macos-14: default Xcode 15.4 → Apple Clang 15.0.0 (default), 16.0.0
+//   macos-15: default Xcode 16.2 → Apple Clang 16.0.0 (default), 17.0.0
+// Default Apple Clang majors: [15, 16] (from is_default entries)
+// Available Apple Clang majors: [15, 16, 17] (all entries)
+
+describe('splitRanges MACOS_DEFAULTS_AND_LATEST', () => {
+    test('includes macOS defaults plus the latest available version', () => {
+        // Defaults: 15 (macos-14), 16 (macos-15). Latest available: 17.
+        const versions = ['15.0.0', '16.0.0', '17.0.0'];
+        const result = splitRanges('>=15', versions, SubrangePolicies.MACOS_DEFAULTS_AND_LATEST, 'apple-clang');
+        expect(result).toStrictEqual(['15', '16', '17']);
+    });
+
+    test('no duplicate when latest is already a default', () => {
+        // Restrict to range where latest available (16) is already a default
+        const versions = ['15.0.0', '16.0.0'];
+        const result = splitRanges('>=15 <=16', versions, SubrangePolicies.MACOS_DEFAULTS_AND_LATEST, 'apple-clang');
+        expect(result).toStrictEqual(['15', '16']);
+    });
+
+    test('adds latest even when only one default matches', () => {
+        // Range >=16: defaults in range = [16]. Latest available in range = 17
+        const versions = ['15.0.0', '16.0.0', '17.0.0'];
+        const result = splitRanges('>=16', versions, SubrangePolicies.MACOS_DEFAULTS_AND_LATEST, 'apple-clang');
+        expect(result).toStrictEqual(['16', '17']);
+    });
+
+    test('excludes default versions outside user range', () => {
+        // Range >=16: default 15 is outside range
+        const versions = ['15.0.0', '16.0.0', '17.0.0'];
+        const result = splitRanges('>=16', versions, SubrangePolicies.MACOS_DEFAULTS_AND_LATEST, 'apple-clang');
+        expect(result).not.toContain('15');
+    });
+
+    test('falls back to latest for non-apple-clang compiler', () => {
+        const versions = ['9.1.0', '10.1.0', '11.1.0'];
+        const result = splitRanges('>=9', versions, SubrangePolicies.MACOS_DEFAULTS_AND_LATEST, 'gcc');
+        // Falls back to latest → latest in range is 11.1.0 → major 11
+        expect(result).toStrictEqual(['11']);
+    });
+
+    test('returns ["*"] when no versions satisfy range', () => {
+        const versions = ['15.0.0', '16.0.0'];
+        const result = splitRanges('>=99', versions, SubrangePolicies.MACOS_DEFAULTS_AND_LATEST, 'apple-clang');
+        expect(result).toStrictEqual(['*']);
+    });
+
+    test('handles single version range', () => {
+        const versions = ['15.0.0', '16.0.0', '17.0.0'];
+        const result = splitRanges('15', versions, SubrangePolicies.MACOS_DEFAULTS_AND_LATEST, 'apple-clang');
+        // 15 is a default, no latest addition needed (15 is already selected)
+        expect(result).toStrictEqual(['15']);
+    });
+});
+
+describe('splitRanges LATEST', () => {
+    test('returns only the single highest version in range', () => {
+        const versions = ['9.1.0', '10.1.0', '11.1.0', '12.1.0'];
+        const result = splitRanges('>=9', versions, SubrangePolicies.LATEST);
+        expect(result).toStrictEqual(['12']);
+    });
+
+    test('respects the upper bound of the range', () => {
+        const versions = ['9.1.0', '10.1.0', '11.1.0', '12.1.0'];
+        const result = splitRanges('>=9 <=11', versions, SubrangePolicies.LATEST);
+        expect(result).toStrictEqual(['11']);
+    });
+
+    test('returns ["*"] when no versions satisfy range', () => {
+        const versions = ['9.1.0', '10.1.0'];
+        const result = splitRanges('>=99', versions, SubrangePolicies.LATEST);
+        expect(result).toStrictEqual(['*']);
+    });
+
+    test('returns ["*"] when versions list is empty', () => {
+        const result = splitRanges('>=9', [], SubrangePolicies.LATEST);
+        expect(result).toStrictEqual(['*']);
+    });
+
+    test('handles single version', () => {
+        const versions = ['15.0.0'];
+        const result = splitRanges('>=15', versions, SubrangePolicies.LATEST);
+        expect(result).toStrictEqual(['15']);
+    });
+
+    test('picks latest across multiple majors', () => {
+        const versions = ['14.29.30133', '14.44.35207'];
+        const result = splitRanges('>=14', versions, SubrangePolicies.LATEST);
+        // Latest is 14.44.35207 → major 14
+        expect(result).toStrictEqual(['14']);
     });
 });

@@ -42,6 +42,14 @@ export function compilerSupportsStd(compiler: string, version: string | semver.S
             (cxxstd <= 2011 && semver.satisfies(version, '>=3')) ||
             cxxstd <= 2003;
     }
+    if (compiler === 'apple-clang') {
+        return (cxxstd <= 2023 && semver.satisfies(version, '>=16')) ||
+            (cxxstd <= 2020 && semver.satisfies(version, '>=14')) ||
+            (cxxstd <= 2017 && semver.satisfies(version, '>=13')) ||
+            (cxxstd <= 2014 && semver.satisfies(version, '>=13')) ||
+            (cxxstd <= 2011 && semver.satisfies(version, '>=13')) ||
+            cxxstd <= 2003;
+    }
     if (compiler === 'msvc') {
         return (cxxstd <= 2023 && semver.satisfies(version, '>=14.40')) ||
             (cxxstd <= 2020 && semver.satisfies(version, '>=14.30')) ||

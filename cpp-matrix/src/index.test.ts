@@ -150,24 +150,16 @@ test('non-x86 entries default arch to x64 unless overridden', async () => {
 });
 
 test('generates entries for compilers with no known versions', async () => {
-    // This test verifies that apple-clang, mingw, and clang-cl (which have no
+    // This test verifies that mingw and clang-cl (which have no
     // version tracking) still generate matrix entries with version "*"
     const inputs = makeDefaultMatrixInputs({
-        compilers: { 'apple-clang': '*', 'mingw': '*', 'clang-cl': '*' },
+        compilers: { 'mingw': '*', 'clang-cl': '*' },
         standards: normalizeCppVersionRequirement('>=14'),
         warnNoMatches: true // Should NOT warn because entries should be generated
     });
     const warnSpy = jest.spyOn(core, 'warning').mockImplementation(() => { });
     try {
         const matrix = await generateMatrix(inputs);
-
-        // Verify entries were generated for each compiler
-        const appleClangEntry = matrix.find(entry => entry.compiler === 'apple-clang');
-        expect(appleClangEntry).toBeDefined();
-        expect(appleClangEntry?.version).toBe('*');
-        expect(appleClangEntry?.cxx).toBe('clang++');
-        expect(appleClangEntry?.cc).toBe('clang');
-        expect(appleClangEntry?.['runs-on']).toBe('macos-14');
 
         const mingwEntry = matrix.find(entry => entry.compiler === 'mingw');
         expect(mingwEntry).toBeDefined();
@@ -192,6 +184,28 @@ test('generates entries for compilers with no known versions', async () => {
         expect(missingEntriesWarnings).toHaveLength(0);
     } finally {
         warnSpy.mockRestore();
+    }
+});
+
+test('generates entries for apple-clang with data-driven versions', async () => {
+    // apple-clang now has known versions from macos-xcode-defaults.json
+    const inputs = makeDefaultMatrixInputs({
+        compilers: { 'apple-clang': '*' },
+        standards: normalizeCppVersionRequirement('>=14'),
+        maxStandards: 1
+    });
+    const matrix = await generateMatrix(inputs);
+
+    // Verify apple-clang entries were generated with version info
+    const appleClangEntries = matrix.filter(entry => entry.compiler === 'apple-clang');
+    expect(appleClangEntries.length).toBeGreaterThan(0);
+
+    // All entries should have clang/clang++ executables
+    for (const entry of appleClangEntries) {
+        expect(entry.cxx).toBe('clang++');
+        expect(entry.cc).toBe('clang');
+        // Should be on a macOS runner
+        expect(entry['runs-on']).toMatch(/^macos-/);
     }
 });
 

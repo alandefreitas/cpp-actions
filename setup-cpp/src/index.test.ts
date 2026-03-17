@@ -2,6 +2,7 @@ jest.mock('@actions/core', () => ({
     info: jest.fn(),
     debug: jest.fn(),
     error: jest.fn(),
+    warning: jest.fn(),
     setFailed: jest.fn(),
     startGroup: jest.fn(),
     endGroup: jest.fn(),
@@ -15,7 +16,12 @@ jest.mock('@actions/io', () => ({
 }));
 
 jest.mock('@actions/exec', () => ({
-    getExecOutput: jest.fn()
+    getExecOutput: jest.fn(),
+    exec: jest.fn()
+}));
+
+jest.mock('./apple-clang-utils', () => ({
+    scanInstalledXcodes: jest.fn()
 }));
 
 jest.mock('trace-commands', () => ({
@@ -46,6 +52,7 @@ jest.mock('fs', () => ({
     existsSync: jest.fn()
 }));
 
+import * as core from '@actions/core';
 import * as io from '@actions/io';
 import * as exec from '@actions/exec';
 import * as fs from 'fs';
@@ -53,18 +60,25 @@ import * as setup_gcc from 'setup-gcc';
 import * as setup_clang from 'setup-clang';
 import * as setup_msvc from 'setup-msvc';
 import * as setup_program from 'setup-program';
+import { scanInstalledXcodes } from './apple-clang-utils';
 import { normalizeCompiler, resolveMSVCArch, main } from './index';
 import type { Inputs } from './schema';
 import { ExpectedError } from 'pretty-errors';
 import { describePrettyErrors } from 'pretty-errors/test-helper';
 const mockWhich = io.which as jest.MockedFunction<typeof io.which>;
 const mockGetExecOutput = exec.getExecOutput as jest.MockedFunction<typeof exec.getExecOutput>;
+const mockExec = exec.exec as jest.MockedFunction<typeof exec.exec>;
+const mockExportVariable = core.exportVariable as jest.MockedFunction<typeof core.exportVariable>;
+const mockScanInstalledXcodes = scanInstalledXcodes as jest.MockedFunction<typeof scanInstalledXcodes>;
 const mockExistsSync = fs.existsSync as jest.MockedFunction<typeof fs.existsSync>;
 const mockGccMain = setup_gcc.main as jest.MockedFunction<typeof setup_gcc.main>;
 const mockClangMain = setup_clang.main as jest.MockedFunction<typeof setup_clang.main>;
 const mockMsvcMain = setup_msvc.main as jest.MockedFunction<typeof setup_msvc.main>;
 const mockFindLlvmSymbolizer = setup_program.findLlvmSymbolizer as jest.MockedFunction<typeof setup_program.findLlvmSymbolizer>;
 const mockExportSymbolizerEnvVars = setup_program.exportSymbolizerEnvVars as jest.MockedFunction<typeof setup_program.exportSymbolizerEnvVars>;
+const mockCoreInfo = core.info as jest.MockedFunction<typeof core.info>;
+const mockCoreWarning = core.warning as jest.MockedFunction<typeof core.warning>;
+const mockCoreStartGroup = core.startGroup as jest.MockedFunction<typeof core.startGroup>;
 
 /**
  * Creates a default Inputs object for testing with optional overrides.
@@ -113,16 +127,22 @@ describe('normalizeCompiler', () => {
         expect(normalizeCompiler('cl', '*').compiler).toEqual('msvc');
     });
 
-    it('normalizes multi-part compiler name with version', () => {
-        const originalPlatform = process.platform;
-        Object.defineProperty(process, 'platform', { value: 'linux' });
-        try {
-            const result = normalizeCompiler('apple-clang-14', '*');
-            expect(result.compiler).toEqual('clang');
-            expect(result.version).toEqual('14');
-        } finally {
-            Object.defineProperty(process, 'platform', { value: originalPlatform });
-        }
+    it('normalizes apple-clang with embedded version', () => {
+        const result = normalizeCompiler('apple-clang-14', '*');
+        expect(result.compiler).toEqual('apple-clang');
+        expect(result.version).toEqual('14');
+    });
+
+    it('preserves apple-clang as distinct compiler', () => {
+        const result = normalizeCompiler('apple-clang', '17');
+        expect(result.compiler).toEqual('apple-clang');
+        expect(result.version).toEqual('17');
+    });
+
+    it('normalizes appleclang to apple-clang', () => {
+        const result = normalizeCompiler('appleclang', '15');
+        expect(result.compiler).toEqual('apple-clang');
+        expect(result.version).toEqual('15');
     });
 
     it('normalizes clang to clang-cl on win32', () => {
@@ -131,18 +151,6 @@ describe('normalizeCompiler', () => {
         try {
             const result = normalizeCompiler('clang', '*');
             expect(result.compiler).toEqual('clang-cl');
-        } finally {
-            Object.defineProperty(process, 'platform', { value: originalPlatform });
-        }
-    });
-
-    it('normalizes appleclang to clang', () => {
-        const originalPlatform = process.platform;
-        Object.defineProperty(process, 'platform', { value: 'linux' });
-        try {
-            const result = normalizeCompiler('appleclang', '15');
-            expect(result.compiler).toEqual('clang');
-            expect(result.version).toEqual('15');
         } finally {
             Object.defineProperty(process, 'platform', { value: originalPlatform });
         }
@@ -471,6 +479,430 @@ describe('main (SetupCppRunner)', () => {
 
             await main(makeInputs({ compiler: 'mingw64', version: '*' }));
             expect(mockWhich).toHaveBeenCalledWith('gcc');
+        });
+    });
+
+    describe('Apple Clang on non-macOS platforms', () => {
+        it('throws ExpectedError on Linux', async () => {
+            Object.defineProperty(process, 'platform', { value: 'linux' });
+
+            await expect(main(makeInputs({ compiler: 'apple-clang', version: '17' }))).rejects.toThrow(ExpectedError);
+            await expect(main(makeInputs({ compiler: 'apple-clang', version: '17' }))).rejects.toThrow('Apple Clang is only available on macOS');
+        });
+
+        it('throws ExpectedError on Windows', async () => {
+            Object.defineProperty(process, 'platform', { value: 'win32' });
+
+            await expect(main(makeInputs({ compiler: 'apple-clang', version: '*' }))).rejects.toThrow(ExpectedError);
+            await expect(main(makeInputs({ compiler: 'apple-clang', version: '*' }))).rejects.toThrow('Apple Clang is only available on macOS');
+        });
+
+        it('throws before any Xcode scanning', async () => {
+            Object.defineProperty(process, 'platform', { value: 'linux' });
+
+            await expect(main(makeInputs({ compiler: 'apple-clang', version: '16' }))).rejects.toThrow(ExpectedError);
+            expect(mockScanInstalledXcodes).not.toHaveBeenCalled();
+            expect(mockGetExecOutput).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('Apple Clang setup (specific version)', () => {
+        beforeEach(() => {
+            Object.defineProperty(process, 'platform', { value: 'darwin' });
+        });
+
+        it('selects Xcode matching requested major Apple Clang version', async () => {
+            mockScanInstalledXcodes.mockResolvedValue([
+                { xcodePath: '/Applications/Xcode_16.0.app', xcodeVersion: '16.0', appleClangVersion: '17.0.0' },
+                { xcodePath: '/Applications/Xcode_15.4.app', xcodeVersion: '15.4', appleClangVersion: '16.0.0' },
+                { xcodePath: '/Applications/Xcode_15.0.app', xcodeVersion: '15.0', appleClangVersion: '15.0.0' }
+            ]);
+            mockGetExecOutput.mockImplementation(async (_cmd: string, args?: string[]) => {
+                if (args?.[0] === 'clang' && args?.[1] === '--version') {
+                    return { exitCode: 0, stdout: 'Apple clang version 16.0.0\n', stderr: '' };
+                }
+                if (args?.[0] === '--find' && args?.[1] === 'clang') {
+                    return { exitCode: 0, stdout: '/Applications/Xcode_15.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang\n', stderr: '' };
+                }
+                if (args?.[0] === '--find' && args?.[1] === 'clang++') {
+                    return { exitCode: 0, stdout: '/Applications/Xcode_15.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++\n', stderr: '' };
+                }
+                return { exitCode: 0, stdout: '', stderr: '' };
+            });
+
+            const result = await main(makeInputs({ compiler: 'apple-clang', version: '16' }));
+
+            expect(mockScanInstalledXcodes).toHaveBeenCalled();
+            expect(mockExportVariable).toHaveBeenCalledWith(
+                'DEVELOPER_DIR',
+                '/Applications/Xcode_15.4.app/Contents/Developer'
+            );
+            expect(result).toEqual(expect.objectContaining({
+                cc: '/Applications/Xcode_15.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang',
+                cxx: '/Applications/Xcode_15.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++',
+                version: '16.0.0',
+                versionMajor: 16,
+                versionMinor: 0,
+                versionPatch: 0
+            }));
+        });
+
+        it('picks newest Xcode when multiple match same major', async () => {
+            mockScanInstalledXcodes.mockResolvedValue([
+                { xcodePath: '/Applications/Xcode_15.4.app', xcodeVersion: '15.4', appleClangVersion: '16.0.6' },
+                { xcodePath: '/Applications/Xcode_15.2.app', xcodeVersion: '15.2', appleClangVersion: '16.0.0' }
+            ]);
+            mockGetExecOutput.mockImplementation(async (_cmd: string, args?: string[]) => {
+                if (args?.[0] === '--find' && args?.[1] === 'clang') {
+                    return { exitCode: 0, stdout: '/usr/bin/clang\n', stderr: '' };
+                }
+                if (args?.[0] === '--find' && args?.[1] === 'clang++') {
+                    return { exitCode: 0, stdout: '/usr/bin/clang++\n', stderr: '' };
+                }
+                return { exitCode: 0, stdout: '', stderr: '' };
+            });
+
+            const result = await main(makeInputs({ compiler: 'apple-clang', version: '16' }));
+
+            // First match is 16.0.6 (sorted descending), which is Xcode 15.4
+            expect(mockExportVariable).toHaveBeenCalledWith(
+                'DEVELOPER_DIR',
+                '/Applications/Xcode_15.4.app/Contents/Developer'
+            );
+            expect(result).toEqual(expect.objectContaining({
+                version: '16.0.6',
+                versionMajor: 16
+            }));
+        });
+
+        it('matches exact semver version', async () => {
+            mockScanInstalledXcodes.mockResolvedValue([
+                { xcodePath: '/Applications/Xcode_16.0.app', xcodeVersion: '16.0', appleClangVersion: '17.0.0' },
+                { xcodePath: '/Applications/Xcode_15.4.app', xcodeVersion: '15.4', appleClangVersion: '16.0.0' }
+            ]);
+            mockGetExecOutput.mockImplementation(async (_cmd: string, args?: string[]) => {
+                if (args?.[0] === '--find' && args?.[1] === 'clang') {
+                    return { exitCode: 0, stdout: '/usr/bin/clang\n', stderr: '' };
+                }
+                if (args?.[0] === '--find' && args?.[1] === 'clang++') {
+                    return { exitCode: 0, stdout: '/usr/bin/clang++\n', stderr: '' };
+                }
+                return { exitCode: 0, stdout: '', stderr: '' };
+            });
+
+            const result = await main(makeInputs({ compiler: 'apple-clang', version: '17.0.0' }));
+
+            expect(mockExportVariable).toHaveBeenCalledWith(
+                'DEVELOPER_DIR',
+                '/Applications/Xcode_16.0.app/Contents/Developer'
+            );
+            expect(result).toEqual(expect.objectContaining({
+                version: '17.0.0',
+                versionMajor: 17
+            }));
+        });
+
+        it('throws when no Xcode matches requested version', async () => {
+            mockScanInstalledXcodes.mockResolvedValue([
+                { xcodePath: '/Applications/Xcode_15.4.app', xcodeVersion: '15.4', appleClangVersion: '16.0.0' }
+            ]);
+
+            await expect(main(makeInputs({ compiler: 'apple-clang', version: '99' }))).rejects.toThrow(ExpectedError);
+            await expect(main(makeInputs({ compiler: 'apple-clang', version: '99' }))).rejects.toThrow('No installed Xcode has Apple Clang version matching');
+        });
+
+        it('throws when no Xcodes are installed', async () => {
+            mockScanInstalledXcodes.mockResolvedValue([]);
+
+            await expect(main(makeInputs({ compiler: 'apple-clang', version: '17' }))).rejects.toThrow(ExpectedError);
+            await expect(main(makeInputs({ compiler: 'apple-clang', version: '17' }))).rejects.toThrow('No Xcode installations found');
+        });
+
+        it('falls back to xcode-select when DEVELOPER_DIR verification fails', async () => {
+            mockScanInstalledXcodes.mockResolvedValue([
+                { xcodePath: '/Applications/Xcode_16.0.app', xcodeVersion: '16.0', appleClangVersion: '17.0.0' }
+            ]);
+            mockGetExecOutput.mockImplementation(async (_cmd: string, args?: string[]) => {
+                if (args?.[0] === 'clang' && args?.[1] === '--version') {
+                    return { exitCode: 1, stdout: '', stderr: 'error' };
+                }
+                if (args?.[0] === '--find' && args?.[1] === 'clang') {
+                    return { exitCode: 0, stdout: '/usr/bin/clang\n', stderr: '' };
+                }
+                if (args?.[0] === '--find' && args?.[1] === 'clang++') {
+                    return { exitCode: 0, stdout: '/usr/bin/clang++\n', stderr: '' };
+                }
+                return { exitCode: 0, stdout: '', stderr: '' };
+            });
+            mockExec.mockResolvedValue(0);
+
+            await main(makeInputs({ compiler: 'apple-clang', version: '17' }));
+
+            expect(mockExec).toHaveBeenCalledWith(
+                'sudo',
+                ['-n', 'xcode-select', '-s', '/Applications/Xcode_16.0.app'],
+                { ignoreReturnCode: true }
+            );
+        });
+
+        it('matches exact coerced version (non-range, non-major)', async () => {
+            mockScanInstalledXcodes.mockResolvedValue([
+                { xcodePath: '/Applications/Xcode_16.0.app', xcodeVersion: '16.0', appleClangVersion: '17.0.0' },
+                { xcodePath: '/Applications/Xcode_15.4.app', xcodeVersion: '15.4', appleClangVersion: '16.0.0' }
+            ]);
+            mockGetExecOutput.mockImplementation(async (_cmd: string, args?: string[]) => {
+                if (args?.[0] === '--find' && args?.[1] === 'clang') {
+                    return { exitCode: 0, stdout: '/usr/bin/clang\n', stderr: '' };
+                }
+                if (args?.[0] === '--find' && args?.[1] === 'clang++') {
+                    return { exitCode: 0, stdout: '/usr/bin/clang++\n', stderr: '' };
+                }
+                return { exitCode: 0, stdout: '', stderr: '' };
+            });
+
+            // "16.0" is not a valid semver range (semver.validRange returns null for it)
+            // but semver.coerce("16.0") produces 16.0.0 which matches
+            const result = await main(makeInputs({ compiler: 'apple-clang', version: '16.0' }));
+
+            expect(result).toEqual(expect.objectContaining({
+                version: '16.0.0',
+                versionMajor: 16
+            }));
+        });
+
+        it('supports semver range version', async () => {
+            mockScanInstalledXcodes.mockResolvedValue([
+                { xcodePath: '/Applications/Xcode_16.0.app', xcodeVersion: '16.0', appleClangVersion: '17.0.0' },
+                { xcodePath: '/Applications/Xcode_15.4.app', xcodeVersion: '15.4', appleClangVersion: '16.0.0' },
+                { xcodePath: '/Applications/Xcode_15.0.app', xcodeVersion: '15.0', appleClangVersion: '15.0.0' }
+            ]);
+            mockGetExecOutput.mockImplementation(async (_cmd: string, args?: string[]) => {
+                if (args?.[0] === '--find' && args?.[1] === 'clang') {
+                    return { exitCode: 0, stdout: '/usr/bin/clang\n', stderr: '' };
+                }
+                if (args?.[0] === '--find' && args?.[1] === 'clang++') {
+                    return { exitCode: 0, stdout: '/usr/bin/clang++\n', stderr: '' };
+                }
+                return { exitCode: 0, stdout: '', stderr: '' };
+            });
+
+            const result = await main(makeInputs({ compiler: 'apple-clang', version: '>=16.0.0' }));
+
+            // Should match 17.0.0 (first in descending order that satisfies >=16)
+            expect(result).toEqual(expect.objectContaining({
+                version: '17.0.0',
+                versionMajor: 17
+            }));
+        });
+    });
+
+    describe('Apple Clang default (wildcard version)', () => {
+        beforeEach(() => {
+            Object.defineProperty(process, 'platform', { value: 'darwin' });
+        });
+
+        it('detects default Apple Clang version and resolves paths via xcrun', async () => {
+            mockGetExecOutput.mockImplementation(async (_cmd: string, args?: string[]) => {
+                if (args?.[0] === 'clang' && args?.[1] === '--version') {
+                    return { exitCode: 0, stdout: 'Apple clang version 17.0.0 (clang-1700.0.13.3)\nTarget: arm64-apple-darwin24.0.0\n', stderr: '' };
+                }
+                if (args?.[0] === '--find' && args?.[1] === 'clang') {
+                    return { exitCode: 0, stdout: '/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang\n', stderr: '' };
+                }
+                if (args?.[0] === '--find' && args?.[1] === 'clang++') {
+                    return { exitCode: 0, stdout: '/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++\n', stderr: '' };
+                }
+                return { exitCode: 0, stdout: '', stderr: '' };
+            });
+
+            const result = await main(makeInputs({ compiler: 'apple-clang', version: '*' }));
+
+            expect(mockScanInstalledXcodes).not.toHaveBeenCalled();
+            expect(mockExportVariable).not.toHaveBeenCalledWith('DEVELOPER_DIR', expect.anything());
+            expect(result).toEqual(expect.objectContaining({
+                cc: '/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang',
+                cxx: '/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++',
+                version: '17.0.0',
+                versionMajor: 17,
+                versionMinor: 0,
+                versionPatch: 0
+            }));
+        });
+
+        it('works with empty version string', async () => {
+            mockGetExecOutput.mockImplementation(async (_cmd: string, args?: string[]) => {
+                if (args?.[0] === 'clang' && args?.[1] === '--version') {
+                    return { exitCode: 0, stdout: 'Apple clang version 16.0.0 (clang-1600.0.26.6)\n', stderr: '' };
+                }
+                if (args?.[0] === '--find' && args?.[1] === 'clang') {
+                    return { exitCode: 0, stdout: '/usr/bin/clang\n', stderr: '' };
+                }
+                if (args?.[0] === '--find' && args?.[1] === 'clang++') {
+                    return { exitCode: 0, stdout: '/usr/bin/clang++\n', stderr: '' };
+                }
+                return { exitCode: 0, stdout: '', stderr: '' };
+            });
+
+            const result = await main(makeInputs({ compiler: 'apple-clang', version: '' }));
+
+            expect(result).toEqual(expect.objectContaining({
+                cc: '/usr/bin/clang',
+                cxx: '/usr/bin/clang++',
+                version: '16.0.0',
+                versionMajor: 16,
+                versionMinor: 0,
+                versionPatch: 0
+            }));
+        });
+
+        it('sets bindir and dir from cc path', async () => {
+            mockGetExecOutput.mockImplementation(async (_cmd: string, args?: string[]) => {
+                if (args?.[0] === 'clang' && args?.[1] === '--version') {
+                    return { exitCode: 0, stdout: 'Apple clang version 15.0.0 (clang-1500.3.9.4)\n', stderr: '' };
+                }
+                if (args?.[0] === '--find' && args?.[1] === 'clang') {
+                    return { exitCode: 0, stdout: '/Applications/Xcode_15.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang\n', stderr: '' };
+                }
+                if (args?.[0] === '--find' && args?.[1] === 'clang++') {
+                    return { exitCode: 0, stdout: '/Applications/Xcode_15.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++\n', stderr: '' };
+                }
+                return { exitCode: 0, stdout: '', stderr: '' };
+            });
+
+            const result = await main(makeInputs({ compiler: 'apple-clang', version: '*' }));
+
+            expect(result).toEqual(expect.objectContaining({
+                bindir: '/Applications/Xcode_15.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin',
+                dir: '/Applications/Xcode_15.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr'
+            }));
+        });
+
+        it('throws when xcrun clang --version fails', async () => {
+            mockGetExecOutput.mockResolvedValue({
+                exitCode: 1,
+                stdout: '',
+                stderr: 'xcrun: error: unable to find utility "clang"'
+            });
+
+            await expect(main(makeInputs({ compiler: 'apple-clang', version: '*' }))).rejects.toThrow(ExpectedError);
+            await expect(main(makeInputs({ compiler: 'apple-clang', version: '*' }))).rejects.toThrow('Failed to run xcrun clang --version');
+        });
+
+        it('throws when version cannot be parsed from output', async () => {
+            mockGetExecOutput.mockImplementation(async (_cmd: string, args?: string[]) => {
+                if (args?.[0] === 'clang' && args?.[1] === '--version') {
+                    return { exitCode: 0, stdout: 'some unknown clang version output\n', stderr: '' };
+                }
+                return { exitCode: 0, stdout: '', stderr: '' };
+            });
+
+            await expect(main(makeInputs({ compiler: 'apple-clang', version: '*' }))).rejects.toThrow(ExpectedError);
+            await expect(main(makeInputs({ compiler: 'apple-clang', version: '*' }))).rejects.toThrow('Could not parse Apple Clang version');
+        });
+    });
+
+    describe('Compiler target info logging (apple-clang)', () => {
+        beforeEach(() => {
+            Object.defineProperty(process, 'platform', { value: 'darwin' });
+        });
+
+        it('logs target triple and supported targets for specific version', async () => {
+            mockScanInstalledXcodes.mockResolvedValue([
+                { xcodePath: '/Applications/Xcode_16.0.app', xcodeVersion: '16.0', appleClangVersion: '17.0.0' }
+            ]);
+            mockGetExecOutput.mockImplementation(async (_cmd: string, args?: string[]) => {
+                if (args?.[0] === 'clang' && args?.[1] === '--version') {
+                    return { exitCode: 0, stdout: 'Apple clang version 17.0.0\n', stderr: '' };
+                }
+                if (args?.[0] === '--find' && args?.[1] === 'clang') {
+                    return { exitCode: 0, stdout: '/usr/bin/clang\n', stderr: '' };
+                }
+                if (args?.[0] === '--find' && args?.[1] === 'clang++') {
+                    return { exitCode: 0, stdout: '/usr/bin/clang++\n', stderr: '' };
+                }
+                if (args?.[0] === 'clang' && args?.[1] === '--print-target-triple') {
+                    return { exitCode: 0, stdout: 'arm64-apple-darwin24.0.0\n', stderr: '' };
+                }
+                if (args?.[0] === 'clang' && args?.[1] === '--print-targets') {
+                    return { exitCode: 0, stdout: '  Registered Targets:\n    aarch64 - AArch64\n    x86_64  - 64-bit X86\n', stderr: '' };
+                }
+                return { exitCode: 0, stdout: '', stderr: '' };
+            });
+
+            await main(makeInputs({ compiler: 'apple-clang', version: '17' }));
+
+            expect(mockCoreStartGroup).toHaveBeenCalledWith('\uD83C\uDFAF Compiler target info');
+            expect(mockCoreInfo).toHaveBeenCalledWith('Target triple: arm64-apple-darwin24.0.0');
+            expect(mockCoreInfo).toHaveBeenCalledWith(expect.stringContaining('Supported targets:'));
+        });
+
+        it('logs target info for wildcard version', async () => {
+            mockGetExecOutput.mockImplementation(async (_cmd: string, args?: string[]) => {
+                if (args?.[0] === 'clang' && args?.[1] === '--version') {
+                    return { exitCode: 0, stdout: 'Apple clang version 17.0.0 (clang-1700.0.13.3)\n', stderr: '' };
+                }
+                if (args?.[0] === '--find' && args?.[1] === 'clang') {
+                    return { exitCode: 0, stdout: '/usr/bin/clang\n', stderr: '' };
+                }
+                if (args?.[0] === '--find' && args?.[1] === 'clang++') {
+                    return { exitCode: 0, stdout: '/usr/bin/clang++\n', stderr: '' };
+                }
+                if (args?.[0] === 'clang' && args?.[1] === '--print-target-triple') {
+                    return { exitCode: 0, stdout: 'arm64-apple-darwin24.0.0\n', stderr: '' };
+                }
+                if (args?.[0] === 'clang' && args?.[1] === '--print-targets') {
+                    return { exitCode: 0, stdout: '  Registered Targets:\n    aarch64 - AArch64\n', stderr: '' };
+                }
+                return { exitCode: 0, stdout: '', stderr: '' };
+            });
+
+            await main(makeInputs({ compiler: 'apple-clang', version: '*' }));
+
+            expect(mockCoreStartGroup).toHaveBeenCalledWith('\uD83C\uDFAF Compiler target info');
+            expect(mockCoreInfo).toHaveBeenCalledWith('Target triple: arm64-apple-darwin24.0.0');
+        });
+
+        it('warns but does not fail when target triple command fails', async () => {
+            mockGetExecOutput.mockImplementation(async (_cmd: string, args?: string[]) => {
+                if (args?.[0] === 'clang' && args?.[1] === '--version') {
+                    return { exitCode: 0, stdout: 'Apple clang version 17.0.0\n', stderr: '' };
+                }
+                if (args?.[0] === '--find' && args?.[1] === 'clang') {
+                    return { exitCode: 0, stdout: '/usr/bin/clang\n', stderr: '' };
+                }
+                if (args?.[0] === '--find' && args?.[1] === 'clang++') {
+                    return { exitCode: 0, stdout: '/usr/bin/clang++\n', stderr: '' };
+                }
+                if (args?.[0] === 'clang' && args?.[1] === '--print-target-triple') {
+                    return { exitCode: 1, stdout: '', stderr: 'error' };
+                }
+                if (args?.[0] === 'clang' && args?.[1] === '--print-targets') {
+                    return { exitCode: 1, stdout: '', stderr: 'error' };
+                }
+                return { exitCode: 0, stdout: '', stderr: '' };
+            });
+
+            const result = await main(makeInputs({ compiler: 'apple-clang', version: '*' }));
+
+            expect(mockCoreWarning).toHaveBeenCalledWith('Failed to get target triple from xcrun clang --print-target-triple');
+            expect(mockCoreWarning).toHaveBeenCalledWith('Failed to get supported targets from xcrun clang --print-targets');
+            // Should still succeed
+            expect(result).toEqual(expect.objectContaining({ version: '17.0.0' }));
+        });
+
+        it('does not log target info for non-apple-clang compilers', async () => {
+            Object.defineProperty(process, 'platform', { value: 'darwin' });
+            mockWhich.mockResolvedValue('/usr/local/bin/gcc');
+            mockExistsSync.mockReturnValue(true);
+            mockGetExecOutput.mockResolvedValue({
+                exitCode: 0,
+                stdout: 'gcc (Homebrew GCC 13.2.0) 13.2.0\n',
+                stderr: ''
+            });
+
+            await main(makeInputs({ compiler: 'gcc', version: '*' }));
+
+            expect(mockCoreStartGroup).not.toHaveBeenCalledWith('\uD83C\uDFAF Compiler target info');
         });
     });
 
