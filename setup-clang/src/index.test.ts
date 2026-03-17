@@ -61,7 +61,8 @@ jest.mock('setup-program', () => ({
     urlExists: jest.fn().mockResolvedValue(true),
     getPackagePreferenceTier: jest.fn().mockReturnValue(1),
     PackagePreferenceTier: { UNVERSIONED: 1, RAW_VERSIONED: 2, OTHER_VERSIONED: 3 },
-    installProgramFromUrl: jest.fn().mockResolvedValue({ outputVersion: null, outputPath: null })
+    installProgramFromUrl: jest.fn().mockResolvedValue({ outputVersion: null, outputPath: null }),
+    exportSymbolizerEnvVars: jest.fn()
 }));
 
 jest.mock('./download', () => ({
@@ -354,10 +355,7 @@ describe('setup-clang', () => {
                 symbolizerPath: '/usr/bin/llvm-symbolizer-15'
             });
             await main(makeInputs({ updateEnvironment: true }));
-            expect(mockCore.exportVariable).toHaveBeenCalledWith('ASAN_SYMBOLIZER_PATH', '/usr/bin/llvm-symbolizer-15');
-            expect(mockCore.exportVariable).toHaveBeenCalledWith('MSAN_SYMBOLIZER_PATH', '/usr/bin/llvm-symbolizer-15');
-            expect(mockCore.exportVariable).toHaveBeenCalledWith('TSAN_SYMBOLIZER_PATH', '/usr/bin/llvm-symbolizer-15');
-            expect(mockCore.exportVariable).toHaveBeenCalledWith('UBSAN_SYMBOLIZER_PATH', '/usr/bin/llvm-symbolizer-15');
+            expect(mockSetupProgram.exportSymbolizerEnvVars).toHaveBeenCalledWith('/usr/bin/llvm-symbolizer-15');
         });
 
         it('does not set sanitizer env vars when updateEnvironment is false', async () => {
@@ -370,7 +368,7 @@ describe('setup-clang', () => {
                 symbolizerPath: '/usr/bin/llvm-symbolizer-15'
             });
             await main(makeInputs({ updateEnvironment: false }));
-            expect(mockCore.exportVariable).not.toHaveBeenCalledWith('ASAN_SYMBOLIZER_PATH', expect.anything());
+            expect(mockSetupProgram.exportSymbolizerEnvVars).not.toHaveBeenCalled();
         });
     });
 

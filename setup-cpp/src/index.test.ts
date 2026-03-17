@@ -37,6 +37,11 @@ jest.mock('setup-msvc', () => ({
     buildMSVCOutputs: jest.requireActual('setup-msvc').buildMSVCOutputs
 }));
 
+jest.mock('setup-program', () => ({
+    findLlvmSymbolizer: jest.fn().mockResolvedValue(null),
+    exportSymbolizerEnvVars: jest.fn()
+}));
+
 jest.mock('fs', () => ({
     existsSync: jest.fn()
 }));
@@ -47,6 +52,7 @@ import * as fs from 'fs';
 import * as setup_gcc from 'setup-gcc';
 import * as setup_clang from 'setup-clang';
 import * as setup_msvc from 'setup-msvc';
+import * as setup_program from 'setup-program';
 import { normalizeCompiler, resolveMSVCArch, main } from './index';
 import type { Inputs } from './schema';
 import { ExpectedError } from 'pretty-errors';
@@ -57,6 +63,8 @@ const mockExistsSync = fs.existsSync as jest.MockedFunction<typeof fs.existsSync
 const mockGccMain = setup_gcc.main as jest.MockedFunction<typeof setup_gcc.main>;
 const mockClangMain = setup_clang.main as jest.MockedFunction<typeof setup_clang.main>;
 const mockMsvcMain = setup_msvc.main as jest.MockedFunction<typeof setup_msvc.main>;
+const mockFindLlvmSymbolizer = setup_program.findLlvmSymbolizer as jest.MockedFunction<typeof setup_program.findLlvmSymbolizer>;
+const mockExportSymbolizerEnvVars = setup_program.exportSymbolizerEnvVars as jest.MockedFunction<typeof setup_program.exportSymbolizerEnvVars>;
 
 /**
  * Creates a default Inputs object for testing with optional overrides.
@@ -463,6 +471,73 @@ describe('main (SetupCppRunner)', () => {
 
             await main(makeInputs({ compiler: 'mingw64', version: '*' }));
             expect(mockWhich).toHaveBeenCalledWith('gcc');
+        });
+    });
+
+    describe('ensureSymbolizerEnvVars', () => {
+        it('finds and exports symbolizer when searching PATH on non-Linux', async () => {
+            Object.defineProperty(process, 'platform', { value: 'darwin' });
+            mockWhich.mockResolvedValue('/usr/local/bin/gcc');
+            mockExistsSync.mockReturnValue(true);
+            mockGetExecOutput.mockResolvedValue({
+                exitCode: 0,
+                stdout: 'gcc (Homebrew GCC 13.2.0) 13.2.0\n',
+                stderr: ''
+            });
+            mockFindLlvmSymbolizer.mockResolvedValue('/opt/homebrew/opt/llvm/bin/llvm-symbolizer');
+
+            await main(makeInputs({ compiler: 'gcc', version: '*' }));
+
+            expect(mockFindLlvmSymbolizer).toHaveBeenCalledWith(13);
+            expect(mockExportSymbolizerEnvVars).toHaveBeenCalledWith('/opt/homebrew/opt/llvm/bin/llvm-symbolizer');
+        });
+
+        it('skips symbolizer when LLVM_SYMBOLIZER_PATH already set', async () => {
+            Object.defineProperty(process, 'platform', { value: 'darwin' });
+            process.env['LLVM_SYMBOLIZER_PATH'] = '/some/path';
+            mockWhich.mockResolvedValue('/usr/local/bin/gcc');
+            mockExistsSync.mockReturnValue(true);
+            mockGetExecOutput.mockResolvedValue({
+                exitCode: 0,
+                stdout: 'gcc 13.2.0\n',
+                stderr: ''
+            });
+
+            await main(makeInputs({ compiler: 'gcc', version: '*' }));
+
+            expect(mockFindLlvmSymbolizer).not.toHaveBeenCalled();
+            delete process.env['LLVM_SYMBOLIZER_PATH'];
+        });
+
+        it('skips symbolizer when updateEnvironment is false', async () => {
+            Object.defineProperty(process, 'platform', { value: 'darwin' });
+            mockWhich.mockResolvedValue('/usr/local/bin/gcc');
+            mockExistsSync.mockReturnValue(true);
+            mockGetExecOutput.mockResolvedValue({
+                exitCode: 0,
+                stdout: 'gcc 13.2.0\n',
+                stderr: ''
+            });
+
+            await main(makeInputs({ compiler: 'gcc', version: '*', updateEnvironment: false }));
+
+            expect(mockFindLlvmSymbolizer).not.toHaveBeenCalled();
+        });
+
+        it('does not export when symbolizer not found', async () => {
+            Object.defineProperty(process, 'platform', { value: 'darwin' });
+            mockWhich.mockResolvedValue('/usr/local/bin/gcc');
+            mockExistsSync.mockReturnValue(true);
+            mockGetExecOutput.mockResolvedValue({
+                exitCode: 0,
+                stdout: 'gcc 13.2.0\n',
+                stderr: ''
+            });
+            mockFindLlvmSymbolizer.mockResolvedValue(null);
+
+            await main(makeInputs({ compiler: 'gcc', version: '*' }));
+
+            expect(mockExportSymbolizerEnvVars).not.toHaveBeenCalled();
         });
     });
 });

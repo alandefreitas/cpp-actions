@@ -35,7 +35,9 @@ jest.mock('setup-program', () => ({
     findProgramWithApt: jest.fn(),
     installProgramFromUrl: jest.fn(),
     isSudoRequired: jest.fn(),
-    getCurrentUbuntuVersion: jest.fn()
+    getCurrentUbuntuVersion: jest.fn(),
+    findLlvmSymbolizer: jest.fn(),
+    exportSymbolizerEnvVars: jest.fn()
 }));
 
 jest.mock('./gcc-download', () => ({
@@ -61,6 +63,8 @@ const mockFindProgramInSystemPaths = setup_program.findProgramInSystemPaths as j
 const mockFindProgramWithApt = setup_program.findProgramWithApt as jest.MockedFunction<typeof setup_program.findProgramWithApt>;
 const mockIsSudoRequired = setup_program.isSudoRequired as jest.MockedFunction<typeof setup_program.isSudoRequired>;
 const mockDownloadGccFromUrl = downloadGccFromUrl as jest.MockedFunction<typeof downloadGccFromUrl>;
+const mockFindLlvmSymbolizer = setup_program.findLlvmSymbolizer as jest.MockedFunction<typeof setup_program.findLlvmSymbolizer>;
+const mockExportSymbolizerEnvVars = setup_program.exportSymbolizerEnvVars as jest.MockedFunction<typeof setup_program.exportSymbolizerEnvVars>;
 const mockExistsSync = fs.existsSync as jest.MockedFunction<typeof fs.existsSync>;
 const mockWhich = io.which as jest.MockedFunction<typeof io.which>;
 const mockExec = exec.exec as jest.MockedFunction<typeof exec.exec>;
@@ -103,6 +107,7 @@ describe('setup-gcc main', () => {
         mockIsSudoRequired.mockReturnValue(true);
         mockExec.mockResolvedValue(0);
         mockWhich.mockResolvedValue('');
+        mockFindLlvmSymbolizer.mockResolvedValue(null);
     });
 
     afterEach(() => {
@@ -417,6 +422,59 @@ describe('setup-gcc main', () => {
             // Still should not throw
             const result = await main(makeInputs());
             expect(result.cc).toBe('/usr/bin/gcc-12');
+        });
+    });
+    describe('installSymbolizer', () => {
+        it('exports symbolizer env vars when symbolizer is found', async () => {
+            mockFindProgramInPath.mockResolvedValue({ outputVersion: '12.1.0', outputPath: '/usr/bin/g++-12' });
+            mockExistsSync.mockReturnValue(true);
+            mockFindLlvmSymbolizer.mockResolvedValue('/usr/bin/llvm-symbolizer');
+
+            await main(makeInputs());
+
+            expect(mockFindLlvmSymbolizer).toHaveBeenCalledWith(0);
+            expect(mockExportSymbolizerEnvVars).toHaveBeenCalledWith('/usr/bin/llvm-symbolizer');
+        });
+
+        it('does not export env vars when symbolizer is not found', async () => {
+            mockFindProgramInPath.mockResolvedValue({ outputVersion: '12.1.0', outputPath: '/usr/bin/g++-12' });
+            mockExistsSync.mockReturnValue(true);
+            mockFindLlvmSymbolizer.mockResolvedValue(null);
+
+            await main(makeInputs());
+
+            expect(mockExportSymbolizerEnvVars).not.toHaveBeenCalled();
+        });
+
+        it('skips symbolizer when updateEnvironment is false', async () => {
+            mockFindProgramInPath.mockResolvedValue({ outputVersion: '12.1.0', outputPath: '/usr/bin/g++-12' });
+            mockExistsSync.mockReturnValue(true);
+
+            await main(makeInputs({ updateEnvironment: false }));
+
+            expect(mockFindLlvmSymbolizer).not.toHaveBeenCalled();
+        });
+
+        it('skips symbolizer when no compiler found', async () => {
+            await main(makeInputs());
+            expect(mockFindLlvmSymbolizer).not.toHaveBeenCalled();
+        });
+
+        it('attempts APT install when symbolizer not found on Linux', async () => {
+            mockFindProgramInPath.mockResolvedValue({ outputVersion: '12.1.0', outputPath: '/usr/bin/g++-12' });
+            mockExistsSync.mockReturnValue(true);
+            mockFindLlvmSymbolizer
+                .mockResolvedValueOnce(null)       // initial search
+                .mockResolvedValueOnce('/usr/bin/llvm-symbolizer'); // after apt install
+
+            await main(makeInputs());
+
+            expect(mockExec).toHaveBeenCalledWith(
+                expect.stringContaining('apt-get install -y llvm'),
+                [],
+                expect.objectContaining({ ignoreReturnCode: true })
+            );
+            expect(mockExportSymbolizerEnvVars).toHaveBeenCalledWith('/usr/bin/llvm-symbolizer');
         });
     });
 });

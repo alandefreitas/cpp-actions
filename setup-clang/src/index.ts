@@ -287,10 +287,7 @@ class SetupClangRunner {
         // Set sanitizer symbolizer environment variables if symbolizer was found
         if (this.symbolizerPath && this.inputs.updateEnvironment) {
             core.info(`Setting sanitizer symbolizer path to ${this.symbolizerPath}`);
-            core.exportVariable('ASAN_SYMBOLIZER_PATH', this.symbolizerPath);
-            core.exportVariable('MSAN_SYMBOLIZER_PATH', this.symbolizerPath);
-            core.exportVariable('TSAN_SYMBOLIZER_PATH', this.symbolizerPath);
-            core.exportVariable('UBSAN_SYMBOLIZER_PATH', this.symbolizerPath);
+            setup_program.exportSymbolizerEnvVars(this.symbolizerPath);
         }
     }
 

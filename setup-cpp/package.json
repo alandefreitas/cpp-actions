@@ -20,6 +20,7 @@
     "setup-gcc": "*",
     "setup-clang": "*",
     "setup-msvc": "*",
+    "setup-program": "*",
     "trace-commands": "*",
     "pretty-errors": "*"
   },

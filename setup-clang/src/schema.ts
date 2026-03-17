@@ -57,9 +57,9 @@ export const outputsSchema = {
     symbolizerPath: {
         description: `The absolute path to llvm-symbolizer (Linux only).
 
-This is also exported as ASAN_SYMBOLIZER_PATH, MSAN_SYMBOLIZER_PATH,
-TSAN_SYMBOLIZER_PATH, and UBSAN_SYMBOLIZER_PATH environment variables
-when update-environment is true.`
+This is also exported as LLVM_SYMBOLIZER_PATH, ASAN_SYMBOLIZER_PATH,
+MSAN_SYMBOLIZER_PATH, TSAN_SYMBOLIZER_PATH, and UBSAN_SYMBOLIZER_PATH
+environment variables when update-environment is true.`
     }
 } satisfies ActionOutputsSchema;
 

@@ -11,6 +11,7 @@ import { ExpectedError } from 'pretty-errors';
 import * as setup_gcc from 'setup-gcc';
 import * as setup_clang from 'setup-clang';
 import * as setup_msvc from 'setup-msvc';
+import * as setup_program from 'setup-program';
 
 // Schema imports
 import { type Inputs, inputsSchema, outputsSchema } from './schema';
@@ -216,6 +217,8 @@ class SetupCppRunner {
             await this.searchPathCompiler();
         }
 
+        await this.ensureSymbolizerEnvVars();
+
         return this.buildOutputs();
     }
 
@@ -364,6 +367,33 @@ class SetupCppRunner {
         this.versionMajor = result.versionMajor;
         this.versionMinor = result.versionMinor;
         this.versionPatch = result.versionPatch;
+    }
+
+    /**
+     * Ensures LLVM_SYMBOLIZER_PATH and sanitizer env vars are set when a
+     * symbolizer is available.
+     *
+     * Delegated compiler setups (setup-clang, setup-gcc on Linux) handle this
+     * internally. This method covers the remaining paths: MSVC, mingw,
+     * gcc/clang found via PATH on non-Linux, and clang-cl.
+     */
+    private async ensureSymbolizerEnvVars(): Promise<void> {
+        if (!this.inputs.updateEnvironment) {
+            return;
+        }
+        if (process.env['LLVM_SYMBOLIZER_PATH']) {
+            return;
+        }
+        if (!this.outputPath) {
+            return;
+        }
+
+        const majorVersion = this.versionMajor ?? 0;
+        const symbolizerPath = await setup_program.findLlvmSymbolizer(majorVersion);
+        if (symbolizerPath) {
+            core.info(`llvm-symbolizer found at ${symbolizerPath}`);
+            setup_program.exportSymbolizerEnvVars(symbolizerPath);
+        }
     }
 
     /**

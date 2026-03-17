@@ -5,7 +5,6 @@
  */
 
 import * as core from '@actions/core';
-import * as io from '@actions/io';
 import * as exec from '@actions/exec';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -21,41 +20,8 @@ export interface CompanionPackageResult {
 
 import * as setup_program from 'setup-program';
 
-/**
- * Finds llvm-symbolizer in the system and returns its path.
- *
- * @param majorVersion - The major version of Clang installed
- * @returns Path to llvm-symbolizer if found, null otherwise
- */
-export async function findLlvmSymbolizer(majorVersion: number): Promise<string | null> {
-    // Check common absolute paths for llvm-symbolizer
-    const absolutePaths = [
-        `/usr/lib/llvm-${majorVersion}/bin/llvm-symbolizer`,
-        `/usr/bin/llvm-symbolizer-${majorVersion}`,
-        '/usr/bin/llvm-symbolizer'
-    ];
-
-    for (const p of absolutePaths) {
-        if (fs.existsSync(p)) {
-            return p;
-        }
-    }
-
-    // Check if llvm-symbolizer is in PATH using io.which
-    const pathNames = [`llvm-symbolizer-${majorVersion}`, 'llvm-symbolizer'];
-    for (const name of pathNames) {
-        try {
-            const found = await io.which(name, false);
-            if (found) {
-                return found;
-            }
-        } catch {
-            // Continue checking other candidates
-        }
-    }
-
-    return null;
-}
+// Re-export findLlvmSymbolizer from the shared library for backward compatibility
+export { findLlvmSymbolizer } from 'setup-program';
 
 /**
  * Recursively searches for a file matching the given name in a directory.
@@ -204,7 +170,7 @@ export async function installCompanionPackages(installedVersion: string, install
     }
 
     // Check if llvm-symbolizer is already available
-    symbolizerPath = await findLlvmSymbolizer(majorVersion);
+    symbolizerPath = await setup_program.findLlvmSymbolizer(majorVersion);
     if (symbolizerPath) {
         fnlog(`llvm-symbolizer already available at ${symbolizerPath}`);
         core.info(`llvm-symbolizer already available at ${symbolizerPath}`);
@@ -220,7 +186,7 @@ export async function installCompanionPackages(installedVersion: string, install
             if (exitCode === 0) {
                 core.info(`Installed ${pkg} for llvm-symbolizer`);
                 // Find the symbolizer path after installation
-                symbolizerPath = await findLlvmSymbolizer(majorVersion);
+                symbolizerPath = await setup_program.findLlvmSymbolizer(majorVersion);
                 if (symbolizerPath) {
                     fnlog(`llvm-symbolizer found at ${symbolizerPath}`);
                 }

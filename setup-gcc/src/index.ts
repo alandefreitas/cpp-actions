@@ -50,7 +50,8 @@ export interface MainOutputs {
  * 3. Search system paths
  * 4. Search via APT package manager
  * 5. Download from release binaries
- * 6. Build output values (cc, cxx, bindir, etc.)
+ * 6. Find/install llvm-symbolizer and export env vars
+ * 7. Build output values (cc, cxx, bindir, etc.)
  */
 class SetupGccRunner {
     /** Frozen copy of action inputs */
@@ -64,6 +65,9 @@ class SetupGccRunner {
 
     /** Resolved version string, set progressively by search phases */
     private outputVersion: string | null = null;
+
+    /** Path to llvm-symbolizer, set by installSymbolizer phase */
+    private symbolizerPath: string | null = null;
 
     /** Program names to search for — prefer g++ so libstdc++ headers come along */
     private readonly names = ['g++', 'gcc'];
@@ -83,6 +87,7 @@ class SetupGccRunner {
         await this.searchSystemPaths();
         await this.searchApt();
         await this.downloadFromUrl();
+        await this.installSymbolizer();
         return this.buildOutputs();
     }
 
@@ -211,6 +216,57 @@ class SetupGccRunner {
         });
         this.outputVersion = result.outputVersion;
         this.outputPath = result.outputPath;
+
+        core.endGroup();
+    }
+
+    /**
+     * Discovers llvm-symbolizer and exports sanitizer environment variables.
+     *
+     * GCC ships its own sanitizer runtime libraries, so no sanitizer runtime
+     * installation is performed. The symbolizer is attempted via APT on Linux
+     * when not already present, but failure is non-fatal.
+     *
+     * Uses version 0 for LLVM discovery because GCC's major version is
+     * independent of the LLVM version — this falls through to unversioned
+     * paths and PATH-based lookup.
+     */
+    private async installSymbolizer(): Promise<void> {
+        if (!this.outputVersion || !this.inputs.updateEnvironment) {
+            return;
+        }
+
+        core.startGroup('🔧 Find llvm-symbolizer');
+
+        // GCC major version has no relationship to LLVM version, so use 0
+        // to skip version-specific paths and rely on unversioned fallbacks
+        this.symbolizerPath = await setup_program.findLlvmSymbolizer(0);
+
+        if (!this.symbolizerPath && process.platform === 'linux') {
+            traceCommands.log('llvm-symbolizer not found, attempting APT install (best-effort)');
+            try {
+                const opts = {
+                    env: { DEBIAN_FRONTEND: 'noninteractive', TZ: 'Etc/UTC' },
+                    ignoreReturnCode: true,
+                    silent: true
+                };
+                const sudoPrefix = setup_program.isSudoRequired() ? 'sudo -n ' : '';
+                const exitCode = await exec.exec(`${sudoPrefix}apt-get install -y llvm`, [], opts);
+                if (exitCode === 0) {
+                    traceCommands.log('Installed llvm');
+                    this.symbolizerPath = await setup_program.findLlvmSymbolizer(0);
+                }
+            } catch (err) {
+                traceCommands.log(`APT install attempt failed: ${(err as Error).message}`);
+            }
+        }
+
+        if (this.symbolizerPath) {
+            core.info(`llvm-symbolizer found at ${this.symbolizerPath}`);
+            setup_program.exportSymbolizerEnvVars(this.symbolizerPath);
+        } else {
+            core.info('llvm-symbolizer not found; sanitizer output may lack symbolization');
+        }
 
         core.endGroup();
     }

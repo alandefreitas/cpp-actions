@@ -88,6 +88,9 @@ export {
 // Re-export URL installation for external consumers
 export { installProgramFromUrl } from './url-install';
 
+// Re-export symbolizer utilities for external consumers
+export { findLlvmSymbolizer, exportSymbolizerEnvVars, buildSymbolizerCandidatePaths } from './symbolizer-utils';
+
 /**
  * Orchestrates the setup-program pipeline: search user paths, system paths,
  * APT repositories, and URL download — in priority order.
