@@ -268,6 +268,46 @@ describe('aptGetMain', () => {
             );
         });
 
+        it('omits -E flag when running as root (no sudo)', async () => {
+            const setup_program = require('setup-program');
+            setup_program.isSudoRequired.mockReturnValue(false);
+            mockExec.mockResolvedValue(0);
+
+            const inputs = makeInputs({
+                aptGetSources: ['ppa:test/ppa'],
+                aptGetRetries: 1
+            });
+            await aptGetMain(inputs);
+
+            const addRepoCall = mockExec.mock.calls.find(
+                c => typeof c[0] === 'string' && c[0].includes('apt-add-repository')
+            );
+            expect(addRepoCall).toBeDefined();
+            // Command should NOT start with -E when not using sudo
+            expect(addRepoCall![0]).not.toMatch(/^\s*-E/);
+            expect(addRepoCall![0]).toMatch(/^apt-add-repository/);
+        });
+
+        it('includes sudo -E prefix when sudo is required', async () => {
+            const setup_program = require('setup-program');
+            setup_program.isSudoRequired.mockReturnValue(true);
+            mockExec.mockResolvedValue(0);
+
+            const inputs = makeInputs({
+                aptGetSources: ['ppa:test/ppa'],
+                aptGetRetries: 1
+            });
+            await aptGetMain(inputs);
+
+            const addRepoCall = mockExec.mock.calls.find(
+                c => typeof c[0] === 'string' && c[0].includes('apt-add-repository')
+            );
+            expect(addRepoCall).toBeDefined();
+            expect(addRepoCall![0]).toMatch(/^sudo\s+-E\s+apt-add-repository/);
+
+            setup_program.isSudoRequired.mockReturnValue(false);
+        });
+
         it('retries source add on non-zero exit code', async () => {
             mockExec
                 .mockResolvedValueOnce(1) // source add fail

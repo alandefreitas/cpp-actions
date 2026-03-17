@@ -102,7 +102,8 @@ export async function aptGetMain(inputs: Inputs): Promise<void> {
             for (let i = 0; i < inputs.aptGetRetries; i++) {
                 try {
                     // Execute the apt-add-repository command
-                    const exitCode = await exec.exec(`${sudoPrefix} -E apt-add-repository ${aptAddRepoArgs.join(' ')}`, [], {
+                    const sudoEnvPrefix = sudoRequired ? `${sudoPrefix} -E` : '';
+                    const exitCode = await exec.exec(`${sudoEnvPrefix} apt-add-repository ${aptAddRepoArgs.join(' ')}`.trim(), [], {
                         ignoreReturnCode: i !== inputs.aptGetRetries - 1
                     });
                     if (exitCode === 0) {
