@@ -33,6 +33,7 @@ import {
     setCompilerContainer,
     findBestUbuntuRelease,
     findBestMacOSRunner,
+    findBestWindowsRunner,
     findNewestMacOSRunner,
     setCompilerB2Toolset,
     runsOnLabels,
@@ -590,10 +591,11 @@ describe('setCompilerContainer', () => {
         expect(entry['runs-on']).toBe('windows-2025');
     });
 
-    test('msvc < 14.42 uses windows-2022', () => {
+    test('msvc 14.29 uses data-driven runner (newest with version)', () => {
         const entry = makeEntry();
-        setCompilerContainer(entry, makeInputs(), 'msvc', semver.parse('14.29.30133')!, '14.29');
-        expect(entry['runs-on']).toBe('windows-2022');
+        setCompilerContainer(entry, makeInputs(), 'msvc', semver.parse('14.29.0')!, '14.29');
+        // 14.29 is available on both windows-2022 and windows-2025; newest wins
+        expect(entry['runs-on']).toBe('windows-2025');
     });
 
     test('apple-clang uses data-driven runner selection', () => {
@@ -738,6 +740,20 @@ describe('setCompilerCMakeGenerator', () => {
         const v = semver.parse('14.29.30133')!;
         setCompilerCMakeGenerator(entry, makeInputs(), 'msvc', v, v, '14.29');
         expect(entry.generator).toBe('Visual Studio 17 2022');
+    });
+
+    test('msvc 14.29 on windows-2025 uses runner VS (compat toolset)', () => {
+        const entry = makeEntry({ 'runs-on': 'windows-2025' });
+        const v = semver.parse('14.29.0')!;
+        setCompilerCMakeGenerator(entry, makeInputs(), 'msvc', v, v, '14.29');
+        expect(entry.generator).toBe('Visual Studio 17 2022');
+    });
+
+    test('msvc 14.50 on windows-2025 overrides to VS 18 2026', () => {
+        const entry = makeEntry({ 'runs-on': 'windows-2025' });
+        const v = semver.parse('14.50.0')!;
+        setCompilerCMakeGenerator(entry, makeInputs(), 'msvc', v, v, '14.50');
+        expect(entry.generator).toBe('Visual Studio 18 2026');
     });
 
     test('msvc with no runs-on uses year-based generator for 2022', () => {
@@ -1047,5 +1063,45 @@ describe('findBestMacOSRunner', () => {
 describe('findNewestMacOSRunner', () => {
     test('returns newest runner from data', () => {
         expect(findNewestMacOSRunner()).toBe('macos-15');
+    });
+});
+
+// Tests for findBestWindowsRunner auto-select logic.
+// Uses real windows-msvc-defaults.json data:
+//   windows-2022: MSVC 14.44 (default), 14.29
+//   windows-2025: MSVC 14.50, 14.44 (default), 14.29
+describe('findBestWindowsRunner', () => {
+    test('MSVC 14.44 selects windows-2025 (default on newest runner)', () => {
+        // 14.44 is_default on both windows-2022 and windows-2025
+        // windows-2025 is newer, so it wins
+        expect(findBestWindowsRunner(44)).toBe('windows-2025');
+    });
+
+    test('MSVC 14.29 selects windows-2025 (newest runner with it)', () => {
+        // 14.29 is available on both runners but not default on either
+        // Newest runner (windows-2025) wins
+        expect(findBestWindowsRunner(29)).toBe('windows-2025');
+    });
+
+    test('MSVC 14.50 selects windows-2025 (only runner with it)', () => {
+        // 14.50 is only on windows-2025
+        expect(findBestWindowsRunner(50)).toBe('windows-2025');
+    });
+
+    test('unknown version falls back to newest runner', () => {
+        // MSVC 14.99 is not in any runner → newest runner = windows-2025
+        expect(findBestWindowsRunner(99)).toBe('windows-2025');
+    });
+
+    test('setCompilerContainer routes msvc 14.44 to windows-2025', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs(), 'msvc', semver.parse('14.44.0')!, '14.44');
+        expect(entry['runs-on']).toBe('windows-2025');
+    });
+
+    test('setCompilerContainer routes msvc 14.29 to windows-2025', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs(), 'msvc', semver.parse('14.29.0')!, '14.29');
+        expect(entry['runs-on']).toBe('windows-2025');
     });
 });

@@ -107,4 +107,6 @@ CLAUDE.md
 /.issues
 /.code
 
+# Local developer tooling (ralph agent loop)
 /local
+/tasks

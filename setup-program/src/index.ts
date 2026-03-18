@@ -93,6 +93,14 @@ export {
     loadMacOSXcodeDefaults
 } from './macos-xcode-defaults';
 
+// Re-export Windows MSVC defaults parser and types for external consumers
+export {
+    type WindowsMsvcDefaults,
+    type RunnerMsvcInfo,
+    type MsvcVersionEntry,
+    loadWindowsMsvcDefaults
+} from './windows-msvc-defaults';
+
 // Re-export runner images data and types for external consumers
 export {
     type RunnerImagesData,

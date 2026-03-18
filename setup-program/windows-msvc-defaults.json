@@ -1,0 +1,19 @@
+{
+  "generated": "2026-03-17T00:00:00.000Z",
+  "source": "actions/runner-images toolsets + VS channel manifests",
+  "runners": {
+    "windows-2022": {
+      "msvc_versions": [
+        {"version": "14.44", "vs_year": "2022", "is_default": true},
+        {"version": "14.29", "vs_year": "2019", "is_default": false}
+      ]
+    },
+    "windows-2025": {
+      "msvc_versions": [
+        {"version": "14.50", "vs_year": "2026", "is_default": false},
+        {"version": "14.44", "vs_year": "2022", "is_default": true},
+        {"version": "14.29", "vs_year": "2019", "is_default": false}
+      ]
+    }
+  }
+}

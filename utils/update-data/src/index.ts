@@ -9,6 +9,7 @@ import { generateUbuntuVersionsJson } from './ubuntu-versions';
 import { generateBoostDeps } from './boost-deps';
 import { updateUbuntuCompilerDefaults } from './ubuntu-compiler-defaults';
 import { updateMacOSXcodeDefaults } from './macos-xcode-defaults';
+import { updateWindowsMsvcDefaults } from './windows-msvc-defaults';
 import { updateRunnerImages } from './runner-images';
 
 // Re-export runner utilities for consumers (e.g. utils/docs)
@@ -48,12 +49,17 @@ async function main(): Promise<void> {
         console.error('Warning: macOS Xcode defaults generation failed');
     }
 
+    const msvcOk = await updateWindowsMsvcDefaults(rootDir);
+    if (!msvcOk) {
+        console.error('Warning: Windows MSVC defaults generation failed');
+    }
+
     const boostOk = await generateBoostDeps(rootDir);
     if (!boostOk) {
         console.error('Warning: Boost deps generation failed');
     }
 
-    if (!runnerImagesOk || !tagsOk || !ubuntuOk || !compilerDefaultsOk || !macosOk || !boostOk) {
+    if (!runnerImagesOk || !tagsOk || !ubuntuOk || !compilerDefaultsOk || !macosOk || !msvcOk || !boostOk) {
         process.exit(1);
     }
 

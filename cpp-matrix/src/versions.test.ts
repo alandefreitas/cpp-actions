@@ -31,7 +31,9 @@ import {
     arraysHaveSameElements,
     getSubrangePolicy,
     getSubrangePolicyStr,
-    SubrangePolicies
+    SubrangePolicies,
+    getWindowsDefaultMsvcVersions,
+    getWindowsAvailableMsvcVersions
 } from './versions';
 
 describe('setup_program.findGCCVersions', () => {
@@ -75,8 +77,13 @@ describe('getVisualCppYear', () => {
         expect(getVisualCppYear('not-a-version')).toBeUndefined();
     });
 
+    it('returns 2026 for >= 14.50', () => {
+        expect(getVisualCppYear('14.50.0')).toBe('2026');
+    });
+
     it('returns 2022 for >= 14.30', () => {
         expect(getVisualCppYear('14.30.0')).toBe('2022');
+        expect(getVisualCppYear('14.44.0')).toBe('2022');
     });
 
     it('returns 2019 for >= 14.20', () => {
@@ -255,7 +262,7 @@ describe('splitRanges', () => {
         expect(splitRanges('9.2 - 11', await setup_program.findGCCVersions())).toStrictEqual(['^9.2', '10', '11']);
         expect(splitRanges('9.2 - 9.4 || 11', await setup_program.findGCCVersions())).toStrictEqual(['9.2 - 9.4', '11']);
         expect(splitRanges('>=8 <9.100', await setup_program.findGCCVersions())).toStrictEqual(['8', '9']);
-        expect(splitRanges('>=14 <14.50', findMSVCVersions())).toStrictEqual(['14']);
+        expect(splitRanges('>=14 <14.50', findMSVCVersions())).toStrictEqual(['14 - 14.44']);
         expect(splitRanges('<=9.2', ['9.1.0', '9.2.0', '9.3.0', '9.4.0', '9.5.0'], SubrangePolicies.ONE_PER_MAJOR)).toStrictEqual(['9 - 9.2']);
         expect(splitRanges('>14.29.4 <14.40', ['14.29.30139', '14.29.30140'])).toStrictEqual(['14']);
         expect(splitRanges('>14.29.30140 <14.40', ['14.29.30139', '14.29.30150'])).toStrictEqual(['^14.29.30150']);
@@ -541,29 +548,28 @@ describe('splitRanges UBUNTU_DEFAULTS_AND_LATEST', () => {
 });
 
 describe('splitRanges ONE_PER_VS_YEAR', () => {
-    test('groups MSVC versions by VS year and picks latest per year', () => {
-        // 14.20 = 2019, 14.29 = 2019, 14.30 = 2022, 14.42 = 2022
-        const msvcVersions = ['14.20.27508', '14.29.30133', '14.29.30140', '14.30.30704', '14.42.34433'];
+    // Uses real windows-msvc-defaults.json data:
+    //   windows-2022: MSVC 14.44 (default), 14.29
+    //   windows-2025: MSVC 14.50, 14.44 (default), 14.29
+    // Defaults: [44], Available: [29, 44, 50]
+    const msvcVersions = findMSVCVersions(); // ['14.29.0', '14.44.0', '14.50.0']
+
+    test('selects default versions plus latest available', () => {
         const result = splitRanges('>=14.20', msvcVersions, SubrangePolicies.ONE_PER_VS_YEAR, 'msvc');
-        // 2019: latest is 14.29.30140 → subrange "14.29"
-        // 2022: latest is 14.42.34433 → subrange "14.42"
-        expect(result).toStrictEqual(['14.29', '14.42']);
+        // Default 14.44 is in range, latest available 14.50 is also in range
+        expect(result).toStrictEqual(['14.44', '14.50']);
     });
 
-    test('single VS year returns single subrange', () => {
-        const msvcVersions = ['14.30.30704', '14.42.34433'];
-        const result = splitRanges('>=14.30', msvcVersions, SubrangePolicies.ONE_PER_VS_YEAR, 'msvc');
-        // Both are 2022 → latest is 14.42
-        expect(result).toStrictEqual(['14.42']);
+    test('latest is not duplicated when it matches a default', () => {
+        const result = splitRanges('14.44', msvcVersions, SubrangePolicies.ONE_PER_VS_YEAR, 'msvc');
+        // Default 14.44 is in range, latest available in range is also 14.44 → no duplicate
+        expect(result).toStrictEqual(['14.44']);
     });
 
-    test('three VS years', () => {
-        const msvcVersions = ['14.1.25017', '14.16.27023', '14.20.27508', '14.29.30133', '14.30.30704', '14.42.34433'];
-        const result = splitRanges('>=14.1', msvcVersions, SubrangePolicies.ONE_PER_VS_YEAR, 'msvc');
-        // 2017: latest 14.16 → "14.16"
-        // 2019: latest 14.29 → "14.29"
-        // 2022: latest 14.42 → "14.42"
-        expect(result).toStrictEqual(['14.16', '14.29', '14.42']);
+    test('excludes defaults outside user range', () => {
+        const result = splitRanges('>=14.50', msvcVersions, SubrangePolicies.ONE_PER_VS_YEAR, 'msvc');
+        // Default 14.44 is NOT in range, only 14.50 matches → latest only
+        expect(result).toStrictEqual(['14.50']);
     });
 
     test('falls back to latest for non-MSVC compiler', () => {
@@ -573,17 +579,42 @@ describe('splitRanges ONE_PER_VS_YEAR', () => {
         expect(result).toStrictEqual(['11']);
     });
 
-    test('excludes versions outside user range', () => {
-        const msvcVersions = ['14.20.27508', '14.29.30133', '14.30.30704', '14.42.34433'];
-        const result = splitRanges('>=14.30', msvcVersions, SubrangePolicies.ONE_PER_VS_YEAR, 'msvc');
-        // Only 2022 versions are in range
-        expect(result).toStrictEqual(['14.42']);
+    test('returns ["*"] when no versions satisfy range', () => {
+        const result = splitRanges('>=14.99', msvcVersions, SubrangePolicies.ONE_PER_VS_YEAR, 'msvc');
+        expect(result).toStrictEqual(['*']);
+    });
+});
+
+describe('getWindowsDefaultMsvcVersions', () => {
+    it('returns default MSVC minors from data file', () => {
+        const defaults = setup_program.loadWindowsMsvcDefaults();
+        const minors = getWindowsDefaultMsvcVersions(defaults);
+        // 14.44 is_default on both windows-2022 and windows-2025
+        expect(minors).toStrictEqual([44]);
+    });
+});
+
+describe('getWindowsAvailableMsvcVersions', () => {
+    it('returns all available MSVC minors from data file', () => {
+        const defaults = setup_program.loadWindowsMsvcDefaults();
+        const minors = getWindowsAvailableMsvcVersions(defaults);
+        // 14.29, 14.44, 14.50 across all runners
+        expect(minors).toStrictEqual([29, 44, 50]);
+    });
+});
+
+describe('findMSVCVersions', () => {
+    it('returns unique MSVC versions with .0 patch sorted ascending by semver', () => {
+        const versions = findMSVCVersions();
+        // windows-msvc-defaults.json has: 14.29 (2019), 14.44 (2022), 14.50 (2026)
+        expect(versions).toStrictEqual(['14.29.0', '14.44.0', '14.50.0']);
     });
 
-    test('returns ["*"] when no versions satisfy range', () => {
-        const msvcVersions = ['14.20.27508'];
-        const result = splitRanges('>=14.30', msvcVersions, SubrangePolicies.ONE_PER_VS_YEAR, 'msvc');
-        expect(result).toStrictEqual(['*']);
+    it('deduplicates versions across runners', () => {
+        const versions = findMSVCVersions();
+        // 14.29 and 14.44 appear on both windows-2022 and windows-2025 but should only appear once
+        const duplicates = versions.filter((v, i) => versions.indexOf(v) !== i);
+        expect(duplicates).toHaveLength(0);
     });
 });
 

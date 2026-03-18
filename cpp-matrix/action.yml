@@ -416,7 +416,7 @@ inputs:
 
       The `ubuntu-defaults-and-latest` policy combines the `one-per-ubuntu-default` results with the single latest available version of the compiler. If the latest version is already included in the Ubuntu defaults, no duplicate entry is created. This is the default policy for GCC and Clang when no explicit `subrange-policy` is set.
 
-      The `one-per-vs-year` policy groups MSVC versions by their Visual Studio release year (e.g., 2019, 2022) and selects the latest patch version within each year as the representative. This is useful for testing one MSVC toolset per Visual Studio release instead of every known MSVC version. This is the default policy for MSVC. Only applicable to MSVC; for other compilers it falls back to `latest`.
+      The `one-per-vs-year` policy selects one MSVC toolset version per Visual Studio release year (e.g., one for VS 2019, one for VS 2022, one for VS 2026), plus the latest available MSVC version. This is the default policy for MSVC. Only applicable to MSVC; for other compilers it falls back to `latest`.
 
       The `macos-defaults-and-latest` policy selects the Apple Clang versions that are the runner default on each macOS runner image, plus the latest available Apple Clang version. For example, if macos-14 defaults to Apple Clang 15 and macos-15 defaults to Apple Clang 16, and Apple Clang 17 is the latest available, entries are generated for 15, 16, and 17. This is the default policy for Apple Clang. Only applicable to Apple Clang; for other compilers it falls back to `latest`.
 

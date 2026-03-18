@@ -10,7 +10,7 @@ import { type CompilerSuggestion, type MatrixEntry } from './types';
 import { type Inputs } from './schema';
 import { getVisualCppYear } from './versions';
 import { humanizeCompilerName } from './compiler-support';
-import { loadUbuntuCompilerDefaults, loadMacOSXcodeDefaults } from 'setup-program';
+import { loadUbuntuCompilerDefaults, loadMacOSXcodeDefaults, loadWindowsMsvcDefaults } from 'setup-program';
 
 /**
  * Sets the semver components (major, minor, patch) on a matrix entry.
@@ -391,6 +391,67 @@ export function findBestMacOSRunner(majorVersion: number): string {
 }
 
 /**
+ * Finds the best Windows runner for a given MSVC minor version using windows-msvc-defaults.json.
+ *
+ * Selection priority: (1) runner where the matching version has `is_default: true`,
+ * (2) newest runner that has the version available, (3) newest runner overall (fallback).
+ *
+ * @param msvcMinor - The MSVC minor version number (e.g., 44 for MSVC 14.44)
+ * @returns The best Windows runner string (e.g., "windows-2025") or "windows-2022" if data is unavailable
+ */
+export function findBestWindowsRunner(msvcMinor: number): string {
+    try {
+        const defaults = loadWindowsMsvcDefaults();
+        const runners = Object.keys(defaults.runners);
+
+        if (runners.length === 0) {
+            return 'windows-2022';
+        }
+
+        // Parse runner year for sorting (e.g., "windows-2025" → 2025)
+        const runnerYear = (r: string): number => {
+            const m = r.match(/windows-(\d+)/);
+            return m ? parseInt(m[1], 10) : 0;
+        };
+
+        let bestDefault = '';
+        let bestAvailable = '';
+        let newestRunner = '';
+
+        for (const runner of runners) {
+            const year = runnerYear(runner);
+
+            // Track newest runner overall
+            if (!newestRunner || year > runnerYear(newestRunner)) {
+                newestRunner = runner;
+            }
+
+            const info = defaults.runners[runner];
+            for (const entry of info.msvc_versions) {
+                const entryMinor = parseInt(entry.version.split('.')[1], 10);
+                if (entryMinor !== msvcMinor) {
+                    continue;
+                }
+
+                // Track runner where matching version is the default
+                if (entry.is_default && (!bestDefault || year > runnerYear(bestDefault))) {
+                    bestDefault = runner;
+                }
+
+                // Track newest runner that has a matching version
+                if (!bestAvailable || year > runnerYear(bestAvailable)) {
+                    bestAvailable = runner;
+                }
+            }
+        }
+
+        return bestDefault || bestAvailable || newestRunner;
+    } catch {
+        return 'windows-2022';
+    }
+}
+
+/**
  * Finds the newest macOS runner from macos-xcode-defaults.json data.
  *
  * @returns The newest macOS runner string (e.g., "macos-15") or "macos-14" if data is unavailable
@@ -482,13 +543,7 @@ export function setCompilerContainer(entry: MatrixEntry, inputs: Inputs, compile
     if (compilerName === 'gcc' || compilerName === 'clang') {
         applyUbuntuAutoSelect(entry, inputs, compilerName, minSubrangeVersion);
     } else if (compilerName === 'msvc') {
-        if (semver.satisfies(minSubrangeVersion, '>=14.42')) {
-            entry['runs-on'] = 'windows-2025';
-        } else {
-            // v142 (14.29) toolset is available on windows-2022 via
-            // Microsoft.VisualStudio.ComponentGroup.VC.Tools.142.x86.x64
-            entry['runs-on'] = 'windows-2022';
-        }
+        entry['runs-on'] = findBestWindowsRunner(minSubrangeVersion.minor);
     } else if (compilerName === 'apple-clang') {
         entry['runs-on'] = findBestMacOSRunner(minSubrangeVersion.major);
     } else if (['mingw', 'clang-cl'].includes(compilerName)) {
@@ -588,32 +643,35 @@ export function inferVisualStudioGeneratorFromRunsOn(entry: MatrixEntry): string
 export function setCompilerCMakeGenerator(entry: MatrixEntry, _inputs: Inputs, compilerName: string, minSubrangeVersion: semver.SemVer, maxSubrangeVersion: semver.SemVer, _subrange: string): void {
     // Recommended cmake generator
     if (compilerName === 'msvc') {
+        // Start with runner-based inference (matches the runner's primary VS)
         const generatorFromRunsOn = inferVisualStudioGeneratorFromRunsOn(entry);
         if (generatorFromRunsOn) {
             entry['generator'] = generatorFromRunsOn;
-            return;
         }
 
+        // Override with version-based generator when the MSVC version's VS
+        // year is newer than the runner's primary VS. This handles runners
+        // with multiple VS editions (e.g., windows-2025 has VS 2022 as
+        // primary but also VS 2026). For older compat toolsets (e.g., v142
+        // on windows-2025), the runner's primary VS generator is correct
+        // since the compat toolset runs under the newer VS installation.
         const year = getVisualCppYear(minSubrangeVersion);
-        if (minSubrangeVersion === maxSubrangeVersion || year === getVisualCppYear(maxSubrangeVersion)) {
-            if (year === '2022') {
-                entry['generator'] = `Visual Studio 17 ${year}`;
-            } else if (year === '2019') {
-                entry['generator'] = `Visual Studio 16 ${year}`;
-            } else if (year === '2017') {
-                entry['generator'] = `Visual Studio 15 ${year}`;
-            } else if (year === '2015') {
-                entry['generator'] = `Visual Studio 14 ${year}`;
-            } else if (year === '2013') {
-                entry['generator'] = `Visual Studio 12 ${year}`;
-            } else if (year === '2012') {
-                entry['generator'] = `Visual Studio 11 ${year}`;
-            } else if (year === '2010') {
-                entry['generator'] = `Visual Studio 10 ${year}`;
-            } else if (year === '2008') {
-                entry['generator'] = `Visual Studio 9 ${year}`;
-            } else if (year === '2005') {
-                entry['generator'] = `Visual Studio 8 ${year}`;
+        if (year && (minSubrangeVersion === maxSubrangeVersion || year === getVisualCppYear(maxSubrangeVersion))) {
+            const yearToGenerator: Record<string, string> = {
+                '2026': 'Visual Studio 18 2026',
+                '2022': 'Visual Studio 17 2022',
+                '2019': 'Visual Studio 16 2019',
+                '2017': 'Visual Studio 15 2017',
+                '2015': 'Visual Studio 14 2015',
+                '2013': 'Visual Studio 12 2013',
+                '2012': 'Visual Studio 11 2012',
+                '2010': 'Visual Studio 10 2010',
+                '2008': 'Visual Studio 9 2008',
+                '2005': 'Visual Studio 8 2005'
+            };
+            const versionGenerator = yearToGenerator[year];
+            if (versionGenerator && parseInt(year, 10) > parseInt(generatorFromRunsOn?.match(/\d{4}/)?.[0] || '0', 10)) {
+                entry['generator'] = versionGenerator;
             }
         }
     } else if (compilerName === 'mingw') {

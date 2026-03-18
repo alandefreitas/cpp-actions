@@ -32,38 +32,34 @@ export const SubrangePolicies = {
 export type SubrangePolicy = typeof SubrangePolicies[keyof typeof SubrangePolicies];
 
 import * as setup_program from 'setup-program';
-import { type UbuntuCompilerDefaults, type MacOSXcodeDefaults } from 'setup-program';
+import { type UbuntuCompilerDefaults, type MacOSXcodeDefaults, type WindowsMsvcDefaults } from 'setup-program';
 
 const defaultCacheDir = process.env.CPP_MATRIX_CACHE_DIR || path.join(__dirname, '..', 'var', 'cache', 'cpp-matrix');
 setup_program.setVersionsCacheDir(defaultCacheDir);
 
 /**
- * Returns the list of available MSVC toolset versions.
+ * Discovers unique MSVC toolset versions from the windows-msvc-defaults data file.
  *
- * Since MSVC is not open source, this returns a hardcoded list of versions
- * known to be available on GitHub Actions runners.
+ * Iterates all runners in the data file, collects every MSVC `version`
+ * string, deduplicates them, appends a `.0` patch component, and returns
+ * the result sorted ascending by semver.
  *
- * @returns Array of available MSVC toolset version strings
+ * @returns Array of unique MSVC version strings with `.0` patch (e.g., `['14.29.0', '14.44.0']`),
+ *   or empty array if data is unavailable
  */
 export function findMSVCVersions(): string[] {
-    // MSVC is not open source, so we assume the versions available from github runner images are available
-    // See:
-    // https://en.wikipedia.org/wiki/Microsoft_Visual_C%2B%2B
-    // It would be nice is there were a way to programmatically get the
-    // available images and versions during the build process.
-    // We currently need to access:
-    // https://github.com/actions/runner-images?tab=readme-ov-file#available-images
-    // then check the versions available for each image.
-
-    // Windows Server 2022 image
-    // https://github.com/actions/runner-images/blob/main/images/windows/Windows2022-Readme.md#microsoft-visual-c
-    const windows2022 = ['14.29.30133', '14.44.35207'];
-    // Windows Server 2025 image
-    // https://github.com/actions/runner-images/blob/main/images/windows/Windows2025-Readme.md#microsoft-visual-c
-    const windows2025 = ['14.29.30133', '14.44.35207'];
-
-    // Merge the arrays and remove duplicates
-    return [...new Set([...windows2022, ...windows2025])];
+    try {
+        const defaults: WindowsMsvcDefaults = setup_program.loadWindowsMsvcDefaults();
+        const versionSet = new Set<string>();
+        for (const runner of Object.values(defaults.runners)) {
+            for (const entry of runner.msvc_versions) {
+                versionSet.add(entry.version + '.0');
+            }
+        }
+        return [...versionSet].sort((a, b) => semver.compare(a, b));
+    } catch {
+        return [];
+    }
 }
 
 /**
@@ -117,7 +113,9 @@ export async function findCompilerVersions(compiler: string): Promise<string[]> 
 export function getVisualCppYear(msvcVersion: string | semver.SemVer): string | undefined {
     const v = semver.parse(msvcVersion);
     if (!v) return undefined;
-    if (semver.gte(v, '14.30.0')) {
+    if (semver.gte(v, '14.50.0')) {
+        return '2026';
+    } else if (semver.gte(v, '14.30.0')) {
         return '2022';
     } else if (semver.gte(v, '14.20.0')) {
         return '2019';
@@ -333,6 +331,51 @@ function getMacOSAvailableAppleClangVersions(defaults: MacOSXcodeDefaults): numb
         }
     }
     return [...availableMajors].sort((a, b) => a - b);
+}
+
+/**
+ * Collects the MSVC minor versions that are the runner default
+ * for at least one Windows runner image.
+ *
+ * A version is considered a "default" if its `is_default` flag is true
+ * in the msvc_versions entries.
+ *
+ * @param defaults - The Windows MSVC defaults data
+ * @returns Array of unique default MSVC minor version numbers, sorted ascending
+ */
+export function getWindowsDefaultMsvcVersions(defaults: WindowsMsvcDefaults): number[] {
+    const defaultMinors = new Set<number>();
+    for (const runner of Object.values(defaults.runners)) {
+        for (const entry of runner.msvc_versions) {
+            if (entry.is_default) {
+                const parsed = semver.parse(entry.version + '.0');
+                if (parsed) {
+                    defaultMinors.add(parsed.minor);
+                }
+            }
+        }
+    }
+    return [...defaultMinors].sort((a, b) => a - b);
+}
+
+/**
+ * Collects all unique MSVC minor versions available across
+ * all Windows runner images.
+ *
+ * @param defaults - The Windows MSVC defaults data
+ * @returns Array of unique available MSVC minor version numbers, sorted ascending
+ */
+export function getWindowsAvailableMsvcVersions(defaults: WindowsMsvcDefaults): number[] {
+    const availableMinors = new Set<number>();
+    for (const runner of Object.values(defaults.runners)) {
+        for (const entry of runner.msvc_versions) {
+            const parsed = semver.parse(entry.version + '.0');
+            if (parsed) {
+                availableMinors.add(parsed.minor);
+            }
+        }
+    }
+    return [...availableMinors].sort((a, b) => a - b);
 }
 
 /**
@@ -607,34 +650,41 @@ export function splitRanges(range: string, versions: string[], policy: SubrangeP
             return splitRanges(range, versions, SubrangePolicies.LATEST, compilerName);
         }
 
-        // Group versions in range by Visual Studio year
-        const yearGroups = new Map<string, semver.SemVer[]>();
-        for (const v of rangeVersions) {
-            const year = getVisualCppYear(v);
-            if (!year) {
-                continue;
-            }
-            if (!yearGroups.has(year)) {
-                yearGroups.set(year, []);
-            }
-            yearGroups.get(year)!.push(v);
-        }
+        try {
+            const defaults = setup_program.loadWindowsMsvcDefaults();
+            const defaultMinors = getWindowsDefaultMsvcVersions(defaults);
+            fnlog(`Windows default MSVC minors: ${defaultMinors}`);
 
-        // Sort years and pick the latest version within each year group
-        const sortedYears = [...yearGroups.keys()].sort();
-        for (const year of sortedYears) {
-            const group = yearGroups.get(year)!;
-            // Sort by semver descending and pick the latest
-            group.sort((a, b) => semver.compare(b, a));
-            const latest = group[0];
-            // Use the minor version as the subrange (e.g., "14.44") since MSVC versions
-            // share the same major (14) and differ by minor
-            subranges.push(`${latest.major}.${latest.minor}`);
+            // Collect the default MSVC versions that match the user's range
+            const selectedMinors = new Set<number>();
+            for (const minor of defaultMinors) {
+                const matchingVersions = rangeVersions.filter(v => v.minor === minor);
+                if (matchingVersions.length > 0) {
+                    selectedMinors.add(minor);
+                    subranges.push(`${matchingVersions[0].major}.${minor}`);
+                }
+            }
+
+            // Add the latest available MSVC version
+            const availableMinors = getWindowsAvailableMsvcVersions(defaults);
+            const latestAvailable = availableMinors.filter(m => rangeVersions.some(v => v.minor === m));
+            if (latestAvailable.length > 0) {
+                const latestMinor = latestAvailable[latestAvailable.length - 1];
+                if (!selectedMinors.has(latestMinor)) {
+                    const latestVersion = rangeVersions.find(v => v.minor === latestMinor);
+                    if (latestVersion) {
+                        subranges.push(`${latestVersion.major}.${latestMinor}`);
+                    }
+                }
+            }
+        } catch {
+            fnlog('Failed to load MSVC defaults, falling back to latest');
+            return splitRanges(range, versions, SubrangePolicies.LATEST, compilerName);
         }
 
         // If no versions matched, fall back to latest
         if (subranges.length === 0) {
-            fnlog('No VS year groups matched the range, falling back to latest');
+            fnlog('No MSVC defaults or latest matched the range, falling back to latest');
             return splitRanges(range, versions, SubrangePolicies.LATEST, compilerName);
         }
     }
