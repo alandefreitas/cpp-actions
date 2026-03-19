@@ -87,21 +87,36 @@ class SetupClangRunner {
     /**
      * Runs the full Clang setup pipeline and returns output values.
      *
+     * Dispatches to platform-specific pipelines:
+     * - Linux: user paths → system paths → APT → download → companions
+     * - macOS: user paths → system paths → Homebrew → companions
+     * - Windows: user paths → system paths → Chocolatey
+     * - Other platforms: throws ExpectedError
+     *
      * @returns Object containing paths to clang/clang++, version info, and environment changes
      */
     async run(): Promise<MainOutputs> {
         await this.discoverVersions();
         await this.searchUserPaths();
         await this.searchSystemPaths();
-        await this.searchApt();
-        await this.downloadFromUrl();
-        await this.installCompanions();
+        if (process.platform === 'linux') {
+            await this.searchApt();
+            await this.downloadFromUrl();
+            await this.installCompanions();
+        } else if (process.platform === 'darwin') {
+            await this.searchBrew();
+            await this.installSymbolizer();
+        } else if (process.platform === 'win32') {
+            await this.searchChoco();
+        }
         return this.buildOutputs();
     }
 
     /**
      * Discovers all available Clang versions and configures platform-specific
      * environment variables.
+     *
+     * @throws ExpectedError if the current platform is not linux, darwin, or win32
      */
     private async discoverVersions(): Promise<void> {
         core.startGroup('🔎 Find clang versions');
@@ -112,8 +127,13 @@ class SetupClangRunner {
         if (process.env.AGENT_TOOLSDIRECTORY?.trim()) {
             process.env['RUNNER_TOOL_CACHE'] = process.env['AGENT_TOOLSDIRECTORY'];
         }
-        if (process.platform !== 'linux') {
-            throw new ExpectedError('This action is only supported on Linux', 'Unsupported Platform');
+
+        if (process.platform !== 'linux' && process.platform !== 'darwin' && process.platform !== 'win32') {
+            // Untested: requires an unsupported platform like freebsd
+            throw new ExpectedError(
+                `This action is not supported on ${process.platform}`,
+                'Unsupported Platform'
+            );
         }
 
         this.allVersions = await setup_program.findClangVersions();
@@ -155,6 +175,144 @@ class SetupClangRunner {
         this.outputVersion = result.outputVersion;
         this.outputPath = result.outputPath;
         core.endGroup();
+    }
+
+    /**
+     * Searches for Clang via Homebrew on macOS.
+     *
+     * Homebrew LLVM is keg-only: binaries are not symlinked to PATH.
+     * Uses `getBrewPrefix('llvm@{major}')` to locate the install, then
+     * checks `{prefix}/bin/clang`. If not found, installs via Homebrew.
+     * Skipped if a binary was already found in user-provided or system paths.
+     */
+    private async searchBrew(): Promise<void> {
+        if (this.outputPath !== null) {
+            return;
+        }
+        core.startGroup('🍺 Find Clang with Homebrew');
+        const parsed = this.inputs.version !== '*'
+            ? semver.coerce(this.inputs.version, { loose: true })
+            : null;
+        const major = parsed?.major ?? null;
+
+        if (major === null) {
+            core.info('No specific Clang version requested — cannot determine Homebrew formula');
+            core.endGroup();
+            return;
+        }
+
+        const formula = `llvm@${major}`;
+        const binaryName = 'clang';
+        core.info(`Searching for LLVM ${major} via Homebrew formula ${formula}`);
+
+        // Try to find the already-installed formula
+        let result = await setup_program.findProgramWithBrew(formula, binaryName);
+        if (result === null) {
+            // Not found — attempt installation
+            core.info(`${formula} not found, installing via Homebrew`);
+            const prefix = await setup_program.installProgramWithBrew(formula);
+            if (prefix !== null) {
+                result = await setup_program.findProgramWithBrew(formula, binaryName);
+            }
+        }
+
+        if (result !== null) {
+            this.outputPath = result.path;
+            this.outputVersion = result.version;
+            core.info(`Found Clang ${result.version} at ${result.path}`);
+        }
+
+        core.endGroup();
+    }
+
+    /**
+     * Searches for Clang (clang-cl) via Chocolatey on Windows.
+     *
+     * Searches `C:\Program Files\LLVM\bin` for `clang-cl.exe`. If not found
+     * or the wrong version, installs LLVM via Chocolatey with the exact
+     * installable version from the data file.
+     * Skipped if a binary was already found in user-provided or system paths.
+     */
+    private async searchChoco(): Promise<void> {
+        if (this.outputPath !== null) {
+            return;
+        }
+        core.startGroup('🍫 Find Clang (LLVM) with Chocolatey');
+        const parsed = this.inputs.version !== '*'
+            ? semver.coerce(this.inputs.version, { loose: true })
+            : null;
+        const major = parsed?.major ?? null;
+
+        const searchPaths = [
+            'C:\\Program Files\\LLVM\\bin'
+        ];
+
+        // Search known install paths
+        const result = await setup_program.findProgramWithChoco('llvm', 'clang-cl.exe', searchPaths);
+        if (result !== null) {
+            // Check if version matches the requested major
+            const foundMajor = semver.coerce(result.version, { loose: true })?.major ?? null;
+            if (major === null || foundMajor === major) {
+                this.outputPath = result.path;
+                this.outputVersion = result.version;
+                core.info(`Found LLVM clang-cl ${result.version} at ${result.path}`);
+                core.endGroup();
+                return;
+            }
+            core.info(`Found LLVM clang-cl ${result.version} but need major ${major}`);
+        }
+
+        // Not found or wrong version — attempt Chocolatey install
+        if (major !== null) {
+            core.info(`Installing LLVM ${major} via Chocolatey`);
+
+            // Find the exact installable version matching the requested major
+            const chocoVersion = this.findInstallableLlvmVersion(major);
+            const installDir = 'C:\\Program Files\\LLVM\\bin';
+
+            const installResult = await setup_program.installProgramWithChoco('llvm', chocoVersion ?? undefined, installDir);
+            if (installResult !== null) {
+                const afterInstall = await setup_program.findProgramWithChoco('llvm', 'clang-cl.exe', searchPaths);
+                if (afterInstall !== null) {
+                    this.outputPath = afterInstall.path;
+                    this.outputVersion = afterInstall.version;
+                    core.info(`Installed LLVM clang-cl ${afterInstall.version} at ${afterInstall.path}`);
+                }
+            }
+        } else {
+            core.info('No specific Clang version requested — cannot determine Chocolatey version');
+        }
+
+        core.endGroup();
+    }
+
+    /**
+     * Finds the exact installable LLVM version matching a requested major version.
+     *
+     * Searches the `installable_llvm` list from the Windows data file for a version
+     * whose major matches the requested major. Returns the highest matching version.
+     *
+     * @param major - The requested LLVM major version
+     * @returns The highest matching installable version string, or null if none found
+     */
+    private findInstallableLlvmVersion(major: number): string | null {
+        try {
+            const data = setup_program.loadWindowsMsvcDefaults();
+            const installable = data.installable_llvm ?? [];
+            let best: string | null = null;
+            for (const v of installable) {
+                const coerced = semver.coerce(v, { loose: true });
+                if (coerced && coerced.major === major) {
+                    if (best === null || semver.gt(coerced, best)) {
+                        best = coerced.format();
+                    }
+                }
+            }
+            return best;
+        } catch {
+            // Untested: requires missing or corrupt data file
+            return null;
+        }
     }
 
     /**
@@ -291,8 +449,36 @@ class SetupClangRunner {
         }
     }
 
-    /** Path to llvm-symbolizer, set by installCompanions phase */
+    /** Path to llvm-symbolizer, set by installCompanions or installSymbolizer phase */
     private symbolizerPath: string | null = null;
+
+    /**
+     * Discovers llvm-symbolizer on non-Linux platforms and exports sanitizer
+     * environment variables.
+     *
+     * On macOS, Homebrew LLVM includes llvm-symbolizer in the same prefix.
+     * Uses the resolved Clang major version for version-specific path lookup.
+     */
+    private async installSymbolizer(): Promise<void> {
+        if (!this.outputVersion || !this.inputs.updateEnvironment) {
+            return;
+        }
+
+        core.startGroup('🔧 Find llvm-symbolizer');
+
+        const parsed = this.outputVersion ? semver.parse(this.outputVersion, { loose: true }) : null;
+        const major = parsed?.major ?? 0;
+        this.symbolizerPath = await setup_program.findLlvmSymbolizer(major);
+
+        if (this.symbolizerPath) {
+            core.info(`llvm-symbolizer found at ${this.symbolizerPath}`);
+            setup_program.exportSymbolizerEnvVars(this.symbolizerPath);
+        } else {
+            core.info('llvm-symbolizer not found; sanitizer output may lack symbolization');
+        }
+
+        core.endGroup();
+    }
 
     /**
      * Builds final output values from the resolved compiler path and version.

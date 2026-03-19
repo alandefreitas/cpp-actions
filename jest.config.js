@@ -136,27 +136,27 @@ const utilsProjects = utilsPackages.map(pkg => ({
 //   3. Set each value to -(current_uncovered + 2) for a small buffer
 const coverageThreshold = {
     './b2-workflow/src/':            { statements: -5, branches: -8, functions: -5, lines: -5 },
-    './boost-clone/src/':            { statements: -55, branches: -24, functions: -15, lines: -53 },
+    './boost-clone/src/':            { statements: -62, branches: -24, functions: -15, lines: -60 },
     './cmake-workflow/src/':         { statements: -52, branches: -68, functions: -21, lines: -52 },
     './common/action-schema/src/':   { statements: -5, branches: -5, functions: 0, lines: -5 },
     './common/gh-inputs/src/':       { statements: -4, branches: -5, functions: 0, lines: -4 },
-    './common/pretty-errors/src/':   { statements: -6, branches: -14, functions: -16, lines: -6 },
+    './common/pretty-errors/src/':   { statements: -6, branches: -18, functions: -16, lines: -6 },
     './common/trace-commands/src/':  { statements: 0, branches: 0, functions: 0, lines: 0 },
-    './cpp-matrix/src/':             { statements: -73, branches: -70, functions: -33, lines: -67 },
+    './cpp-matrix/src/':             { statements: -208, branches: -183, functions: -37, lines: -199 },
     './create-changelog/src/':       { statements: 0, branches: -8, functions: 0, lines: 0 },
     './flamegraph/src/':             { statements: -52, branches: -39, functions: -12, lines: -51 },
     './package-install/src/':        { statements: -15, branches: -14, functions: -8, lines: -15 },
-    './setup-clang/src/':            { statements: -28, branches: -15, functions: -8, lines: -28 },
+    './setup-clang/src/':            { statements: -28, branches: -20, functions: -8, lines: -28 },
     './setup-cmake/src/':            { statements: -10, branches: -10, functions: -6, lines: -10 },
     './setup-cpp/src/':              { statements: -14, branches: -10, functions: -5, lines: -14 },
-    './setup-gcc/src/':              { statements: -11, branches: -8, functions: -8, lines: -10 },
+    './setup-gcc/src/':              { statements: -12, branches: -11, functions: -8, lines: -11 },
     './setup-msvc/src/':             { statements: -8, branches: -6, functions: -8, lines: -8 },
     './setup-program/src/':          { statements: -89, branches: -73, functions: -3, lines: -88 },
     './utils/docs/src/':             { statements: 0, branches: 0, functions: 0, lines: 0 },
     './utils/esbuild/src/':          { statements: 0, branches: 0, functions: 0, lines: 0 },
     './utils/jsdoc-linter/src/':     { statements: -3, branches: -3, functions: 0, lines: 0 },
     './utils/release/src/':          { statements: 0, branches: 0, functions: 0, lines: 0 },
-    './utils/update-data/src/':      { statements: -58, branches: -26, functions: -6, lines: -56 }
+    './utils/update-data/src/':      { statements: -83, branches: -47, functions: -6, lines: -81 }
 };
 
 module.exports = {

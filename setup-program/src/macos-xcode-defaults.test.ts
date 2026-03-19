@@ -47,4 +47,38 @@ describe('loadMacOSXcodeDefaults', () => {
             expect(defaults[0].xcode).toContain(runner.default_xcode);
         }
     });
+
+    it('has gcc_versions and llvm_version per runner', () => {
+        const data = loadMacOSXcodeDefaults();
+        for (const runner of Object.values(data.runners)) {
+            expect(Array.isArray(runner.gcc_versions)).toBe(true);
+            expect(runner.gcc_versions!.length).toBeGreaterThan(0);
+            for (const v of runner.gcc_versions!) {
+                expect(typeof v).toBe('string');
+            }
+            expect(typeof runner.llvm_version).toBe('string');
+        }
+    });
+
+    it('has installable_gcc as an array of {major, version} entries', () => {
+        const data = loadMacOSXcodeDefaults();
+        expect(Array.isArray(data.installable_gcc)).toBe(true);
+        expect(data.installable_gcc!.length).toBeGreaterThan(0);
+        for (const entry of data.installable_gcc!) {
+            expect(typeof entry.major).toBe('number');
+            expect(typeof entry.version).toBe('string');
+            expect(entry.version).toMatch(/^\d+\.\d+\.\d+$/);
+        }
+    });
+
+    it('has installable_llvm as an array of {major, version} entries', () => {
+        const data = loadMacOSXcodeDefaults();
+        expect(Array.isArray(data.installable_llvm)).toBe(true);
+        expect(data.installable_llvm!.length).toBeGreaterThan(0);
+        for (const entry of data.installable_llvm!) {
+            expect(typeof entry.major).toBe('number');
+            expect(typeof entry.version).toBe('string');
+            expect(entry.version).toMatch(/^\d+\.\d+\.\d+$/);
+        }
+    });
 });

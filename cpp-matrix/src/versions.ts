@@ -86,6 +86,130 @@ export function findAppleClangVersions(): string[] {
 }
 
 /**
+ * Discovers unique MinGW GCC versions from the windows-msvc-defaults data file.
+ *
+ * Collects pre-installed MinGW GCC major versions from each runner (appending
+ * `.0.0` to form valid semver) and merges with the Chocolatey-installable
+ * version list. Deduplicates and sorts ascending by semver.
+ *
+ * @returns Array of unique MinGW GCC version strings sorted ascending, or empty array if data is unavailable
+ */
+export function findMingwVersions(): string[] {
+    try {
+        const defaults: WindowsMsvcDefaults = setup_program.loadWindowsMsvcDefaults();
+        const versionSet = new Set<string>();
+        for (const runner of Object.values(defaults.runners)) {
+            if (runner.mingw_version) {
+                versionSet.add(`${runner.mingw_version}.0.0`);
+            }
+        }
+        for (const v of defaults.installable_mingw || []) {
+            const parsed = semver.parse(v) || semver.coerce(v);
+            if (parsed) {
+                versionSet.add(parsed.format());
+            }
+        }
+        return [...versionSet].sort((a, b) => semver.compare(a, b));
+    } catch {
+        // Untested: requires data file to be missing or corrupt
+        return [];
+    }
+}
+
+/**
+ * Discovers unique LLVM versions for clang-cl from the windows-msvc-defaults data file.
+ *
+ * Collects pre-installed LLVM major versions from each runner (appending
+ * `.0.0` to form valid semver) and merges with the Chocolatey-installable
+ * version list. Deduplicates and sorts ascending by semver.
+ *
+ * @returns Array of unique LLVM version strings sorted ascending, or empty array if data is unavailable
+ */
+export function findClangClVersions(): string[] {
+    try {
+        const defaults: WindowsMsvcDefaults = setup_program.loadWindowsMsvcDefaults();
+        const versionSet = new Set<string>();
+        for (const runner of Object.values(defaults.runners)) {
+            if (runner.llvm_version) {
+                versionSet.add(`${runner.llvm_version}.0.0`);
+            }
+        }
+        for (const v of defaults.installable_llvm || []) {
+            const parsed = semver.parse(v) || semver.coerce(v);
+            if (parsed) {
+                versionSet.add(parsed.format());
+            }
+        }
+        return [...versionSet].sort((a, b) => semver.compare(a, b));
+    } catch {
+        // Untested: requires data file to be missing or corrupt
+        return [];
+    }
+}
+
+/**
+ * Discovers unique macOS GCC versions from the macos-xcode-defaults data file.
+ *
+ * Collects pre-installed GCC major versions from each runner (appending
+ * `.0.0` to form valid semver) and merges with the Homebrew-installable
+ * version list. Deduplicates and sorts ascending by semver.
+ *
+ * @returns Array of unique macOS GCC version strings sorted ascending, or empty array if data is unavailable
+ */
+export function findMacOSGccVersions(): string[] {
+    try {
+        const defaults: MacOSXcodeDefaults = setup_program.loadMacOSXcodeDefaults();
+        const versionSet = new Set<string>();
+        for (const runner of Object.values(defaults.runners)) {
+            for (const major of runner.gcc_versions || []) {
+                versionSet.add(`${major}.0.0`);
+            }
+        }
+        for (const entry of defaults.installable_gcc || []) {
+            const parsed = semver.parse(entry.version) || semver.coerce(entry.version);
+            if (parsed) {
+                versionSet.add(parsed.format());
+            }
+        }
+        return [...versionSet].sort((a, b) => semver.compare(a, b));
+    } catch {
+        // Untested: requires data file to be missing or corrupt
+        return [];
+    }
+}
+
+/**
+ * Discovers unique macOS LLVM/Clang versions from the macos-xcode-defaults data file.
+ *
+ * Collects pre-installed LLVM major versions from each runner (appending
+ * `.0.0` to form valid semver) and merges with the Homebrew-installable
+ * version list. Deduplicates and sorts ascending by semver.
+ *
+ * @returns Array of unique macOS LLVM version strings sorted ascending, or empty array if data is unavailable
+ */
+export function findMacOSClangVersions(): string[] {
+    try {
+        const defaults: MacOSXcodeDefaults = setup_program.loadMacOSXcodeDefaults();
+        const versionSet = new Set<string>();
+        for (const runner of Object.values(defaults.runners)) {
+            if (runner.llvm_version) {
+                versionSet.add(`${runner.llvm_version}.0.0`);
+            }
+        }
+        for (const entry of defaults.installable_llvm || []) {
+            const parsed = semver.parse(entry.version) || semver.coerce(entry.version);
+            if (parsed) {
+                versionSet.add(parsed.format());
+            }
+        }
+        return [...versionSet].sort((a, b) => semver.compare(a, b));
+    } catch {
+        // Untested: requires data file to be missing or corrupt
+        return [];
+    }
+}
+
+/**
  * Finds available versions for a given compiler.
  *
  * @param compiler - Compiler name
@@ -100,6 +224,14 @@ export async function findCompilerVersions(compiler: string): Promise<string[]> 
         return findMSVCVersions();
     } else if (compiler === 'apple-clang') {
         return findAppleClangVersions();
+    } else if (compiler === 'mingw') {
+        return findMingwVersions();
+    } else if (compiler === 'clang-cl') {
+        return findClangClVersions();
+    } else if (compiler === 'macos-gcc') {
+        return findMacOSGccVersions();
+    } else if (compiler === 'macos-clang') {
+        return findMacOSClangVersions();
     }
     return [];
 }

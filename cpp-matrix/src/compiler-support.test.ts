@@ -33,6 +33,30 @@ describe('compilerSupportsStd', () => {
         expect(compilerSupportsStd('unknown-compiler', '10.0.0', 2020)).toBe(false);
     });
 
+    test('mingw delegates to gcc thresholds', () => {
+        expect(compilerSupportsStd('mingw', '11.1.0', 2023)).toBe(true);
+        expect(compilerSupportsStd('mingw', '4.0.0', 2023)).toBe(false);
+        expect(compilerSupportsStd('mingw', '5.1.0', 2017)).toBe(true);
+    });
+
+    test('macos-gcc delegates to gcc thresholds', () => {
+        expect(compilerSupportsStd('macos-gcc', '11.1.0', 2023)).toBe(true);
+        expect(compilerSupportsStd('macos-gcc', '4.0.0', 2023)).toBe(false);
+        expect(compilerSupportsStd('macos-gcc', '10.1.0', 2020)).toBe(true);
+    });
+
+    test('clang-cl delegates to clang thresholds', () => {
+        expect(compilerSupportsStd('clang-cl', '17.0.0', 2023)).toBe(true);
+        expect(compilerSupportsStd('clang-cl', '10.0.0', 2020)).toBe(true);
+        expect(compilerSupportsStd('clang-cl', '5.0.0', 2020)).toBe(false);
+    });
+
+    test('macos-clang delegates to clang thresholds', () => {
+        expect(compilerSupportsStd('macos-clang', '17.0.0', 2023)).toBe(true);
+        expect(compilerSupportsStd('macos-clang', '10.0.0', 2020)).toBe(true);
+        expect(compilerSupportsStd('macos-clang', '5.0.0', 2020)).toBe(false);
+    });
+
     test('gcc supports c++03 for any version', () => {
         expect(compilerSupportsStd('gcc', '4.0.0', 2003)).toBe(true);
     });
@@ -103,6 +127,8 @@ describe('humanizeCompilerName', () => {
         expect(humanizeCompilerName('gcc')).toBe('GCC');
         expect(humanizeCompilerName('clang')).toBe('Clang');
         expect(humanizeCompilerName('msvc')).toBe('MSVC');
+        expect(humanizeCompilerName('macos-gcc')).toBe('macOS-GCC');
+        expect(humanizeCompilerName('macos-clang')).toBe('macOS-Clang');
     });
 
     test('returns input for unknown compiler', () => {
@@ -114,6 +140,8 @@ describe('compilerEmoji', () => {
     test('returns emoji for known compilers', () => {
         expect(compilerEmoji('gcc')).toBe('🐧');
         expect(compilerEmoji('clang')).toBe('🐉');
+        expect(compilerEmoji('macos-gcc')).toBe('🍺');
+        expect(compilerEmoji('macos-clang')).toBe('🍺');
     });
 
     test('returns default emoji for unknown compiler', () => {

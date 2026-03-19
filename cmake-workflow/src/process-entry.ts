@@ -611,22 +611,28 @@ async function uploadPackageArtifacts(
         artifactName += '-' + (process.env['RUNNER_OS'] || process.platform).toLowerCase();
     }
 
-    // Add compiler to artifact name
-    if (!entry.cxx && artifactName === 'windows') {
+    // Add compiler to artifact name.
+    // Use CPP_ACTIONS_COMPILER env var (set by setup-cpp) when available
+    // to disambiguate families that share the same binary name (e.g.,
+    // apple-clang and macos-clang both use clang++).
+    const compilerFamily = process.env['CPP_ACTIONS_COMPILER'] || '';
+    if (compilerFamily) {
+        artifactName += '-' + compilerFamily;
+    } else if (!entry.cxx && artifactName.includes('windows')) {
         artifactName += '-msvc';
     } else if (entry.cxx) {
         const cxxBasename = path.basename(entry.cxx);
         if (cxxBasename.startsWith('clang')) {
-            if (artifactName !== 'windows') {
-                artifactName += '-clang';
-            } else {
+            if (artifactName.includes('windows')) {
                 artifactName += '-clang-cl';
+            } else {
+                artifactName += '-clang';
             }
         } else if (cxxBasename.startsWith('gcc') || cxxBasename.startsWith('g++')) {
-            if (artifactName !== 'windows') {
-                artifactName += '-gcc';
-            } else {
+            if (artifactName.includes('windows')) {
                 artifactName += '-mingw';
+            } else {
+                artifactName += '-gcc';
             }
         } else if (cxxBasename.startsWith('cl')) {
             artifactName += '-msvc';

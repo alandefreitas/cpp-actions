@@ -48,4 +48,32 @@ describe('loadWindowsMsvcDefaults', () => {
         expect(data.runners).toHaveProperty('windows-2022');
         expect(data.runners).toHaveProperty('windows-2025');
     });
+
+    it('has mingw_version and llvm_version per runner', () => {
+        const data = loadWindowsMsvcDefaults();
+        for (const runner of Object.values(data.runners)) {
+            expect(typeof runner.mingw_version).toBe('string');
+            expect(typeof runner.llvm_version).toBe('string');
+        }
+    });
+
+    it('has installable_mingw as an array of version strings', () => {
+        const data = loadWindowsMsvcDefaults();
+        expect(Array.isArray(data.installable_mingw)).toBe(true);
+        expect(data.installable_mingw!.length).toBeGreaterThan(0);
+        for (const v of data.installable_mingw!) {
+            expect(typeof v).toBe('string');
+            expect(v).toMatch(/^\d+\.\d+\.\d+$/);
+        }
+    });
+
+    it('has installable_llvm as an array of version strings', () => {
+        const data = loadWindowsMsvcDefaults();
+        expect(Array.isArray(data.installable_llvm)).toBe(true);
+        expect(data.installable_llvm!.length).toBeGreaterThan(0);
+        for (const v of data.installable_llvm!) {
+            expect(typeof v).toBe('string');
+            expect(v).toMatch(/^\d+\.\d+\.\d+$/);
+        }
+    });
 });

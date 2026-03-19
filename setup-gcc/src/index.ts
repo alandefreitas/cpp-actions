@@ -79,14 +79,26 @@ class SetupGccRunner {
     /**
      * Runs the full GCC setup pipeline and returns output values.
      *
+     * Dispatches to platform-specific pipelines:
+     * - Linux: user paths → system paths → APT → download → symbolizer
+     * - macOS: user paths → system paths → Homebrew → symbolizer
+     * - Windows: user paths → system paths → Chocolatey → symbolizer
+     * - Other platforms: throws ExpectedError
+     *
      * @returns Object containing paths to gcc/g++, version info, and environment changes
      */
     async run(): Promise<MainOutputs> {
         await this.discoverVersions();
         await this.searchUserPaths();
         await this.searchSystemPaths();
-        await this.searchApt();
-        await this.downloadFromUrl();
+        if (process.platform === 'linux') {
+            await this.searchApt();
+            await this.downloadFromUrl();
+        } else if (process.platform === 'darwin') {
+            await this.searchBrew();
+        } else if (process.platform === 'win32') {
+            await this.searchChoco();
+        }
         await this.installSymbolizer();
         return this.buildOutputs();
     }
@@ -94,6 +106,8 @@ class SetupGccRunner {
     /**
      * Discovers all available GCC versions and configures platform-specific
      * environment variables.
+     *
+     * @throws ExpectedError if the current platform is not linux, darwin, or win32
      */
     private async discoverVersions(): Promise<void> {
         core.startGroup('🔎 Find GCC versions');
@@ -105,8 +119,12 @@ class SetupGccRunner {
             process.env['RUNNER_TOOL_CACHE'] = process.env['AGENT_TOOLSDIRECTORY'];
         }
 
-        if (process.platform !== 'linux') {
-            throw new ExpectedError('This action is only supported on Linux', 'Unsupported Platform');
+        if (process.platform !== 'linux' && process.platform !== 'darwin' && process.platform !== 'win32') {
+            // Untested: requires an unsupported platform like freebsd
+            throw new ExpectedError(
+                `This action is not supported on ${process.platform}`,
+                'Unsupported Platform'
+            );
         }
 
         this.allVersions = await setup_program.findGCCVersions();
@@ -143,6 +161,144 @@ class SetupGccRunner {
         this.outputVersion = systemResult.outputVersion;
         this.outputPath = systemResult.outputPath;
         core.endGroup();
+    }
+
+    /**
+     * Searches for GCC via Homebrew on macOS.
+     *
+     * Homebrew installs GCC with versioned binary names (e.g., gcc-14, g++-14).
+     * If not already found, attempts to install the formula `gcc@{major}`.
+     * Skipped if a binary was already found in user-provided or system paths.
+     */
+    private async searchBrew(): Promise<void> {
+        if (this.outputPath !== null) {
+            return;
+        }
+        core.startGroup('🍺 Find GCC with Homebrew');
+        const parsed = this.inputs.version !== '*'
+            ? semver.coerce(this.inputs.version, { loose: true })
+            : null;
+        const major = parsed?.major ?? null;
+
+        if (major === null) {
+            core.info('No specific GCC version requested — cannot determine Homebrew formula');
+            core.endGroup();
+            return;
+        }
+
+        const formula = `gcc@${major}`;
+        const binaryName = `gcc-${major}`;
+        core.info(`Searching for GCC ${major} via Homebrew formula ${formula}`);
+
+        // Try to find the already-installed formula
+        let result = await setup_program.findProgramWithBrew(formula, binaryName);
+        if (result === null) {
+            // Not found — attempt installation
+            core.info(`${formula} not found, installing via Homebrew`);
+            const prefix = await setup_program.installProgramWithBrew(formula);
+            if (prefix !== null) {
+                result = await setup_program.findProgramWithBrew(formula, binaryName);
+            }
+        }
+
+        if (result !== null) {
+            this.outputPath = result.path;
+            this.outputVersion = result.version;
+            core.info(`Found GCC ${result.version} at ${result.path}`);
+        }
+
+        core.endGroup();
+    }
+
+    /**
+     * Searches for GCC (MinGW) via Chocolatey on Windows.
+     *
+     * Searches known MinGW install paths (`C:\mingw64\bin` for runner pre-installed,
+     * `C:\ProgramData\mingw64\bin` for Chocolatey-installed). If not found or the
+     * wrong version, installs via `choco install mingw`.
+     * Skipped if a binary was already found in user-provided or system paths.
+     */
+    private async searchChoco(): Promise<void> {
+        if (this.outputPath !== null) {
+            return;
+        }
+        core.startGroup('🍫 Find GCC (MinGW) with Chocolatey');
+        const parsed = this.inputs.version !== '*'
+            ? semver.coerce(this.inputs.version, { loose: true })
+            : null;
+        const major = parsed?.major ?? null;
+
+        const searchPaths = [
+            'C:\\mingw64\\bin',
+            'C:\\ProgramData\\mingw64\\bin'
+        ];
+
+        // Search known install paths
+        const result = await setup_program.findProgramWithChoco('mingw', 'gcc.exe', searchPaths);
+        if (result !== null) {
+            // Check if version matches the requested major
+            const foundMajor = semver.coerce(result.version, { loose: true })?.major ?? null;
+            if (major === null || foundMajor === major) {
+                this.outputPath = result.path;
+                this.outputVersion = result.version;
+                core.info(`Found MinGW GCC ${result.version} at ${result.path}`);
+                core.endGroup();
+                return;
+            }
+            core.info(`Found MinGW GCC ${result.version} but need major ${major}`);
+        }
+
+        // Not found or wrong version — attempt Chocolatey install
+        if (major !== null) {
+            core.info(`Installing MinGW GCC ${major} via Chocolatey`);
+
+            // Find the exact installable version matching the requested major
+            const chocoVersion = this.findInstallableVersion(major);
+            const installDir = 'C:\\ProgramData\\mingw64\\bin';
+
+            const installResult = await setup_program.installProgramWithChoco('mingw', chocoVersion ?? undefined, installDir);
+            if (installResult !== null) {
+                const afterInstall = await setup_program.findProgramWithChoco('mingw', 'gcc.exe', searchPaths);
+                if (afterInstall !== null) {
+                    this.outputPath = afterInstall.path;
+                    this.outputVersion = afterInstall.version;
+                    core.info(`Installed MinGW GCC ${afterInstall.version} at ${afterInstall.path}`);
+                }
+            }
+        } else {
+            core.info('No specific GCC version requested — cannot determine Chocolatey version');
+        }
+
+        core.endGroup();
+    }
+
+    /**
+     * Finds the exact installable MinGW version matching a requested major version.
+     *
+     * Searches the `installable_mingw` list from the Windows data file for a version
+     * whose major matches the requested major. Returns the highest matching version.
+     *
+     * @param major - The requested GCC major version
+     * @returns The exact installable version string, or null if not found
+     */
+    private findInstallableVersion(major: number): string | null {
+        try {
+            const data = setup_program.loadWindowsMsvcDefaults();
+            const installable = data.installable_mingw ?? [];
+            let best: string | null = null;
+            for (const v of installable) {
+                const coerced = semver.coerce(v, { loose: true });
+                if (coerced && coerced.major === major) {
+                    if (best === null || semver.gt(coerced, best)) {
+                        best = coerced.format();
+                    }
+                }
+            }
+            return best;
+        } catch {
+            // Untested: requires missing or corrupt data file
+            return null;
+        }
     }
 
     /**
@@ -401,7 +557,7 @@ runAction({
         // Validate that GCC was found
         if (!outputs.outputPath) {
             throw new ExpectedError(
-                'Cannot setup GCC: no suitable version was found in the specified paths, system paths, APT, or release binaries. Check the version requirement and available versions.',
+                'Cannot setup GCC: no suitable version was found in the specified paths, system paths, or platform package manager. Check the version requirement and available versions.',
                 'GCC Setup Failed'
             );
         }

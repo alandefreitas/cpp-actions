@@ -12,7 +12,11 @@ import {
     deriveMsvcFromChannelManifest,
     discoverMsvcVersions,
     fetchToolsetDirectory,
-    updateWindowsMsvcDefaults
+    updateWindowsMsvcDefaults,
+    parseChocolateyVersions,
+    fetchChocolateyVersions,
+    extractMingwVersion,
+    extractLlvmVersion
 } from './windows-msvc-defaults';
 
 const mockedGet = https.get as jest.MockedFunction<typeof https.get>;
@@ -46,6 +50,190 @@ function mockResponse(
     }
     return stream;
 }
+
+/**
+ * Creates a mock HTTPS response with the given status and raw text body.
+ *
+ * @param statusCode - HTTP status code
+ * @param text - Response body as raw text
+ * @returns Mock response stream
+ */
+function mockTextResponse(
+    statusCode: number,
+    text: string
+): PassThrough {
+    const stream = new PassThrough();
+    Object.assign(stream, { statusCode, headers: {} });
+    if (statusCode === 200) {
+        process.nextTick(() => {
+            stream.write(text);
+            stream.end();
+        });
+    } else {
+        process.nextTick(() => {
+            stream.end();
+        });
+    }
+    return stream;
+}
+
+// ── extractMingwVersion ─────────────────────────────────────────────────────
+
+describe('extractMingwVersion', () => {
+    it('extracts major version from mingw version pattern', () => {
+        const toolset = {
+            visualStudio: { version: '2022', subversion: '17', edition: 'Enterprise', channel: 'release', workloads: [] },
+            mingw: { version: '14.*' }
+        };
+        expect(extractMingwVersion(toolset)).toBe('14');
+    });
+
+    it('extracts major from plain number string', () => {
+        const toolset = {
+            visualStudio: { version: '2022', subversion: '17', edition: 'Enterprise', channel: 'release', workloads: [] },
+            mingw: { version: '15' }
+        };
+        expect(extractMingwVersion(toolset)).toBe('15');
+    });
+
+    it('returns null when mingw section is absent', () => {
+        const toolset = {
+            visualStudio: { version: '2022', subversion: '17', edition: 'Enterprise', channel: 'release', workloads: [] }
+        };
+        expect(extractMingwVersion(toolset)).toBeNull();
+    });
+});
+
+// ── extractLlvmVersion ──────────────────────────────────────────────────────
+
+describe('extractLlvmVersion', () => {
+    it('extracts LLVM version string', () => {
+        const toolset = {
+            visualStudio: { version: '2022', subversion: '17', edition: 'Enterprise', channel: 'release', workloads: [] },
+            llvm: { version: '20' }
+        };
+        expect(extractLlvmVersion(toolset)).toBe('20');
+    });
+
+    it('returns null when llvm section is absent', () => {
+        const toolset = {
+            visualStudio: { version: '2022', subversion: '17', edition: 'Enterprise', channel: 'release', workloads: [] }
+        };
+        expect(extractLlvmVersion(toolset)).toBeNull();
+    });
+});
+
+// ── parseChocolateyVersions ─────────────────────────────────────────────────
+
+describe('parseChocolateyVersions', () => {
+    it('extracts approved non-prerelease versions from Atom XML', () => {
+        const xml = `<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <m:properties>
+      <d:Version>14.2.0</d:Version>
+      <d:IsApproved m:type="Edm.Boolean">true</d:IsApproved>
+      <d:IsPrerelease m:type="Edm.Boolean">false</d:IsPrerelease>
+    </m:properties>
+  </entry>
+  <entry>
+    <m:properties>
+      <d:Version>15.2.0</d:Version>
+      <d:IsApproved m:type="Edm.Boolean">true</d:IsApproved>
+      <d:IsPrerelease m:type="Edm.Boolean">false</d:IsPrerelease>
+    </m:properties>
+  </entry>
+</feed>`;
+        expect(parseChocolateyVersions(xml)).toEqual(['14.2.0', '15.2.0']);
+    });
+
+    it('filters out unapproved versions', () => {
+        const xml = `<feed>
+  <entry>
+    <m:properties>
+      <d:Version>14.2.0</d:Version>
+      <d:IsApproved m:type="Edm.Boolean">false</d:IsApproved>
+      <d:IsPrerelease m:type="Edm.Boolean">false</d:IsPrerelease>
+    </m:properties>
+  </entry>
+  <entry>
+    <m:properties>
+      <d:Version>15.2.0</d:Version>
+      <d:IsApproved m:type="Edm.Boolean">true</d:IsApproved>
+      <d:IsPrerelease m:type="Edm.Boolean">false</d:IsPrerelease>
+    </m:properties>
+  </entry>
+</feed>`;
+        expect(parseChocolateyVersions(xml)).toEqual(['15.2.0']);
+    });
+
+    it('filters out prerelease versions', () => {
+        const xml = `<feed>
+  <entry>
+    <m:properties>
+      <d:Version>16.0.0-alpha1</d:Version>
+      <d:IsApproved m:type="Edm.Boolean">true</d:IsApproved>
+      <d:IsPrerelease m:type="Edm.Boolean">true</d:IsPrerelease>
+    </m:properties>
+  </entry>
+</feed>`;
+        expect(parseChocolateyVersions(xml)).toEqual([]);
+    });
+
+    it('returns empty array for XML with no entries', () => {
+        const xml = `<?xml version="1.0"?><feed></feed>`;
+        expect(parseChocolateyVersions(xml)).toEqual([]);
+    });
+});
+
+// ── fetchChocolateyVersions ─────────────────────────────────────────────────
+
+describe('fetchChocolateyVersions', () => {
+    beforeEach(() => {
+        mockedGet.mockReset();
+    });
+
+    it('fetches and parses Chocolatey package versions', async () => {
+        const xml = `<feed>
+  <entry>
+    <m:properties>
+      <d:Version>14.2.0</d:Version>
+      <d:IsApproved m:type="Edm.Boolean">true</d:IsApproved>
+      <d:IsPrerelease m:type="Edm.Boolean">false</d:IsPrerelease>
+    </m:properties>
+  </entry>
+  <entry>
+    <m:properties>
+      <d:Version>15.2.0</d:Version>
+      <d:IsApproved m:type="Edm.Boolean">true</d:IsApproved>
+      <d:IsPrerelease m:type="Edm.Boolean">false</d:IsPrerelease>
+    </m:properties>
+  </entry>
+</feed>`;
+
+        mockedGet.mockImplementation((_urlOrOpts: unknown, cb: unknown) => {
+            const callback = cb as (res: PassThrough) => void;
+            callback(mockTextResponse(200, xml));
+            return { on: jest.fn().mockReturnThis() } as unknown as ReturnType<typeof https.get>;
+        });
+
+        const versions = await fetchChocolateyVersions('mingw');
+        expect(versions).toEqual(['14.2.0', '15.2.0']);
+    });
+
+    it('returns empty array on network failure', async () => {
+        mockedGet.mockImplementation((_urlOrOpts: unknown, _cb: unknown) => {
+            const mockReq = new PassThrough();
+            process.nextTick(() => {
+                mockReq.emit('error', new Error('network error'));
+            });
+            return mockReq as unknown as ReturnType<typeof https.get>;
+        });
+
+        const versions = await fetchChocolateyVersions('mingw');
+        expect(versions).toEqual([]);
+    });
+});
 
 // ── extractExplicitPins ─────────────────────────────────────────────────────
 
@@ -256,15 +444,15 @@ describe('fetchToolsetDirectory', () => {
 
         const result = await fetchToolsetDirectory();
 
-        expect(result.size).toBe(2);
-        expect(result.get('2022')).toHaveLength(1);
-        expect(result.get('2022')![0].isPrimary).toBe(true);
-        expect(result.get('2025')).toHaveLength(2);
-
-        const primary = result.get('2025')!.find(f => f.isPrimary);
-        const extra = result.get('2025')!.find(f => !f.isPrimary);
-        expect(primary).toBeDefined();
-        expect(extra).toBeDefined();
+        // 3 entries: windows-2022, windows-2025, windows-2025-vs2026
+        expect(result.size).toBe(3);
+        expect(result.get('windows-2022')).toHaveLength(1);
+        expect(result.get('windows-2022')![0].isPrimary).toBe(true);
+        expect(result.get('windows-2025')).toHaveLength(1);
+        expect(result.get('windows-2025')![0].isPrimary).toBe(true);
+        expect(result.get('windows-2025-vs2026')).toHaveLength(1);
+        expect(result.get('windows-2025-vs2026')![0].isPrimary).toBe(false);
+        expect(result.get('windows-2025-vs2026')![0].runnerName).toBe('windows-2025-vs2026');
     });
 
     it('throws on non-array response', async () => {
@@ -346,7 +534,9 @@ describe('updateWindowsMsvcDefaults', () => {
                     'Microsoft.VisualStudio.Component.VC.Tools.x86.x64',
                     'Microsoft.VisualStudio.ComponentGroup.VC.Tools.142.x86.x64'
                 ]
-            }
+            },
+            mingw: { version: '14.*' },
+            llvm: { version: '20' }
         };
 
         // Directory listing for toolset files
@@ -358,6 +548,33 @@ describe('updateWindowsMsvcDefaults', () => {
         const channelManifest = {
             info: { productDisplayVersion: '17.14.29 (March 2026)' }
         };
+
+        // Chocolatey Atom XML responses
+        const chocoMingwXml = `<feed>
+  <entry><m:properties>
+    <d:Version>14.2.0</d:Version>
+    <d:IsApproved m:type="Edm.Boolean">true</d:IsApproved>
+    <d:IsPrerelease m:type="Edm.Boolean">false</d:IsPrerelease>
+  </m:properties></entry>
+  <entry><m:properties>
+    <d:Version>15.2.0</d:Version>
+    <d:IsApproved m:type="Edm.Boolean">true</d:IsApproved>
+    <d:IsPrerelease m:type="Edm.Boolean">false</d:IsPrerelease>
+  </m:properties></entry>
+</feed>`;
+
+        const chocoLlvmXml = `<feed>
+  <entry><m:properties>
+    <d:Version>18.1.8</d:Version>
+    <d:IsApproved m:type="Edm.Boolean">true</d:IsApproved>
+    <d:IsPrerelease m:type="Edm.Boolean">false</d:IsPrerelease>
+  </m:properties></entry>
+  <entry><m:properties>
+    <d:Version>20.1.8</d:Version>
+    <d:IsApproved m:type="Edm.Boolean">true</d:IsApproved>
+    <d:IsPrerelease m:type="Edm.Boolean">false</d:IsPrerelease>
+  </m:properties></entry>
+</feed>`;
 
         mockedGet.mockImplementation((urlOrOpts: unknown, cb: unknown) => {
             const callback = cb as (res: PassThrough) => void;
@@ -377,6 +594,10 @@ describe('updateWindowsMsvcDefaults', () => {
                 }));
             } else if (url.includes('download.visualstudio.microsoft.com')) {
                 callback(mockResponse(200, channelManifest));
+            } else if (url.includes('chocolatey.org') && url.includes('mingw')) {
+                callback(mockTextResponse(200, chocoMingwXml));
+            } else if (url.includes('chocolatey.org') && url.includes('llvm')) {
+                callback(mockTextResponse(200, chocoLlvmXml));
             } else {
                 callback(mockResponse(404, null));
             }
@@ -406,5 +627,13 @@ describe('updateWindowsMsvcDefaults', () => {
         );
         expect(v142).toBeDefined();
         expect(v142.vs_year).toBe('2019');
+
+        // Check MinGW and LLVM per-runner data
+        expect(data.runners['windows-2022'].mingw_version).toBe('14');
+        expect(data.runners['windows-2022'].llvm_version).toBe('20');
+
+        // Check Chocolatey installable versions
+        expect(data.installable_mingw).toEqual(['14.2.0', '15.2.0']);
+        expect(data.installable_llvm).toEqual(['18.1.8', '20.1.8']);
     });
 });

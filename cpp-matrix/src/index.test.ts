@@ -149,9 +149,8 @@ test('non-x86 entries default arch to x64 unless overridden', async () => {
     expect(gccEntry?.arch).toBe('x64');
 });
 
-test('generates entries for compilers with no known versions', async () => {
-    // This test verifies that mingw and clang-cl (which have no
-    // version tracking) still generate matrix entries with version "*"
+test('generates entries for mingw and clang-cl with data-driven versions', async () => {
+    // mingw and clang-cl now have known versions from windows-msvc-defaults.json
     const inputs = makeDefaultMatrixInputs({
         compilers: { 'mingw': '*', 'clang-cl': '*' },
         standards: normalizeCppVersionRequirement('>=14'),
@@ -161,22 +160,17 @@ test('generates entries for compilers with no known versions', async () => {
     try {
         const matrix = await generateMatrix(inputs);
 
-        const mingwEntry = matrix.find(entry => entry.compiler === 'mingw');
-        expect(mingwEntry).toBeDefined();
-        expect(mingwEntry?.version).toBe('*');
-        expect(mingwEntry?.cxx).toBe('g++');
-        expect(mingwEntry?.cc).toBe('gcc');
-        expect(mingwEntry?.['runs-on']).toBe('windows-2022');
+        const mingwEntries = matrix.filter(entry => entry.compiler === 'mingw');
+        expect(mingwEntries.length).toBeGreaterThan(0);
+        expect(mingwEntries[0]?.cxx).toBe('g++');
+        expect(mingwEntries[0]?.cc).toBe('gcc');
 
-        const clangClEntry = matrix.find(entry => entry.compiler === 'clang-cl');
-        expect(clangClEntry).toBeDefined();
-        expect(clangClEntry?.version).toBe('*');
-        expect(clangClEntry?.cxx).toBe('clang++-cl');
-        expect(clangClEntry?.cc).toBe('clang-cl');
-        expect(clangClEntry?.['runs-on']).toBe('windows-2022');
+        const clangClEntries = matrix.filter(entry => entry.compiler === 'clang-cl');
+        expect(clangClEntries.length).toBeGreaterThan(0);
+        expect(clangClEntries[0]?.cxx).toBe('clang++-cl');
+        expect(clangClEntries[0]?.cc).toBe('clang-cl');
 
         // No warnings should have been emitted about missing entries
-        // (warnings about no known versions should not appear)
         const warningCalls = warnSpy.mock.calls.map(call => call[0]);
         const missingEntriesWarnings = warningCalls.filter(msg =>
             typeof msg === 'string' && msg.includes('No matrix entries were generated because no published')

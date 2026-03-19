@@ -39,13 +39,39 @@ interface ToolsetXcode {
 }
 
 /**
- * Partial runner-images toolset JSON (only the Xcode section).
+ * GCC section of the runner-images toolset JSON.
+ *
+ * Note: this interface mirrors the runner-images toolset schema, which is not
+ * guaranteed to be stable across runner-images releases.
+ */
+interface ToolsetGcc {
+    /** Array of GCC major version strings (e.g., `["13", "14", "15"]`). */
+    versions: string[];
+}
+
+/**
+ * LLVM section of the runner-images toolset JSON.
+ *
+ * Note: this interface mirrors the runner-images toolset schema, which is not
+ * guaranteed to be stable across runner-images releases.
+ */
+interface ToolsetLLVM {
+    /** LLVM major version string (e.g., `"18"`). */
+    version: string;
+}
+
+/**
+ * Partial runner-images toolset JSON (Xcode, GCC, and LLVM sections).
  *
  * Note: this interface mirrors the runner-images toolset schema, which is not
  * guaranteed to be stable across runner-images releases.
  */
 interface ToolsetJson {
     xcode: ToolsetXcode;
+    /** GCC configuration (optional — may be absent on older toolsets). */
+    gcc?: ToolsetGcc;
+    /** LLVM configuration (optional — may be absent on older toolsets). */
+    llvm?: ToolsetLLVM;
 }
 
 /**
@@ -96,6 +122,20 @@ interface OutputRunnerXcodeInfo {
     default_xcode: string;
     /** Available Xcode version entries. */
     xcode_versions: OutputXcodeVersionEntry[];
+    /** Pre-installed GCC major versions (e.g., `["13", "14", "15"]`). */
+    gcc_versions?: string[];
+    /** Pre-installed LLVM major version (e.g., `"18"`). */
+    llvm_version?: string;
+}
+
+/**
+ * A Homebrew-installable compiler version with major and exact version.
+ */
+interface InstallableVersion {
+    /** Major version number (e.g., `14`). */
+    major: number;
+    /** Exact version string from Homebrew (e.g., `"14.3.0"`). */
+    version: string;
 }
 
 /**
@@ -108,6 +148,10 @@ interface MacOSXcodeDefaults {
     source: string;
     /** Runner data keyed by runner name (e.g., `"macos-14"`). */
     runners: Record<string, OutputRunnerXcodeInfo>;
+    /** All GCC versions installable via Homebrew. */
+    installable_gcc: InstallableVersion[];
+    /** All LLVM versions installable via Homebrew. */
+    installable_llvm: InstallableVersion[];
 }
 
 /**
@@ -163,6 +207,139 @@ function fetchJson(url: string): Promise<unknown> {
             });
         }).on('error', reject);
     });
+}
+
+// ── Toolset extraction ──────────────────────────────────────────────────────
+
+/**
+ * Extracts the pre-installed GCC major version strings from a macOS toolset JSON.
+ *
+ * The toolset `gcc.versions` field contains an array of major version strings
+ * like `["13", "14", "15"]`.
+ *
+ * @param toolset - Parsed toolset JSON
+ * @returns Array of GCC major version strings, or empty array if not present
+ */
+export function extractGccVersions(toolset: ToolsetJson): string[] {
+    return toolset.gcc?.versions ?? [];
+}
+
+/**
+ * Extracts the pre-installed LLVM major version string from a macOS toolset JSON.
+ *
+ * The toolset `llvm.version` field contains a plain major version string
+ * like `"18"`.
+ *
+ * @param toolset - Parsed toolset JSON
+ * @returns The LLVM major version string (e.g., `"18"`), or null if not present
+ */
+export function extractLlvmVersion(toolset: ToolsetJson): string | null {
+    return toolset.llvm?.version ?? null;
+}
+
+// ── Homebrew version discovery ──────────────────────────────────────────────
+
+/**
+ * Partial structure of a Homebrew formula API response.
+ */
+interface HomebrewFormulaJson {
+    /** Stable version info. */
+    versions: { stable: string };
+    /** List of versioned formula names (e.g., `["gcc@14", "gcc@13"]`). */
+    versioned_formulae?: string[];
+    /** Whether the formula is deprecated. */
+    deprecated?: boolean;
+    /** Whether the formula is disabled. */
+    disabled?: boolean;
+}
+
+/**
+ * Homebrew formula API base URL.
+ */
+const HOMEBREW_API_BASE = 'https://formulae.brew.sh/api/formula';
+
+/**
+ * Fetches installable versions for a Homebrew formula family (e.g., `gcc` or `llvm`).
+ *
+ * Queries the Homebrew formula API for the main formula and each versioned formula,
+ * collecting exact version strings and filtering out deprecated/disabled formulas.
+ *
+ * @param formulaName - The Homebrew formula name (e.g., `"gcc"` or `"llvm"`)
+ * @returns Promise resolving to an array of `{major, version}` entries, sorted by major ascending
+ */
+export async function fetchHomebrewVersions(formulaName: string): Promise<InstallableVersion[]> {
+    try {
+        console.log(`    Fetching Homebrew versions for '${formulaName}'...`);
+
+        // Fetch the main formula to get versioned_formulae list
+        const mainFormula = await fetchJson(`${HOMEBREW_API_BASE}/${formulaName}.json`) as HomebrewFormulaJson;
+
+        const versions: InstallableVersion[] = [];
+
+        // Collect versioned formulae names
+        const versionedNames = mainFormula.versioned_formulae ?? [];
+
+        // Add the main formula itself (represents the latest version)
+        if (!mainFormula.deprecated && !mainFormula.disabled) {
+            const mainVersion = mainFormula.versions.stable;
+            const mainMajor = extractMajorFromVersion(mainVersion);
+            if (mainMajor !== null) {
+                versions.push({ major: mainMajor, version: mainVersion });
+            }
+        }
+
+        // Fetch each versioned formula
+        for (const name of versionedNames) {
+            try {
+                const formula = await fetchJson(`${HOMEBREW_API_BASE}/${name}.json`) as HomebrewFormulaJson;
+                if (formula.deprecated || formula.disabled) {
+                    continue;
+                }
+                // Extract major from formula name (e.g., "gcc@14" → 14)
+                const atIndex = name.indexOf('@');
+                if (atIndex === -1) {
+                    continue;
+                }
+                const major = parseInt(name.substring(atIndex + 1), 10);
+                if (isNaN(major)) {
+                    continue;
+                }
+                versions.push({ major, version: formula.versions.stable });
+            } catch (err) {
+                // Untested: requires a single versioned formula fetch to fail,
+                // which the mocked responses never produce.
+                console.warn(`      Warning: failed to fetch ${name}: ${err}`);
+            }
+        }
+
+        // Sort by major ascending
+        versions.sort((a, b) => a.major - b.major);
+
+        console.log(`      Found ${versions.length} installable version(s)`);
+        return versions;
+    } catch (err) {
+        // Untested: requires the Homebrew API to be unreachable,
+        // which cannot happen in the mocked test environment.
+        console.warn(`    Warning: failed to fetch Homebrew versions for '${formulaName}': ${err}`);
+        return [];
+    }
+}
+
+/**
+ * Extracts the major version number from a version string.
+ *
+ * Parses the first numeric component of a version string (e.g., `"14.3.0"` → `14`).
+ *
+ * @param version - A version string (e.g., `"14.3.0"`)
+ * @returns The major version number, or null if parsing fails
+ */
+function extractMajorFromVersion(version: string): number | null {
+    const match = version.match(/^(\d+)/);
+    if (!match) {
+        return null;
+    }
+    const major = parseInt(match[1], 10);
+    return isNaN(major) ? null : major;
 }
 
 // ── Data processing ─────────────────────────────────────────────────────────
@@ -312,10 +489,25 @@ function processRunner(
         return null;
     }
 
-    return {
+    const result: OutputRunnerXcodeInfo = {
         default_xcode: defaultXcode,
         xcode_versions: entries
     };
+
+    // Extract GCC and LLVM versions from toolset
+    const gccVersions = extractGccVersions(toolset);
+    if (gccVersions.length > 0) {
+        result.gcc_versions = gccVersions;
+        console.log(`    GCC versions: ${gccVersions.join(', ')}`);
+    }
+
+    const llvmVersion = extractLlvmVersion(toolset);
+    if (llvmVersion) {
+        result.llvm_version = llvmVersion;
+        console.log(`    LLVM version: ${llvmVersion}`);
+    }
+
+    return result;
 }
 
 // ── Main export ─────────────────────────────────────────────────────────────
@@ -398,10 +590,18 @@ export async function updateMacOSXcodeDefaults(rootDir: string): Promise<boolean
         return false;
     }
 
+    // Fetch Homebrew installable versions for GCC and LLVM
+    const [installableGcc, installableLlvm] = await Promise.all([
+        fetchHomebrewVersions('gcc'),
+        fetchHomebrewVersions('llvm')
+    ]);
+
     const result: MacOSXcodeDefaults = {
         generated: new Date().toISOString(),
         source: 'actions/runner-images toolsets + xcodereleases.com',
-        runners
+        runners,
+        installable_gcc: installableGcc,
+        installable_llvm: installableLlvm
     };
 
     const outputPath = path.join(rootDir, 'setup-program/macos-xcode-defaults.json');

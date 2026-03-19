@@ -27,6 +27,10 @@ import {
     findMSVCVersions,
     findCompilerVersions,
     findAppleClangVersions,
+    findMingwVersions,
+    findClangClVersions,
+    findMacOSGccVersions,
+    findMacOSClangVersions,
     getVisualCppYear,
     arraysHaveSameElements,
     getSubrangePolicy,
@@ -550,13 +554,14 @@ describe('splitRanges UBUNTU_DEFAULTS_AND_LATEST', () => {
 describe('splitRanges ONE_PER_VS_YEAR', () => {
     // Uses real windows-msvc-defaults.json data:
     //   windows-2022: MSVC 14.44 (default), 14.29
-    //   windows-2025: MSVC 14.50, 14.44 (default), 14.29
-    // Defaults: [44], Available: [29, 44, 50]
+    //   windows-2025: MSVC 14.44 (default), 14.29
+    //   windows-2025-vs2026: MSVC 14.50 (default), 14.44
+    // Defaults: [44, 50], Available: [29, 44, 50]
     const msvcVersions = findMSVCVersions(); // ['14.29.0', '14.44.0', '14.50.0']
 
     test('selects default versions plus latest available', () => {
         const result = splitRanges('>=14.20', msvcVersions, SubrangePolicies.ONE_PER_VS_YEAR, 'msvc');
-        // Default 14.44 is in range, latest available 14.50 is also in range
+        // Defaults 14.44 and 14.50 in range, latest available 14.50 is same as default → no extra
         expect(result).toStrictEqual(['14.44', '14.50']);
     });
 
@@ -589,8 +594,8 @@ describe('getWindowsDefaultMsvcVersions', () => {
     it('returns default MSVC minors from data file', () => {
         const defaults = setup_program.loadWindowsMsvcDefaults();
         const minors = getWindowsDefaultMsvcVersions(defaults);
-        // 14.44 is_default on both windows-2022 and windows-2025
-        expect(minors).toStrictEqual([44]);
+        // 14.44 is_default on windows-2022/2025, 14.50 is_default on windows-2025-vs2026
+        expect(minors).toStrictEqual([44, 50]);
     });
 });
 
@@ -598,7 +603,7 @@ describe('getWindowsAvailableMsvcVersions', () => {
     it('returns all available MSVC minors from data file', () => {
         const defaults = setup_program.loadWindowsMsvcDefaults();
         const minors = getWindowsAvailableMsvcVersions(defaults);
-        // 14.29, 14.44, 14.50 across all runners
+        // 14.29, 14.44 across windows-2022/2025 + 14.50 from windows-2025-vs2026
         expect(minors).toStrictEqual([29, 44, 50]);
     });
 });
@@ -606,7 +611,7 @@ describe('getWindowsAvailableMsvcVersions', () => {
 describe('findMSVCVersions', () => {
     it('returns unique MSVC versions with .0 patch sorted ascending by semver', () => {
         const versions = findMSVCVersions();
-        // windows-msvc-defaults.json has: 14.29 (2019), 14.44 (2022), 14.50 (2026)
+        // windows-msvc-defaults.json has: 14.29 (2019), 14.44 (2022), 14.50 (2026 on windows-2025-vs2026)
         expect(versions).toStrictEqual(['14.29.0', '14.44.0', '14.50.0']);
     });
 
@@ -630,6 +635,120 @@ describe('findAppleClangVersions', () => {
         // 16.0.0 appears on both macos-14 and macos-15 but should only appear once
         const duplicates = versions.filter((v, i) => versions.indexOf(v) !== i);
         expect(duplicates).toHaveLength(0);
+    });
+});
+
+describe('findMingwVersions', () => {
+    it('returns unique MinGW GCC versions sorted ascending by semver', () => {
+        const versions = findMingwVersions();
+        // windows-msvc-defaults.json has: pre-installed 14, 15 + installable 8.1.0..15.2.0
+        expect(versions.length).toBeGreaterThan(0);
+        expect(versions).toContain('8.1.0');
+        expect(versions).toContain('14.0.0');
+        expect(versions).toContain('15.2.0');
+    });
+
+    it('deduplicates pre-installed and installable versions', () => {
+        const versions = findMingwVersions();
+        const duplicates = versions.filter((v, i) => versions.indexOf(v) !== i);
+        expect(duplicates).toHaveLength(0);
+    });
+
+    it('merges pre-installed majors with installable versions', () => {
+        const versions = findMingwVersions();
+        // Pre-installed "14" → "14.0.0" and installable "14.2.0" should both appear
+        expect(versions).toContain('14.0.0');
+        expect(versions).toContain('14.2.0');
+    });
+});
+
+describe('findClangClVersions', () => {
+    it('returns unique LLVM versions sorted ascending by semver', () => {
+        const versions = findClangClVersions();
+        // windows-msvc-defaults.json has: pre-installed 20 + installable 14.0.0..22.1.0
+        expect(versions.length).toBeGreaterThan(0);
+        expect(versions).toContain('14.0.0');
+        expect(versions).toContain('20.0.0');
+        expect(versions).toContain('22.1.0');
+    });
+
+    it('deduplicates pre-installed and installable versions', () => {
+        const versions = findClangClVersions();
+        const duplicates = versions.filter((v, i) => versions.indexOf(v) !== i);
+        expect(duplicates).toHaveLength(0);
+    });
+});
+
+describe('findMacOSGccVersions', () => {
+    it('returns unique macOS GCC versions sorted ascending by semver', () => {
+        const versions = findMacOSGccVersions();
+        // macos-xcode-defaults.json has: pre-installed [13,14,15] + installable 11.5.0..15.2.0
+        expect(versions.length).toBeGreaterThan(0);
+        expect(versions).toContain('11.5.0');
+        expect(versions).toContain('13.0.0');
+        expect(versions).toContain('15.2.0');
+    });
+
+    it('deduplicates pre-installed and installable versions', () => {
+        const versions = findMacOSGccVersions();
+        const duplicates = versions.filter((v, i) => versions.indexOf(v) !== i);
+        expect(duplicates).toHaveLength(0);
+    });
+
+    it('merges pre-installed majors with installable versions', () => {
+        const versions = findMacOSGccVersions();
+        // Pre-installed "13" → "13.0.0" and installable "13.4.0" should both appear
+        expect(versions).toContain('13.0.0');
+        expect(versions).toContain('13.4.0');
+    });
+});
+
+describe('findMacOSClangVersions', () => {
+    it('returns unique macOS LLVM versions sorted ascending by semver', () => {
+        const versions = findMacOSClangVersions();
+        // macos-xcode-defaults.json has: pre-installed 15, 18 + installable 15.0.7..22.1.1
+        expect(versions.length).toBeGreaterThan(0);
+        expect(versions).toContain('15.0.0');
+        expect(versions).toContain('18.0.0');
+        expect(versions).toContain('22.1.1');
+    });
+
+    it('deduplicates pre-installed and installable versions', () => {
+        const versions = findMacOSClangVersions();
+        const duplicates = versions.filter((v, i) => versions.indexOf(v) !== i);
+        expect(duplicates).toHaveLength(0);
+    });
+});
+
+describe('findCompilerVersions mingw', () => {
+    it('returns mingw versions', async () => {
+        const versions = await findCompilerVersions('mingw');
+        expect(versions.length).toBeGreaterThan(0);
+        expect(versions).toContain('14.2.0');
+    });
+});
+
+describe('findCompilerVersions clang-cl', () => {
+    it('returns clang-cl versions', async () => {
+        const versions = await findCompilerVersions('clang-cl');
+        expect(versions.length).toBeGreaterThan(0);
+        expect(versions).toContain('20.1.8');
+    });
+});
+
+describe('findCompilerVersions macos-gcc', () => {
+    it('returns macos-gcc versions', async () => {
+        const versions = await findCompilerVersions('macos-gcc');
+        expect(versions.length).toBeGreaterThan(0);
+        expect(versions).toContain('14.3.0');
+    });
+});
+
+describe('findCompilerVersions macos-clang', () => {
+    it('returns macos-clang versions', async () => {
+        const versions = await findCompilerVersions('macos-clang');
+        expect(versions.length).toBeGreaterThan(0);
+        expect(versions).toContain('18.1.8');
     });
 });
 

@@ -6,14 +6,27 @@
       "msvc_versions": [
         {"version": "14.44", "vs_year": "2022", "is_default": true},
         {"version": "14.29", "vs_year": "2019", "is_default": false}
-      ]
+      ],
+      "mingw_version": "14",
+      "llvm_version": "20"
     },
     "windows-2025": {
       "msvc_versions": [
-        {"version": "14.50", "vs_year": "2026", "is_default": false},
         {"version": "14.44", "vs_year": "2022", "is_default": true},
         {"version": "14.29", "vs_year": "2019", "is_default": false}
-      ]
+      ],
+      "mingw_version": "15",
+      "llvm_version": "20"
+    },
+    "windows-2025-vs2026": {
+      "msvc_versions": [
+        {"version": "14.50", "vs_year": "2026", "is_default": true},
+        {"version": "14.44", "vs_year": "2022", "is_default": false}
+      ],
+      "mingw_version": "15",
+      "llvm_version": "20"
     }
-  }
+  },
+  "installable_mingw": ["8.1.0", "9.4.0", "10.3.0", "11.2.0", "12.2.0", "13.2.0", "14.2.0", "15.2.0"],
+  "installable_llvm": ["14.0.0", "15.0.7", "16.0.2", "17.0.6", "18.1.8", "19.1.7", "20.1.8", "21.1.8", "22.1.0"]
 }

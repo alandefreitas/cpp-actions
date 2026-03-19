@@ -40,13 +40,33 @@ interface ToolsetVisualStudio {
 }
 
 /**
- * Partial runner-images toolset JSON (only the Visual Studio section).
+ * MinGW section of the runner-images toolset JSON.
+ */
+interface ToolsetMinGW {
+    /** MinGW GCC version pattern (e.g., `"14.*"`). */
+    version: string;
+}
+
+/**
+ * LLVM section of the runner-images toolset JSON.
+ */
+interface ToolsetLLVM {
+    /** LLVM major version string (e.g., `"20"`). */
+    version: string;
+}
+
+/**
+ * Partial runner-images toolset JSON (Visual Studio, MinGW, and LLVM sections).
  *
  * Note: this interface mirrors the runner-images toolset schema, which is not
  * guaranteed to be stable across runner-images releases.
  */
 interface ToolsetJson {
     visualStudio: ToolsetVisualStudio;
+    /** MinGW GCC configuration (optional — may be absent on older toolsets). */
+    mingw?: ToolsetMinGW;
+    /** LLVM configuration (optional — may be absent on older toolsets). */
+    llvm?: ToolsetLLVM;
 }
 
 /**
@@ -67,6 +87,8 @@ interface DiscoveredMsvcVersion {
 interface ToolsetFileInfo {
     /** Runner version number (e.g., `"2025"`). */
     runnerVersion: string;
+    /** Full runner name (e.g., `"windows-2025"` or `"windows-2025-vs2026"`). */
+    runnerName: string;
     /** Whether this is the primary (non-suffix) toolset file. */
     isPrimary: boolean;
     /** Raw download URL. */
@@ -87,6 +109,10 @@ interface ChannelManifest {
  */
 interface OutputRunnerMsvcInfo {
     msvc_versions: OutputMsvcVersionEntry[];
+    /** Pre-installed MinGW GCC major version (e.g., `"14"`), if present. */
+    mingw_version?: string;
+    /** Pre-installed LLVM major version (e.g., `"20"`), if present. */
+    llvm_version?: string;
 }
 
 /**
@@ -111,6 +137,10 @@ interface WindowsMsvcDefaults {
     source: string;
     /** Runner data keyed by runner name (e.g., `"windows-2022"`). */
     runners: Record<string, OutputRunnerMsvcInfo>;
+    /** All Chocolatey-installable MinGW GCC versions (semver strings). */
+    installable_mingw: string[];
+    /** All Chocolatey-installable LLVM versions (semver strings). */
+    installable_llvm: string[];
 }
 
 /**
@@ -135,11 +165,12 @@ const WINDOWS_TOOLSETS_API_URL =
     'https://api.github.com/repos/actions/runner-images/contents/images/windows/toolsets';
 
 /**
- * Regex to match toolset filenames and extract runner version.
- * Captures the numeric runner version from files like `toolset-2025.json`
- * or `toolset-2025-vs2026.json`.
+ * Regex to match toolset filenames and extract runner version + optional suffix.
+ * Group 1: numeric runner version (e.g., `"2025"`)
+ * Group 2: optional suffix (e.g., `"-vs2026"`)
+ * Examples: `toolset-2025.json` → ("2025", undefined), `toolset-2025-vs2026.json` → ("2025", "-vs2026")
  */
-const TOOLSET_FILE_RE = /^toolset-(\d+)(?:-.*?)?\.json$/;
+const TOOLSET_FILE_RE = /^toolset-(\d+)(-[a-z0-9-]+)?\.json$/;
 
 /**
  * Regex to extract explicit MSVC version pins from workload component IDs.
@@ -320,6 +351,146 @@ function fetchWithRedirect(url: string): Promise<unknown | null> {
             });
         }).on('error', reject);
     });
+}
+
+// ── Chocolatey version discovery ────────────────────────────────────────────
+
+/**
+ * Chocolatey OData API base URL for package searches.
+ */
+const CHOCOLATEY_API_BASE = 'https://community.chocolatey.org/api/v2';
+
+/**
+ * Fetches raw text from an HTTPS URL.
+ *
+ * @param url - The HTTPS URL to fetch
+ * @returns Promise resolving to the response body as a string
+ * @throws Error if the HTTP response status is not 200
+ */
+function fetchText(url: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+        https.get(url, (res) => {
+            // Untested: requires the Chocolatey API to return non-200,
+            // which the mocked https.get never produces for text fetches.
+            if (res.statusCode !== 200) {
+                res.resume();
+                reject(new Error(`HTTP ${res.statusCode} for ${url}`));
+                return;
+            }
+            const chunks: Buffer[] = [];
+            res.on('data', (chunk: Buffer) => {
+                chunks.push(chunk);
+            });
+            res.on('end', () => {
+                resolve(Buffer.concat(chunks).toString('utf-8'));
+            });
+        }).on('error', reject);
+    });
+}
+
+/**
+ * Parses Chocolatey OData Atom XML to extract approved, non-prerelease package versions.
+ *
+ * The Atom XML contains `<entry>` elements with `<m:properties>` children holding
+ * `<d:Version>`, `<d:IsApproved>`, and `<d:IsPrerelease>` elements.
+ * This function uses simple regex extraction rather than a full XML parser
+ * since the structure is well-known and stable.
+ *
+ * @param xml - Raw Atom XML response body from the Chocolatey OData API
+ * @returns Array of approved, non-prerelease version strings
+ */
+export function parseChocolateyVersions(xml: string): string[] {
+    const versions: string[] = [];
+
+    // Split by <entry> to process each package entry individually
+    const entries = xml.split(/<entry[\s>]/);
+    for (const entry of entries) {
+        // Extract version
+        const versionMatch = entry.match(/<d:Version>(.*?)<\/d:Version>/);
+        if (!versionMatch) {
+            continue;
+        }
+
+        // Check IsApproved (must be true)
+        const approvedMatch = entry.match(/<d:IsApproved[^>]*>(true|false)<\/d:IsApproved>/i);
+        if (!approvedMatch || approvedMatch[1].toLowerCase() !== 'true') {
+            continue;
+        }
+
+        // Check IsPrerelease (must be false)
+        const prereleaseMatch = entry.match(/<d:IsPrerelease[^>]*>(true|false)<\/d:IsPrerelease>/i);
+        if (!prereleaseMatch || prereleaseMatch[1].toLowerCase() !== 'false') {
+            continue;
+        }
+
+        versions.push(versionMatch[1]);
+    }
+
+    return versions;
+}
+
+/**
+ * Fetches all installable versions of a Chocolatey package.
+ *
+ * Queries the Chocolatey OData API `FindPackagesById()` endpoint and parses
+ * the Atom XML response to collect approved, non-prerelease versions.
+ *
+ * Does NOT add `$orderby` or other OData `$` operators to the URL, as these
+ * return HTTP 406 since March 2024.
+ *
+ * @param packageId - The Chocolatey package ID (e.g., `"mingw"` or `"llvm"`)
+ * @returns Promise resolving to an array of version strings, or empty array on failure
+ */
+export async function fetchChocolateyVersions(packageId: string): Promise<string[]> {
+    const url = `${CHOCOLATEY_API_BASE}/FindPackagesById()?id='${packageId}'`;
+    try {
+        console.log(`    Fetching Chocolatey versions for '${packageId}'...`);
+        const xml = await fetchText(url);
+        const versions = parseChocolateyVersions(xml);
+        console.log(`      Found ${versions.length} approved version(s)`);
+        return versions;
+    } catch (err) {
+        // Untested: requires the Chocolatey API to be unreachable,
+        // which cannot happen in the mocked test environment.
+        console.warn(`    Warning: failed to fetch Chocolatey versions for '${packageId}': ${err}`);
+        return [];
+    }
+}
+
+/**
+ * Extracts the MinGW GCC major version string from a toolset JSON.
+ *
+ * The toolset `mingw.version` field contains a pattern like `"14.*"`.
+ * This function extracts just the major number before `.*`.
+ *
+ * @param toolset - Parsed toolset JSON
+ * @returns The MinGW GCC major version string (e.g., `"14"`), or null if not present
+ */
+export function extractMingwVersion(toolset: ToolsetJson): string | null {
+    const version = toolset.mingw?.version;
+    if (!version) {
+        return null;
+    }
+    // Extract major number before ".*" pattern (e.g., "14.*" → "14")
+    const match = version.match(/^(\d+)/);
+    return match ? match[1] : null;
+}
+
+/**
+ * Extracts the LLVM major version string from a toolset JSON.
+ *
+ * The toolset `llvm.version` field contains a plain major version string
+ * like `"20"`, used as-is.
+ *
+ * @param toolset - Parsed toolset JSON
+ * @returns The LLVM major version string (e.g., `"20"`), or null if not present
+ */
+export function extractLlvmVersion(toolset: ToolsetJson): string | null {
+    const version = toolset.llvm?.version;
+    if (!version) {
+        return null;
+    }
+    return version;
 }
 
 // ── MSVC version discovery ──────────────────────────────────────────────────
@@ -586,13 +757,16 @@ export async function fetchToolsetDirectory(
         }
 
         const runnerVersion = match[1];
-        const isPrimary = entry.name === `toolset-${runnerVersion}.json`;
+        const suffix = match[2] || '';
+        const isPrimary = suffix === '';
+        const runnerName = `windows-${runnerVersion}${suffix}`;
 
-        if (!grouped.has(runnerVersion)) {
-            grouped.set(runnerVersion, []);
+        if (!grouped.has(runnerName)) {
+            grouped.set(runnerName, []);
         }
-        grouped.get(runnerVersion)!.push({
+        grouped.get(runnerName)!.push({
             runnerVersion,
+            runnerName,
             isPrimary,
             downloadUrl: entry.download_url
         });
@@ -687,33 +861,30 @@ export async function updateWindowsMsvcDefaults(rootDir: string): Promise<boolea
         toolsetDir = new Map();
     }
 
-    // Build a combined map of runner version → toolset URLs
-    // Start with runner-images.json entries, then add extras from directory listing
+    // Build a map of runner name → toolset files.
+    // Primary runners come from runner-images.json (e.g., "windows-2025").
+    // Multi-suffix runners come from the directory listing (e.g., "windows-2025-vs2026").
     const runnerToolsets = new Map<string, ToolsetFileInfo[]>();
 
     for (const runner of windowsRunners) {
         const version = runner.version;
-        const files: ToolsetFileInfo[] = [];
+        const runnerName = `windows-${version}`;
 
-        // Primary toolset from runner-images.json
         if (runner.toolset_url) {
-            files.push({
+            runnerToolsets.set(runnerName, [{
                 runnerVersion: version,
+                runnerName,
                 isPrimary: true,
                 downloadUrl: runner.toolset_url
-            });
+            }]);
         }
+    }
 
-        // Add multi-suffix files from directory listing
-        const dirFiles = toolsetDir.get(version) || [];
-        for (const df of dirFiles) {
-            if (!df.isPrimary) {
-                files.push(df);
-            }
-        }
-
-        if (files.length > 0) {
-            runnerToolsets.set(version, files);
+    // Add multi-suffix runners from directory listing as separate entries
+    for (const [dirRunnerName, dirFiles] of toolsetDir.entries()) {
+        if (!runnerToolsets.has(dirRunnerName)) {
+            // This is a new runner not in runner-images.json (e.g., windows-2025-vs2026)
+            runnerToolsets.set(dirRunnerName, dirFiles);
         }
     }
 
@@ -721,14 +892,15 @@ export async function updateWindowsMsvcDefaults(rootDir: string): Promise<boolea
     const runners: Record<string, OutputRunnerMsvcInfo> = {};
     let successCount = 0;
 
-    const sortedVersions = [...runnerToolsets.keys()].sort();
+    const sortedRunnerNames = [...runnerToolsets.keys()].sort();
 
-    for (const version of sortedVersions) {
-        const files = runnerToolsets.get(version)!;
-        const runnerName = `windows-${version}`;
+    for (const runnerName of sortedRunnerNames) {
+        const files = runnerToolsets.get(runnerName)!;
         console.log(`  Processing ${runnerName} (${files.length} toolset file(s))...`);
 
         const allVersions: DiscoveredMsvcVersion[] = [];
+        let mingwVersion: string | null = null;
+        let llvmVersion: string | null = null;
 
         for (const file of files) {
             try {
@@ -736,6 +908,18 @@ export async function updateWindowsMsvcDefaults(rootDir: string): Promise<boolea
                 const discovered = await discoverMsvcVersions(toolset, file.isPrimary);
                 allVersions.push(...discovered);
                 console.log(`    ${file.isPrimary ? 'Primary' : 'Extra'}: found ${discovered.length} MSVC version(s)`);
+
+                // Extract MinGW and LLVM versions from the primary toolset
+                if (file.isPrimary) {
+                    mingwVersion = extractMingwVersion(toolset);
+                    llvmVersion = extractLlvmVersion(toolset);
+                    if (mingwVersion) {
+                        console.log(`    MinGW GCC major: ${mingwVersion}`);
+                    }
+                    if (llvmVersion) {
+                        console.log(`    LLVM major: ${llvmVersion}`);
+                    }
+                }
             } catch (err) {
                 // Untested: requires a toolset fetch to fail, which the
                 // mocked responses never produce.
@@ -752,7 +936,14 @@ export async function updateWindowsMsvcDefaults(rootDir: string): Promise<boolea
 
         // Merge and deduplicate versions
         const mergedVersions = mergeVersions(allVersions);
-        runners[runnerName] = { msvc_versions: mergedVersions };
+        const runnerInfo: OutputRunnerMsvcInfo = { msvc_versions: mergedVersions };
+        if (mingwVersion) {
+            runnerInfo.mingw_version = mingwVersion;
+        }
+        if (llvmVersion) {
+            runnerInfo.llvm_version = llvmVersion;
+        }
+        runners[runnerName] = runnerInfo;
         successCount++;
         console.log(`    ${mergedVersions.length} unique MSVC version(s) for ${runnerName}`);
     }
@@ -764,10 +955,18 @@ export async function updateWindowsMsvcDefaults(rootDir: string): Promise<boolea
         return false;
     }
 
+    // Fetch Chocolatey installable versions for MinGW and LLVM
+    const [installableMingw, installableLlvm] = await Promise.all([
+        fetchChocolateyVersions('mingw'),
+        fetchChocolateyVersions('llvm')
+    ]);
+
     const result: WindowsMsvcDefaults = {
         generated: new Date().toISOString(),
         source: 'actions/runner-images toolsets + VS channel manifests',
-        runners
+        runners,
+        installable_mingw: installableMingw,
+        installable_llvm: installableLlvm
     };
 
     const outputPath = path.join(rootDir, 'setup-program/windows-msvc-defaults.json');

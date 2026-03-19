@@ -156,7 +156,9 @@ export async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): P
     entry['install'] = '';
     const wantsX86 = entry['x86'] === true;
     const entryArch = typeof entry['arch'] === 'string' && entry['arch'].trim() !== '' ? entry['arch'].trim() : null;
-    const normalizedArch = entryArch ? entryArch.toLowerCase() : (wantsX86 ? 'x86' : 'x64');
+    const isMacOSCompiler = ['apple-clang', 'macos-gcc', 'macos-clang'].includes(entry['compiler']);
+    const defaultArch = wantsX86 ? 'x86' : (isMacOSCompiler ? 'arm64' : 'x64');
+    const normalizedArch = entryArch ? entryArch.toLowerCase() : defaultArch;
     entry['arch'] = normalizedArch;
 
     // Flags for asan
@@ -318,7 +320,7 @@ export async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): P
         entry['triplet'] = `${archPrefix}-windows`;
     } else if (entry['compiler'] === 'mingw') {
         entry['triplet'] = `${archPrefix}-mingw-static`;
-    } else if (entry['compiler'] === 'apple-clang') {
+    } else if (['apple-clang', 'macos-gcc', 'macos-clang'].includes(entry['compiler'])) {
         entry['triplet'] = `${archPrefix}-osx`;
     } else {
         entry['triplet'] = `${archPrefix}-linux`;

@@ -195,7 +195,11 @@ export function normalizeCppVersionRequirement(range: string): string {
 export function normalizeCompilerName(name: string): string {
     const lowerCaseName = name.toLowerCase();
 
-    if (['gcc', 'g++', 'gcc-'].some(s => lowerCaseName.startsWith(s))) {
+    if (['macos-gcc', 'macosgcc', 'brew-gcc', 'brewgcc'].some(s => lowerCaseName.startsWith(s))) {
+        return 'macos-gcc';
+    } else if (['macos-clang', 'macosclang', 'brew-clang', 'brewclang', 'macos-llvm'].some(s => lowerCaseName.startsWith(s))) {
+        return 'macos-clang';
+    } else if (['gcc', 'g++', 'gcc-'].some(s => lowerCaseName.startsWith(s))) {
         return 'gcc';
     } else if (['clang-cl', 'clang-win'].some(s => lowerCaseName.startsWith(s))) {
         return 'clang-cl';

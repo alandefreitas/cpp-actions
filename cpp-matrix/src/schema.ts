@@ -84,7 +84,9 @@ export const inputsSchema = {
             'msvc >=14',
             'apple-clang *',
             'mingw *',
-            'clang-cl *'
+            'clang-cl *',
+            'macos-gcc *',
+            'macos-clang *'
         ] as string[],
         transform: (v) => {
             const versions = parseCompilerRequirements((v as string[]).join('\n'));

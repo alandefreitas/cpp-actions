@@ -398,6 +398,8 @@ inputs:
       apple-clang *
       mingw *
       clang-cl *
+      macos-gcc *
+      macos-clang *
   subrange-policy:
     description: |-
       The policy to be used to break the compiler version requirements into sub-ranges of versions.

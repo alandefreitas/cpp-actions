@@ -59,6 +59,24 @@ export {
     ensureAddAptRepositoryIsAvailable
 } from './apt-utils';
 
+// Re-export Homebrew utilities for external consumers
+export {
+    type BrewProgramResult,
+    isBrewAvailable,
+    getBrewPrefix,
+    findProgramWithBrew,
+    installProgramWithBrew,
+    parseVersionFromOutput
+} from './brew-utils';
+
+// Re-export Chocolatey utilities for external consumers
+export {
+    type ChocoProgramResult,
+    isChocoAvailable,
+    findProgramWithChoco,
+    installProgramWithChoco
+} from './choco-utils';
+
 // Re-export Git utilities for external consumers
 export {
     findGit,
@@ -90,6 +108,7 @@ export {
     type MacOSXcodeDefaults,
     type RunnerXcodeInfo,
     type XcodeVersionEntry,
+    type InstallableVersion,
     loadMacOSXcodeDefaults
 } from './macos-xcode-defaults';
 

@@ -155,6 +155,43 @@ describe('normalizeCompiler', () => {
             Object.defineProperty(process, 'platform', { value: originalPlatform });
         }
     });
+
+    it('normalizes macos-gcc variants', () => {
+        expect(normalizeCompiler('macos-gcc', '*').compiler).toEqual('macos-gcc');
+        expect(normalizeCompiler('macosgcc', '*').compiler).toEqual('macos-gcc');
+        expect(normalizeCompiler('brew-gcc', '*').compiler).toEqual('macos-gcc');
+        expect(normalizeCompiler('brewgcc', '*').compiler).toEqual('macos-gcc');
+    });
+
+    it('normalizes macos-clang variants', () => {
+        expect(normalizeCompiler('macos-clang', '*').compiler).toEqual('macos-clang');
+        expect(normalizeCompiler('macosclang', '*').compiler).toEqual('macos-clang');
+        expect(normalizeCompiler('brew-clang', '*').compiler).toEqual('macos-clang');
+        expect(normalizeCompiler('brewclang', '*').compiler).toEqual('macos-clang');
+        expect(normalizeCompiler('macos-llvm', '*').compiler).toEqual('macos-clang');
+    });
+
+    it('extracts version from macos-gcc-14 style input', () => {
+        const result = normalizeCompiler('macos-gcc-14', '*');
+        expect(result.compiler).toEqual('macos-gcc');
+        expect(result.version).toEqual('14');
+    });
+
+    it('extracts version from macos-clang-18 style input', () => {
+        const result = normalizeCompiler('macos-clang-18', '*');
+        expect(result.compiler).toEqual('macos-clang');
+        expect(result.version).toEqual('18');
+    });
+
+    it('normalizes mingw variants', () => {
+        expect(normalizeCompiler('mingw', '*').compiler).toEqual('mingw');
+        expect(normalizeCompiler('mingw32', '*').compiler).toEqual('mingw');
+        expect(normalizeCompiler('mingw64', '*').compiler).toEqual('mingw');
+    });
+
+    it('preserves clang-cl as distinct compiler', () => {
+        expect(normalizeCompiler('clang-cl', '*').compiler).toEqual('clang-cl');
+    });
 });
 
 describe('resolveMSVCArch', () => {
@@ -340,41 +377,27 @@ describe('main (SetupCppRunner)', () => {
             }));
         });
 
-        it('finds mingw as gcc in PATH', async () => {
+        it('searches for clang-cl on Windows via normalizeCompiler for "clang" input', async () => {
             Object.defineProperty(process, 'platform', { value: 'win32' });
-            mockWhich.mockResolvedValue('C:\\mingw\\bin\\gcc.exe');
-            mockExistsSync.mockReturnValue(true);
-            mockGetExecOutput.mockResolvedValue({
-                exitCode: 0,
-                stdout: 'gcc.exe (x86_64-posix-seh-rev0) 13.1.0\n',
-                stderr: ''
-            });
-
-            const result = await main(makeInputs({ compiler: 'mingw', version: '*' }));
-
-            expect(mockWhich).toHaveBeenCalledWith('gcc');
-            expect(result).toEqual(expect.objectContaining({
-                cc: 'C:\\mingw\\bin\\gcc.exe',
-                version: '13.1.0'
-            }));
-        });
-
-        it('searches for clang-cl on Windows', async () => {
-            Object.defineProperty(process, 'platform', { value: 'win32' });
-            mockWhich.mockResolvedValue('C:\\LLVM\\bin\\clang-cl.exe');
-            mockExistsSync.mockReturnValue(false);
-            mockGetExecOutput.mockResolvedValue({
-                exitCode: 0,
-                stdout: 'clang version 17.0.1\n',
-                stderr: ''
+            // "clang" on win32 normalizes to "clang-cl" which delegates to setup-clang
+            mockClangMain.mockResolvedValue({
+                cc: 'C:\\LLVM\\bin\\clang-cl.exe',
+                cxx: 'C:\\LLVM\\bin\\clang-cl.exe',
+                bindir: 'C:\\LLVM\\bin',
+                dir: 'C:\\LLVM',
+                outputPath: 'C:\\LLVM\\bin\\clang-cl.exe',
+                version: '17.0.1',
+                versionMajor: 17,
+                versionMinor: 0,
+                versionPatch: 1,
+                symbolizerPath: null
             });
 
             const result = await main(makeInputs({ compiler: 'clang', version: '*' }));
 
-            expect(mockWhich).toHaveBeenCalledWith('clang-cl');
+            expect(mockClangMain).toHaveBeenCalled();
             expect(result).toEqual(expect.objectContaining({
                 cc: 'C:\\LLVM\\bin\\clang-cl.exe',
-                cxx: 'C:\\LLVM\\bin\\clang-cl.exe', // cxx falls back to cc when existsSync returns false
                 version: '17.0.1'
             }));
         });
@@ -455,30 +478,261 @@ describe('main (SetupCppRunner)', () => {
             }));
         });
 
-        it('uses mingw32 and mingw64 as gcc alias', async () => {
+        it('uses mingw32 and mingw64 as mingw aliases (delegate to setup-gcc)', async () => {
             Object.defineProperty(process, 'platform', { value: 'win32' });
-            mockWhich.mockResolvedValue('C:\\bin\\gcc.exe');
-            mockExistsSync.mockReturnValue(true);
-            mockGetExecOutput.mockResolvedValue({
-                exitCode: 0,
-                stdout: 'gcc 12.0.0\n',
-                stderr: ''
+            mockGccMain.mockResolvedValue({
+                cc: 'C:\\bin\\gcc.exe', cxx: 'C:\\bin\\g++.exe',
+                bindir: 'C:\\bin', dir: 'C:\\',
+                outputPath: 'C:\\bin\\gcc.exe', version: '12.0.0',
+                versionMajor: 12, versionMinor: 0, versionPatch: 0
             });
 
             await main(makeInputs({ compiler: 'mingw32', version: '*' }));
-            expect(mockWhich).toHaveBeenCalledWith('gcc');
+            expect(mockGccMain).toHaveBeenCalled();
 
             jest.clearAllMocks();
-            mockWhich.mockResolvedValue('C:\\bin\\gcc.exe');
-            mockExistsSync.mockReturnValue(true);
-            mockGetExecOutput.mockResolvedValue({
-                exitCode: 0,
-                stdout: 'gcc 12.0.0\n',
-                stderr: ''
+            mockGccMain.mockResolvedValue({
+                cc: 'C:\\bin\\gcc.exe', cxx: 'C:\\bin\\g++.exe',
+                bindir: 'C:\\bin', dir: 'C:\\',
+                outputPath: 'C:\\bin\\gcc.exe', version: '12.0.0',
+                versionMajor: 12, versionMinor: 0, versionPatch: 0
             });
 
             await main(makeInputs({ compiler: 'mingw64', version: '*' }));
+            expect(mockGccMain).toHaveBeenCalled();
+        });
+    });
+
+    describe('mingw routing', () => {
+        it('delegates mingw to setup-gcc on Windows', async () => {
+            Object.defineProperty(process, 'platform', { value: 'win32' });
+            mockGccMain.mockResolvedValue({
+                cc: 'C:\\mingw64\\bin\\gcc.exe',
+                cxx: 'C:\\mingw64\\bin\\g++.exe',
+                bindir: 'C:\\mingw64\\bin',
+                dir: 'C:\\mingw64',
+                outputPath: 'C:\\mingw64\\bin\\gcc.exe',
+                version: '14.2.0',
+                versionMajor: 14,
+                versionMinor: 2,
+                versionPatch: 0
+            });
+
+            const result = await main(makeInputs({ compiler: 'mingw', version: '14' }));
+
+            expect(mockGccMain).toHaveBeenCalledWith({
+                version: '14',
+                path: [],
+                checkLatest: false,
+                updateEnvironment: true,
+                traceCommands: false
+            });
+            expect(result).toEqual(expect.objectContaining({
+                cc: 'C:\\mingw64\\bin\\gcc.exe',
+                cxx: 'C:\\mingw64\\bin\\g++.exe'
+            }));
+        });
+
+        it('throws ExpectedError for mingw on non-Windows', async () => {
+            Object.defineProperty(process, 'platform', { value: 'linux' });
+
+            await expect(main(makeInputs({ compiler: 'mingw', version: '*' }))).rejects.toThrow(ExpectedError);
+            await expect(main(makeInputs({ compiler: 'mingw', version: '*' }))).rejects.toThrow('MinGW is only available on Windows');
+        });
+
+        it('throws ExpectedError for mingw on macOS', async () => {
+            Object.defineProperty(process, 'platform', { value: 'darwin' });
+
+            await expect(main(makeInputs({ compiler: 'mingw', version: '*' }))).rejects.toThrow(ExpectedError);
+            await expect(main(makeInputs({ compiler: 'mingw', version: '*' }))).rejects.toThrow('MinGW is only available on Windows');
+        });
+    });
+
+    describe('clang-cl routing', () => {
+        it('delegates clang-cl to setup-clang on Windows', async () => {
+            Object.defineProperty(process, 'platform', { value: 'win32' });
+            mockClangMain.mockResolvedValue({
+                cc: 'C:\\Program Files\\LLVM\\bin\\clang-cl.exe',
+                cxx: 'C:\\Program Files\\LLVM\\bin\\clang-cl.exe',
+                bindir: 'C:\\Program Files\\LLVM\\bin',
+                dir: 'C:\\Program Files\\LLVM',
+                outputPath: 'C:\\Program Files\\LLVM\\bin\\clang-cl.exe',
+                version: '20.1.8',
+                versionMajor: 20,
+                versionMinor: 1,
+                versionPatch: 8,
+                symbolizerPath: null
+            });
+
+            const result = await main(makeInputs({ compiler: 'clang-cl', version: '20' }));
+
+            expect(mockClangMain).toHaveBeenCalledWith({
+                version: '20',
+                path: [],
+                checkLatest: false,
+                updateEnvironment: true,
+                traceCommands: false
+            });
+            expect(result).toEqual(expect.objectContaining({
+                cc: 'C:\\Program Files\\LLVM\\bin\\clang-cl.exe'
+            }));
+        });
+
+        it('throws ExpectedError for clang-cl on non-Windows', async () => {
+            Object.defineProperty(process, 'platform', { value: 'linux' });
+
+            await expect(main(makeInputs({ compiler: 'clang-cl', version: '*' }))).rejects.toThrow(ExpectedError);
+            await expect(main(makeInputs({ compiler: 'clang-cl', version: '*' }))).rejects.toThrow('clang-cl is only available on Windows');
+        });
+    });
+
+    describe('macos-gcc routing', () => {
+        it('delegates macos-gcc to setup-gcc on macOS', async () => {
+            Object.defineProperty(process, 'platform', { value: 'darwin' });
+            mockGccMain.mockResolvedValue({
+                cc: '/opt/homebrew/bin/gcc-14',
+                cxx: '/opt/homebrew/bin/g++-14',
+                bindir: '/opt/homebrew/bin',
+                dir: '/opt/homebrew',
+                outputPath: '/opt/homebrew/bin/gcc-14',
+                version: '14.2.0',
+                versionMajor: 14,
+                versionMinor: 2,
+                versionPatch: 0
+            });
+
+            const result = await main(makeInputs({ compiler: 'macos-gcc', version: '14' }));
+
+            expect(mockGccMain).toHaveBeenCalledWith({
+                version: '14',
+                path: [],
+                checkLatest: false,
+                updateEnvironment: true,
+                traceCommands: false
+            });
+            expect(result).toEqual(expect.objectContaining({
+                cc: '/opt/homebrew/bin/gcc-14',
+                cxx: '/opt/homebrew/bin/g++-14'
+            }));
+        });
+
+        it('throws ExpectedError for macos-gcc on non-macOS', async () => {
+            Object.defineProperty(process, 'platform', { value: 'linux' });
+
+            await expect(main(makeInputs({ compiler: 'macos-gcc', version: '*' }))).rejects.toThrow(ExpectedError);
+            await expect(main(makeInputs({ compiler: 'macos-gcc', version: '*' }))).rejects.toThrow('macos-gcc is only available on macOS');
+        });
+
+        it('throws ExpectedError for macos-gcc on Windows', async () => {
+            Object.defineProperty(process, 'platform', { value: 'win32' });
+
+            await expect(main(makeInputs({ compiler: 'macos-gcc', version: '*' }))).rejects.toThrow(ExpectedError);
+            await expect(main(makeInputs({ compiler: 'macos-gcc', version: '*' }))).rejects.toThrow('macos-gcc is only available on macOS');
+        });
+    });
+
+    describe('macos-clang routing', () => {
+        it('delegates macos-clang to setup-clang on macOS', async () => {
+            Object.defineProperty(process, 'platform', { value: 'darwin' });
+            mockClangMain.mockResolvedValue({
+                cc: '/opt/homebrew/opt/llvm@18/bin/clang',
+                cxx: '/opt/homebrew/opt/llvm@18/bin/clang++',
+                bindir: '/opt/homebrew/opt/llvm@18/bin',
+                dir: '/opt/homebrew/opt/llvm@18',
+                outputPath: '/opt/homebrew/opt/llvm@18/bin/clang',
+                version: '18.1.8',
+                versionMajor: 18,
+                versionMinor: 1,
+                versionPatch: 8,
+                symbolizerPath: null
+            });
+
+            const result = await main(makeInputs({ compiler: 'macos-clang', version: '18' }));
+
+            expect(mockClangMain).toHaveBeenCalledWith({
+                version: '18',
+                path: [],
+                checkLatest: false,
+                updateEnvironment: true,
+                traceCommands: false
+            });
+            expect(result).toEqual(expect.objectContaining({
+                cc: '/opt/homebrew/opt/llvm@18/bin/clang',
+                cxx: '/opt/homebrew/opt/llvm@18/bin/clang++'
+            }));
+        });
+
+        it('throws ExpectedError for macos-clang on non-macOS', async () => {
+            Object.defineProperty(process, 'platform', { value: 'linux' });
+
+            await expect(main(makeInputs({ compiler: 'macos-clang', version: '*' }))).rejects.toThrow(ExpectedError);
+            await expect(main(makeInputs({ compiler: 'macos-clang', version: '*' }))).rejects.toThrow('macos-clang is only available on macOS');
+        });
+
+        it('throws ExpectedError for macos-clang on Windows', async () => {
+            Object.defineProperty(process, 'platform', { value: 'win32' });
+
+            await expect(main(makeInputs({ compiler: 'macos-clang', version: '*' }))).rejects.toThrow(ExpectedError);
+            await expect(main(makeInputs({ compiler: 'macos-clang', version: '*' }))).rejects.toThrow('macos-clang is only available on macOS');
+        });
+    });
+
+    describe('Existing gcc/clang routing unchanged', () => {
+        it('gcc on Linux still delegates to setup-gcc', async () => {
+            Object.defineProperty(process, 'platform', { value: 'linux' });
+            mockGccMain.mockResolvedValue({
+                cc: '/usr/bin/gcc-12', cxx: '/usr/bin/g++-12',
+                bindir: '/usr/bin', dir: '/usr',
+                outputPath: '/usr/bin/gcc-12', version: '12.3.0',
+                versionMajor: 12, versionMinor: 3, versionPatch: 0
+            });
+
+            await main(makeInputs({ compiler: 'gcc', version: '12' }));
+            expect(mockGccMain).toHaveBeenCalled();
+        });
+
+        it('clang on Linux still delegates to setup-clang', async () => {
+            Object.defineProperty(process, 'platform', { value: 'linux' });
+            mockClangMain.mockResolvedValue({
+                cc: '/usr/bin/clang-16', cxx: '/usr/bin/clang++-16',
+                bindir: '/usr/bin', dir: '/usr',
+                outputPath: '/usr/bin/clang-16', version: '16.0.0',
+                versionMajor: 16, versionMinor: 0, versionPatch: 0,
+                symbolizerPath: null
+            });
+
+            await main(makeInputs({ compiler: 'clang', version: '16' }));
+            expect(mockClangMain).toHaveBeenCalled();
+        });
+
+        it('gcc on macOS falls through to searchPathCompiler', async () => {
+            Object.defineProperty(process, 'platform', { value: 'darwin' });
+            mockWhich.mockResolvedValue('/usr/local/bin/gcc');
+            mockExistsSync.mockReturnValue(true);
+            mockGetExecOutput.mockResolvedValue({
+                exitCode: 0, stdout: 'gcc 13.2.0\n', stderr: ''
+            });
+
+            const result = await main(makeInputs({ compiler: 'gcc', version: '*' }));
+
+            expect(mockGccMain).not.toHaveBeenCalled();
             expect(mockWhich).toHaveBeenCalledWith('gcc');
+            expect(result).toEqual(expect.objectContaining({ version: '13.2.0' }));
+        });
+
+        it('clang on macOS falls through to searchPathCompiler', async () => {
+            Object.defineProperty(process, 'platform', { value: 'darwin' });
+            mockWhich.mockResolvedValue('/usr/bin/clang');
+            mockExistsSync.mockReturnValue(true);
+            mockGetExecOutput.mockResolvedValue({
+                exitCode: 0, stdout: 'clang version 15.0.0\n', stderr: ''
+            });
+
+            const result = await main(makeInputs({ compiler: 'clang', version: '*' }));
+
+            expect(mockClangMain).not.toHaveBeenCalled();
+            expect(mockWhich).toHaveBeenCalledWith('clang');
+            expect(result).toEqual(expect.objectContaining({ version: '15.0.0' }));
         });
     });
 

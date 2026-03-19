@@ -76,6 +76,23 @@ describe('normalizeCompilerName', () => {
         expect(normalizeCompilerName('MSVC-12.0')).toBe('msvc');
     });
 
+    test('should normalize macos-gcc variants to "macos-gcc"', () => {
+        expect(normalizeCompilerName('macos-gcc')).toBe('macos-gcc');
+        expect(normalizeCompilerName('macosgcc')).toBe('macos-gcc');
+        expect(normalizeCompilerName('brew-gcc')).toBe('macos-gcc');
+        expect(normalizeCompilerName('brewgcc')).toBe('macos-gcc');
+        expect(normalizeCompilerName('MACOS-GCC')).toBe('macos-gcc');
+    });
+
+    test('should normalize macos-clang variants to "macos-clang"', () => {
+        expect(normalizeCompilerName('macos-clang')).toBe('macos-clang');
+        expect(normalizeCompilerName('macosclang')).toBe('macos-clang');
+        expect(normalizeCompilerName('brew-clang')).toBe('macos-clang');
+        expect(normalizeCompilerName('brewclang')).toBe('macos-clang');
+        expect(normalizeCompilerName('macos-llvm')).toBe('macos-clang');
+        expect(normalizeCompilerName('MACOS-CLANG')).toBe('macos-clang');
+    });
+
     test('should not normalize other compiler names', () => {
         expect(normalizeCompilerName('Intel C++')).toBe('Intel C++');
         expect(normalizeCompilerName('xyz')).toBe('xyz');

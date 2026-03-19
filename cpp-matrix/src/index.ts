@@ -249,6 +249,8 @@ class CppMatrixRunner {
                 compilerDefault = 'one-per-vs-year';
             } else if (compilerName === 'apple-clang') {
                 compilerDefault = 'macos-defaults-and-latest';
+            } else if (compilerName === 'macos-gcc' || compilerName === 'macos-clang') {
+                compilerDefault = 'latest';
             } else {
                 compilerDefault = 'latest';
             }

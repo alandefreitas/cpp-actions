@@ -35,6 +35,11 @@ import {
     findBestMacOSRunner,
     findBestWindowsRunner,
     findNewestMacOSRunner,
+    findNewestWindowsRunner,
+    findBestWindowsRunnerForMingw,
+    findBestWindowsRunnerForLlvm,
+    findBestMacOSRunnerForGcc,
+    findBestMacOSRunnerForLlvm,
     setCompilerB2Toolset,
     runsOnLabels,
     inferVisualStudioGeneratorFromRunsOn,
@@ -155,6 +160,20 @@ describe('setCompilerExecutableNames', () => {
         expect(entry.cc).toBe('gcc');
         expect(entry.cxx).toBe('g++');
     });
+
+    test('macos-gcc uses versioned gcc-{major}/g++-{major}', () => {
+        const entry = makeEntry();
+        setCompilerExecutableNames(entry, 'macos-gcc', semver.parse('14.0.0')!);
+        expect(entry.cc).toBe('gcc-14');
+        expect(entry.cxx).toBe('g++-14');
+    });
+
+    test('macos-clang uses versioned clang-{major}/clang++-{major}', () => {
+        const entry = makeEntry();
+        setCompilerExecutableNames(entry, 'macos-clang', semver.parse('18.0.0')!);
+        expect(entry.cc).toBe('clang-18');
+        expect(entry.cxx).toBe('clang++-18');
+    });
 });
 
 describe('setCompilerExecutableNamesNoVersion', () => {
@@ -195,16 +214,16 @@ describe('setCompilerContainerNoVersion', () => {
         expect(entry['runs-on']).toBe('macos-15');
     });
 
-    test('mingw sets windows-2022', () => {
+    test('mingw sets newest Windows runner', () => {
         const entry = makeEntry();
         setCompilerContainerNoVersion(entry, 'mingw');
-        expect(entry['runs-on']).toBe('windows-2022');
+        expect(entry['runs-on']).toBe('windows-2025');
     });
 
-    test('clang-cl sets windows-2022', () => {
+    test('clang-cl sets newest Windows runner', () => {
         const entry = makeEntry();
         setCompilerContainerNoVersion(entry, 'clang-cl');
-        expect(entry['runs-on']).toBe('windows-2022');
+        expect(entry['runs-on']).toBe('windows-2025');
     });
 
     test('gcc does not set runs-on', () => {
@@ -605,16 +624,32 @@ describe('setCompilerContainer', () => {
         expect(entry['runs-on']).toBe('macos-14');
     });
 
-    test('mingw uses windows-2022', () => {
+    test('mingw uses data-driven runner — prefers runner with matching mingw major', () => {
         const entry = makeEntry();
-        setCompilerContainer(entry, makeInputs(), 'mingw', semver.parse('12.0.0')!, '12');
+        setCompilerContainer(entry, makeInputs(), 'mingw', semver.parse('14.0.0')!, '14');
+        // windows-2022 has mingw_version "14"
         expect(entry['runs-on']).toBe('windows-2022');
     });
 
-    test('clang-cl uses windows-2022', () => {
+    test('mingw falls back to newest runner when no runner has matching major', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs(), 'mingw', semver.parse('12.0.0')!, '12');
+        // No runner has mingw_version "12", falls back to newest (windows-2025)
+        expect(entry['runs-on']).toBe('windows-2025');
+    });
+
+    test('clang-cl uses data-driven runner — prefers runner with matching llvm major', () => {
+        const entry = makeEntry();
+        setCompilerContainer(entry, makeInputs(), 'clang-cl', semver.parse('20.0.0')!, '20');
+        // Both runners have llvm_version "20", newest wins (windows-2025)
+        expect(entry['runs-on']).toBe('windows-2025');
+    });
+
+    test('clang-cl falls back to newest runner when no runner has matching major', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs(), 'clang-cl', semver.parse('16.0.0')!, '16');
-        expect(entry['runs-on']).toBe('windows-2022');
+        // No runner has llvm_version "16", falls back to newest (windows-2025)
+        expect(entry['runs-on']).toBe('windows-2025');
     });
 
     test('container with object config gets overwritten by data-driven selection', () => {
@@ -749,11 +784,11 @@ describe('setCompilerCMakeGenerator', () => {
         expect(entry.generator).toBe('Visual Studio 17 2022');
     });
 
-    test('msvc 14.50 on windows-2025 overrides to VS 18 2026', () => {
+    test('msvc 14.50 on windows-2025 uses Ninja (VS 2026 needs CMake 4.0+)', () => {
         const entry = makeEntry({ 'runs-on': 'windows-2025' });
         const v = semver.parse('14.50.0')!;
         setCompilerCMakeGenerator(entry, makeInputs(), 'msvc', v, v, '14.50');
-        expect(entry.generator).toBe('Visual Studio 18 2026');
+        expect(entry.generator).toBe('Ninja');
     });
 
     test('msvc with no runs-on uses year-based generator for 2022', () => {
@@ -844,11 +879,12 @@ describe('setCompilerCMakeGenerator', () => {
         expect(entry.generator).toBe('MinGW Makefiles');
     });
 
-    test('clang-cl sets ClangCL toolset', () => {
+    test('clang-cl sets Ninja generator', () => {
         const entry = makeEntry();
         const v = semver.parse('16.0.0')!;
         setCompilerCMakeGenerator(entry, makeInputs(), 'clang-cl', v, v, '16');
-        expect(entry['generator-toolset']).toBe('ClangCL');
+        expect(entry['generator']).toBe('Ninja');
+        expect(entry['generator-toolset']).toBeUndefined();
     });
 
     test('gcc does not set generator', () => {
@@ -1083,9 +1119,9 @@ describe('findBestWindowsRunner', () => {
         expect(findBestWindowsRunner(29)).toBe('windows-2025');
     });
 
-    test('MSVC 14.50 selects windows-2025 (only runner with it)', () => {
-        // 14.50 is only on windows-2025
-        expect(findBestWindowsRunner(50)).toBe('windows-2025');
+    test('MSVC 14.50 selects windows-2025-vs2026 (default there)', () => {
+        // 14.50 is default on windows-2025-vs2026
+        expect(findBestWindowsRunner(50)).toBe('windows-2025-vs2026');
     });
 
     test('unknown version falls back to newest runner', () => {
@@ -1103,5 +1139,111 @@ describe('findBestWindowsRunner', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs(), 'msvc', semver.parse('14.29.0')!, '14.29');
         expect(entry['runs-on']).toBe('windows-2025');
+    });
+});
+
+// Tests for findNewestWindowsRunner.
+// Uses real windows-msvc-defaults.json data:
+//   windows-2022, windows-2025
+describe('findNewestWindowsRunner', () => {
+    test('returns newest runner from data', () => {
+        expect(findNewestWindowsRunner()).toBe('windows-2025');
+    });
+});
+
+// Tests for findBestWindowsRunnerForMingw.
+// Uses real windows-msvc-defaults.json data:
+//   windows-2022: mingw_version "14"
+//   windows-2025: mingw_version "15"
+describe('findBestWindowsRunnerForMingw', () => {
+    test('mingw 14 selects windows-2022 (matching pre-installed version)', () => {
+        expect(findBestWindowsRunnerForMingw(14)).toBe('windows-2022');
+    });
+
+    test('mingw 15 selects windows-2025 (matching pre-installed version)', () => {
+        expect(findBestWindowsRunnerForMingw(15)).toBe('windows-2025');
+    });
+
+    test('unknown version falls back to newest runner', () => {
+        // mingw 12 is not pre-installed on any runner → newest = windows-2025
+        expect(findBestWindowsRunnerForMingw(12)).toBe('windows-2025');
+    });
+});
+
+// Tests for findBestWindowsRunnerForLlvm.
+// Uses real windows-msvc-defaults.json data:
+//   windows-2022: llvm_version "20"
+//   windows-2025: llvm_version "20"
+describe('findBestWindowsRunnerForLlvm', () => {
+    test('llvm 20 selects windows-2025 (newest runner with matching version)', () => {
+        // Both runners have llvm_version "20", newest wins
+        expect(findBestWindowsRunnerForLlvm(20)).toBe('windows-2025');
+    });
+
+    test('unknown version falls back to newest runner', () => {
+        // llvm 16 is not pre-installed on any runner → newest = windows-2025
+        expect(findBestWindowsRunnerForLlvm(16)).toBe('windows-2025');
+    });
+});
+
+// Tests for findBestMacOSRunnerForGcc.
+// Uses real macos-xcode-defaults.json data:
+//   macos-14: gcc_versions ["13", "14", "15"]
+//   macos-15: gcc_versions ["13", "14", "15"]
+describe('findBestMacOSRunnerForGcc', () => {
+    test('gcc 15 selects macos-15 (newest runner with matching version)', () => {
+        // Both runners have gcc 15, newest wins
+        expect(findBestMacOSRunnerForGcc(15)).toBe('macos-15');
+    });
+
+    test('gcc 13 selects macos-15 (newest runner with matching version)', () => {
+        expect(findBestMacOSRunnerForGcc(13)).toBe('macos-15');
+    });
+
+    test('unknown version falls back to newest runner', () => {
+        // gcc 10 is not pre-installed on any runner → newest = macos-15
+        expect(findBestMacOSRunnerForGcc(10)).toBe('macos-15');
+    });
+});
+
+// Tests for findBestMacOSRunnerForLlvm.
+// Uses real macos-xcode-defaults.json data:
+//   macos-14: llvm_version "15"
+//   macos-15: llvm_version "18"
+describe('findBestMacOSRunnerForLlvm', () => {
+    test('llvm 15 selects macos-14 (matching pre-installed version)', () => {
+        expect(findBestMacOSRunnerForLlvm(15)).toBe('macos-14');
+    });
+
+    test('llvm 18 selects macos-15 (matching pre-installed version)', () => {
+        expect(findBestMacOSRunnerForLlvm(18)).toBe('macos-15');
+    });
+
+    test('unknown version falls back to newest runner', () => {
+        // llvm 12 is not pre-installed on any runner → newest = macos-15
+        expect(findBestMacOSRunnerForLlvm(12)).toBe('macos-15');
+    });
+});
+
+// Tests for setCompilerContainer with macos-gcc and macos-clang.
+describe('setCompilerContainer for macos-gcc', () => {
+    test('macos-gcc selects best macOS runner for GCC major', () => {
+        const entry = makeEntry({ compiler: 'macos-gcc' });
+        setCompilerContainer(entry, makeInputs(), 'macos-gcc', semver.parse('14.0.0')!, '>=14.0.0');
+        expect(entry['runs-on']).toMatch(/^macos-/);
+    });
+});
+
+describe('setCompilerContainer for macos-clang', () => {
+    test('macos-clang selects best macOS runner for LLVM major', () => {
+        const entry = makeEntry({ compiler: 'macos-clang' });
+        setCompilerContainer(entry, makeInputs(), 'macos-clang', semver.parse('18.0.0')!, '>=18.0.0');
+        expect(entry['runs-on']).toBe('macos-15');
+    });
+
+    test('macos-clang with llvm 15 selects macos-14', () => {
+        const entry = makeEntry({ compiler: 'macos-clang' });
+        setCompilerContainer(entry, makeInputs(), 'macos-clang', semver.parse('15.0.0')!, '>=15.0.0');
+        expect(entry['runs-on']).toBe('macos-14');
     });
 });

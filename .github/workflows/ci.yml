@@ -111,6 +111,8 @@ jobs:
             apple-clang *
             mingw *
             clang-cl *
+            macos-gcc *
+            macos-clang *
           latest-factors: |
             gcc Coverage TSan UBSan Fetch-Content
             clang Fetch-Content

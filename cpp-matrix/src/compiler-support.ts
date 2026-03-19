@@ -25,6 +25,12 @@ import { type Inputs } from './schema';
  * @returns True if the compiler version supports the standard
  */
 export function compilerSupportsStd(compiler: string, version: string | semver.SemVer, cxxstd: number): boolean {
+    if (compiler === 'mingw' || compiler === 'macos-gcc') {
+        return compilerSupportsStd('gcc', version, cxxstd);
+    }
+    if (compiler === 'clang-cl' || compiler === 'macos-clang') {
+        return compilerSupportsStd('clang', version, cxxstd);
+    }
     if (compiler === 'gcc') {
         return (cxxstd <= 2023 && semver.satisfies(version, '>=11.1')) ||
             (cxxstd <= 2020 && semver.satisfies(version, '>=10.1')) ||
@@ -75,7 +81,9 @@ export function humanizeCompilerName(compiler: string): string {
         'apple-clang': 'Apple-Clang',
         'msvc': 'MSVC',
         'mingw': 'MinGW',
-        'clang-cl': 'Windows-Clang'
+        'clang-cl': 'Clang-CL',
+        'macos-gcc': 'macOS-GCC',
+        'macos-clang': 'macOS-Clang'
     };
     if (compiler in humanCompilerNames) {
         return humanCompilerNames[compiler];
@@ -96,7 +104,9 @@ export function compilerEmoji(compiler: string): string {
         'apple-clang': '🍏',
         'msvc': '🪟',
         'mingw': '🪓',
-        'clang-cl': '🛠️'
+        'clang-cl': '🛠️',
+        'macos-gcc': '🍺',
+        'macos-clang': '🍺'
     };
     if (compiler in compilerEmojis) {
         return compilerEmojis[compiler];

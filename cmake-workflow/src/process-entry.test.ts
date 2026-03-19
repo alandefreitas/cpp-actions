@@ -977,6 +977,8 @@ describe('processEntry — artifact upload', () => {
     });
 
     it('adds gcc compiler suffix to artifact name', async () => {
+        const origRunnerOs = process.env['RUNNER_OS'];
+        process.env['RUNNER_OS'] = 'Linux';
         const output = 'CPack: - package: /tmp/packages/mylib-1.0.tar.gz generated.\n';
         const entry = setupPackageWithOutput({ cxx: '/usr/bin/g++-12' }, output);
         await processEntry(entry, makeSetupOutputs(), makeParams());
@@ -987,9 +989,12 @@ describe('processEntry — artifact upload', () => {
             expect.any(String),
             expect.any(Object)
         );
+        process.env['RUNNER_OS'] = origRunnerOs;
     });
 
     it('adds clang compiler suffix to artifact name', async () => {
+        const origRunnerOs = process.env['RUNNER_OS'];
+        process.env['RUNNER_OS'] = 'Linux';
         const output = 'CPack: - package: /tmp/packages/mylib-1.0.tar.gz generated.\n';
         const entry = setupPackageWithOutput({ cxx: '/usr/bin/clang++-15' }, output);
         await processEntry(entry, makeSetupOutputs(), makeParams());
@@ -1000,6 +1005,7 @@ describe('processEntry — artifact upload', () => {
             expect.any(String),
             expect.any(Object)
         );
+        process.env['RUNNER_OS'] = origRunnerOs;
     });
 
     it('adds msvc suffix for cl compiler', async () => {
@@ -1086,5 +1092,68 @@ describe('processEntry — artifact upload', () => {
             expect.any(String),
             expect.any(Object)
         );
+    });
+
+    it('uses CPP_ACTIONS_COMPILER env var for artifact name when set', async () => {
+        const origCompiler = process.env['CPP_ACTIONS_COMPILER'];
+        process.env['CPP_ACTIONS_COMPILER'] = 'clang-cl';
+        const output = 'CPack: - package: /tmp/packages/mylib-1.0.tar.gz generated.\n';
+        const entry = setupPackageWithOutput({ cxx: '/usr/bin/clang++' }, output);
+        await processEntry(entry, makeSetupOutputs(), makeParams());
+
+        expect(mockUploadArtifact).toHaveBeenCalledWith(
+            expect.stringContaining('-clang-cl-packages'),
+            expect.any(Array),
+            expect.any(String),
+            expect.any(Object)
+        );
+        process.env['CPP_ACTIONS_COMPILER'] = origCompiler;
+    });
+
+    it('distinguishes apple-clang from macos-clang via env var', async () => {
+        const origCompiler = process.env['CPP_ACTIONS_COMPILER'];
+        const output = 'CPack: - package: /tmp/packages/mylib-1.0.tar.gz generated.\n';
+
+        process.env['CPP_ACTIONS_COMPILER'] = 'apple-clang';
+        const entry1 = setupPackageWithOutput({ cxx: '/usr/bin/clang++' }, output);
+        await processEntry(entry1, makeSetupOutputs(), makeParams());
+        expect(mockUploadArtifact).toHaveBeenCalledWith(
+            expect.stringContaining('-apple-clang-packages'),
+            expect.any(Array),
+            expect.any(String),
+            expect.any(Object)
+        );
+
+        mockUploadArtifact.mockClear();
+        process.env['CPP_ACTIONS_COMPILER'] = 'macos-clang';
+        const entry2 = setupPackageWithOutput({ cxx: '/usr/bin/clang++' }, output);
+        await processEntry(entry2, makeSetupOutputs(), makeParams());
+        expect(mockUploadArtifact).toHaveBeenCalledWith(
+            expect.stringContaining('-macos-clang-packages'),
+            expect.any(Array),
+            expect.any(String),
+            expect.any(Object)
+        );
+
+        process.env['CPP_ACTIONS_COMPILER'] = origCompiler;
+    });
+
+    it('distinguishes gcc from macos-gcc via env var', async () => {
+        const origCompiler = process.env['CPP_ACTIONS_COMPILER'];
+        const origRunnerOs = process.env['RUNNER_OS'];
+        process.env['RUNNER_OS'] = 'macOS';
+        process.env['CPP_ACTIONS_COMPILER'] = 'macos-gcc';
+        const output = 'CPack: - package: /tmp/packages/mylib-1.0.tar.gz generated.\n';
+        const entry = setupPackageWithOutput({ cxx: '/opt/homebrew/bin/g++-15' }, output);
+        await processEntry(entry, makeSetupOutputs(), makeParams());
+
+        expect(mockUploadArtifact).toHaveBeenCalledWith(
+            expect.stringContaining('-macos-gcc-packages'),
+            expect.any(Array),
+            expect.any(String),
+            expect.any(Object)
+        );
+        process.env['RUNNER_OS'] = origRunnerOs;
+        process.env['CPP_ACTIONS_COMPILER'] = origCompiler;
     });
 });

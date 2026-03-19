@@ -36,6 +36,20 @@ export interface RunnerXcodeInfo {
     default_xcode: string;
     /** All available Xcode version entries on this runner. */
     xcode_versions: XcodeVersionEntry[];
+    /** Pre-installed GCC major versions (e.g., `["13", "14", "15"]`), if present. */
+    gcc_versions?: string[];
+    /** Pre-installed LLVM major version (e.g., `"15"`), if present. */
+    llvm_version?: string;
+}
+
+/**
+ * A Homebrew-installable compiler version with major and exact version.
+ */
+export interface InstallableVersion {
+    /** Major version number (e.g., `14`). */
+    major: number;
+    /** Full semantic version string (e.g., `"14.3.0"`). */
+    version: string;
 }
 
 /**
@@ -50,6 +64,10 @@ export interface MacOSXcodeDefaults {
     source: string;
     /** Runner data keyed by runner name. */
     runners: Record<string, RunnerXcodeInfo>;
+    /** All GCC versions installable via Homebrew. */
+    installable_gcc?: InstallableVersion[];
+    /** All LLVM versions installable via Homebrew. */
+    installable_llvm?: InstallableVersion[];
 }
 
 // ── Data loader ─────────────────────────────────────────────────────────────

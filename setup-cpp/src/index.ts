@@ -36,7 +36,7 @@ export interface SetupResult {
     cxx: string | null;
     bindir: string | null;
     dir: string | null;
-    release?: string | null;
+    version?: string | null;
     versionMajor: number | null;
     versionMinor: number | null;
     versionPatch: number | null;
@@ -75,7 +75,15 @@ export function normalizeCompiler(compiler: string, version: string): Normalized
 
     // Normalize compiler name
     compiler = compiler.toLowerCase();
-    if (compiler.startsWith('gcc') || compiler.startsWith('g++')) {
+    if (compiler === 'macos-gcc' || compiler === 'macosgcc' || compiler === 'brew-gcc' || compiler === 'brewgcc') {
+        compiler = 'macos-gcc';
+    } else if (compiler === 'macos-clang' || compiler === 'macosclang' || compiler === 'brew-clang' || compiler === 'brewclang' || compiler === 'macos-llvm') {
+        compiler = 'macos-clang';
+    } else if (compiler === 'mingw' || compiler === 'mingw32' || compiler === 'mingw64') {
+        compiler = 'mingw';
+    } else if (compiler === 'clang-cl') {
+        compiler = 'clang-cl';
+    } else if (compiler.startsWith('gcc') || compiler.startsWith('g++')) {
         compiler = 'gcc';
     } else if (compiler === 'apple-clang' || compiler.startsWith('appleclang')) {
         compiler = 'apple-clang';
@@ -227,11 +235,47 @@ class SetupCppRunner {
             await this.setupAppleClang();
         } else if (this.compiler === 'apple-clang') {
             await this.setupAppleClangDefault();
-        } else if (['mingw', 'mingw32', 'mingw64', 'gcc', 'clang', 'clang-cl'].includes(this.compiler)) {
+        } else if (this.compiler === 'mingw') {
+            if (process.platform !== 'win32') {
+                throw new ExpectedError(
+                    'MinGW is only available on Windows',
+                    'Unsupported Platform'
+                );
+            }
+            await this.setupDelegatedCompiler('gcc');
+        } else if (this.compiler === 'clang-cl') {
+            if (process.platform !== 'win32') {
+                throw new ExpectedError(
+                    'clang-cl is only available on Windows',
+                    'Unsupported Platform'
+                );
+            }
+            await this.setupDelegatedCompiler('clang');
+        } else if (this.compiler === 'macos-gcc') {
+            if (process.platform !== 'darwin') {
+                throw new ExpectedError(
+                    'macos-gcc is only available on macOS',
+                    'Unsupported Platform'
+                );
+            }
+            await this.setupDelegatedCompiler('gcc');
+        } else if (this.compiler === 'macos-clang') {
+            if (process.platform !== 'darwin') {
+                throw new ExpectedError(
+                    'macos-clang is only available on macOS',
+                    'Unsupported Platform'
+                );
+            }
+            await this.setupDelegatedCompiler('clang');
+        } else if (['gcc', 'clang'].includes(this.compiler)) {
             await this.searchPathCompiler();
         }
 
         await this.ensureSymbolizerEnvVars();
+
+        // Export compiler family for downstream actions (e.g., cmake-workflow
+        // uses it to disambiguate artifact names for compilers sharing binaries)
+        core.exportVariable('CPP_ACTIONS_COMPILER', this.compiler);
 
         return this.buildOutputs();
     }
@@ -258,6 +302,34 @@ class SetupCppRunner {
                 updateEnvironment: this.inputs.updateEnvironment,
                 traceCommands: this.inputs.traceCommands
             });
+        }
+        if (setupResult !== null) {
+            this.applySetupResult(setupResult);
+        }
+    }
+
+    /**
+     * Delegates compiler setup to setup-gcc or setup-clang.
+     *
+     * Used for platform-specific compilers (mingw, clang-cl, macos-gcc, macos-clang)
+     * that are handled by the respective setup actions' platform-dispatching pipelines.
+     *
+     * @param family - The setup action family to delegate to: 'gcc' or 'clang'
+     */
+    private async setupDelegatedCompiler(family: 'gcc' | 'clang'): Promise<void> {
+        traceCommands.log(`compiler: ${this.compiler}... forwarding to setup-${family} action.`);
+        const inputs = {
+            version: this.version,
+            path: this.inputs.path,
+            checkLatest: this.inputs.checkLatest,
+            updateEnvironment: this.inputs.updateEnvironment,
+            traceCommands: this.inputs.traceCommands
+        };
+        let setupResult: SetupResult | null = null;
+        if (family === 'gcc') {
+            setupResult = await setup_gcc.main(inputs);
+        } else {
+            setupResult = await setup_clang.main(inputs);
         }
         if (setupResult !== null) {
             this.applySetupResult(setupResult);
@@ -520,14 +592,7 @@ class SetupCppRunner {
     private async searchPathCompiler(): Promise<void> {
         core.startGroup(`🔍 Searching for ${this.compiler}`);
         traceCommands.log(`compiler: ${this.compiler}... looking for compiler in PATH.`);
-        let whichArg: string;
-        if (['mingw', 'mingw32', 'mingw64', 'gcc'].includes(this.compiler)) {
-            whichArg = 'gcc';
-        } else if (this.compiler === 'clang' && process.platform === 'win32') {
-            whichArg = 'clang-cl';
-        } else {
-            whichArg = this.compiler;
-        }
+        const whichArg = this.compiler === 'gcc' ? 'gcc' : this.compiler;
         let compilerPath: string | null;
         try {
             compilerPath = await io.which(whichArg);
@@ -593,7 +658,7 @@ class SetupCppRunner {
         this.cxx = result.cxx;
         this.bindir = result.bindir;
         this.dir = result.dir;
-        this.release = result.release ?? null;
+        this.release = result.version ?? null;
         this.versionMajor = result.versionMajor;
         this.versionMinor = result.versionMinor;
         this.versionPatch = result.versionPatch;

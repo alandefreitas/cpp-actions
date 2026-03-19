@@ -210,7 +210,7 @@ describe('setRecommendedFlags', () => {
 
         const appleEntry = makeEntry({ compiler: 'apple-clang' });
         await setRecommendedFlags(appleEntry, makeInputs());
-        expect(appleEntry.triplet).toBe('x64-osx');
+        expect(appleEntry.triplet).toBe('arm64-osx');
 
         const gccEntry = makeEntry({ compiler: 'gcc' });
         await setRecommendedFlags(gccEntry, makeInputs());

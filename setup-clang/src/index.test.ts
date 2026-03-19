@@ -53,6 +53,12 @@ jest.mock('setup-program', () => ({
     findProgramInPath: jest.fn().mockResolvedValue({ outputVersion: null, outputPath: null }),
     findProgramInSystemPaths: jest.fn().mockResolvedValue({ outputVersion: null, outputPath: null }),
     findProgramWithApt: jest.fn().mockResolvedValue({ outputVersion: null, outputPath: null, installedPackage: null }),
+    findProgramWithBrew: jest.fn().mockResolvedValue(null),
+    installProgramWithBrew: jest.fn().mockResolvedValue(null),
+    findProgramWithChoco: jest.fn().mockResolvedValue(null),
+    installProgramWithChoco: jest.fn().mockResolvedValue(null),
+    loadWindowsMsvcDefaults: jest.fn(),
+    findLlvmSymbolizer: jest.fn().mockResolvedValue(null),
     getCurrentUbuntuName: jest.fn().mockReturnValue('jammy'),
     getCurrentUbuntuVersion: jest.fn().mockReturnValue('22.04'),
     isSudoRequired: jest.fn().mockReturnValue(false),
@@ -99,6 +105,9 @@ const mockSetupProgram = setup_program as jest.Mocked<typeof setup_program>;
 const mockDownload = download as jest.Mocked<typeof download>;
 const mockCompanionPkg = companionPkg as jest.Mocked<typeof companionPkg>;
 const mockExistsSync = fs.existsSync as jest.MockedFunction<typeof fs.existsSync>;
+const mockFindProgramWithChoco = setup_program.findProgramWithChoco as jest.MockedFunction<typeof setup_program.findProgramWithChoco>;
+const mockInstallProgramWithChoco = setup_program.installProgramWithChoco as jest.MockedFunction<typeof setup_program.installProgramWithChoco>;
+const mockLoadWindowsMsvcDefaults = setup_program.loadWindowsMsvcDefaults as jest.MockedFunction<typeof setup_program.loadWindowsMsvcDefaults>;
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
@@ -123,6 +132,28 @@ describe('setup-clang', () => {
         jest.clearAllMocks();
         Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
         process.env = { ...originalEnv };
+        mockFindProgramWithChoco.mockResolvedValue(null);
+        mockInstallProgramWithChoco.mockResolvedValue(null);
+        mockLoadWindowsMsvcDefaults.mockReturnValue({
+            generated: '2026-03-17T00:00:00.000Z',
+            source: 'test',
+            runners: {
+                'windows-2022': {
+                    default_msvc: { name: '', version: '' },
+                    msvc_versions: [],
+                    mingw_version: '14',
+                    llvm_version: '20'
+                },
+                'windows-2025': {
+                    default_msvc: { name: '', version: '' },
+                    msvc_versions: [],
+                    mingw_version: '15',
+                    llvm_version: '20'
+                }
+            },
+            installable_mingw: ['14.2.0', '15.2.0'],
+            installable_llvm: ['18.1.8', '20.1.8']
+        } as ReturnType<typeof setup_program.loadWindowsMsvcDefaults>);
     });
 
     afterEach(() => {
@@ -143,9 +174,9 @@ describe('setup-clang', () => {
             expect(mockSetupProgram.findClangVersions).toHaveBeenCalled();
         });
 
-        it('sets AGENT_TOOLSDIRECTORY on darwin but throws ExpectedError', async () => {
+        it('sets AGENT_TOOLSDIRECTORY on darwin', async () => {
             Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
-            await expect(main(makeInputs())).rejects.toThrow(ExpectedError);
+            await main(makeInputs());
             expect(process.env['AGENT_TOOLSDIRECTORY']).toBe('/Users/runner/hostedtoolcache');
         });
 
@@ -155,10 +186,16 @@ describe('setup-clang', () => {
             expect(process.env['RUNNER_TOOL_CACHE']).toBe('/custom/tools');
         });
 
-        it('throws ExpectedError on non-linux', async () => {
+        it('does not throw on win32 platform', async () => {
             Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+            const result = await main(makeInputs());
+            expect(result).toBeDefined();
+        });
+
+        it('throws ExpectedError on unsupported platforms', async () => {
+            Object.defineProperty(process, 'platform', { value: 'freebsd', configurable: true });
             await expect(main(makeInputs())).rejects.toThrow(ExpectedError);
-            await expect(main(makeInputs())).rejects.toThrow('This action is only supported on Linux');
+            await expect(main(makeInputs())).rejects.toThrow('This action is not supported on freebsd');
         });
     });
 
@@ -215,9 +252,9 @@ describe('setup-clang', () => {
             expect(mockSetupProgram.findProgramWithApt).not.toHaveBeenCalled();
         });
 
-        it('throws ExpectedError on non-linux platforms before reaching APT', async () => {
+        it('skips APT on non-linux platforms', async () => {
             Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
-            await expect(main(makeInputs())).rejects.toThrow(ExpectedError);
+            await main(makeInputs());
             expect(mockSetupProgram.findProgramWithApt).not.toHaveBeenCalled();
         });
 
@@ -304,6 +341,272 @@ describe('setup-clang', () => {
             mockSetupProgram.findClangVersions.mockResolvedValue([]);
             await main(makeInputs({ version: '>=99.0.0' }));
             expect(mockTc.downloadTool).not.toHaveBeenCalled();
+        });
+    });
+
+    // ─── searchBrew (macOS) ────────────────────────────────────────
+
+    describe('searchBrew', () => {
+        beforeEach(() => {
+            Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
+        });
+
+        it('finds already-installed Homebrew LLVM', async () => {
+            mockSetupProgram.findProgramWithBrew.mockResolvedValueOnce({
+                path: '/opt/homebrew/opt/llvm@18/bin/clang',
+                version: '18.1.8'
+            });
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '>=18.0.0' }));
+            expect(mockSetupProgram.findProgramWithBrew).toHaveBeenCalledWith('llvm@18', 'clang');
+            expect(mockSetupProgram.installProgramWithBrew).not.toHaveBeenCalled();
+            expect(result.outputPath).toBe('/opt/homebrew/opt/llvm@18/bin/clang');
+            expect(result.version).toBe('18.1.8');
+        });
+
+        it('installs via Homebrew when not found then finds', async () => {
+            mockSetupProgram.findProgramWithBrew
+                .mockResolvedValueOnce(null) // First search: not found
+                .mockResolvedValueOnce({     // After install: found
+                    path: '/opt/homebrew/opt/llvm@18/bin/clang',
+                    version: '18.1.8'
+                });
+            mockSetupProgram.installProgramWithBrew.mockResolvedValueOnce('/opt/homebrew/opt/llvm@18');
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '>=18.0.0' }));
+            expect(mockSetupProgram.installProgramWithBrew).toHaveBeenCalledWith('llvm@18');
+            expect(result.outputPath).toBe('/opt/homebrew/opt/llvm@18/bin/clang');
+        });
+
+        it('handles Homebrew install failure gracefully', async () => {
+            mockSetupProgram.findProgramWithBrew.mockResolvedValue(null);
+            mockSetupProgram.installProgramWithBrew.mockResolvedValueOnce(null);
+            const result = await main(makeInputs({ version: '>=18.0.0' }));
+            expect(result.outputPath).toBeNull();
+        });
+
+        it('skips Homebrew search for wildcard version', async () => {
+            const result = await main(makeInputs({ version: '*' }));
+            expect(mockSetupProgram.findProgramWithBrew).not.toHaveBeenCalled();
+            expect(result.outputPath).toBeNull();
+        });
+
+        it('prioritizes user-provided path over Homebrew', async () => {
+            mockSetupProgram.findProgramInPath.mockResolvedValueOnce({
+                outputVersion: '18.1.8',
+                outputPath: '/custom/bin/clang'
+            });
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '>=18.0.0', path: ['/custom/bin'] }));
+            expect(mockSetupProgram.findProgramWithBrew).not.toHaveBeenCalled();
+            expect(result.outputPath).toBe('/custom/bin/clang');
+        });
+
+        it('skips APT and download on macOS', async () => {
+            mockSetupProgram.findProgramWithBrew.mockResolvedValueOnce({
+                path: '/opt/homebrew/opt/llvm@18/bin/clang',
+                version: '18.1.8'
+            });
+            mockExistsSync.mockReturnValue(true);
+            await main(makeInputs({ version: '>=18.0.0' }));
+            expect(mockSetupProgram.findProgramWithApt).not.toHaveBeenCalled();
+            expect(mockDownload.installProgramFromClangUrls).not.toHaveBeenCalled();
+        });
+
+        it('handles semver input (e.g., "18")', async () => {
+            mockSetupProgram.findProgramWithBrew.mockResolvedValueOnce({
+                path: '/opt/homebrew/opt/llvm@18/bin/clang',
+                version: '18.1.8'
+            });
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '18' }));
+            expect(mockSetupProgram.findProgramWithBrew).toHaveBeenCalledWith('llvm@18', 'clang');
+            expect(result.version).toBe('18.1.8');
+        });
+
+        it('derives cc and cxx correctly from clang path', async () => {
+            mockSetupProgram.findProgramWithBrew.mockResolvedValueOnce({
+                path: '/opt/homebrew/opt/llvm@18/bin/clang',
+                version: '18.1.8'
+            });
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '>=18.0.0' }));
+            expect(result.cc).toBe('/opt/homebrew/opt/llvm@18/bin/clang');
+            expect(result.cxx).toBe(path.join('/opt/homebrew/opt/llvm@18/bin', 'clang++'));
+        });
+    });
+
+    // ─── installSymbolizer (macOS) ───────────────────────────────
+
+    describe('installSymbolizer (macOS)', () => {
+        beforeEach(() => {
+            Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
+        });
+
+        it('finds and exports symbolizer on macOS', async () => {
+            mockSetupProgram.findProgramWithBrew.mockResolvedValueOnce({
+                path: '/opt/homebrew/opt/llvm@18/bin/clang',
+                version: '18.1.8'
+            });
+            mockSetupProgram.findLlvmSymbolizer.mockResolvedValueOnce('/opt/homebrew/opt/llvm@18/bin/llvm-symbolizer');
+            mockExistsSync.mockReturnValue(true);
+            await main(makeInputs({ version: '>=18.0.0', updateEnvironment: true }));
+            expect(mockSetupProgram.findLlvmSymbolizer).toHaveBeenCalledWith(18);
+            expect(mockSetupProgram.exportSymbolizerEnvVars).toHaveBeenCalledWith(
+                '/opt/homebrew/opt/llvm@18/bin/llvm-symbolizer'
+            );
+        });
+
+        it('skips symbolizer when updateEnvironment is false', async () => {
+            mockSetupProgram.findProgramWithBrew.mockResolvedValueOnce({
+                path: '/opt/homebrew/opt/llvm@18/bin/clang',
+                version: '18.1.8'
+            });
+            mockExistsSync.mockReturnValue(true);
+            await main(makeInputs({ version: '>=18.0.0', updateEnvironment: false }));
+            expect(mockSetupProgram.findLlvmSymbolizer).not.toHaveBeenCalled();
+        });
+    });
+
+    // ─── searchChoco (Windows) ─────────────────────────────────────
+
+    describe('searchChoco (Windows)', () => {
+        beforeEach(() => {
+            Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+        });
+
+        it('finds LLVM clang-cl in known install paths', async () => {
+            mockFindProgramWithChoco.mockResolvedValue({
+                path: path.join('C:\\Program Files\\LLVM\\bin', 'clang-cl.exe'),
+                version: '20.1.8'
+            });
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '20' }));
+
+            expect(mockFindProgramWithChoco).toHaveBeenCalledWith(
+                'llvm', 'clang-cl.exe',
+                ['C:\\Program Files\\LLVM\\bin']
+            );
+            expect(result.outputPath).toBe(path.join('C:\\Program Files\\LLVM\\bin', 'clang-cl.exe'));
+            expect(result.version).toBe('20.1.8');
+        });
+
+        it('installs LLVM via Chocolatey when not found', async () => {
+            mockFindProgramWithChoco
+                .mockResolvedValueOnce(null)  // initial search
+                .mockResolvedValueOnce({      // after install
+                    path: path.join('C:\\Program Files\\LLVM\\bin', 'clang-cl.exe'),
+                    version: '20.1.8'
+                });
+            mockInstallProgramWithChoco.mockResolvedValue('C:\\Program Files\\LLVM\\bin');
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '20' }));
+
+            expect(mockInstallProgramWithChoco).toHaveBeenCalledWith(
+                'llvm', '20.1.8', 'C:\\Program Files\\LLVM\\bin'
+            );
+            expect(result.outputPath).toBe(path.join('C:\\Program Files\\LLVM\\bin', 'clang-cl.exe'));
+            expect(result.version).toBe('20.1.8');
+        });
+
+        it('installs with version from data file when major matches', async () => {
+            mockFindProgramWithChoco
+                .mockResolvedValueOnce(null)
+                .mockResolvedValueOnce({
+                    path: path.join('C:\\Program Files\\LLVM\\bin', 'clang-cl.exe'),
+                    version: '18.1.8'
+                });
+            mockInstallProgramWithChoco.mockResolvedValue('C:\\Program Files\\LLVM\\bin');
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '18' }));
+
+            expect(mockInstallProgramWithChoco).toHaveBeenCalledWith(
+                'llvm', '18.1.8', 'C:\\Program Files\\LLVM\\bin'
+            );
+            expect(result.version).toBe('18.1.8');
+        });
+
+        it('skips wrong version and installs correct one', async () => {
+            mockFindProgramWithChoco
+                .mockResolvedValueOnce({      // found but wrong major
+                    path: path.join('C:\\Program Files\\LLVM\\bin', 'clang-cl.exe'),
+                    version: '18.1.8'
+                })
+                .mockResolvedValueOnce({      // after install
+                    path: path.join('C:\\Program Files\\LLVM\\bin', 'clang-cl.exe'),
+                    version: '20.1.8'
+                });
+            mockInstallProgramWithChoco.mockResolvedValue('C:\\Program Files\\LLVM\\bin');
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '20' }));
+
+            expect(mockInstallProgramWithChoco).toHaveBeenCalledWith(
+                'llvm', '20.1.8', 'C:\\Program Files\\LLVM\\bin'
+            );
+            expect(result.version).toBe('20.1.8');
+        });
+
+        it('accepts found version when no specific version requested (wildcard)', async () => {
+            mockFindProgramWithChoco.mockResolvedValue({
+                path: path.join('C:\\Program Files\\LLVM\\bin', 'clang-cl.exe'),
+                version: '20.1.8'
+            });
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '*' }));
+
+            expect(result.outputPath).toBe(path.join('C:\\Program Files\\LLVM\\bin', 'clang-cl.exe'));
+            expect(result.version).toBe('20.1.8');
+        });
+
+        it('returns null when Chocolatey install fails', async () => {
+            mockFindProgramWithChoco.mockResolvedValue(null);
+            mockInstallProgramWithChoco.mockResolvedValue(null);
+            const result = await main(makeInputs({ version: '20' }));
+
+            expect(result.outputPath).toBeNull();
+        });
+
+        it('skips Chocolatey when already found in user paths', async () => {
+            mockSetupProgram.findProgramInPath.mockResolvedValueOnce({
+                outputVersion: '20.1.8',
+                outputPath: path.join('C:\\custom\\bin', 'clang-cl.exe')
+            });
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '20', path: ['C:\\custom\\bin'] }));
+
+            expect(mockFindProgramWithChoco).not.toHaveBeenCalled();
+            expect(result.outputPath).toBe(path.join('C:\\custom\\bin', 'clang-cl.exe'));
+        });
+
+        it('does not call APT or download on Windows', async () => {
+            mockFindProgramWithChoco.mockResolvedValue({
+                path: path.join('C:\\Program Files\\LLVM\\bin', 'clang-cl.exe'),
+                version: '20.1.8'
+            });
+            mockExistsSync.mockReturnValue(true);
+            await main(makeInputs({ version: '20' }));
+
+            expect(mockSetupProgram.findProgramWithApt).not.toHaveBeenCalled();
+            expect(mockDownload.installProgramFromClangUrls).not.toHaveBeenCalled();
+        });
+
+        it('does not install when wildcard version and nothing found', async () => {
+            mockFindProgramWithChoco.mockResolvedValue(null);
+            const result = await main(makeInputs({ version: '*' }));
+
+            expect(mockInstallProgramWithChoco).not.toHaveBeenCalled();
+            expect(result.outputPath).toBeNull();
+        });
+
+        it('handles semver version input correctly', async () => {
+            mockFindProgramWithChoco.mockResolvedValue({
+                path: path.join('C:\\Program Files\\LLVM\\bin', 'clang-cl.exe'),
+                version: '20.1.8'
+            });
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '20.1.8' }));
+
+            expect(result.version).toBe('20.1.8');
         });
     });
 

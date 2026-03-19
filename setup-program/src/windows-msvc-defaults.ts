@@ -30,6 +30,10 @@ export interface MsvcVersionEntry {
 export interface RunnerMsvcInfo {
     /** All available MSVC version entries on this runner. */
     msvc_versions: MsvcVersionEntry[];
+    /** Pre-installed MinGW GCC major version (e.g., `"14"`), if present. */
+    mingw_version?: string;
+    /** Pre-installed LLVM major version (e.g., `"20"`), if present. */
+    llvm_version?: string;
 }
 
 /**
@@ -44,6 +48,10 @@ export interface WindowsMsvcDefaults {
     source: string;
     /** Runner data keyed by runner name. */
     runners: Record<string, RunnerMsvcInfo>;
+    /** All MinGW GCC versions installable via Chocolatey. */
+    installable_mingw?: string[];
+    /** All LLVM versions installable via Chocolatey. */
+    installable_llvm?: string[];
 }
 
 // ── Data loader ─────────────────────────────────────────────────────────────

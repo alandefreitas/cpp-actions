@@ -1,6 +1,5 @@
 import * as path from 'path';
 import { describePrettyErrors } from 'pretty-errors/test-helper';
-import { ExpectedError } from 'pretty-errors';
 
 jest.mock('@actions/core', () => ({
     info: jest.fn(),
@@ -37,7 +36,12 @@ jest.mock('setup-program', () => ({
     isSudoRequired: jest.fn(),
     getCurrentUbuntuVersion: jest.fn(),
     findLlvmSymbolizer: jest.fn(),
-    exportSymbolizerEnvVars: jest.fn()
+    exportSymbolizerEnvVars: jest.fn(),
+    findProgramWithBrew: jest.fn(),
+    installProgramWithBrew: jest.fn(),
+    findProgramWithChoco: jest.fn(),
+    installProgramWithChoco: jest.fn(),
+    loadWindowsMsvcDefaults: jest.fn()
 }));
 
 jest.mock('./gcc-download', () => ({
@@ -65,6 +69,11 @@ const mockIsSudoRequired = setup_program.isSudoRequired as jest.MockedFunction<t
 const mockDownloadGccFromUrl = downloadGccFromUrl as jest.MockedFunction<typeof downloadGccFromUrl>;
 const mockFindLlvmSymbolizer = setup_program.findLlvmSymbolizer as jest.MockedFunction<typeof setup_program.findLlvmSymbolizer>;
 const mockExportSymbolizerEnvVars = setup_program.exportSymbolizerEnvVars as jest.MockedFunction<typeof setup_program.exportSymbolizerEnvVars>;
+const mockFindProgramWithBrew = setup_program.findProgramWithBrew as jest.MockedFunction<typeof setup_program.findProgramWithBrew>;
+const mockInstallProgramWithBrew = setup_program.installProgramWithBrew as jest.MockedFunction<typeof setup_program.installProgramWithBrew>;
+const mockFindProgramWithChoco = setup_program.findProgramWithChoco as jest.MockedFunction<typeof setup_program.findProgramWithChoco>;
+const mockInstallProgramWithChoco = setup_program.installProgramWithChoco as jest.MockedFunction<typeof setup_program.installProgramWithChoco>;
+const mockLoadWindowsMsvcDefaults = setup_program.loadWindowsMsvcDefaults as jest.MockedFunction<typeof setup_program.loadWindowsMsvcDefaults>;
 const mockExistsSync = fs.existsSync as jest.MockedFunction<typeof fs.existsSync>;
 const mockWhich = io.which as jest.MockedFunction<typeof io.which>;
 const mockExec = exec.exec as jest.MockedFunction<typeof exec.exec>;
@@ -108,6 +117,23 @@ describe('setup-gcc main', () => {
         mockExec.mockResolvedValue(0);
         mockWhich.mockResolvedValue('');
         mockFindLlvmSymbolizer.mockResolvedValue(null);
+        mockFindProgramWithBrew.mockResolvedValue(null);
+        mockInstallProgramWithBrew.mockResolvedValue(null);
+        mockFindProgramWithChoco.mockResolvedValue(null);
+        mockInstallProgramWithChoco.mockResolvedValue(null);
+        mockLoadWindowsMsvcDefaults.mockReturnValue({
+            generated: '2026-03-17T00:00:00.000Z',
+            source: 'test',
+            runners: {
+                'windows-2022': {
+                    msvc_versions: [],
+                    mingw_version: '14',
+                    llvm_version: '20'
+                }
+            },
+            installable_mingw: ['8.1.0', '13.2.0', '14.2.0', '15.2.0'],
+            installable_llvm: ['18.1.8', '20.1.8']
+        } as ReturnType<typeof setup_program.loadWindowsMsvcDefaults>);
     });
 
     afterEach(() => {
@@ -128,16 +154,17 @@ describe('setup-gcc main', () => {
         expect(result.version).toBe('0.0.0');
     });
 
-    it('throws ExpectedError on non-linux platforms', async () => {
-        Object.defineProperty(process, 'platform', { value: 'win32', writable: true });
-        await expect(main(makeInputs())).rejects.toThrow(ExpectedError);
-        await expect(main(makeInputs())).rejects.toThrow('This action is only supported on Linux');
+    it('does not throw on darwin platform', async () => {
+        Object.defineProperty(process, 'platform', { value: 'darwin', writable: true });
+        const result = await main(makeInputs());
+        expect(result.outputPath).toBeNull();
+        expect(process.env['AGENT_TOOLSDIRECTORY']).toBe('/Users/runner/hostedtoolcache');
     });
 
-    it('sets AGENT_TOOLSDIRECTORY on darwin but throws ExpectedError', async () => {
-        Object.defineProperty(process, 'platform', { value: 'darwin', writable: true });
-        await expect(main(makeInputs())).rejects.toThrow(ExpectedError);
-        expect(process.env['AGENT_TOOLSDIRECTORY']).toBe('/Users/runner/hostedtoolcache');
+    it('does not throw on win32 platform', async () => {
+        Object.defineProperty(process, 'platform', { value: 'win32', writable: true });
+        const result = await main(makeInputs());
+        expect(result.outputPath).toBeNull();
     });
 
     it('copies AGENT_TOOLSDIRECTORY to RUNNER_TOOL_CACHE', async () => {
@@ -179,9 +206,9 @@ describe('setup-gcc main', () => {
         );
     });
 
-    it('throws ExpectedError on non-linux platform before reaching APT', async () => {
-        Object.defineProperty(process, 'platform', { value: 'win32', writable: true });
-        await expect(main(makeInputs())).rejects.toThrow(ExpectedError);
+    it('skips APT on non-linux platforms', async () => {
+        Object.defineProperty(process, 'platform', { value: 'darwin', writable: true });
+        await main(makeInputs());
         expect(mockFindProgramWithApt).not.toHaveBeenCalled();
     });
 
@@ -475,6 +502,233 @@ describe('setup-gcc main', () => {
                 expect.objectContaining({ ignoreReturnCode: true })
             );
             expect(mockExportSymbolizerEnvVars).toHaveBeenCalledWith('/usr/bin/llvm-symbolizer');
+        });
+    });
+
+    describe('searchBrew (macOS)', () => {
+        beforeEach(() => {
+            Object.defineProperty(process, 'platform', { value: 'darwin', writable: true });
+        });
+
+        it('finds GCC via Homebrew when already installed', async () => {
+            mockFindProgramWithBrew.mockResolvedValue({
+                path: '/opt/homebrew/bin/gcc-14',
+                version: '14.2.0'
+            });
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '14' }));
+
+            expect(mockFindProgramWithBrew).toHaveBeenCalledWith('gcc@14', 'gcc-14');
+            expect(result.outputPath).toBe('/opt/homebrew/bin/gcc-14');
+            expect(result.version).toBe('14.2.0');
+            expect(result.cc).toBe('/opt/homebrew/bin/gcc-14');
+            expect(result.cxx).toBe(path.join('/opt/homebrew/bin', 'g++-14'));
+        });
+
+        it('installs GCC via Homebrew when not found', async () => {
+            mockFindProgramWithBrew
+                .mockResolvedValueOnce(null)  // initial search
+                .mockResolvedValueOnce({      // after install
+                    path: '/opt/homebrew/bin/gcc-14',
+                    version: '14.2.0'
+                });
+            mockInstallProgramWithBrew.mockResolvedValue('/opt/homebrew/opt/gcc@14');
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '14' }));
+
+            expect(mockInstallProgramWithBrew).toHaveBeenCalledWith('gcc@14');
+            expect(result.outputPath).toBe('/opt/homebrew/bin/gcc-14');
+            expect(result.version).toBe('14.2.0');
+        });
+
+        it('returns null when Homebrew install fails', async () => {
+            mockFindProgramWithBrew.mockResolvedValue(null);
+            mockInstallProgramWithBrew.mockResolvedValue(null);
+            const result = await main(makeInputs({ version: '14' }));
+
+            expect(result.outputPath).toBeNull();
+        });
+
+        it('skips Homebrew when version is wildcard', async () => {
+            const result = await main(makeInputs({ version: '*' }));
+
+            expect(mockFindProgramWithBrew).not.toHaveBeenCalled();
+            expect(result.outputPath).toBeNull();
+        });
+
+        it('skips Homebrew when already found in user paths', async () => {
+            mockFindProgramInPath.mockResolvedValue({
+                outputVersion: '14.2.0',
+                outputPath: '/custom/bin/gcc-14'
+            });
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '14', path: ['/custom/bin'] }));
+
+            expect(mockFindProgramWithBrew).not.toHaveBeenCalled();
+            expect(result.outputPath).toBe('/custom/bin/gcc-14');
+        });
+
+        it('does not call APT or download on macOS', async () => {
+            mockFindProgramWithBrew.mockResolvedValue({
+                path: '/opt/homebrew/bin/gcc-14',
+                version: '14.2.0'
+            });
+            mockExistsSync.mockReturnValue(true);
+            await main(makeInputs({ version: '14' }));
+
+            expect(mockFindProgramWithApt).not.toHaveBeenCalled();
+            expect(mockDownloadGccFromUrl).not.toHaveBeenCalled();
+        });
+
+        it('handles semver version input correctly', async () => {
+            mockFindProgramWithBrew.mockResolvedValue({
+                path: '/opt/homebrew/bin/gcc-15',
+                version: '15.1.0'
+            });
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '15.1.0' }));
+
+            expect(mockFindProgramWithBrew).toHaveBeenCalledWith('gcc@15', 'gcc-15');
+            expect(result.version).toBe('15.1.0');
+        });
+    });
+    describe('searchChoco (Windows)', () => {
+        beforeEach(() => {
+            Object.defineProperty(process, 'platform', { value: 'win32', writable: true });
+        });
+
+        it('finds MinGW GCC in known install paths', async () => {
+            mockFindProgramWithChoco.mockResolvedValue({
+                path: path.join('C:\\mingw64\\bin', 'gcc.exe'),
+                version: '14.2.0'
+            });
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '14' }));
+
+            expect(mockFindProgramWithChoco).toHaveBeenCalledWith(
+                'mingw', 'gcc.exe',
+                ['C:\\mingw64\\bin', 'C:\\ProgramData\\mingw64\\bin']
+            );
+            expect(result.outputPath).toBe(path.join('C:\\mingw64\\bin', 'gcc.exe'));
+            expect(result.version).toBe('14.2.0');
+        });
+
+        it('installs MinGW GCC via Chocolatey when not found', async () => {
+            mockFindProgramWithChoco
+                .mockResolvedValueOnce(null)  // initial search
+                .mockResolvedValueOnce({      // after install
+                    path: path.join('C:\\ProgramData\\mingw64\\bin', 'gcc.exe'),
+                    version: '14.2.0'
+                });
+            mockInstallProgramWithChoco.mockResolvedValue('C:\\ProgramData\\mingw64\\bin');
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '14' }));
+
+            expect(mockInstallProgramWithChoco).toHaveBeenCalledWith(
+                'mingw', '14.2.0', 'C:\\ProgramData\\mingw64\\bin'
+            );
+            expect(result.outputPath).toBe(path.join('C:\\ProgramData\\mingw64\\bin', 'gcc.exe'));
+            expect(result.version).toBe('14.2.0');
+        });
+
+        it('installs with version from data file when major matches', async () => {
+            mockFindProgramWithChoco
+                .mockResolvedValueOnce(null)
+                .mockResolvedValueOnce({
+                    path: path.join('C:\\ProgramData\\mingw64\\bin', 'gcc.exe'),
+                    version: '15.2.0'
+                });
+            mockInstallProgramWithChoco.mockResolvedValue('C:\\ProgramData\\mingw64\\bin');
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '15' }));
+
+            expect(mockInstallProgramWithChoco).toHaveBeenCalledWith(
+                'mingw', '15.2.0', 'C:\\ProgramData\\mingw64\\bin'
+            );
+            expect(result.version).toBe('15.2.0');
+        });
+
+        it('skips wrong version and installs correct one', async () => {
+            mockFindProgramWithChoco
+                .mockResolvedValueOnce({      // found but wrong major
+                    path: path.join('C:\\mingw64\\bin', 'gcc.exe'),
+                    version: '13.2.0'
+                })
+                .mockResolvedValueOnce({      // after install
+                    path: path.join('C:\\ProgramData\\mingw64\\bin', 'gcc.exe'),
+                    version: '14.2.0'
+                });
+            mockInstallProgramWithChoco.mockResolvedValue('C:\\ProgramData\\mingw64\\bin');
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '14' }));
+
+            expect(mockInstallProgramWithChoco).toHaveBeenCalledWith(
+                'mingw', '14.2.0', 'C:\\ProgramData\\mingw64\\bin'
+            );
+            expect(result.version).toBe('14.2.0');
+        });
+
+        it('accepts found version when no specific version requested (wildcard)', async () => {
+            mockFindProgramWithChoco.mockResolvedValue({
+                path: path.join('C:\\mingw64\\bin', 'gcc.exe'),
+                version: '14.2.0'
+            });
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '*' }));
+
+            expect(result.outputPath).toBe(path.join('C:\\mingw64\\bin', 'gcc.exe'));
+            expect(result.version).toBe('14.2.0');
+        });
+
+        it('returns null when Chocolatey install fails', async () => {
+            mockFindProgramWithChoco.mockResolvedValue(null);
+            mockInstallProgramWithChoco.mockResolvedValue(null);
+            const result = await main(makeInputs({ version: '14' }));
+
+            expect(result.outputPath).toBeNull();
+        });
+
+        it('skips Chocolatey when already found in user paths', async () => {
+            mockFindProgramInPath.mockResolvedValue({
+                outputVersion: '14.2.0',
+                outputPath: path.join('C:\\custom\\bin', 'gcc.exe')
+            });
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '14', path: ['C:\\custom\\bin'] }));
+
+            expect(mockFindProgramWithChoco).not.toHaveBeenCalled();
+            expect(result.outputPath).toBe(path.join('C:\\custom\\bin', 'gcc.exe'));
+        });
+
+        it('does not call APT or download on Windows', async () => {
+            mockFindProgramWithChoco.mockResolvedValue({
+                path: path.join('C:\\mingw64\\bin', 'gcc.exe'),
+                version: '14.2.0'
+            });
+            mockExistsSync.mockReturnValue(true);
+            await main(makeInputs({ version: '14' }));
+
+            expect(mockFindProgramWithApt).not.toHaveBeenCalled();
+            expect(mockDownloadGccFromUrl).not.toHaveBeenCalled();
+        });
+
+        it('does not install when wildcard version and nothing found', async () => {
+            mockFindProgramWithChoco.mockResolvedValue(null);
+            const result = await main(makeInputs({ version: '*' }));
+
+            expect(mockInstallProgramWithChoco).not.toHaveBeenCalled();
+            expect(result.outputPath).toBeNull();
+        });
+
+        it('handles semver version input correctly', async () => {
+            mockFindProgramWithChoco.mockResolvedValue({
+                path: path.join('C:\\mingw64\\bin', 'gcc.exe'),
+                version: '14.2.0'
+            });
+            mockExistsSync.mockReturnValue(true);
+            const result = await main(makeInputs({ version: '14.2.0' }));
+
+            expect(result.version).toBe('14.2.0');
         });
     });
 });
