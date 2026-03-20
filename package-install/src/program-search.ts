@@ -1,5 +1,5 @@
 /**
- * Program search utilities for setup-program action.
+ * Program search utilities for locating executables on the system.
  *
  * @module program-search
  */
@@ -11,7 +11,24 @@ import * as exec from '@actions/exec';
 import * as semver from 'semver';
 import * as traceCommands from 'trace-commands';
 
-import { type ProgramResult, type ExecOutput } from './types';
+/**
+ * Result of a program search or installation operation.
+ */
+export interface ProgramResult {
+    outputVersion: string | null;
+    outputPath: string | null;
+    /** The APT package name that was installed (only set when installed via APT) */
+    installedPackage?: string | null;
+}
+
+/**
+ * Output from executing a command via exec.getExecOutput.
+ */
+interface ExecOutput {
+    exitCode: number;
+    stdout: string;
+    stderr: string;
+}
 
 /**
  * Checks if a file at the given path is executable.

@@ -48,25 +48,25 @@ jest.mock('semver', () => {
     };
 });
 
-jest.mock('setup-program', () => ({
-    findClangVersions: jest.fn().mockResolvedValue(['14.0.0', '15.0.0', '16.0.0']),
-    findProgramInPath: jest.fn().mockResolvedValue({ outputVersion: null, outputPath: null }),
-    findProgramInSystemPaths: jest.fn().mockResolvedValue({ outputVersion: null, outputPath: null }),
+jest.mock('package-install', () => ({
     findProgramWithApt: jest.fn().mockResolvedValue({ outputVersion: null, outputPath: null, installedPackage: null }),
     findProgramWithBrew: jest.fn().mockResolvedValue(null),
     installProgramWithBrew: jest.fn().mockResolvedValue(null),
     findProgramWithChoco: jest.fn().mockResolvedValue(null),
-    installProgramWithChoco: jest.fn().mockResolvedValue(null),
+    installProgramWithChoco: jest.fn().mockResolvedValue(null)
+}));
+
+jest.mock('setup-program', () => ({
+    findClangVersions: jest.fn().mockResolvedValue(['14.0.0', '15.0.0', '16.0.0']),
+    findProgramInPath: jest.fn().mockResolvedValue({ outputVersion: null, outputPath: null }),
+    findProgramInSystemPaths: jest.fn().mockResolvedValue({ outputVersion: null, outputPath: null }),
     loadWindowsMsvcDefaults: jest.fn(),
     findLlvmSymbolizer: jest.fn().mockResolvedValue(null),
     getCurrentUbuntuName: jest.fn().mockReturnValue('jammy'),
     getCurrentUbuntuVersion: jest.fn().mockReturnValue('22.04'),
     isSudoRequired: jest.fn().mockReturnValue(false),
     ensureSudoIsAvailable: jest.fn().mockResolvedValue(undefined),
-    ensureAddAptRepositoryIsAvailable: jest.fn().mockResolvedValue(undefined),
     urlExists: jest.fn().mockResolvedValue(true),
-    getPackagePreferenceTier: jest.fn().mockReturnValue(1),
-    PackagePreferenceTier: { UNVERSIONED: 1, RAW_VERSIONED: 2, OTHER_VERSIONED: 3 },
     installProgramFromUrl: jest.fn().mockResolvedValue({ outputVersion: null, outputPath: null }),
     exportSymbolizerEnvVars: jest.fn()
 }));
@@ -93,6 +93,7 @@ import * as io from '@actions/io';
 import * as exec from '@actions/exec';
 import * as tc from '@actions/tool-cache';
 import * as setup_program from 'setup-program';
+import * as package_install from 'package-install';
 import * as download from './download';
 import * as companionPkg from './companion-packages';
 import * as fs from 'fs';
@@ -102,11 +103,12 @@ const mockIo = io as jest.Mocked<typeof io>;
 const mockExec = exec as jest.Mocked<typeof exec>;
 const mockTc = tc as jest.Mocked<typeof tc>;
 const mockSetupProgram = setup_program as jest.Mocked<typeof setup_program>;
+const mockPackageInstall = package_install as jest.Mocked<typeof package_install>;
 const mockDownload = download as jest.Mocked<typeof download>;
 const mockCompanionPkg = companionPkg as jest.Mocked<typeof companionPkg>;
 const mockExistsSync = fs.existsSync as jest.MockedFunction<typeof fs.existsSync>;
-const mockFindProgramWithChoco = setup_program.findProgramWithChoco as jest.MockedFunction<typeof setup_program.findProgramWithChoco>;
-const mockInstallProgramWithChoco = setup_program.installProgramWithChoco as jest.MockedFunction<typeof setup_program.installProgramWithChoco>;
+const mockFindProgramWithChoco = package_install.findProgramWithChoco as jest.MockedFunction<typeof package_install.findProgramWithChoco>;
+const mockInstallProgramWithChoco = package_install.installProgramWithChoco as jest.MockedFunction<typeof package_install.installProgramWithChoco>;
 const mockLoadWindowsMsvcDefaults = setup_program.loadWindowsMsvcDefaults as jest.MockedFunction<typeof setup_program.loadWindowsMsvcDefaults>;
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -249,19 +251,19 @@ describe('setup-clang', () => {
             });
             await main(makeInputs());
             // findProgramWithApt should NOT have been called
-            expect(mockSetupProgram.findProgramWithApt).not.toHaveBeenCalled();
+            expect(mockPackageInstall.findProgramWithApt).not.toHaveBeenCalled();
         });
 
         it('skips APT on non-linux platforms', async () => {
             Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
             await main(makeInputs());
-            expect(mockSetupProgram.findProgramWithApt).not.toHaveBeenCalled();
+            expect(mockPackageInstall.findProgramWithApt).not.toHaveBeenCalled();
         });
 
         it('adds APT repositories when ubuntu name available', async () => {
             await main(makeInputs({ version: '>=15.0.0' }));
             // Should call findProgramWithApt for gnupg
-            expect(mockSetupProgram.findProgramWithApt).toHaveBeenCalledWith(['gnupg'], '*', true);
+            expect(mockPackageInstall.findProgramWithApt).toHaveBeenCalledWith(['gnupg'], '*', true);
         });
 
         it('downloads GPG key and installs with gpg --dearmor', async () => {
@@ -316,7 +318,7 @@ describe('setup-clang', () => {
             mockSetupProgram.urlExists.mockResolvedValue(false);
             await main(makeInputs({ version: '>=15.0.0' }));
             // Should still call findProgramWithApt for clang (the final search)
-            expect(mockSetupProgram.findProgramWithApt).toHaveBeenCalledWith(
+            expect(mockPackageInstall.findProgramWithApt).toHaveBeenCalledWith(
                 ['clang'],
                 '>=15.0.0',
                 true
@@ -327,7 +329,10 @@ describe('setup-clang', () => {
             (mockIo.which as jest.Mock).mockResolvedValue('/usr/bin/add-apt-repository');
             mockSetupProgram.urlExists.mockResolvedValue(false);
             await main(makeInputs({ version: '>=15.0.0' }));
-            expect(mockSetupProgram.ensureAddAptRepositoryIsAvailable).not.toHaveBeenCalled();
+            const addRepoCalls = mockExec.exec.mock.calls.filter(
+                (c: unknown[]) => typeof c[0] === 'string' && (c[0] as string).includes('add-apt-repository')
+            );
+            expect(addRepoCalls.length).toBe(0);
         });
 
         it('skips repositories when ubuntuName is null', async () => {
@@ -352,42 +357,42 @@ describe('setup-clang', () => {
         });
 
         it('finds already-installed Homebrew LLVM', async () => {
-            mockSetupProgram.findProgramWithBrew.mockResolvedValueOnce({
+            mockPackageInstall.findProgramWithBrew.mockResolvedValueOnce({
                 path: '/opt/homebrew/opt/llvm@18/bin/clang',
                 version: '18.1.8'
             });
             mockExistsSync.mockReturnValue(true);
             const result = await main(makeInputs({ version: '>=18.0.0' }));
-            expect(mockSetupProgram.findProgramWithBrew).toHaveBeenCalledWith('llvm@18', 'clang');
-            expect(mockSetupProgram.installProgramWithBrew).not.toHaveBeenCalled();
+            expect(mockPackageInstall.findProgramWithBrew).toHaveBeenCalledWith('llvm@18', 'clang');
+            expect(mockPackageInstall.installProgramWithBrew).not.toHaveBeenCalled();
             expect(result.outputPath).toBe('/opt/homebrew/opt/llvm@18/bin/clang');
             expect(result.version).toBe('18.1.8');
         });
 
         it('installs via Homebrew when not found then finds', async () => {
-            mockSetupProgram.findProgramWithBrew
+            mockPackageInstall.findProgramWithBrew
                 .mockResolvedValueOnce(null) // First search: not found
                 .mockResolvedValueOnce({     // After install: found
                     path: '/opt/homebrew/opt/llvm@18/bin/clang',
                     version: '18.1.8'
                 });
-            mockSetupProgram.installProgramWithBrew.mockResolvedValueOnce('/opt/homebrew/opt/llvm@18');
+            mockPackageInstall.installProgramWithBrew.mockResolvedValueOnce('/opt/homebrew/opt/llvm@18');
             mockExistsSync.mockReturnValue(true);
             const result = await main(makeInputs({ version: '>=18.0.0' }));
-            expect(mockSetupProgram.installProgramWithBrew).toHaveBeenCalledWith('llvm@18');
+            expect(mockPackageInstall.installProgramWithBrew).toHaveBeenCalledWith('llvm@18');
             expect(result.outputPath).toBe('/opt/homebrew/opt/llvm@18/bin/clang');
         });
 
         it('handles Homebrew install failure gracefully', async () => {
-            mockSetupProgram.findProgramWithBrew.mockResolvedValue(null);
-            mockSetupProgram.installProgramWithBrew.mockResolvedValueOnce(null);
+            mockPackageInstall.findProgramWithBrew.mockResolvedValue(null);
+            mockPackageInstall.installProgramWithBrew.mockResolvedValueOnce(null);
             const result = await main(makeInputs({ version: '>=18.0.0' }));
             expect(result.outputPath).toBeNull();
         });
 
         it('skips Homebrew search for wildcard version', async () => {
             const result = await main(makeInputs({ version: '*' }));
-            expect(mockSetupProgram.findProgramWithBrew).not.toHaveBeenCalled();
+            expect(mockPackageInstall.findProgramWithBrew).not.toHaveBeenCalled();
             expect(result.outputPath).toBeNull();
         });
 
@@ -398,34 +403,34 @@ describe('setup-clang', () => {
             });
             mockExistsSync.mockReturnValue(true);
             const result = await main(makeInputs({ version: '>=18.0.0', path: ['/custom/bin'] }));
-            expect(mockSetupProgram.findProgramWithBrew).not.toHaveBeenCalled();
+            expect(mockPackageInstall.findProgramWithBrew).not.toHaveBeenCalled();
             expect(result.outputPath).toBe('/custom/bin/clang');
         });
 
         it('skips APT and download on macOS', async () => {
-            mockSetupProgram.findProgramWithBrew.mockResolvedValueOnce({
+            mockPackageInstall.findProgramWithBrew.mockResolvedValueOnce({
                 path: '/opt/homebrew/opt/llvm@18/bin/clang',
                 version: '18.1.8'
             });
             mockExistsSync.mockReturnValue(true);
             await main(makeInputs({ version: '>=18.0.0' }));
-            expect(mockSetupProgram.findProgramWithApt).not.toHaveBeenCalled();
+            expect(mockPackageInstall.findProgramWithApt).not.toHaveBeenCalled();
             expect(mockDownload.installProgramFromClangUrls).not.toHaveBeenCalled();
         });
 
         it('handles semver input (e.g., "18")', async () => {
-            mockSetupProgram.findProgramWithBrew.mockResolvedValueOnce({
+            mockPackageInstall.findProgramWithBrew.mockResolvedValueOnce({
                 path: '/opt/homebrew/opt/llvm@18/bin/clang',
                 version: '18.1.8'
             });
             mockExistsSync.mockReturnValue(true);
             const result = await main(makeInputs({ version: '18' }));
-            expect(mockSetupProgram.findProgramWithBrew).toHaveBeenCalledWith('llvm@18', 'clang');
+            expect(mockPackageInstall.findProgramWithBrew).toHaveBeenCalledWith('llvm@18', 'clang');
             expect(result.version).toBe('18.1.8');
         });
 
         it('derives cc and cxx correctly from clang path', async () => {
-            mockSetupProgram.findProgramWithBrew.mockResolvedValueOnce({
+            mockPackageInstall.findProgramWithBrew.mockResolvedValueOnce({
                 path: '/opt/homebrew/opt/llvm@18/bin/clang',
                 version: '18.1.8'
             });
@@ -444,7 +449,7 @@ describe('setup-clang', () => {
         });
 
         it('finds and exports symbolizer on macOS', async () => {
-            mockSetupProgram.findProgramWithBrew.mockResolvedValueOnce({
+            mockPackageInstall.findProgramWithBrew.mockResolvedValueOnce({
                 path: '/opt/homebrew/opt/llvm@18/bin/clang',
                 version: '18.1.8'
             });
@@ -458,7 +463,7 @@ describe('setup-clang', () => {
         });
 
         it('skips symbolizer when updateEnvironment is false', async () => {
-            mockSetupProgram.findProgramWithBrew.mockResolvedValueOnce({
+            mockPackageInstall.findProgramWithBrew.mockResolvedValueOnce({
                 path: '/opt/homebrew/opt/llvm@18/bin/clang',
                 version: '18.1.8'
             });
@@ -586,7 +591,7 @@ describe('setup-clang', () => {
             mockExistsSync.mockReturnValue(true);
             await main(makeInputs({ version: '20' }));
 
-            expect(mockSetupProgram.findProgramWithApt).not.toHaveBeenCalled();
+            expect(mockPackageInstall.findProgramWithApt).not.toHaveBeenCalled();
             expect(mockDownload.installProgramFromClangUrls).not.toHaveBeenCalled();
         });
 
@@ -614,7 +619,7 @@ describe('setup-clang', () => {
 
     describe('downloadFromUrl', () => {
         it('skips download when version already found', async () => {
-            mockSetupProgram.findProgramWithApt.mockResolvedValueOnce({
+            mockPackageInstall.findProgramWithApt.mockResolvedValueOnce({
                 outputVersion: '15.0.0',
                 outputPath: '/usr/bin/clang++-15',
                 installedPackage: 'clang-15'
@@ -639,7 +644,7 @@ describe('setup-clang', () => {
         });
 
         it('installs companions when version is found', async () => {
-            mockSetupProgram.findProgramWithApt.mockResolvedValueOnce({
+            mockPackageInstall.findProgramWithApt.mockResolvedValueOnce({
                 outputVersion: '15.0.0',
                 outputPath: '/usr/bin/clang++-15',
                 installedPackage: 'clang-15'
@@ -649,7 +654,7 @@ describe('setup-clang', () => {
         });
 
         it('sets sanitizer env vars when symbolizer found and updateEnvironment is true', async () => {
-            mockSetupProgram.findProgramWithApt.mockResolvedValueOnce({
+            mockPackageInstall.findProgramWithApt.mockResolvedValueOnce({
                 outputVersion: '15.0.0',
                 outputPath: '/usr/bin/clang++-15',
                 installedPackage: 'clang-15'
@@ -662,7 +667,7 @@ describe('setup-clang', () => {
         });
 
         it('does not set sanitizer env vars when updateEnvironment is false', async () => {
-            mockSetupProgram.findProgramWithApt.mockResolvedValueOnce({
+            mockPackageInstall.findProgramWithApt.mockResolvedValueOnce({
                 outputVersion: '15.0.0',
                 outputPath: '/usr/bin/clang++-15',
                 installedPackage: 'clang-15'

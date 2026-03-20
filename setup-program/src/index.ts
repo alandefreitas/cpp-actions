@@ -13,12 +13,9 @@ export { inputsSchema, outputsSchema };
 
 import {
     findProgramInPath,
-    findProgramInSystemPaths
-} from './program-search';
-
-import {
+    findProgramInSystemPaths,
     findProgramWithApt
-} from './apt-utils';
+} from 'package-install';
 
 import { installProgramFromUrl } from './url-install';
 
@@ -26,7 +23,6 @@ import { installProgramFromUrl } from './url-install';
 export { normalizeArchitectureInput } from './utils';
 
 // Re-export types for external consumers
-export { PackagePreferenceTier, type AptPackageMatch, type AptInstallOptions } from './apt-utils';
 export { type FetchGitTagsOptions, type CloneGitRepoOptions } from './git-utils';
 
 // Re-export version cache functions for external consumers
@@ -36,7 +32,7 @@ export { setVersionsCacheDir, resolveVersionsCachePath, readVersionsFromFile, sa
 export { downloadAndExtract, stripSingleDirectoryFromPath } from './download-utils';
 
 // Re-export program search functions for external consumers
-export { findProgramInPath, findProgramInSystemPaths } from './program-search';
+export { findProgramInPath, findProgramInSystemPaths } from 'package-install';
 
 // Re-export system utilities for external consumers
 export {
@@ -47,35 +43,6 @@ export {
     ensureSudoIsAvailable,
     moveWithPermissions
 } from './system-utils';
-
-// Re-export APT utilities for external consumers
-export {
-    getPackagePreferenceTier,
-    searchAptPackages,
-    installProgramWithApt,
-    isAptAvailable,
-    updateAptPackageLists,
-    findProgramWithApt,
-    ensureAddAptRepositoryIsAvailable
-} from './apt-utils';
-
-// Re-export Homebrew utilities for external consumers
-export {
-    type BrewProgramResult,
-    isBrewAvailable,
-    getBrewPrefix,
-    findProgramWithBrew,
-    installProgramWithBrew,
-    parseVersionFromOutput
-} from './brew-utils';
-
-// Re-export Chocolatey utilities for external consumers
-export {
-    type ChocoProgramResult,
-    isChocoAvailable,
-    findProgramWithChoco,
-    installProgramWithChoco
-} from './choco-utils';
 
 // Re-export Git utilities for external consumers
 export {

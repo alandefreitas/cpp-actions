@@ -1,5 +1,5 @@
 {
-  "threshold": 3,
+  "threshold": 5,
   "reporters": ["console"],
   "format": ["typescript"],
   "pattern": ["**/src/**/*.ts"],

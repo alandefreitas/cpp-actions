@@ -25,8 +25,19 @@
  */
 
 import * as crypto from 'crypto';
+import * as fs from 'fs';
+import * as path from 'path';
 import * as traceCommands from 'trace-commands';
 import type { Inputs } from './schema';
+
+/**
+ * Action version from package.json, used as salt in cache keys so that
+ * journals saved by older action versions are not reused when the scanning
+ * logic changes between releases.
+ */
+const ACTION_VERSION: string = JSON.parse(
+    fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf-8')
+).version;
 
 /**
  * Number of hex characters kept from SHA-1 digests in cache keys.
@@ -182,24 +193,38 @@ export function computeSourceCacheKey(
  *    immutable, the same module state always maps to the same key,
  *    which is exactly what we want.
  *
- * 2. **Restore prefix** — derived from root *names* + branch only.
- *    When the primary key misses (some root committed new code), a
- *    prefix match finds the most recent journal for the same
- *    configuration.  That journal may contain stale entries, but the
- *    resolution walk detects and re-scans them.
+ * 2. **Restore prefix** — derived from root *names* + branch + scan
+ *    configuration.  When the primary key misses (some root committed
+ *    new code), a prefix match finds the most recent journal for the
+ *    same configuration.  That journal may contain stale entries, but
+ *    the resolution walk detects and re-scans them.
+ *
+ * The scan configuration (scanPaths, excludePaths) is included in both
+ * keys so that different scan settings (e.g., scanning test dirs vs not)
+ * produce distinct cache entries.
  *
  * @param graphRoots - Root modules for the dependency walk
  * @param branch - Boost branch or tag
  * @param rootHashes - Current commit hashes for the root modules
+ * @param scanPaths - Additional subdirectories scanned for root modules (modules-scan-paths)
+ * @param excludePaths - Subdirectories excluded from root module scans (modules-exclude-paths)
  * @returns primaryKey for exact match + restorePrefix for fallback
  */
 export function computeJournalKey(
     graphRoots: Set<string>,
     branch: string,
-    rootHashes: Map<string, string>
+    rootHashes: Map<string, string>,
+    scanPaths: Set<string> = new Set(),
+    excludePaths: Set<string> = new Set()
 ): { primaryKey: JournalCacheKey; restorePrefix: string } {
     const sortedRoots = toSortedArray(graphRoots);
-    const namesHash = hashObject({ roots: sortedRoots, branch }).substring(0, HASH_HEX_LENGTH);
+    const namesHash = hashObject({
+        roots: sortedRoots,
+        branch,
+        scanPaths: toSortedArray(scanPaths),
+        excludePaths: toSortedArray(excludePaths),
+        actionVersion: ACTION_VERSION
+    }).substring(0, HASH_HEX_LENGTH);
     const restorePrefix = `boost-journal-${namesHash}`;
 
     const hashEntries = sortedRoots.map(r => [r, rootHashes.get(r) ?? '']);

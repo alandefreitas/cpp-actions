@@ -8,6 +8,10 @@ jest.mock('@actions/io', () => ({
     which: jest.fn()
 }));
 
+jest.mock('@actions/exec', () => ({
+    getExecOutput: jest.fn().mockResolvedValue({ exitCode: 1, stdout: '', stderr: '' })
+}));
+
 jest.mock('trace-commands', () => ({
     scoped: jest.fn(() => jest.fn())
 }));
@@ -18,6 +22,7 @@ jest.mock('fs', () => ({
 }));
 
 import * as core from '@actions/core';
+import * as exec from '@actions/exec';
 import * as io from '@actions/io';
 import {
     buildSymbolizerCandidatePaths,
@@ -28,6 +33,7 @@ import {
 const mockExistsSync = fs.existsSync as jest.MockedFunction<typeof fs.existsSync>;
 const mockWhich = io.which as jest.MockedFunction<typeof io.which>;
 const mockExportVariable = core.exportVariable as jest.MockedFunction<typeof core.exportVariable>;
+const mockGetExecOutput = exec.getExecOutput as jest.MockedFunction<typeof exec.getExecOutput>;
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -101,6 +107,33 @@ describe('findLlvmSymbolizer', () => {
         mockWhich.mockRejectedValue(new Error('not found'));
         const result = await findLlvmSymbolizer(999);
         expect(result).toBeNull();
+    });
+
+    it('finds symbolizer via xcrun on macOS', async () => {
+        const origPlatform = process.platform;
+        Object.defineProperty(process, 'platform', { value: 'darwin' });
+
+        const xcrunPath = '/Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/llvm-symbolizer';
+        mockGetExecOutput.mockResolvedValueOnce({ exitCode: 0, stdout: `${xcrunPath}\n`, stderr: '' });
+        mockExistsSync.mockImplementation((p) => String(p) === xcrunPath);
+
+        const result = await findLlvmSymbolizer(17);
+        expect(result).toBe(xcrunPath);
+
+        Object.defineProperty(process, 'platform', { value: origPlatform });
+    });
+
+    it('falls through when xcrun fails on macOS', async () => {
+        const origPlatform = process.platform;
+        Object.defineProperty(process, 'platform', { value: 'darwin' });
+
+        mockGetExecOutput.mockRejectedValueOnce(new Error('xcrun failed'));
+        mockWhich.mockResolvedValueOnce('').mockResolvedValueOnce('/usr/local/bin/llvm-symbolizer');
+
+        const result = await findLlvmSymbolizer(999);
+        expect(result).toBe('/usr/local/bin/llvm-symbolizer');
+
+        Object.defineProperty(process, 'platform', { value: origPlatform });
     });
 });
 

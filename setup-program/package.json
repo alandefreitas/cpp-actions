@@ -20,7 +20,8 @@
     "action-schema": "*",
     "semver": "^7.7.4",
     "trace-commands": "*",
-    "pretty-errors": "*"
+    "pretty-errors": "*",
+    "package-install": "*"
   },
   "devDependencies": {
     "@types/semver": "^7.7.1"

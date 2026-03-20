@@ -1,5 +1,5 @@
 /**
- * APT package management utilities for setup-program action.
+ * APT package management utilities for package-install action.
  *
  * Provides functions for searching, installing, and managing packages
  * via APT on Linux systems.
@@ -13,22 +13,104 @@ import * as semver from 'semver';
 import * as traceCommands from 'trace-commands';
 import { ExpectedError } from 'pretty-errors';
 
-import { type ProgramResult, type ExecOutput } from './types';
+import { findProgramInSystemPaths } from './program-search';
 
-import {
-    escapeRegExp,
-    removeSemverLeadingZeros
-} from './utils';
+/**
+ * Determines whether sudo is required for privileged operations.
+ * Returns true on Linux when the current process is not running as root.
+ *
+ * @returns True if sudo is needed, false otherwise
+ */
+export function isSudoRequired(): boolean {
+    if (process.platform !== 'linux') {
+        return false;
+    }
+    return process.getuid?.() !== 0;
+}
 
-import {
-    findProgramInSystemPaths
-} from './program-search';
+/**
+ * Executes a command, prepending sudo if required on Linux.
+ *
+ * @param command - The command to execute
+ * @param args - Command arguments
+ * @param options - Execution options passed to exec.exec
+ * @returns The exit code from the command
+ */
+async function execWithSudo(
+    command: string,
+    args: string[] = [],
+    options: exec.ExecOptions = {}
+): Promise<number> {
+    if (isSudoRequired()) {
+        return await exec.exec('sudo', ['-n', command, ...args], options);
+    }
+    return await exec.exec(command, args, options);
+}
 
-import {
-    execWithSudo,
-    isSudoRequired,
-    ensureSudoIsAvailable
-} from './system-utils';
+/**
+ * Ensures the sudo command is available on the system.
+ * Installs sudo via apt-get if not already present (requires running as root).
+ *
+ * @throws Error if sudo cannot be found or installed
+ */
+async function ensureSudoIsAvailable(): Promise<void> {
+    const fnlog = traceCommands.scoped('ensureSudoIsAvailable');
+    let sudoPath: string | null = null;
+    try {
+        sudoPath = await io.which('sudo');
+        fnlog(`sudo found at ${sudoPath}`);
+    } catch {
+        sudoPath = null;
+    }
+    if (sudoPath === null || sudoPath === '') {
+        await exec.exec('apt-get update', [], { ignoreReturnCode: true });
+        await exec.exec('apt-get install -y sudo', [], { ignoreReturnCode: true });
+        await io.which('sudo');
+    }
+}
+
+/**
+ * Result of a program search or installation operation.
+ */
+interface ProgramResult {
+    outputVersion: string | null;
+    outputPath: string | null;
+    /** The APT package name that was installed (only set when installed via APT) */
+    installedPackage?: string | null;
+}
+
+/**
+ * Output from executing a command via exec.getExecOutput.
+ */
+interface ExecOutput {
+    exitCode: number;
+    stdout: string;
+    stderr: string;
+}
+
+/**
+ * Escapes special regex characters in a string.
+ *
+ * @param string - String to escape for use in a regular expression
+ * @returns Escaped string safe for regex pattern construction
+ */
+function escapeRegExp(string: string): string {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Removes leading zeros from semver version components.
+ *
+ * Converts "01.02.03" to "1.2.3" for proper semver comparison.
+ *
+ * @param version - Version string with potentially leading zeros
+ * @returns Cleaned version string without leading zeros
+ */
+function removeSemverLeadingZeros(version: string): string {
+    const components = version.split('.');
+    const cleanedComponents = components.map(component => parseInt(component, 10));
+    return cleanedComponents.join('.');
+}
 
 /**
  * Package preference tier for APT package selection.
@@ -340,7 +422,11 @@ export async function updateAptPackageLists(): Promise<void> {
  * @param checkLatest - If true, prefer latest matching version; if false, prefer earliest
  * @returns Object containing the found executable path and version, or nulls if not found
  */
-export async function findProgramWithApt(names: string[], version: string, checkLatest: boolean): Promise<ProgramResult> {
+export async function findProgramWithApt(
+    names: string[],
+    version: string,
+    checkLatest: boolean
+): Promise<ProgramResult> {
     const fnlog = traceCommands.scoped('findProgramWithApt');
 
     let outputVersion: string | null = null;

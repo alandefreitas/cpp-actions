@@ -683,12 +683,14 @@ class SetupCppRunner {
             return;
         }
 
+        core.startGroup('🔍 Find llvm-symbolizer');
         const majorVersion = this.versionMajor ?? 0;
         const symbolizerPath = await setup_program.findLlvmSymbolizer(majorVersion);
         if (symbolizerPath) {
             core.info(`llvm-symbolizer found at ${symbolizerPath}`);
             setup_program.exportSymbolizerEnvVars(symbolizerPath);
         }
+        core.endGroup();
     }
 
     /**

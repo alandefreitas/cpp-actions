@@ -8,7 +8,7 @@ import * as semver from 'semver';
 
 import { type CompilerSuggestion, type MatrixEntry } from './types';
 import { type Inputs } from './schema';
-import { getVisualCppYear } from './versions';
+import { getVisualCppYear, findMacOSGccVersions, findMacOSClangVersions } from './versions';
 import { humanizeCompilerName } from './compiler-support';
 import { loadUbuntuCompilerDefaults, loadMacOSXcodeDefaults, loadWindowsMsvcDefaults } from 'setup-program';
 
@@ -105,11 +105,15 @@ export function setCompilerExecutableNamesNoVersion(entry: MatrixEntry, compiler
         entry['cxx'] = `g++`;
         entry['cc'] = `gcc`;
     } else if (compilerName === 'macos-gcc') {
-        entry['cxx'] = `g++-15`;
-        entry['cc'] = `gcc-15`;
+        const versions = findMacOSGccVersions();
+        const latest = versions.length > 0 ? semver.major(versions[versions.length - 1]) : 15;
+        entry['cxx'] = `g++-${latest}`;
+        entry['cc'] = `gcc-${latest}`;
     } else if (compilerName === 'macos-clang') {
-        entry['cxx'] = `clang++-18`;
-        entry['cc'] = `clang-18`;
+        const versions = findMacOSClangVersions();
+        const latest = versions.length > 0 ? semver.major(versions[versions.length - 1]) : 18;
+        entry['cxx'] = `clang++-${latest}`;
+        entry['cc'] = `clang-${latest}`;
     }
     // For gcc, clang, and msvc we expect to have version information,
     // so we don't set defaults here.
@@ -430,11 +434,23 @@ export function findBestWindowsRunner(msvcMinor: number): string {
         let bestAvailable = '';
         let newestRunner = '';
 
-        for (const runner of runners) {
-            const year = runnerYear(runner);
+        /**
+         * Compares two runners by year then by name length (standard runner preferred over suffixed variants).
+         *
+         * @param a - First runner string
+         * @param b - Second runner string
+         * @returns True if a ranks higher than b
+         */
+        const isNewerRunner = (a: string, b: string): boolean => {
+            const yearA = runnerYear(a);
+            const yearB = runnerYear(b);
+            if (yearA !== yearB) return yearA > yearB;
+            return a.length < b.length;
+        };
 
+        for (const runner of runners) {
             // Track newest runner overall
-            if (!newestRunner || year > runnerYear(newestRunner)) {
+            if (!newestRunner || isNewerRunner(runner, newestRunner)) {
                 newestRunner = runner;
             }
 
@@ -446,12 +462,12 @@ export function findBestWindowsRunner(msvcMinor: number): string {
                 }
 
                 // Track runner where matching version is the default
-                if (entry.is_default && (!bestDefault || year > runnerYear(bestDefault))) {
+                if (entry.is_default && (!bestDefault || isNewerRunner(runner, bestDefault))) {
                     bestDefault = runner;
                 }
 
                 // Track newest runner that has a matching version
-                if (!bestAvailable || year > runnerYear(bestAvailable)) {
+                if (!bestAvailable || isNewerRunner(runner, bestAvailable)) {
                     bestAvailable = runner;
                 }
             }
@@ -501,7 +517,12 @@ export function findNewestWindowsRunner(): string {
             const m = r.match(/windows-(\d+)/);
             return m ? parseInt(m[1], 10) : 0;
         };
-        return runners.reduce((best, r) => runnerYear(r) > runnerYear(best) ? r : best);
+        return runners.reduce((best, r) => {
+            const yearR = runnerYear(r);
+            const yearBest = runnerYear(best);
+            if (yearR !== yearBest) return yearR > yearBest ? r : best;
+            return r.length < best.length ? r : best;
+        });
     } catch {
         // Untested: requires data file to be missing/corrupt
         return 'windows-2022';
@@ -531,19 +552,31 @@ export function findBestWindowsRunnerForMingw(majorVersion: number): string {
             return m ? parseInt(m[1], 10) : 0;
         };
 
+        /**
+         * Compares two runners by year then by name length (standard runner preferred over suffixed variants).
+         *
+         * @param a - First runner string
+         * @param b - Second runner string
+         * @returns True if a ranks higher than b
+         */
+        const isNewerRunner = (a: string, b: string): boolean => {
+            const yearA = runnerYear(a);
+            const yearB = runnerYear(b);
+            if (yearA !== yearB) return yearA > yearB;
+            return a.length < b.length;
+        };
+
         let bestMatch = '';
         let newestRunner = '';
 
         for (const runner of runners) {
-            const year = runnerYear(runner);
-
-            if (!newestRunner || year > runnerYear(newestRunner)) {
+            if (!newestRunner || isNewerRunner(runner, newestRunner)) {
                 newestRunner = runner;
             }
 
             const info = defaults.runners[runner];
             if (info.mingw_version && parseInt(info.mingw_version, 10) === majorVersion) {
-                if (!bestMatch || year > runnerYear(bestMatch)) {
+                if (!bestMatch || isNewerRunner(runner, bestMatch)) {
                     bestMatch = runner;
                 }
             }
@@ -579,19 +612,31 @@ export function findBestWindowsRunnerForLlvm(majorVersion: number): string {
             return m ? parseInt(m[1], 10) : 0;
         };
 
+        /**
+         * Compares two runners by year then by name length (standard runner preferred over suffixed variants).
+         *
+         * @param a - First runner string
+         * @param b - Second runner string
+         * @returns True if a ranks higher than b
+         */
+        const isNewerRunner = (a: string, b: string): boolean => {
+            const yearA = runnerYear(a);
+            const yearB = runnerYear(b);
+            if (yearA !== yearB) return yearA > yearB;
+            return a.length < b.length;
+        };
+
         let bestMatch = '';
         let newestRunner = '';
 
         for (const runner of runners) {
-            const year = runnerYear(runner);
-
-            if (!newestRunner || year > runnerYear(newestRunner)) {
+            if (!newestRunner || isNewerRunner(runner, newestRunner)) {
                 newestRunner = runner;
             }
 
             const info = defaults.runners[runner];
             if (info.llvm_version && parseInt(info.llvm_version, 10) === majorVersion) {
-                if (!bestMatch || year > runnerYear(bestMatch)) {
+                if (!bestMatch || isNewerRunner(runner, bestMatch)) {
                     bestMatch = runner;
                 }
             }

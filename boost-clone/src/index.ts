@@ -29,7 +29,7 @@ import { computeSourceCacheKey, computeJournalKey, makeResolvedModuleSet } from 
 import { getCachedBoost, cacheBoost, fetchModuleHashes } from './cache';
 import { isReleaseTag, estimateTotalModules, decideStrategy, getBoostDepsData, getTransitiveClosure, getLatestRelease } from './module-deps';
 import { initializeSubmodules, initializeAllSubmodules } from './submodules';
-import { fetchBoostMetadata, scanBoostDependencies, listBoostDependencies } from './header-scan';
+import { fetchBoostMetadata, listBoostDependencies } from './header-scan';
 import { getArchiveUrl, downloadAndExtractArchive } from './archive';
 import { findGitFeatures, cloneBoostSuperproject, applyPatches, getRepoName, cloneRepo } from './git-utils';
 import { resolveModules, isResolutionComplete } from './resolution';
@@ -332,8 +332,11 @@ class BoostCloner {
         if (this.inputs.scanModulesDir.size > 0) {
             await this.ensureBoostMetadata();
 
+            // For user project directories, scan the entire directory tree.
+            // User projects have arbitrary structures — the Boost convention
+            // subdirectory list (modulesScanPaths/modulesExcludePaths) does not apply here.
             const scanResults = await Promise.all([...this.inputs.scanModulesDir].map(scanDir =>
-                scanBoostDependencies(scanDir, this.inputs, this.exceptions!, this.submodulePaths!)
+                listBoostDependencies(scanDir, ['.'], this.exceptions!, this.submodulePaths!)
             ));
             for (const scannedModules of scanResults) {
                 for (const module of scannedModules) {
@@ -359,7 +362,10 @@ class BoostCloner {
         this.rootHashes = await fetchModuleHashes(
             this.graphRoots, this.inputs.branch, this.gitFeatures, this.patchUrlMap
         );
-        this.journalKey = computeJournalKey(this.graphRoots, this.inputs.branch, this.rootHashes);
+        this.journalKey = computeJournalKey(
+            this.graphRoots, this.inputs.branch, this.rootHashes,
+            this.inputs.modulesScanPaths, this.inputs.modulesExcludePaths
+        );
         core.info(`Journal cache key: ${this.journalKey.primaryKey}`);
         this.journal = await restoreJournal(this.journalKey.primaryKey, this.journalKey.restorePrefix);
         if (this.journal) {
@@ -615,7 +621,7 @@ class BoostCloner {
             this.discoveryResult = await initializeSubmodules(
                 this.inputs, initModules, this.gitFeatures,
                 this.exceptions!, allValidPaths, this.patchNames,
-                preScannedDeps
+                preScannedDeps, this.graphRoots
             );
             core.endGroup();
         }

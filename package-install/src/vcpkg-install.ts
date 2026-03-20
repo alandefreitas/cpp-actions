@@ -100,27 +100,29 @@ export async function vcpkgMain(inputs: Inputs): Promise<VcpkgOutputs> {
     // Compiler hash
     let compilerHashStr = '';
     let cxxCompilerVersion = '';
-    if (inputs.cxx !== '') {
-        if (inputs.cxx === path.basename(inputs.cxx)) {
-            inputs.cxx = await io.which(inputs.cxx, true);
+    let resolvedCxx = inputs.cxx;
+    let resolvedCc = inputs.cc;
+    if (resolvedCxx !== '') {
+        if (resolvedCxx === path.basename(resolvedCxx)) {
+            resolvedCxx = await io.which(resolvedCxx, true);
         }
-        const compilerVersionOutput = await readCompilerVersion(inputs.cxx);
+        const compilerVersionOutput = await readCompilerVersion(resolvedCxx);
         const regex = /[0-9]+\.[0-9]+\.[0-9]+/;
         const matches = compilerVersionOutput.match(regex);
         const compilerVersion = matches ? matches[0] : '';
-        compilerHashStr += `cxx:${inputs.cxx}-version:${compilerVersion}-flags:${inputs.cxxflags}`;
+        compilerHashStr += `cxx:${resolvedCxx}-version:${compilerVersion}-flags:${inputs.cxxflags}`;
         cxxCompilerVersion = compilerVersion;
     }
-    if (inputs.cc !== '') {
-        if (inputs.cc === path.basename(inputs.cc)) {
-            inputs.cc = await io.which(inputs.cc, true);
+    if (resolvedCc !== '') {
+        if (resolvedCc === path.basename(resolvedCc)) {
+            resolvedCc = await io.which(resolvedCc, true);
         }
-        const compilerVersionOutput = await readCompilerVersion(inputs.cc);
+        const compilerVersionOutput = await readCompilerVersion(resolvedCc);
         const regex = /[0-9]+\.[0-9]+\.[0-9]+/;
         const matches = compilerVersionOutput.match(regex);
         const compilerVersion = matches ? matches[0] : '';
         if (cxxCompilerVersion !== compilerVersion || inputs.ccflags !== inputs.cxxflags) {
-            compilerHashStr += `cc:${inputs.cc}-version:${compilerVersion}-flags:${inputs.ccflags}`;
+            compilerHashStr += `cc:${resolvedCc}-version:${compilerVersion}-flags:${inputs.ccflags}`;
         }
     }
     core.info(`🧩 compiler-hash-str: ${compilerHashStr}`);
@@ -164,14 +166,14 @@ export async function vcpkgMain(inputs: Inputs): Promise<VcpkgOutputs> {
     if (inputs.vcpkg.length > 0) {
         // Set environment variables to determine how vcpkg should
         // build packages by default
-        if (inputs.cxx !== '') {
-            core.exportVariable('CXX', inputs.cxx);
+        if (resolvedCxx !== '') {
+            core.exportVariable('CXX', resolvedCxx);
         }
         if (inputs.cxxflags !== '') {
             core.exportVariable('CXXFLAGS', inputs.cxxflags);
         }
-        if (inputs.cc !== '') {
-            core.exportVariable('CC', inputs.cc);
+        if (resolvedCc !== '') {
+            core.exportVariable('CC', resolvedCc);
         }
         if (inputs.ccflags) {
             core.exportVariable('CFLAGS', inputs.ccflags);
@@ -182,7 +184,7 @@ export async function vcpkgMain(inputs: Inputs): Promise<VcpkgOutputs> {
             // Check pkg contains its own triplet suffix
             const hasOwnTriplet = pkg.includes(':');
             const pkgWithTriplet = hasOwnTriplet ? pkg : `${pkg}${tripletSuffix}`;
-            const exitCode = await exec.exec(escapePath(vcpkgExecutable), ['install', pkg, pkgWithTriplet], {
+            const exitCode = await exec.exec(escapePath(vcpkgExecutable), ['install', pkgWithTriplet], {
                 ignoreReturnCode: true
             });
             if (exitCode === 0) {

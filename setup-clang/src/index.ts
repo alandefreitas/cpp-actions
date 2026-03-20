@@ -46,6 +46,13 @@ import { clangDownloadCandidates, installProgramFromClangUrls } from './download
 import { installCompanionPackages } from './companion-packages';
 
 import * as setup_program from 'setup-program';
+import {
+    findProgramWithBrew,
+    installProgramWithBrew,
+    findProgramWithChoco,
+    installProgramWithChoco,
+    findProgramWithApt
+} from 'package-install';
 
 // ─── SetupClangRunner ───────────────────────────────────────────────
 
@@ -206,13 +213,13 @@ class SetupClangRunner {
         core.info(`Searching for LLVM ${major} via Homebrew formula ${formula}`);
 
         // Try to find the already-installed formula
-        let result = await setup_program.findProgramWithBrew(formula, binaryName);
+        let result = await findProgramWithBrew(formula, binaryName);
         if (result === null) {
             // Not found — attempt installation
             core.info(`${formula} not found, installing via Homebrew`);
-            const prefix = await setup_program.installProgramWithBrew(formula);
+            const prefix = await installProgramWithBrew(formula);
             if (prefix !== null) {
-                result = await setup_program.findProgramWithBrew(formula, binaryName);
+                result = await findProgramWithBrew(formula, binaryName);
             }
         }
 
@@ -248,7 +255,7 @@ class SetupClangRunner {
         ];
 
         // Search known install paths
-        const result = await setup_program.findProgramWithChoco('llvm', 'clang-cl.exe', searchPaths);
+        const result = await findProgramWithChoco('llvm', 'clang-cl.exe', searchPaths);
         if (result !== null) {
             // Check if version matches the requested major
             const foundMajor = semver.coerce(result.version, { loose: true })?.major ?? null;
@@ -270,9 +277,9 @@ class SetupClangRunner {
             const chocoVersion = this.findInstallableLlvmVersion(major);
             const installDir = 'C:\\Program Files\\LLVM\\bin';
 
-            const installResult = await setup_program.installProgramWithChoco('llvm', chocoVersion ?? undefined, installDir);
+            const installResult = await installProgramWithChoco('llvm', chocoVersion ?? undefined, installDir);
             if (installResult !== null) {
-                const afterInstall = await setup_program.findProgramWithChoco('llvm', 'clang-cl.exe', searchPaths);
+                const afterInstall = await findProgramWithChoco('llvm', 'clang-cl.exe', searchPaths);
                 if (afterInstall !== null) {
                     this.outputPath = afterInstall.path;
                     this.outputVersion = afterInstall.version;
@@ -321,7 +328,7 @@ class SetupClangRunner {
      * Skipped if a binary was already found or if not on Linux.
      */
     private async searchApt(): Promise<void> {
-        if (this.outputVersion !== null && process.platform === 'linux') {
+        if (this.outputVersion !== null) {
             traceCommands.log(
                 `Skipping APT step because Clang ${this.outputVersion} was already found in ${this.outputPath}`
             );
@@ -354,7 +361,7 @@ class SetupClangRunner {
 
             // Download and install repo signing key using modern signed-by approach
             // (apt-key was removed in Ubuntu 24.10+)
-            await setup_program.findProgramWithApt(['gnupg'], '*', true);
+            await findProgramWithApt(['gnupg'], '*', true);
             const gpgKeyUrl = 'https://apt.llvm.org/llvm-snapshot.gpg.key';
             const keyPath = await tc.downloadTool(gpgKeyUrl);
             const keyringPath = '/etc/apt/keyrings/llvm-snapshot.gpg';
@@ -386,7 +393,7 @@ class SetupClangRunner {
         }
 
         core.info(`Searching for Clang ${this.inputs.version} with APT`);
-        const result = await setup_program.findProgramWithApt(['clang'], this.inputs.version, this.inputs.checkLatest);
+        const result = await findProgramWithApt(['clang'], this.inputs.version, this.inputs.checkLatest);
         this.outputVersion = result.outputVersion;
         this.outputPath = result.outputPath;
         this.installedAptPackage = result.installedPackage ?? null;

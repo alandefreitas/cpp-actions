@@ -29,7 +29,7 @@ import {
 
 import {
     findProgramInPaths
-} from './program-search';
+} from 'package-install';
 
 import {
     moveWithPermissions

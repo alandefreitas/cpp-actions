@@ -87,6 +87,7 @@ function makeSubmoduleUpdateArgs(gitFeatures: GitFeatures): string[] {
  * @param submodulePaths - Set of valid submodule paths from .gitmodules
  * @param patchNames - Names of patch modules already cloned by applyPatches (excluded from git submodule init, seeded into scan loop)
  * @param preScannedDeps - Pre-known deps from journal for validated modules (skips scanning them)
+ * @param rootModules - User-requested root modules that get scanned with modules-scan-paths (test dirs etc.), unlike transitive deps which only scan include/src
  * @returns The complete set of initialized modules and discovered dependencies
  */
 export async function initializeSubmodules(
@@ -96,7 +97,8 @@ export async function initializeSubmodules(
     exceptions: Record<string, string>,
     submodulePaths: Set<string>,
     patchNames: Set<string> = new Set(),
-    preScannedDeps: Map<string, string[]> = new Map()
+    preScannedDeps: Map<string, string[]> = new Map(),
+    rootModules: Set<string> = new Set()
 ): Promise<DiscoveryResult> {
     const fnlog = traceCommands.scoped('initializeSubmodules');
 
@@ -142,12 +144,20 @@ export async function initializeSubmodules(
             const modulePath = path.resolve(path.join(inputs.boostDir, 'libs', mod));
             const ignoreSet = new Set<string>(inputs.scanModulesIgnore);
             ignoreSet.add(mod);
-            const moduleInputs: Inputs = {
-                ...inputs,
-                scanModulesIgnore: ignoreSet,
-                modulesScanPaths: new Set<string>(),
-                modulesExcludePaths: new Set<string>(['test', 'tests', 'example', 'examples'])
-            };
+            // Root modules: honor the user's modules-scan-paths (e.g., scan test dirs
+            // for direct deps needed to build tests). Matches depinst.py behavior where
+            // the root module is scanned with main_dirs + extra_dirs.
+            // Transitive modules: only scan include/src — test dependencies of
+            // dependencies are not real transitive dependencies.
+            const isRoot = rootModules.has(mod);
+            const moduleInputs: Inputs = isRoot
+                ? { ...inputs, scanModulesIgnore: ignoreSet }
+                : {
+                    ...inputs,
+                    scanModulesIgnore: ignoreSet,
+                    modulesScanPaths: new Set<string>(),
+                    modulesExcludePaths: new Set<string>(['test', 'tests', 'example', 'examples'])
+                };
             const deps = await scanBoostDependencies(modulePath, moduleInputs, exceptions, submodulePaths);
             fnlog(`Submodules of ${mod}: ${gh_inputs.makeValueString(deps)}`);
             return { mod, deps };

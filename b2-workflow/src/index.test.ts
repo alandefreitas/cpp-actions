@@ -22,6 +22,7 @@ jest.mock('trace-commands', () => ({
     setTraceCommands: jest.fn()
 }));
 
+import * as path from 'path';
 import * as exec from '@actions/exec';
 import { main } from './index';
 import { describePrettyErrors } from 'pretty-errors/test-helper';
@@ -143,6 +144,10 @@ test('broadcasts all targets to a single module', async () => {
 });
 
 test('derives address model and architecture from arch input when unspecified', async () => {
+    // Run on Linux to avoid the macOS ARM64 skip logic
+    const origPlatform = process.platform;
+    Object.defineProperty(process, 'platform', { value: 'linux' });
+
     const inputs = createInputs({
         arch: 'arm64'
     });
@@ -150,11 +155,33 @@ test('derives address model and architecture from arch input when unspecified', 
     const buildArgs = (exec.getExecOutput as jest.Mock).mock.calls[2][1];
     expect(buildArgs).toContain('address-model=64');
     expect(buildArgs).toContain('architecture=arm');
+
+    Object.defineProperty(process, 'platform', { value: origPlatform });
 });
 
 // ==========================================
 // createUserConfig tests
 // ==========================================
+
+test('creates user-config.jam in home dir and cleans up after', async () => {
+    const fs = require('fs');
+    const os = require('os');
+    const writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+    const unlinkSpy = jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
+
+    const inputs = createInputs({ cxx: 'g++', toolset: 'gcc-13' });
+    await main(inputs);
+
+    const expectedPath = path.join(os.homedir(), 'user-config.jam');
+    expect(writeSpy).toHaveBeenCalledWith(
+        expectedPath,
+        expect.stringContaining('using gcc')
+    );
+    expect(unlinkSpy).toHaveBeenCalledWith(expectedPath);
+
+    writeSpy.mockRestore();
+    unlinkSpy.mockRestore();
+});
 
 test('creates user-config.jam when cxx and toolset are set (basename cxx)', async () => {
     const fs = require('fs');
@@ -195,6 +222,99 @@ test('skips user-config.jam when toolset is clang-win', async () => {
     const inputs = createInputs({ cxx: 'clang-cl', toolset: 'clang-win' });
     await main(inputs);
     expect(writeSpy).not.toHaveBeenCalled();
+    writeSpy.mockRestore();
+});
+
+test('includes sysroot and triplet=none in user-config.jam on macOS with clang', async () => {
+    const fs = require('fs');
+    const writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+    const origPlatform = process.platform;
+    Object.defineProperty(process, 'platform', { value: 'darwin' });
+
+    (exec.getExecOutput as jest.Mock)
+        .mockResolvedValueOnce({ exitCode: 0, stdout: '/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk\n', stderr: '' })
+        .mockResolvedValue({ exitCode: 0, stdout: '', stderr: '' });
+
+    const inputs = createInputs({ cxx: '/usr/bin/clang++', toolset: 'clang' });
+    await main(inputs);
+    expect(writeSpy).toHaveBeenCalledWith(
+        expect.stringContaining('user-config.jam'),
+        expect.stringContaining('--sysroot=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk')
+    );
+    expect(writeSpy).toHaveBeenCalledWith(
+        expect.stringContaining('user-config.jam'),
+        expect.stringContaining('<triplet>none')
+    );
+
+    Object.defineProperty(process, 'platform', { value: origPlatform });
+    writeSpy.mockRestore();
+});
+
+test('does not include sysroot or triplet on Linux', async () => {
+    const fs = require('fs');
+    const writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+    const origPlatform = process.platform;
+    Object.defineProperty(process, 'platform', { value: 'linux' });
+
+    const inputs = createInputs({ cxx: 'clang++', toolset: 'clang' });
+    await main(inputs);
+    expect(writeSpy).toHaveBeenCalledWith(
+        expect.stringContaining('user-config.jam'),
+        expect.not.stringContaining('--sysroot')
+    );
+
+    Object.defineProperty(process, 'platform', { value: origPlatform });
+    writeSpy.mockRestore();
+});
+
+test('falls back to triplet=none when xcrun fails on macOS', async () => {
+    const fs = require('fs');
+    const writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+    const origPlatform = process.platform;
+    Object.defineProperty(process, 'platform', { value: 'darwin' });
+
+    (exec.getExecOutput as jest.Mock)
+        .mockRejectedValueOnce(new Error('xcrun failed'))
+        .mockResolvedValue({ exitCode: 0, stdout: '', stderr: '' });
+
+    const inputs = createInputs({ cxx: '/usr/bin/clang++', toolset: 'clang' });
+    await main(inputs);
+    expect(writeSpy).toHaveBeenCalledWith(
+        expect.stringContaining('user-config.jam'),
+        expect.stringContaining('<triplet>none')
+    );
+    expect(writeSpy).toHaveBeenCalledWith(
+        expect.stringContaining('user-config.jam'),
+        expect.not.stringContaining('--sysroot')
+    );
+
+    Object.defineProperty(process, 'platform', { value: origPlatform });
+    writeSpy.mockRestore();
+});
+
+test('skips address-model and architecture on macOS ARM64 with clang', async () => {
+    const fs = require('fs');
+    const writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+    const origPlatform = process.platform;
+    const origArch = process.arch;
+    Object.defineProperty(process, 'platform', { value: 'darwin' });
+    Object.defineProperty(process, 'arch', { value: 'arm64' });
+
+    (exec.getExecOutput as jest.Mock)
+        .mockResolvedValueOnce({ exitCode: 0, stdout: '/sdk\n', stderr: '' })
+        .mockResolvedValue({ exitCode: 0, stdout: '', stderr: '' });
+
+    const inputs = createInputs({ cxx: '/usr/bin/clang++', toolset: 'clang', arch: 'arm64' });
+    await main(inputs);
+
+    const allCalls = (exec.getExecOutput as jest.Mock).mock.calls;
+    const buildCall = allCalls[allCalls.length - 1];
+    const args = buildCall[1] as string[];
+    expect(args.some((a: string) => a.startsWith('architecture='))).toBe(false);
+    expect(args.some((a: string) => a.startsWith('address-model='))).toBe(false);
+
+    Object.defineProperty(process, 'platform', { value: origPlatform });
+    Object.defineProperty(process, 'arch', { value: origArch });
     writeSpy.mockRestore();
 });
 

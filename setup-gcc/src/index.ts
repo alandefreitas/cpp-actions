@@ -9,6 +9,13 @@ import { runAction } from 'action-schema';
 import { ExpectedError } from 'pretty-errors';
 
 import * as setup_program from 'setup-program';
+import {
+    findProgramWithBrew,
+    installProgramWithBrew,
+    findProgramWithChoco,
+    installProgramWithChoco,
+    findProgramWithApt
+} from 'package-install';
 
 // Schema imports
 import { inputsSchema, outputsSchema } from './schema';
@@ -191,13 +198,13 @@ class SetupGccRunner {
         core.info(`Searching for GCC ${major} via Homebrew formula ${formula}`);
 
         // Try to find the already-installed formula
-        let result = await setup_program.findProgramWithBrew(formula, binaryName);
+        let result = await findProgramWithBrew(formula, binaryName);
         if (result === null) {
             // Not found — attempt installation
             core.info(`${formula} not found, installing via Homebrew`);
-            const prefix = await setup_program.installProgramWithBrew(formula);
+            const prefix = await installProgramWithBrew(formula);
             if (prefix !== null) {
-                result = await setup_program.findProgramWithBrew(formula, binaryName);
+                result = await findProgramWithBrew(formula, binaryName);
             }
         }
 
@@ -234,7 +241,7 @@ class SetupGccRunner {
         ];
 
         // Search known install paths
-        const result = await setup_program.findProgramWithChoco('mingw', 'gcc.exe', searchPaths);
+        const result = await findProgramWithChoco('mingw', 'gcc.exe', searchPaths);
         if (result !== null) {
             // Check if version matches the requested major
             const foundMajor = semver.coerce(result.version, { loose: true })?.major ?? null;
@@ -256,9 +263,9 @@ class SetupGccRunner {
             const chocoVersion = this.findInstallableVersion(major);
             const installDir = 'C:\\ProgramData\\mingw64\\bin';
 
-            const installResult = await setup_program.installProgramWithChoco('mingw', chocoVersion ?? undefined, installDir);
+            const installResult = await installProgramWithChoco('mingw', chocoVersion ?? undefined, installDir);
             if (installResult !== null) {
-                const afterInstall = await setup_program.findProgramWithChoco('mingw', 'gcc.exe', searchPaths);
+                const afterInstall = await findProgramWithChoco('mingw', 'gcc.exe', searchPaths);
                 if (afterInstall !== null) {
                     this.outputPath = afterInstall.path;
                     this.outputVersion = afterInstall.version;
@@ -307,7 +314,7 @@ class SetupGccRunner {
      * Skipped if a binary was already found or if not on Linux.
      */
     private async searchApt(): Promise<void> {
-        if (this.outputVersion !== null && process.platform === 'linux') {
+        if (this.outputVersion !== null) {
             traceCommands.log(
                 `Skipping APT step because GCC ${this.outputVersion} was already found in ${this.outputPath}`
             );
@@ -322,7 +329,7 @@ class SetupGccRunner {
         core.info(`Searching for GCC ${this.inputs.version} with APT`);
 
         // Add APT repository
-        await setup_program.findProgramWithApt(['software-properties-common'], '*', true);
+        await findProgramWithApt(['software-properties-common'], '*', true);
         let addAptRepositoryPath: string | null = null;
         try {
             addAptRepositoryPath = await io.which('add-apt-repository');
@@ -340,7 +347,7 @@ class SetupGccRunner {
             }
         }
 
-        const aptResult: ProgramResult = await setup_program.findProgramWithApt(
+        const aptResult: ProgramResult = await findProgramWithApt(
             this.names, this.inputs.version, this.inputs.checkLatest
         );
         this.outputVersion = aptResult.outputVersion;

@@ -20,7 +20,6 @@
     "action-schema": "*",
     "semver": "^7.7.4",
     "trace-commands": "*",
-    "setup-program": "*",
     "pretty-errors": "*"
   },
   "devDependencies": {

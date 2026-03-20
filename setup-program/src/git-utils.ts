@@ -30,7 +30,7 @@ import {
     updateAptPackageLists,
     installProgramWithApt,
     findProgramWithApt
-} from './apt-utils';
+} from 'package-install';
 
 /**
  * Options for fetching Git tags from a repository.
@@ -136,7 +136,7 @@ export async function fetchGitTags(repo: string, options: FetchGitTagsOptions = 
                     traceCommands.log('Error fetching Git tags: ' + errorMessage);
                     traceCommands.log(`Attempt ${attempt} of ${maxRetries}`);
                     // Exponential backoff
-                    const delay = Math.max(60000, Math.pow(2, attempt - 1) * 1000);
+                    const delay = Math.min(60000, Math.pow(2, attempt - 1) * 1000);
                     traceCommands.log(`Retrying in ${delay} milliseconds...`);
                     await sleep(delay);
                 } else {

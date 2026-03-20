@@ -88,33 +88,50 @@ inputs:
     default: ''
   scan-modules-dir:
     description: |-
-      An independent directory we should scan for boost dependencies to clone.
+      Directories to scan for `#include <boost/...>` headers to discover which Boost modules to clone.
       This option also accepts a multi-line string with multiple directories.
 
-      This is usually a directory in the current project that requires boost libraries.
-      The Boost modules required in files from this directory will be added to the `modules` list.
+      Each directory is scanned recursively for C++ source and header files.
+      Directories that do not exist are silently skipped.
 
-      Only the subdirectories of this directory specified by `modules-scan-paths` will be scanned.
+      This is usually a set of directories in the current project that may contain Boost includes.
+      Set to an empty string to disable scanning entirely (useful when `modules` is specified explicitly).
     required: false
-    default: .
+    default: |-
+      include
+      src
+      source
+      lib
+      libs
+      test
+      tests
+      example
+      examples
+      bench
+      benchmark
+      benchmarks
+      bin
   modules-scan-paths:
     description: |-
-      Additional subdirectories within each `scan-modules-dir` entry to scan for `#include <boost/...>` headers.
+      Additional subdirectories to scan for `#include <boost/...>` headers when discovering dependencies of the requested Boost modules.
 
-      For instance, by setting it to `test` the action will also scan the `test` subdirectory for boost dependencies.
-      This only affects module discovery — it does not change which files are checked out.
+      For instance, setting this to `test` ensures that Boost headers included by your module's
+      test code are also cloned. This is useful when you want to build and run the module's tests.
+      This matches the behavior of Boost's own `depinst.py --include` flag.
 
-      By default, the action scans the ['include', 'src', 'source', 'test', 'tests', 'example', 'examples'] subdirectories.
+      This only affects the root modules you requested (via `modules` or `scan-modules-dir`).
+      Transitive dependencies are always scanned with only include and src directories, since
+      test dependencies of dependencies are not real transitive dependencies.
+
+      Most users do not need to customize this. If you are simply using Boost as a dependency
+      for your project, leave this empty.
     required: false
     default: ''
   modules-exclude-paths:
     description: |-
-      Subdirectories within each `scan-modules-dir` entry to exclude from the header scan.
+      Subdirectories to exclude from the header scan when discovering dependencies of the requested Boost modules.
 
-      Directories that match any of the values in this list will be skipped during module discovery.
       This only affects which headers are scanned — it does not change which files are checked out.
-
-      By default, the action excludes the ['test', 'tests'] subdirectories.
     required: false
     default: |-
       test

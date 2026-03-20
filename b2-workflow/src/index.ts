@@ -6,10 +6,10 @@
 
 import * as core from '@actions/core';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import * as exec from '@actions/exec';
 import * as io from '@actions/io';
-import * as os from 'os';
 import * as traceCommands from 'trace-commands';
 import { ExpectedError } from 'pretty-errors';
 import { runAction } from 'action-schema';
@@ -61,6 +61,9 @@ class B2WorkflowRunner {
     /** Resolved address model — may be derived from arch config */
     private addressModel: string;
 
+    /** Path to auto-generated user-config.jam (passed via --user-config) */
+    private generatedUserConfig: string | null = null;
+
     /**
      * Creates a new B2WorkflowRunner from parsed inputs.
      *
@@ -80,9 +83,13 @@ class B2WorkflowRunner {
     async run(): Promise<void> {
         this.deriveArchitecture();
         await this.createUserConfig();
-        await this.bootstrapB2();
-        await this.bootstrapHeaders();
-        await this.buildAndTest();
+        try {
+            await this.bootstrapB2();
+            await this.bootstrapHeaders();
+            await this.buildAndTest();
+        } finally {
+            this.cleanupUserConfig();
+        }
     }
 
     /**
@@ -125,12 +132,47 @@ class B2WorkflowRunner {
             const toolsetBasename = this.inputs.toolset.split('-')[0];
             const userConfigJam = path.join(os.homedir(), 'user-config.jam');
             fnlog(`user-config.jam: ${userConfigJam}`);
-            const userConfigJamContents = `using ${toolsetBasename} : : "${this.cxx}" ;`;
+
+            // On macOS, Apple Clang called directly (not via xcrun) cannot find
+            // SDK headers. B2 invokes the compiler path from user-config.jam directly,
+            // bypassing xcrun's sysroot setup. We pass --sysroot= to fix header lookup.
+            // Also set <triplet>none to prevent B2 from generating a broken --target.
+            let toolsetOptions = '';
+            if (process.platform === 'darwin' && toolsetBasename === 'clang') {
+                try {
+                    const { stdout } = await exec.getExecOutput('xcrun', ['--show-sdk-path'], { silent: true });
+                    const sdkPath = stdout.trim();
+                    if (sdkPath) {
+                        fnlog(`macOS SDK path: ${sdkPath}`);
+                        toolsetOptions = ` : <compileflags>--sysroot=${sdkPath} <linkflags>--sysroot=${sdkPath} <triplet>none`;
+                    }
+                } catch {
+                    fnlog('Could not determine macOS SDK path via xcrun');
+                    toolsetOptions = ' : <triplet>none';
+                }
+            }
+
+            const userConfigJamContents = `using ${toolsetBasename} : : "${this.cxx}"${toolsetOptions} ;`;
             fnlog(`user-config.jam contents: ${userConfigJamContents}`);
             fs.writeFileSync(userConfigJam, userConfigJamContents);
+            this.generatedUserConfig = userConfigJam;
             core.info(`📝 ${userConfigJam} contents:`);
             core.info(userConfigJamContents);
             core.endGroup();
+        }
+    }
+
+    /**
+     * Removes the auto-generated user-config.jam and its temp directory.
+     */
+    private cleanupUserConfig(): void {
+        if (this.generatedUserConfig) {
+            try {
+                fs.unlinkSync(this.generatedUserConfig);
+            } catch {
+                // Best-effort cleanup
+            }
+            this.generatedUserConfig = null;
         }
     }
 
@@ -232,10 +274,18 @@ class B2WorkflowRunner {
         if (this.inputs.toolset) {
             b2Args.push(`--toolset=${this.inputs.toolset}`);
         }
-        if (this.addressModel) {
+        // On macOS ARM64 with clang, skip address-model and architecture.
+        // B2's clang-linux toolset adds -m64 for address-model=64, which is an x86
+        // flag that breaks ARM64 compilation by confusing the SDK header search.
+        // B2's --target generation is disabled via <triplet>none in user-config.jam.
+        const isNativeMacOSArm64 = process.platform === 'darwin' &&
+            process.arch === 'arm64' &&
+            this.archConfig.architecture === 'arm';
+
+        if (this.addressModel && !isNativeMacOSArm64) {
             b2Args.push(`address-model=${this.addressModel}`);
         }
-        if (this.archConfig.architecture) {
+        if (this.archConfig.architecture && !isNativeMacOSArm64) {
             b2Args.push(`architecture=${this.archConfig.architecture}`);
         }
         if (this.inputs.cxxstd) {

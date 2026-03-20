@@ -9,6 +9,7 @@
 
 import * as fs from 'fs';
 import * as io from '@actions/io';
+import * as exec from '@actions/exec';
 import * as core from '@actions/core';
 import * as traceCommands from 'trace-commands';
 
@@ -66,6 +67,20 @@ export async function findLlvmSymbolizer(majorVersion: number): Promise<string |
         if (fs.existsSync(p)) {
             fnlog(`Found llvm-symbolizer at ${p}`);
             return p;
+        }
+    }
+
+    // On macOS, try xcrun to find llvm-symbolizer in the active Xcode toolchain
+    if (process.platform === 'darwin') {
+        try {
+            const { stdout, exitCode } = await exec.getExecOutput('xcrun', ['--find', 'llvm-symbolizer'], { silent: true });
+            const xcrunPath = stdout.trim();
+            if (exitCode === 0 && xcrunPath && fs.existsSync(xcrunPath)) {
+                fnlog(`Found llvm-symbolizer via xcrun: ${xcrunPath}`);
+                return xcrunPath;
+            }
+        } catch {
+            fnlog('xcrun --find llvm-symbolizer failed');
         }
     }
 

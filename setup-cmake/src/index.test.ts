@@ -24,9 +24,12 @@ jest.mock('setup-program', () => ({
     findCMakeVersions: jest.fn(),
     findProgramInPath: jest.fn(),
     findProgramInSystemPaths: jest.fn(),
-    findProgramWithApt: jest.fn(),
     installProgramFromUrl: jest.fn(),
     isSudoRequired: jest.fn().mockReturnValue(false)
+}));
+
+jest.mock('package-install', () => ({
+    findProgramWithApt: jest.fn()
 }));
 
 jest.mock('./system-utils', () => ({
@@ -45,6 +48,7 @@ import * as path from 'path';
 import * as core from '@actions/core';
 import * as tc from '@actions/tool-cache';
 import * as setup_program from 'setup-program';
+import * as package_install from 'package-install';
 import { main, type Inputs } from './index';
 import { ensureGit } from './system-utils';
 import { updateCMakeVersionFromFile } from './version-resolve';
@@ -53,7 +57,7 @@ import { generateCMakeURL } from './url-generation';
 const mockFindCMakeVersions = setup_program.findCMakeVersions as jest.Mock;
 const mockFindInPath = setup_program.findProgramInPath as jest.Mock;
 const mockFindInSystem = setup_program.findProgramInSystemPaths as jest.Mock;
-const mockFindWithApt = setup_program.findProgramWithApt as jest.Mock;
+const mockFindWithApt = package_install.findProgramWithApt as jest.Mock;
 const mockInstallFromUrl = setup_program.installProgramFromUrl as jest.Mock;
 
 const defaultVersions = ['3.18.0', '3.19.8', '3.20.0', '3.20.6', '3.21.7', '3.22.0', '3.23.5', '3.24.4', '3.25.3', '3.26.0', '3.27.0', '3.28.0'];
@@ -158,7 +162,7 @@ describe('main (SetupCmakeRunner)', () => {
     test('searches APT on linux when system paths find nothing', async () => {
         mockFindWithApt.mockResolvedValue({ outputVersion: '3.22.0', outputPath: '/usr/bin/cmake' });
         const outputs = await main(makeInputs());
-        expect(setup_program.findProgramWithApt).toHaveBeenCalled();
+        expect(package_install.findProgramWithApt).toHaveBeenCalled();
         expect(outputs.version).toBe('3.22.0');
     });
 
@@ -166,7 +170,7 @@ describe('main (SetupCmakeRunner)', () => {
         Object.defineProperty(process, 'platform', { value: 'darwin' });
         mockInstallFromUrl.mockResolvedValue({ outputVersion: '3.28.0', outputPath: '/usr/local/bin/cmake' });
         await main(makeInputs());
-        expect(setup_program.findProgramWithApt).not.toHaveBeenCalled();
+        expect(package_install.findProgramWithApt).not.toHaveBeenCalled();
     });
 
     test('downloads from URL when all searches fail', async () => {

@@ -28,9 +28,12 @@ jest.mock('trace-commands', () => ({
 }));
 
 jest.mock('setup-program', () => ({
-    getPackagePreferenceTier: jest.fn(),
-    PackagePreferenceTier: { UNVERSIONED: 1, RAW_VERSIONED: 2, OTHER_VERSIONED: 3 },
     findLlvmSymbolizer: jest.fn().mockResolvedValue(null)
+}));
+
+jest.mock('package-install', () => ({
+    getPackagePreferenceTier: jest.fn(),
+    PackagePreferenceTier: { UNVERSIONED: 1, RAW_VERSIONED: 2, OTHER_VERSIONED: 3 }
 }));
 
 const realExistsSync = jest.requireActual<typeof fs>('fs').existsSync;
@@ -42,16 +45,16 @@ jest.mock('fs', () => ({
 import {
     findFileRecursive,
     hasSanitizerRuntimes,
-    findLlvmSymbolizer,
     installCompanionPackages
 } from './companion-packages';
 import * as exec from '@actions/exec';
 import * as setup_program from 'setup-program';
+import * as package_install from 'package-install';
 
 const mockFindLlvmSymbolizer = setup_program.findLlvmSymbolizer as jest.MockedFunction<typeof setup_program.findLlvmSymbolizer>;
 const mockExec = exec.exec as jest.MockedFunction<typeof exec.exec>;
 const mockGetExecOutput = exec.getExecOutput as jest.MockedFunction<typeof exec.getExecOutput>;
-const mockGetPackagePreferenceTier = setup_program.getPackagePreferenceTier as jest.MockedFunction<typeof setup_program.getPackagePreferenceTier>;
+const mockGetPackagePreferenceTier = package_install.getPackagePreferenceTier as jest.MockedFunction<typeof package_install.getPackagePreferenceTier>;
 
 describe('findFileRecursive', () => {
     let tmpDir: string;
@@ -113,11 +116,6 @@ describe('hasSanitizerRuntimes', () => {
     });
 });
 
-describe('findLlvmSymbolizer', () => {
-    it('is re-exported from setup-program', () => {
-        expect(findLlvmSymbolizer).toBe(setup_program.findLlvmSymbolizer);
-    });
-});
 
 describe('installCompanionPackages', () => {
     const originalPlatform = process.platform;
@@ -158,7 +156,7 @@ describe('installCompanionPackages', () => {
     it('detects unversioned package tier', async () => {
         mockExec.mockResolvedValueOnce(0); // apt --version
         mockGetExecOutput.mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }); // sudo check
-        mockGetPackagePreferenceTier.mockReturnValue(setup_program.PackagePreferenceTier.UNVERSIONED);
+        mockGetPackagePreferenceTier.mockReturnValue(package_install.PackagePreferenceTier.UNVERSIONED);
         mockFindLlvmSymbolizer.mockResolvedValue(null);
         // Install llvm package
         mockExec.mockResolvedValueOnce(0); // apt-get install llvm succeeds
@@ -178,7 +176,7 @@ describe('installCompanionPackages', () => {
     it('detects versioned package and tries versioned llvm first', async () => {
         mockExec.mockResolvedValueOnce(0); // apt --version
         mockGetExecOutput.mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }); // sudo check
-        mockGetPackagePreferenceTier.mockReturnValue(setup_program.PackagePreferenceTier.RAW_VERSIONED);
+        mockGetPackagePreferenceTier.mockReturnValue(package_install.PackagePreferenceTier.RAW_VERSIONED);
         mockFindLlvmSymbolizer.mockResolvedValue(null);
         // Install llvm-14 package
         mockExec.mockResolvedValueOnce(0); // apt-get install llvm-14 succeeds
@@ -197,7 +195,7 @@ describe('installCompanionPackages', () => {
     it('uses sudo when available', async () => {
         mockExec.mockResolvedValueOnce(0); // apt --version
         mockGetExecOutput.mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }); // sudo works
-        mockGetPackagePreferenceTier.mockReturnValue(setup_program.PackagePreferenceTier.RAW_VERSIONED);
+        mockGetPackagePreferenceTier.mockReturnValue(package_install.PackagePreferenceTier.RAW_VERSIONED);
         mockFindLlvmSymbolizer.mockResolvedValue(null);
         // Install llvm-14 with sudo
         mockExec.mockResolvedValueOnce(0);
@@ -215,7 +213,7 @@ describe('installCompanionPackages', () => {
     it('skips sudo when not available', async () => {
         mockExec.mockResolvedValueOnce(0); // apt --version
         mockGetExecOutput.mockRejectedValueOnce(new Error('no sudo')); // sudo not available
-        mockGetPackagePreferenceTier.mockReturnValue(setup_program.PackagePreferenceTier.RAW_VERSIONED);
+        mockGetPackagePreferenceTier.mockReturnValue(package_install.PackagePreferenceTier.RAW_VERSIONED);
         mockFindLlvmSymbolizer.mockResolvedValue(null);
         mockExec.mockResolvedValueOnce(0); // install llvm
         mockExec.mockResolvedValueOnce(0); // install sanitizer
@@ -233,7 +231,7 @@ describe('installCompanionPackages', () => {
     it('tries second llvm package when first fails', async () => {
         mockExec.mockResolvedValueOnce(0); // apt --version
         mockGetExecOutput.mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }); // sudo
-        mockGetPackagePreferenceTier.mockReturnValue(setup_program.PackagePreferenceTier.RAW_VERSIONED);
+        mockGetPackagePreferenceTier.mockReturnValue(package_install.PackagePreferenceTier.RAW_VERSIONED);
         mockFindLlvmSymbolizer.mockResolvedValue(null);
         // First llvm package fails
         mockExec.mockResolvedValueOnce(1);
@@ -252,7 +250,7 @@ describe('installCompanionPackages', () => {
     it('skips llvm install when symbolizer already found', async () => {
         mockExec.mockResolvedValueOnce(0); // apt --version
         mockGetExecOutput.mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }); // sudo
-        mockGetPackagePreferenceTier.mockReturnValue(setup_program.PackagePreferenceTier.RAW_VERSIONED);
+        mockGetPackagePreferenceTier.mockReturnValue(package_install.PackagePreferenceTier.RAW_VERSIONED);
         mockFindLlvmSymbolizer.mockResolvedValueOnce('/usr/bin/llvm-symbolizer-14');
         // Sanitizer runtimes not found, install
         mockExec.mockResolvedValueOnce(0);
@@ -264,7 +262,7 @@ describe('installCompanionPackages', () => {
     it('handles null installedAptPackage', async () => {
         mockExec.mockResolvedValueOnce(0); // apt --version
         mockGetExecOutput.mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }); // sudo
-        mockGetPackagePreferenceTier.mockReturnValue(setup_program.PackagePreferenceTier.RAW_VERSIONED);
+        mockGetPackagePreferenceTier.mockReturnValue(package_install.PackagePreferenceTier.RAW_VERSIONED);
         mockFindLlvmSymbolizer.mockResolvedValue(null);
         mockExec.mockResolvedValueOnce(0); // install llvm
         mockExec.mockResolvedValueOnce(0); // install sanitizer
@@ -276,7 +274,7 @@ describe('installCompanionPackages', () => {
     it('tries second sanitizer package when first fails', async () => {
         mockExec.mockResolvedValueOnce(0); // apt --version
         mockGetExecOutput.mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }); // sudo
-        mockGetPackagePreferenceTier.mockReturnValue(setup_program.PackagePreferenceTier.RAW_VERSIONED);
+        mockGetPackagePreferenceTier.mockReturnValue(package_install.PackagePreferenceTier.RAW_VERSIONED);
         mockFindLlvmSymbolizer.mockResolvedValueOnce('/usr/bin/llvm-symbolizer');
         // First sanitizer package fails, second succeeds
         mockExec.mockResolvedValueOnce(1);  // libclang-rt-14-dev fails
@@ -294,7 +292,7 @@ describe('installCompanionPackages', () => {
     it('returns symbolizer path after successful llvm install', async () => {
         mockExec.mockResolvedValueOnce(0); // apt --version
         mockGetExecOutput.mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }); // sudo
-        mockGetPackagePreferenceTier.mockReturnValue(setup_program.PackagePreferenceTier.RAW_VERSIONED);
+        mockGetPackagePreferenceTier.mockReturnValue(package_install.PackagePreferenceTier.RAW_VERSIONED);
         // symbolizer not found initially, then found after install
         mockFindLlvmSymbolizer
             .mockResolvedValueOnce(null)

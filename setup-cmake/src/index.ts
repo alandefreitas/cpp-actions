@@ -13,6 +13,7 @@ import { runAction } from 'action-schema';
 import { ExpectedError } from 'pretty-errors';
 
 import * as setup_program from 'setup-program';
+import { findProgramWithApt } from 'package-install';
 
 // Schema imports and types
 import { inputsSchema, outputsSchema, type Inputs } from './schema';
@@ -244,7 +245,7 @@ class SetupCmakeRunner {
             core.startGroup('📦 Look for CMake in APT');
         }
         core.info(`Searching for CMake ${this.version} in APT repositories`);
-        const result: ProgramResult = await setup_program.findProgramWithApt(['cmake'], this.version, this.inputs.checkLatest);
+        const result: ProgramResult = await findProgramWithApt(['cmake'], this.version, this.inputs.checkLatest);
         if (result.outputVersion && result.outputPath) {
             core.info(`✅ Found CMake ${result.outputVersion} via APT at ${result.outputPath}`);
         }

@@ -30,7 +30,7 @@ jest.mock('trace-commands', () => ({
     scoped: jest.fn(() => jest.fn())
 }));
 
-jest.mock('setup-program', () => ({
+jest.mock('./apt-utils', () => ({
     isSudoRequired: jest.fn(() => false)
 }));
 
@@ -50,6 +50,13 @@ function makeInputs(overrides: Partial<Inputs> = {}): Inputs {
         traceCommands: false,
         vcpkg: [],
         apt_get: [],
+        brew: [],
+        brewCask: [],
+        choco: [],
+        packages: [],
+        retries: 5,
+        brewRetries: 0,
+        chocoRetries: 0,
         cxx: '',
         cxxflags: '',
         cc: '',
@@ -88,24 +95,22 @@ describe('aptGetMain', () => {
         expect(mockWhich).toHaveBeenCalledWith('apt-get', true);
         // Should call apt-get update
         expect(mockExec).toHaveBeenCalledWith(
-            expect.stringContaining('apt-get -o Acquire::Retries=3 update'),
-            []
+            'apt-get',
+            ['-o', 'Acquire::Retries=3', 'update']
         );
     });
 
     it('uses sudo prefix when sudo is required', async () => {
-        const setup_program = require('setup-program');
-        setup_program.isSudoRequired.mockReturnValue(true);
+        const setup_program = require('./apt-utils');
+        setup_program.isSudoRequired.mockReturnValueOnce(true);
 
         const inputs = makeInputs();
         await aptGetMain(inputs);
 
         expect(mockExec).toHaveBeenCalledWith(
-            expect.stringContaining('sudo'),
-            []
+            'sudo',
+            ['-n', 'apt-get', '-o', 'Acquire::Retries=3', 'update']
         );
-
-        setup_program.isSudoRequired.mockReturnValue(false);
     });
 
     describe('source keys', () => {
@@ -121,8 +126,8 @@ describe('aptGetMain', () => {
 
             expect(mockDownloadTool).toHaveBeenCalledWith('https://example.com/key.gpg');
             expect(mockExec).toHaveBeenCalledWith(
-                expect.stringContaining('apt-key add /tmp/key'),
-                [],
+                'apt-key',
+                ['add', '/tmp/key'],
                 expect.objectContaining({ ignoreReturnCode: true })
             );
         });
@@ -158,8 +163,8 @@ describe('aptGetMain', () => {
 
             // First call to exec for key add should have ignoreReturnCode: true (not last retry)
             expect(mockExec).toHaveBeenCalledWith(
-                expect.stringContaining('apt-key add'),
-                [],
+                'apt-key',
+                ['add', '/tmp/key'],
                 expect.objectContaining({ ignoreReturnCode: true })
             );
         });
@@ -207,8 +212,8 @@ describe('aptGetMain', () => {
             // Version 0.99.0 >= 0.98.10, so -P flag should be used
             // Version 0.99.0 >= 0.96.24.20, so -n flag should be used
             expect(mockExec).toHaveBeenCalledWith(
-                expect.stringContaining('apt-add-repository -y -n -P ppa:test/ppa'),
-                [],
+                'apt-add-repository',
+                ['-y', '-n', '-P', 'ppa:test/ppa'],
                 expect.anything()
             );
         });
@@ -223,8 +228,8 @@ describe('aptGetMain', () => {
             await aptGetMain(inputs);
 
             expect(mockExec).toHaveBeenCalledWith(
-                expect.stringContaining('-S deb http://example.com/repo stable main'),
-                [],
+                'apt-add-repository',
+                ['-y', '-n', '-S', 'deb http://example.com/repo stable main'],
                 expect.anything()
             );
         });
@@ -239,8 +244,8 @@ describe('aptGetMain', () => {
             await aptGetMain(inputs);
 
             expect(mockExec).toHaveBeenCalledWith(
-                expect.stringContaining('-U https://example.com/repo'),
-                [],
+                'apt-add-repository',
+                ['-y', '-n', '-U', 'https://example.com/repo'],
                 expect.anything()
             );
         });
@@ -262,15 +267,15 @@ describe('aptGetMain', () => {
             // Version 0.92.0 < 0.96.24.20 — no -n flag
             // Version 0.92.0 < 0.98.10 — no -P/-S/-U flags
             expect(mockExec).toHaveBeenCalledWith(
-                expect.stringContaining('apt-add-repository -y ppa:test/ppa'),
-                [],
+                'apt-add-repository',
+                ['-y', 'ppa:test/ppa'],
                 expect.anything()
             );
         });
 
         it('omits -E flag when running as root (no sudo)', async () => {
-            const setup_program = require('setup-program');
-            setup_program.isSudoRequired.mockReturnValue(false);
+            const setup_program = require('./apt-utils');
+            setup_program.isSudoRequired.mockReturnValueOnce(false);
             mockExec.mockResolvedValue(0);
 
             const inputs = makeInputs({
@@ -279,18 +284,22 @@ describe('aptGetMain', () => {
             });
             await aptGetMain(inputs);
 
-            const addRepoCall = mockExec.mock.calls.find(
-                c => typeof c[0] === 'string' && c[0].includes('apt-add-repository')
+            // When not using sudo, tool should be apt-add-repository directly
+            expect(mockExec).toHaveBeenCalledWith(
+                'apt-add-repository',
+                expect.arrayContaining(['-y', '-n', '-P', 'ppa:test/ppa']),
+                expect.anything()
             );
-            expect(addRepoCall).toBeDefined();
-            // Command should NOT start with -E when not using sudo
-            expect(addRepoCall![0]).not.toMatch(/^\s*-E/);
-            expect(addRepoCall![0]).toMatch(/^apt-add-repository/);
+            // Should NOT have been called via sudo
+            const sudoAddRepoCalls = mockExec.mock.calls.filter(
+                c => c[0] === 'sudo' && Array.isArray(c[1]) && c[1].includes('apt-add-repository')
+            );
+            expect(sudoAddRepoCalls.length).toBe(0);
         });
 
         it('includes sudo -E prefix when sudo is required', async () => {
-            const setup_program = require('setup-program');
-            setup_program.isSudoRequired.mockReturnValue(true);
+            const setup_program = require('./apt-utils');
+            setup_program.isSudoRequired.mockReturnValueOnce(true);
             mockExec.mockResolvedValue(0);
 
             const inputs = makeInputs({
@@ -299,13 +308,12 @@ describe('aptGetMain', () => {
             });
             await aptGetMain(inputs);
 
-            const addRepoCall = mockExec.mock.calls.find(
-                c => typeof c[0] === 'string' && c[0].includes('apt-add-repository')
+            // When sudo is required, tool should be 'sudo' with -n -E and apt-add-repository in args
+            expect(mockExec).toHaveBeenCalledWith(
+                'sudo',
+                ['-n', '-E', 'apt-add-repository', '-y', '-n', '-P', 'ppa:test/ppa'],
+                expect.anything()
             );
-            expect(addRepoCall).toBeDefined();
-            expect(addRepoCall![0]).toMatch(/^sudo\s+-E\s+apt-add-repository/);
-
-            setup_program.isSudoRequired.mockReturnValue(false);
         });
 
         it('retries source add on non-zero exit code', async () => {
@@ -321,9 +329,9 @@ describe('aptGetMain', () => {
             await jest.advanceTimersByTimeAsync(10000);
             await promise;
 
-            // apt-add-repository called twice
+            // apt-add-repository called twice (tool is 'apt-add-repository' without sudo)
             const addRepoCalls = mockExec.mock.calls.filter(
-                c => typeof c[0] === 'string' && c[0].includes('apt-add-repository')
+                c => c[0] === 'apt-add-repository'
             );
             expect(addRepoCalls.length).toBe(2);
         });
@@ -332,7 +340,7 @@ describe('aptGetMain', () => {
             // First exec call for apt-add-repository throws, second succeeds
             let callCount = 0;
             mockExec.mockImplementation(async (cmd) => {
-                if (typeof cmd === 'string' && cmd.includes('apt-add-repository')) {
+                if (cmd === 'apt-add-repository') {
                     callCount++;
                     if (callCount === 1) {
                         throw new Error('network error');
@@ -361,12 +369,12 @@ describe('aptGetMain', () => {
             await aptGetMain(inputs);
 
             expect(mockExec).toHaveBeenCalledWith(
-                expect.stringContaining('dpkg --add-architecture i386'),
-                []
+                'dpkg',
+                ['--add-architecture', 'i386']
             );
             expect(mockExec).toHaveBeenCalledWith(
-                expect.stringContaining('dpkg --add-architecture arm64'),
-                []
+                'dpkg',
+                ['--add-architecture', 'arm64']
             );
         });
     });
@@ -381,7 +389,7 @@ describe('aptGetMain', () => {
 
             // Each package installed separately
             const installCalls = mockExec.mock.calls.filter(
-                c => Array.isArray(c[1]) && c[1].includes('install')
+                c => c[0] === 'apt-get' && Array.isArray(c[1]) && c[1].includes('install')
             );
             expect(installCalls.length).toBe(2);
         });
@@ -395,8 +403,9 @@ describe('aptGetMain', () => {
             await aptGetMain(inputs);
 
             expect(mockExec).toHaveBeenCalledWith(
-                expect.stringContaining('install -y pkg1 pkg2'),
-                []
+                'apt-get',
+                ['-o', 'Acquire::Retries=3', 'install', '-y', 'pkg1', 'pkg2'],
+                expect.anything()
             );
         });
 
@@ -407,10 +416,11 @@ describe('aptGetMain', () => {
             });
             await aptGetMain(inputs);
 
-            const installCall = mockExec.mock.calls.find(
-                c => Array.isArray(c[1]) && c[1].includes('--ignore-missing')
+            expect(mockExec).toHaveBeenCalledWith(
+                'apt-get',
+                ['-o', 'Acquire::Retries=3', '--ignore-missing', 'install', '-y', 'pkg1'],
+                expect.anything()
             );
-            expect(installCall).toBeDefined();
         });
 
         it('throws on failed install when ignoreMissing is false', async () => {
@@ -424,7 +434,8 @@ describe('aptGetMain', () => {
             const inputs = makeInputs({
                 apt_get: ['bad-pkg'],
                 aptGetIgnoreMissing: false,
-                aptGetBulkInstall: false
+                aptGetBulkInstall: false,
+                aptGetRetries: 1
             });
 
             await expect(aptGetMain(inputs)).rejects.toThrow(
@@ -442,7 +453,8 @@ describe('aptGetMain', () => {
 
             const inputs = makeInputs({
                 apt_get: ['bad-pkg'],
-                aptGetIgnoreMissing: true
+                aptGetIgnoreMissing: true,
+                aptGetRetries: 1
             });
 
             // Should not throw
@@ -459,7 +471,7 @@ describe('aptGetMain', () => {
 
             // ignoreMissing takes precedence: installs individually
             const installCalls = mockExec.mock.calls.filter(
-                c => Array.isArray(c[1]) && c[1].includes('install')
+                c => c[0] === 'apt-get' && Array.isArray(c[1]) && c[1].includes('install')
             );
             expect(installCalls.length).toBe(2);
         });
@@ -471,7 +483,7 @@ describe('aptGetMain', () => {
             await aptGetMain(inputs);
 
             const installCall = mockExec.mock.calls.find(
-                c => Array.isArray(c[1]) && c[1].includes('install')
+                c => c[0] === 'apt-get' && Array.isArray(c[1]) && c[1].includes('install')
             );
             expect(installCall).toBeDefined();
             expect(installCall![2]).toEqual(expect.objectContaining({

@@ -202,7 +202,7 @@ jobs:
         with:
           vcpkg: ${{ matrix.vcpkg-packages }}
           vcpkg-triplet: ${{ matrix.triplet }}
-          apt-get: ${{ matrix.install }}
+          packages: ${{ matrix.install }}
           apt-get-ignore-missing: ${{ matrix.is-container }}
           cc: ${{ steps.setup-cpp.outputs.cc }}
           ccflags: ${{ matrix.ccflags }}
@@ -221,7 +221,7 @@ jobs:
           trace-commands: true
 
       - name: B2 Workflow
-        if: ${{ ! matrix.has-factors && ! runner.os == 'Windows' }}
+        if: ${{ !matrix.has-factors && runner.os != 'Windows' }}
         uses: ./b2-workflow
         with:
           source-dir: ${{ steps.boost-clone.outputs.boost-dir }}

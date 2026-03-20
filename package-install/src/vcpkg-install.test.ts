@@ -77,6 +77,13 @@ function makeInputs(overrides: Partial<Inputs> = {}): Inputs {
         traceCommands: false,
         vcpkg: [],
         apt_get: [],
+        brew: [],
+        brewCask: [],
+        choco: [],
+        packages: [],
+        retries: 5,
+        brewRetries: 0,
+        chocoRetries: 0,
         cxx: '',
         cxxflags: '',
         cc: '',
@@ -343,10 +350,10 @@ describe('vcpkgMain', () => {
             const inputs = makeInputs({ vcpkg: ['zlib', 'boost'] });
             await vcpkgMain(inputs);
 
-            // Should call vcpkg install for each package
+            // Should call vcpkg install for each package with triplet
             expect(mockExec).toHaveBeenCalledWith(
                 expect.stringContaining('vcpkg'),
-                expect.arrayContaining(['install', 'zlib']),
+                ['install', 'zlib:x64-linux'],
                 expect.objectContaining({ ignoreReturnCode: true })
             );
         });
@@ -355,9 +362,10 @@ describe('vcpkgMain', () => {
             const inputs = makeInputs({ vcpkg: ['zlib:x86-windows'] });
             await vcpkgMain(inputs);
 
+            // When package already has a triplet, it should be used as-is (no default triplet appended)
             expect(mockExec).toHaveBeenCalledWith(
                 expect.stringContaining('vcpkg'),
-                ['install', 'zlib:x86-windows', 'zlib:x86-windows'],
+                ['install', 'zlib:x86-windows'],
                 expect.objectContaining({ ignoreReturnCode: true })
             );
         });

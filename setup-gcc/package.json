@@ -19,6 +19,7 @@
     "@actions/io": "^3.0.2",
     "action-schema": "*",
     "semver": "^7.7.4",
+    "package-install": "*",
     "setup-program": "*",
     "trace-commands": "*",
     "pretty-errors": "*"

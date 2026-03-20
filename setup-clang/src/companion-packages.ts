@@ -19,9 +19,7 @@ export interface CompanionPackageResult {
 }
 
 import * as setup_program from 'setup-program';
-
-// Re-export findLlvmSymbolizer from the shared library for backward compatibility
-export { findLlvmSymbolizer } from 'setup-program';
+import { getPackagePreferenceTier, PackagePreferenceTier } from 'package-install';
 
 /**
  * Recursively searches for a file matching the given name in a directory.
@@ -144,7 +142,7 @@ export async function installCompanionPackages(installedVersion: string, install
 
     // Determine if the installed package is unversioned (e.g., "clang" vs "clang-14")
     const isUnversionedPackage = installedAptPackage !== null &&
-        setup_program.getPackagePreferenceTier(installedAptPackage, ['clang']) === setup_program.PackagePreferenceTier.UNVERSIONED;
+        getPackagePreferenceTier(installedAptPackage, ['clang']) === PackagePreferenceTier.UNVERSIONED;
 
     fnlog(`Installed APT package: ${installedAptPackage ?? 'none'}, isUnversioned: ${isUnversionedPackage}, fromUrl: ${installedFromUrl}`);
 

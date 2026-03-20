@@ -1,5 +1,5 @@
 /**
- * Chocolatey package management utilities for setup-program action.
+ * Chocolatey package management utilities for package-install action.
  *
  * Provides functions for searching, installing, and managing packages
  * via Chocolatey on Windows systems.
@@ -14,7 +14,17 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as traceCommands from 'trace-commands';
 
-import { type ExecOutput } from './types';
+/**
+ * Output from executing a command via exec.getExecOutput.
+ */
+interface ExecOutput {
+    /** Process exit code */
+    exitCode: number;
+    /** Captured stdout */
+    stdout: string;
+    /** Captured stderr */
+    stderr: string;
+}
 
 /**
  * Result of finding a program installed via Chocolatey.

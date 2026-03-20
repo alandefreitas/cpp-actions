@@ -22,21 +22,15 @@ jest.mock('trace-commands', () => ({
     setTraceCommands: jest.fn()
 }));
 
-jest.mock('./system-utils', () => ({
-    execWithSudo: jest.fn(),
-    isSudoRequired: jest.fn(),
-    ensureSudoIsAvailable: jest.fn()
-}));
-
 jest.mock('./program-search', () => ({
-    findProgramInSystemPaths: jest.fn()
+    findProgramInSystemPaths: jest.fn().mockResolvedValue({ outputVersion: null, outputPath: null })
 }));
 
 import * as exec from '@actions/exec';
 import * as io from '@actions/io';
-import { execWithSudo, isSudoRequired, ensureSudoIsAvailable } from './system-utils';
-import { findProgramInSystemPaths } from './program-search';
+import * as programSearch from './program-search';
 import {
+    isSudoRequired,
     getPackagePreferenceTier,
     PackagePreferenceTier,
     searchAptPackages,
@@ -50,13 +44,143 @@ import {
 const mockExec = exec.exec as jest.MockedFunction<typeof exec.exec>;
 const mockGetExecOutput = exec.getExecOutput as jest.MockedFunction<typeof exec.getExecOutput>;
 const mockWhich = io.which as jest.MockedFunction<typeof io.which>;
-const mockExecWithSudo = execWithSudo as jest.MockedFunction<typeof execWithSudo>;
-const mockIsSudoRequired = isSudoRequired as jest.MockedFunction<typeof isSudoRequired>;
-const mockEnsureSudoIsAvailable = ensureSudoIsAvailable as jest.MockedFunction<typeof ensureSudoIsAvailable>;
-const mockFindProgramInSystemPaths = findProgramInSystemPaths as jest.MockedFunction<typeof findProgramInSystemPaths>;
 
 beforeEach(() => {
     jest.clearAllMocks();
+});
+
+describe('isSudoRequired', () => {
+    const origPlatform = process.platform;
+    const origGetuid = process.getuid;
+
+    afterEach(() => {
+        Object.defineProperty(process, 'platform', { value: origPlatform });
+        process.getuid = origGetuid;
+    });
+
+    it('returns false on non-linux platforms', () => {
+        Object.defineProperty(process, 'platform', { value: 'darwin' });
+        expect(isSudoRequired()).toBe(false);
+    });
+
+    it('returns true on linux when not root', () => {
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+        process.getuid = () => 1000;
+        expect(isSudoRequired()).toBe(true);
+    });
+
+    it('returns false on linux when root', () => {
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+        process.getuid = () => 0;
+        expect(isSudoRequired()).toBe(false);
+    });
+
+    it('returns false on windows', () => {
+        Object.defineProperty(process, 'platform', { value: 'win32' });
+        expect(isSudoRequired()).toBe(false);
+    });
+});
+
+describe('execWithSudo (via installProgramWithApt on linux)', () => {
+    const origPlatform = process.platform;
+    const origGetuid = process.getuid;
+
+    beforeEach(() => {
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+        process.getuid = () => 1000;
+    });
+
+    afterEach(() => {
+        Object.defineProperty(process, 'platform', { value: origPlatform });
+        process.getuid = origGetuid;
+    });
+
+    it('prepends sudo -n when running as non-root on linux', async () => {
+        mockExec.mockResolvedValue(0);
+        await installProgramWithApt('pkg');
+        expect(mockExec).toHaveBeenCalledWith(
+            'sudo',
+            expect.arrayContaining(['-n', 'apt-get']),
+            expect.any(Object)
+        );
+    });
+});
+
+describe('ensureSudoIsAvailable (via ensureAddAptRepositoryIsAvailable on linux)', () => {
+    const origPlatform = process.platform;
+    const origGetuid = process.getuid;
+
+    beforeEach(() => {
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+        process.getuid = () => 1000;
+    });
+
+    afterEach(() => {
+        Object.defineProperty(process, 'platform', { value: origPlatform });
+        process.getuid = origGetuid;
+    });
+
+    it('installs sudo when not found (empty string)', async () => {
+        mockWhich
+            .mockResolvedValueOnce('') // add-apt-repository not found
+            .mockResolvedValueOnce('') // sudo which returns empty (not found)
+            .mockResolvedValueOnce('/usr/bin/sudo') // sudo which after install
+            .mockResolvedValueOnce('/usr/bin/add-apt-repository'); // final which
+        mockExec.mockResolvedValue(0);
+
+        await ensureAddAptRepositoryIsAvailable();
+        expect(mockExec).toHaveBeenCalledWith('apt-get update', [], { ignoreReturnCode: true });
+        expect(mockExec).toHaveBeenCalledWith('apt-get install -y sudo', [], { ignoreReturnCode: true });
+    });
+
+    it('installs sudo when which throws', async () => {
+        mockWhich
+            .mockResolvedValueOnce('') // add-apt-repository not found
+            .mockRejectedValueOnce(new Error('not found')) // sudo which throws
+            .mockResolvedValueOnce('/usr/bin/sudo') // sudo which after install
+            .mockResolvedValueOnce('/usr/bin/add-apt-repository'); // final which
+        mockExec.mockResolvedValue(0);
+
+        await ensureAddAptRepositoryIsAvailable();
+        expect(mockExec).toHaveBeenCalledWith('apt-get update', [], { ignoreReturnCode: true });
+        expect(mockExec).toHaveBeenCalledWith('apt-get install -y sudo', [], { ignoreReturnCode: true });
+    });
+
+    it('skips sudo install when sudo is found', async () => {
+        mockWhich
+            .mockResolvedValueOnce('') // add-apt-repository not found
+            .mockResolvedValueOnce('/usr/bin/sudo') // sudo found
+            .mockResolvedValueOnce('/usr/bin/add-apt-repository'); // final which
+        mockExec.mockResolvedValue(0);
+
+        await ensureAddAptRepositoryIsAvailable();
+        expect(mockExec).not.toHaveBeenCalledWith('apt-get install -y sudo', [], expect.any(Object));
+    });
+});
+
+describe('updateAptPackageLists (with sudo on linux)', () => {
+    const origPlatform = process.platform;
+    const origGetuid = process.getuid;
+
+    beforeEach(() => {
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+        process.getuid = () => 1000;
+    });
+
+    afterEach(() => {
+        Object.defineProperty(process, 'platform', { value: origPlatform });
+        process.getuid = origGetuid;
+    });
+
+    it('runs apt-get update with sudo on linux as non-root', async () => {
+        mockExec.mockResolvedValue(0);
+        await updateAptPackageLists();
+        expect(mockExec).toHaveBeenCalledWith(
+            'sudo',
+            ['-n', 'apt-get', 'update'],
+            { ignoreReturnCode: true }
+        );
+    });
 });
 
 describe('getPackagePreferenceTier', () => {
@@ -327,12 +451,25 @@ describe('searchAptPackages', () => {
 });
 
 describe('installProgramWithApt', () => {
+    const origPlatform = process.platform;
+    const origGetuid = process.getuid;
+
+    beforeEach(() => {
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+        process.getuid = () => 0;
+    });
+
+    afterEach(() => {
+        Object.defineProperty(process, 'platform', { value: origPlatform });
+        process.getuid = origGetuid;
+    });
+
     it('installs package with apt-get on success', async () => {
-        mockExecWithSudo.mockResolvedValue(0);
+        mockExec.mockResolvedValue(0);
 
         const result = await installProgramWithApt('clang-14', '1:14.0.0-1ubuntu1');
         expect(result).toBe('clang-14');
-        expect(mockExecWithSudo).toHaveBeenCalledWith(
+        expect(mockExec).toHaveBeenCalledWith(
             'apt-get',
             ['install', '-f', '-y', '--allow-downgrades', 'clang-14=1:14.0.0-1ubuntu1'],
             expect.any(Object)
@@ -340,11 +477,11 @@ describe('installProgramWithApt', () => {
     });
 
     it('installs package without version when version is null', async () => {
-        mockExecWithSudo.mockResolvedValue(0);
+        mockExec.mockResolvedValue(0);
 
         const result = await installProgramWithApt('build-essential');
         expect(result).toBe('build-essential');
-        expect(mockExecWithSudo).toHaveBeenCalledWith(
+        expect(mockExec).toHaveBeenCalledWith(
             'apt-get',
             ['install', '-f', '-y', '--allow-downgrades', 'build-essential'],
             expect.any(Object)
@@ -352,15 +489,15 @@ describe('installProgramWithApt', () => {
     });
 
     it('falls back to aptitude when apt-get fails', async () => {
-        mockExecWithSudo
+        mockExec
             .mockResolvedValueOnce(100) // apt-get fails
             .mockResolvedValueOnce(0);  // aptitude succeeds
         mockWhich.mockResolvedValue('/usr/bin/aptitude');
 
         const result = await installProgramWithApt('clang-14', null);
         expect(result).toBe('clang-14');
-        expect(mockExecWithSudo).toHaveBeenCalledTimes(2);
-        expect(mockExecWithSudo).toHaveBeenNthCalledWith(2,
+        expect(mockExec).toHaveBeenCalledTimes(2);
+        expect(mockExec).toHaveBeenNthCalledWith(2,
             'aptitude',
             ['install', '-f', '-y', 'clang-14'],
             expect.any(Object)
@@ -368,7 +505,7 @@ describe('installProgramWithApt', () => {
     });
 
     it('skips aptitude when tryAptitude is false', async () => {
-        mockExecWithSudo.mockResolvedValue(100);
+        mockExec.mockResolvedValue(100);
 
         const result = await installProgramWithApt('pkg', null, [], { tryAptitude: false });
         expect(result).toBeNull();
@@ -376,7 +513,7 @@ describe('installProgramWithApt', () => {
     });
 
     it('skips aptitude when aptitude is not found', async () => {
-        mockExecWithSudo.mockResolvedValue(100);
+        mockExec.mockResolvedValue(100);
         mockWhich.mockRejectedValue(new Error('not found'));
 
         const result = await installProgramWithApt('pkg', null, []);
@@ -384,7 +521,7 @@ describe('installProgramWithApt', () => {
     });
 
     it('handles aptitude which returning empty string', async () => {
-        mockExecWithSudo.mockResolvedValue(100);
+        mockExec.mockResolvedValue(100);
         mockWhich.mockResolvedValue('');
 
         const result = await installProgramWithApt('pkg', null, []);
@@ -392,7 +529,7 @@ describe('installProgramWithApt', () => {
     });
 
     it('tries alternative packages when primary fails', async () => {
-        mockExecWithSudo
+        mockExec
             .mockResolvedValueOnce(100) // apt-get primary fails
             .mockResolvedValueOnce(100) // aptitude fails
             .mockResolvedValueOnce(100) // first alternative fails
@@ -404,7 +541,7 @@ describe('installProgramWithApt', () => {
     });
 
     it('skips alternatives when tryAlternatives is false', async () => {
-        mockExecWithSudo.mockResolvedValue(100);
+        mockExec.mockResolvedValue(100);
         mockWhich.mockResolvedValue('');
 
         const result = await installProgramWithApt('pkg', null, ['alt=1.0'], { tryAlternatives: false });
@@ -412,7 +549,7 @@ describe('installProgramWithApt', () => {
     });
 
     it('returns null when all install attempts fail', async () => {
-        mockExecWithSudo.mockResolvedValue(100);
+        mockExec.mockResolvedValue(100);
         mockWhich.mockResolvedValue('');
 
         const result = await installProgramWithApt('pkg', null, ['alt=1.0']);
@@ -420,7 +557,7 @@ describe('installProgramWithApt', () => {
     });
 
     it('returns alternative package name from "package=version" format', async () => {
-        mockExecWithSudo
+        mockExec
             .mockResolvedValueOnce(100) // primary fails
             .mockResolvedValueOnce(0);  // alternative succeeds
         mockWhich.mockResolvedValue(''); // no aptitude
@@ -451,11 +588,24 @@ describe('isAptAvailable', () => {
     });
 });
 
-describe('updateAptPackageLists', () => {
-    it('runs apt-get update with sudo', async () => {
-        mockExecWithSudo.mockResolvedValue(0);
+describe('updateAptPackageLists (as root)', () => {
+    const origPlatform = process.platform;
+    const origGetuid = process.getuid;
+
+    beforeEach(() => {
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+        process.getuid = () => 0;
+    });
+
+    afterEach(() => {
+        Object.defineProperty(process, 'platform', { value: origPlatform });
+        process.getuid = origGetuid;
+    });
+
+    it('runs apt-get update without sudo when root', async () => {
+        mockExec.mockResolvedValue(0);
         await updateAptPackageLists();
-        expect(mockExecWithSudo).toHaveBeenCalledWith('apt-get', ['update'], { ignoreReturnCode: true });
+        expect(mockExec).toHaveBeenCalledWith('apt-get', ['update'], { ignoreReturnCode: true });
     });
 });
 
@@ -472,8 +622,7 @@ describe('findProgramWithApt', () => {
     });
 
     it('returns nulls when no matching package is found', async () => {
-        mockExec.mockResolvedValue(0); // apt available
-        mockExecWithSudo.mockResolvedValue(0); // apt-get update
+        mockExec.mockResolvedValue(0); // apt available + apt-get update
         mockGetExecOutput.mockResolvedValue({
             exitCode: 0,
             stdout: '',
@@ -486,10 +635,7 @@ describe('findProgramWithApt', () => {
     });
 
     it('installs and locates program when package is found', async () => {
-        mockExec.mockResolvedValue(0); // apt available
-        mockExecWithSudo
-            .mockResolvedValueOnce(0) // apt-get update
-            .mockResolvedValueOnce(0); // apt-get install
+        mockExec.mockResolvedValue(0); // apt available + apt-get update + apt-get install
         mockGetExecOutput
             // apt-cache search
             .mockResolvedValueOnce({
@@ -503,7 +649,7 @@ describe('findProgramWithApt', () => {
                 stdout: 'Package: gcc-12\nVersions:\n\nDependencies:\n12.3.0-1ubuntu1 - \nProvides:\n',
                 stderr: ''
             });
-        mockFindProgramInSystemPaths.mockResolvedValue({
+        (programSearch.findProgramInSystemPaths as jest.Mock).mockResolvedValueOnce({
             outputVersion: '12.3.0',
             outputPath: '/usr/bin/gcc-12'
         });
@@ -516,9 +662,6 @@ describe('findProgramWithApt', () => {
 
     it('returns null path when install succeeds but program not found in paths', async () => {
         mockExec.mockResolvedValue(0);
-        mockExecWithSudo
-            .mockResolvedValueOnce(0) // apt-get update
-            .mockResolvedValueOnce(0); // apt-get install
         mockGetExecOutput
             .mockResolvedValueOnce({
                 exitCode: 0,
@@ -530,7 +673,7 @@ describe('findProgramWithApt', () => {
                 stdout: 'Package: gcc-12\nVersions:\n\nDependencies:\n12.3.0-1ubuntu1 - \nProvides:\n',
                 stderr: ''
             });
-        mockFindProgramInSystemPaths.mockResolvedValue({
+        (programSearch.findProgramInSystemPaths as jest.Mock).mockResolvedValueOnce({
             outputVersion: null,
             outputPath: null
         });
@@ -540,9 +683,28 @@ describe('findProgramWithApt', () => {
         expect(result.installedPackage).toBe('gcc-12');
     });
 
+    it('returns null outputVersion/outputPath when program not found in system paths', async () => {
+        mockExec.mockResolvedValue(0);
+        mockGetExecOutput
+            .mockResolvedValueOnce({
+                exitCode: 0,
+                stdout: 'gcc-12 - GNU C compiler\n',
+                stderr: ''
+            })
+            .mockResolvedValueOnce({
+                exitCode: 0,
+                stdout: 'Package: gcc-12\nVersions:\n\nDependencies:\n12.3.0-1ubuntu1 - \nProvides:\n',
+                stderr: ''
+            });
+
+        const result = await findProgramWithApt(['gcc'], '*', true);
+        expect(result.outputPath).toBeNull();
+        expect(result.outputVersion).toBeNull();
+        expect(result.installedPackage).toBe('gcc-12');
+    });
+
     it('catches and logs errors during search/install', async () => {
         mockExec.mockResolvedValue(0); // apt available
-        mockExecWithSudo.mockResolvedValue(0); // apt-get update
         mockGetExecOutput.mockRejectedValue(new Error('apt-cache failed'));
 
         const result = await findProgramWithApt(['gcc'], '*', true);
@@ -551,10 +713,10 @@ describe('findProgramWithApt', () => {
     });
 
     it('returns null installedPackage when install fails', async () => {
-        mockExec.mockResolvedValue(0);
-        mockExecWithSudo
-            .mockResolvedValueOnce(0)   // apt-get update
-            .mockResolvedValue(100);    // all apt-get install attempts fail
+        mockExec
+            .mockResolvedValueOnce(0) // apt available
+            .mockResolvedValueOnce(0) // apt-get update
+            .mockResolvedValue(100);  // all apt-get install attempts fail
         mockGetExecOutput
             .mockResolvedValueOnce({
                 exitCode: 0,
@@ -575,49 +737,66 @@ describe('findProgramWithApt', () => {
 });
 
 describe('ensureAddAptRepositoryIsAvailable', () => {
+    const origPlatform = process.platform;
+    const origGetuid = process.getuid;
+
+    beforeEach(() => {
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+        process.getuid = () => 0;
+    });
+
+    afterEach(() => {
+        Object.defineProperty(process, 'platform', { value: origPlatform });
+        process.getuid = origGetuid;
+    });
+
     it('does nothing when add-apt-repository is found', async () => {
         mockWhich.mockResolvedValue('/usr/bin/add-apt-repository');
 
         await ensureAddAptRepositoryIsAvailable();
-        expect(mockExecWithSudo).not.toHaveBeenCalled();
+        expect(mockExec).not.toHaveBeenCalled();
     });
 
     it('installs software-properties-common when add-apt-repository not found', async () => {
         mockWhich
             .mockRejectedValueOnce(new Error('not found')) // first which fails
             .mockResolvedValueOnce('/usr/bin/add-apt-repository'); // final which succeeds
-        mockIsSudoRequired.mockReturnValue(false);
-        mockExecWithSudo.mockResolvedValue(0);
+        mockExec.mockResolvedValue(0);
 
         await ensureAddAptRepositoryIsAvailable();
-        expect(mockExecWithSudo).toHaveBeenCalledWith('apt-get', ['update'], { ignoreReturnCode: true });
-        expect(mockExecWithSudo).toHaveBeenCalledWith(
+        expect(mockExec).toHaveBeenCalledWith('apt-get', ['update'], { ignoreReturnCode: true });
+        expect(mockExec).toHaveBeenCalledWith(
             'apt-get',
             ['install', '-f', '-y', '--allow-downgrades', 'software-properties-common'],
             expect.any(Object)
         );
     });
 
-    it('ensures sudo is available when required before installing', async () => {
+    it('ensures sudo is available when required on linux', async () => {
+        const origPlatform = process.platform;
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+        const origGetuid = process.getuid;
+        process.getuid = () => 1000;
+
         mockWhich
             .mockResolvedValueOnce('') // add-apt-repository not found (empty)
+            .mockResolvedValueOnce('/usr/bin/sudo') // sudo which in ensureSudoIsAvailable
             .mockResolvedValueOnce('/usr/bin/add-apt-repository'); // final which
-        mockIsSudoRequired.mockReturnValue(true);
-        mockEnsureSudoIsAvailable.mockResolvedValue();
-        mockExecWithSudo.mockResolvedValue(0);
+        mockExec.mockResolvedValue(0);
 
         await ensureAddAptRepositoryIsAvailable();
-        expect(mockEnsureSudoIsAvailable).toHaveBeenCalled();
+
+        Object.defineProperty(process, 'platform', { value: origPlatform });
+        process.getuid = origGetuid;
     });
 
-    it('does not ensure sudo when not required', async () => {
+    it('does not call ensureSudoIsAvailable when sudo not required', async () => {
         mockWhich
             .mockResolvedValueOnce('') // not found
             .mockResolvedValueOnce('/usr/bin/add-apt-repository');
-        mockIsSudoRequired.mockReturnValue(false);
-        mockExecWithSudo.mockResolvedValue(0);
+        mockExec.mockResolvedValue(0);
 
         await ensureAddAptRepositoryIsAvailable();
-        expect(mockEnsureSudoIsAvailable).not.toHaveBeenCalled();
+        expect(mockExec).toHaveBeenCalledWith('apt-get', ['update'], { ignoreReturnCode: true });
     });
 });

@@ -31,17 +31,20 @@ jest.mock('setup-program', () => ({
     findGCCVersions: jest.fn(),
     findProgramInPath: jest.fn(),
     findProgramInSystemPaths: jest.fn(),
-    findProgramWithApt: jest.fn(),
     installProgramFromUrl: jest.fn(),
     isSudoRequired: jest.fn(),
     getCurrentUbuntuVersion: jest.fn(),
     findLlvmSymbolizer: jest.fn(),
     exportSymbolizerEnvVars: jest.fn(),
+    loadWindowsMsvcDefaults: jest.fn()
+}));
+
+jest.mock('package-install', () => ({
     findProgramWithBrew: jest.fn(),
     installProgramWithBrew: jest.fn(),
     findProgramWithChoco: jest.fn(),
     installProgramWithChoco: jest.fn(),
-    loadWindowsMsvcDefaults: jest.fn()
+    findProgramWithApt: jest.fn()
 }));
 
 jest.mock('./gcc-download', () => ({
@@ -57,6 +60,7 @@ import * as io from '@actions/io';
 import * as exec from '@actions/exec';
 import * as fs from 'fs';
 import * as setup_program from 'setup-program';
+import * as package_install from 'package-install';
 import { downloadGccFromUrl } from './gcc-download';
 import { main } from './index';
 import type { Inputs } from './schema';
@@ -64,15 +68,15 @@ import type { Inputs } from './schema';
 const mockFindGCCVersions = setup_program.findGCCVersions as jest.MockedFunction<typeof setup_program.findGCCVersions>;
 const mockFindProgramInPath = setup_program.findProgramInPath as jest.MockedFunction<typeof setup_program.findProgramInPath>;
 const mockFindProgramInSystemPaths = setup_program.findProgramInSystemPaths as jest.MockedFunction<typeof setup_program.findProgramInSystemPaths>;
-const mockFindProgramWithApt = setup_program.findProgramWithApt as jest.MockedFunction<typeof setup_program.findProgramWithApt>;
+const mockFindProgramWithApt = package_install.findProgramWithApt as jest.MockedFunction<typeof package_install.findProgramWithApt>;
 const mockIsSudoRequired = setup_program.isSudoRequired as jest.MockedFunction<typeof setup_program.isSudoRequired>;
 const mockDownloadGccFromUrl = downloadGccFromUrl as jest.MockedFunction<typeof downloadGccFromUrl>;
 const mockFindLlvmSymbolizer = setup_program.findLlvmSymbolizer as jest.MockedFunction<typeof setup_program.findLlvmSymbolizer>;
 const mockExportSymbolizerEnvVars = setup_program.exportSymbolizerEnvVars as jest.MockedFunction<typeof setup_program.exportSymbolizerEnvVars>;
-const mockFindProgramWithBrew = setup_program.findProgramWithBrew as jest.MockedFunction<typeof setup_program.findProgramWithBrew>;
-const mockInstallProgramWithBrew = setup_program.installProgramWithBrew as jest.MockedFunction<typeof setup_program.installProgramWithBrew>;
-const mockFindProgramWithChoco = setup_program.findProgramWithChoco as jest.MockedFunction<typeof setup_program.findProgramWithChoco>;
-const mockInstallProgramWithChoco = setup_program.installProgramWithChoco as jest.MockedFunction<typeof setup_program.installProgramWithChoco>;
+const mockFindProgramWithBrew = package_install.findProgramWithBrew as jest.MockedFunction<typeof package_install.findProgramWithBrew>;
+const mockInstallProgramWithBrew = package_install.installProgramWithBrew as jest.MockedFunction<typeof package_install.installProgramWithBrew>;
+const mockFindProgramWithChoco = package_install.findProgramWithChoco as jest.MockedFunction<typeof package_install.findProgramWithChoco>;
+const mockInstallProgramWithChoco = package_install.installProgramWithChoco as jest.MockedFunction<typeof package_install.installProgramWithChoco>;
 const mockLoadWindowsMsvcDefaults = setup_program.loadWindowsMsvcDefaults as jest.MockedFunction<typeof setup_program.loadWindowsMsvcDefaults>;
 const mockExistsSync = fs.existsSync as jest.MockedFunction<typeof fs.existsSync>;
 const mockWhich = io.which as jest.MockedFunction<typeof io.which>;

@@ -13,7 +13,27 @@ import * as traceCommands from 'trace-commands';
 import { type Inputs } from './schema';
 import { formatTime, semverGteLoose } from './utils';
 
-import * as setup_program from 'setup-program';
+import { isSudoRequired } from './apt-utils';
+
+/**
+ * Builds a tool/args pair that prepends sudo when required.
+ *
+ * When sudo is needed, returns `{ tool: 'sudo', args: ['-n', ...command, ...args] }`.
+ * When sudo is not needed, returns `{ tool: command, args }`.
+ *
+ * @param sudoRequired - Whether sudo is needed for this invocation
+ * @param command - The command to run (e.g. 'apt-get', 'apt-add-repository')
+ * @param args - Arguments to pass to the command
+ * @param preserveEnv - Whether to add the -E flag to sudo (preserves environment)
+ * @returns Object with `tool` and `args` suitable for exec.exec()
+ */
+function buildSudoCommand(sudoRequired: boolean, command: string, args: string[], preserveEnv = false): { tool: string; args: string[] } {
+    if (sudoRequired) {
+        const sudoArgs = preserveEnv ? ['-n', '-E', command, ...args] : ['-n', command, ...args];
+        return { tool: 'sudo', args: sudoArgs };
+    }
+    return { tool: command, args };
+}
 
 /**
  * Installs apt sources, keys, and packages with retries and version-aware flags.
@@ -30,12 +50,20 @@ export async function aptGetMain(inputs: Inputs): Promise<void> {
     core.startGroup('🔍 Find apt-get');
     fnlog(`Check if apt-get is installed`);
     const aptGetPath = await io.which('apt-get', true);
-    const sudoRequired = setup_program.isSudoRequired();
-    const sudoPrefix = sudoRequired ? 'sudo ' : '';
+    const sudoRequired = isSudoRequired();
     core.info(`🧩 apt-get-path: ${aptGetPath}`);
     core.info(`🧩 sudo-required: ${sudoRequired}`);
 
     core.endGroup();
+
+    const aptEnv = {
+        // set the DEBIAN_FRONTEND environment variable to
+        // noninteractive so that the tzdata package
+        // doesn't prompt for input
+        DEBIAN_FRONTEND: 'noninteractive',
+        TZ: 'Etc/UTC',
+        PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+    };
 
     if (inputs.aptGetSourceKeys.length > 0) {
         core.startGroup('🔑 Install apt-get source keys');
@@ -44,7 +72,8 @@ export async function aptGetMain(inputs: Inputs): Promise<void> {
             for (let i = 0; i < inputs.aptGetRetries; i++) {
                 core.info(`Add key ${key}`);
                 const keyPath = await tc.downloadTool(key);
-                const exitCode = await exec.exec(`${sudoPrefix} apt-key add ${keyPath}`, [], {
+                const { tool, args } = buildSudoCommand(sudoRequired, 'apt-key', ['add', keyPath]);
+                const exitCode = await exec.exec(tool, args, {
                     ignoreReturnCode: i !== inputs.aptGetRetries - 1
                 });
                 if (exitCode === 0) {
@@ -67,7 +96,7 @@ export async function aptGetMain(inputs: Inputs): Promise<void> {
         const {
             exitCode,
             stdout
-        } = await exec.getExecOutput('dpkg-query --showformat=\'${Version}\' --show software-properties-common');
+        } = await exec.getExecOutput('dpkg-query', ['--showformat=${Version}', '--show', 'software-properties-common']);
         if (exitCode !== 0) {
             throw new Error('Failed to get the version of software-properties-common');
         }
@@ -99,11 +128,12 @@ export async function aptGetMain(inputs: Inputs): Promise<void> {
             }
             aptAddRepoArgs.push(source);
 
+            const { tool, args } = buildSudoCommand(sudoRequired, 'apt-add-repository', aptAddRepoArgs, true);
+
             for (let i = 0; i < inputs.aptGetRetries; i++) {
                 try {
                     // Execute the apt-add-repository command
-                    const sudoEnvPrefix = sudoRequired ? `${sudoPrefix} -E` : '';
-                    const exitCode = await exec.exec(`${sudoEnvPrefix} apt-add-repository ${aptAddRepoArgs.join(' ')}`.trim(), [], {
+                    const exitCode = await exec.exec(tool, args, {
                         ignoreReturnCode: i !== inputs.aptGetRetries - 1
                     });
                     if (exitCode === 0) {
@@ -129,44 +159,66 @@ export async function aptGetMain(inputs: Inputs): Promise<void> {
     if (inputs.aptGetAddArchitecture.length > 0) {
         core.startGroup('📦 Add architectures');
         for (const arch of inputs.aptGetAddArchitecture) {
-            await exec.exec(`${sudoPrefix} dpkg --add-architecture ${arch}`, []);
+            const { tool, args } = buildSudoCommand(sudoRequired, 'dpkg', ['--add-architecture', arch]);
+            await exec.exec(tool, args);
         }
         core.endGroup();
     }
 
     // Update apt-get
-    // $sudo_prefix apt-get -o Acquire::Retries=${{ inputs.apt-get-retries }} update
     core.startGroup('♻️ Update apt-get');
-    await exec.exec(`${sudoPrefix} apt-get -o Acquire::Retries=${inputs.aptGetRetries} update`, []);
+    const { tool: updateTool, args: updateArgs } = buildSudoCommand(sudoRequired, 'apt-get', ['-o', `Acquire::Retries=${inputs.aptGetRetries}`, 'update']);
+    await exec.exec(updateTool, updateArgs);
     core.endGroup();
 
     // Install packages
     if (inputs.aptGetIgnoreMissing || !inputs.aptGetBulkInstall) {
         for (const pkg of inputs.apt_get) {
             core.startGroup('📦 Install apt-get package: ' + pkg);
-            const args = inputs.aptGetIgnoreMissing ?
+            const pkgArgs = inputs.aptGetIgnoreMissing ?
                 ['-o', 'Acquire::Retries=' + inputs.aptGetRetries, '--ignore-missing', 'install', '-y', pkg] :
                 ['-o', 'Acquire::Retries=' + inputs.aptGetRetries, 'install', '-y', pkg];
-            const exitCode = await exec.exec(`${sudoPrefix} apt-get`, args, {
-                env: {
-                    // set the DEBIAN_FRONTEND environment variable to
-                    // noninteractive so that the tzdata package
-                    // doesn't prompt for input
-                    DEBIAN_FRONTEND: 'noninteractive',
-                    TZ: 'Etc/UTC',
-                    PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
-                },
-                ignoreReturnCode: true
-            });
-            if (exitCode !== 0 && !inputs.aptGetIgnoreMissing) {
-                core.endGroup();
-                throw new Error(`Failed to install package ${pkg}`);
+            const { tool, args } = buildSudoCommand(sudoRequired, 'apt-get', pkgArgs);
+            let retryTime = 2000;
+            for (let i = 0; i < inputs.aptGetRetries; i++) {
+                const exitCode = await exec.exec(tool, args, {
+                    env: aptEnv,
+                    ignoreReturnCode: i !== inputs.aptGetRetries - 1
+                });
+                if (exitCode === 0) {
+                    break;
+                }
+                if (exitCode !== 0 && i === inputs.aptGetRetries - 1 && !inputs.aptGetIgnoreMissing) {
+                    core.endGroup();
+                    throw new Error(`Failed to install package ${pkg}`);
+                }
+                if (i !== inputs.aptGetRetries - 1) {
+                    core.info(`Failed to install ${pkg}, retrying in ${formatTime(retryTime)}`);
+                    await new Promise((resolve) => setTimeout(resolve, retryTime));
+                    retryTime *= 2;
+                }
             }
             core.endGroup();
         }
     } else {
         core.startGroup('📦 Install apt-get packages');
-        await exec.exec(`${sudoPrefix} apt-get -o Acquire::Retries=${inputs.aptGetRetries} install -y ${inputs.apt_get.join(' ')}`, []);
+        const bulkArgs = ['-o', `Acquire::Retries=${inputs.aptGetRetries}`, 'install', '-y', ...inputs.apt_get];
+        const { tool, args } = buildSudoCommand(sudoRequired, 'apt-get', bulkArgs);
+        let retryTime = 2000;
+        for (let i = 0; i < inputs.aptGetRetries; i++) {
+            const exitCode = await exec.exec(tool, args, {
+                env: aptEnv,
+                ignoreReturnCode: i !== inputs.aptGetRetries - 1
+            });
+            if (exitCode === 0) {
+                break;
+            }
+            if (i !== inputs.aptGetRetries - 1) {
+                core.info(`Failed to install packages, retrying in ${formatTime(retryTime)}`);
+                await new Promise((resolve) => setTimeout(resolve, retryTime));
+                retryTime *= 2;
+            }
+        }
         core.endGroup();
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Homebrew package management utilities for setup-program action.
+ * Homebrew package management utilities for package-install action.
  *
  * Provides functions for searching, installing, and managing packages
  * via Homebrew on macOS systems.
@@ -12,7 +12,14 @@ import * as exec from '@actions/exec';
 import * as core from '@actions/core';
 import * as traceCommands from 'trace-commands';
 
-import { type ExecOutput } from './types';
+/**
+ * Output from executing a command via exec.getExecOutput.
+ */
+interface ExecOutput {
+    exitCode: number;
+    stdout: string;
+    stderr: string;
+}
 
 /**
  * Result of finding a program installed via Homebrew.

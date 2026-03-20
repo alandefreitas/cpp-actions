@@ -47,6 +47,54 @@ inputs:
       Additional options are provided to customize the behavior of apt-get.
     required: false
     default: ''
+  brew:
+    description: |-
+      List of Homebrew formula packages to install.
+
+      Accepts formula names (e.g., `cmake`, `gcc`) and supports the `formula@version` syntax
+      for versioned formulae (e.g., `gcc@14`, `llvm@18`).
+
+      Packages are installed on macOS and Linux (via Linuxbrew). On Windows, this input is silently ignored.
+    required: false
+    default: ''
+  brew-cask:
+    description: |-
+      List of Homebrew cask packages to install.
+
+      Casks are macOS GUI applications (e.g., `visual-studio-code`, `docker`, `firefox`).
+      The `--cask` flag is used internally to avoid the formula/cask name ambiguity problem
+      where `brew install` silently prefers formulae over casks when both share the same name.
+
+      On Linux, cask installs are silently skipped since casks are macOS-only (.app bundles).
+      On Windows, this input is silently ignored.
+    required: false
+    default: ''
+  choco:
+    description: |-
+      List of Chocolatey packages to install on Windows.
+
+      Accepts package names (e.g., `cmake`, `ninja`) and supports the `--version=X.Y.Z` syntax
+      for version pinning (e.g., `cmake --version=3.28.0`).
+
+      Packages are installed on Windows only. On macOS and Linux, this input is silently ignored.
+    required: false
+    default: ''
+  packages:
+    description: |-
+      List of packages to install using the OS-native package manager.
+
+      Packages are automatically routed to the appropriate package manager based on the runner platform:
+      `apt-get` on Linux, `brew` on macOS, and `choco` on Windows.
+
+      Supports the `@version` syntax for version pinning, which is translated to the PM-native format:
+      - On Linux (apt-get): `pkg@14` becomes `pkg-14`
+      - On macOS (brew): `pkg@14` is passed through as-is (native brew syntax)
+      - On Windows (choco): `pkg@14` becomes `pkg --version=14`
+
+      Packages without `@version` are passed through unchanged on all platforms.
+      Routed packages are merged with any PM-specific packages from dedicated inputs (e.g., `apt-get`, `brew`, `choco`).
+    required: false
+    default: ''
   cxx:
     description: |-
       C++ compiler to be used by vcpkg. If the compiler is not specified, the value will be retrieved from
@@ -112,9 +160,45 @@ inputs:
       This is useful when you want to use vcpkg in manifest mode.
     required: false
     default: 'false'
+  retries:
+    description: |-
+      Default number of attempts for all package manager operations.
+
+      This shared retry count applies to apt-get, brew, and choco installs unless overridden
+      by a PM-specific retry input (e.g., `apt-get-retries`, `brew-retries`, `choco-retries`).
+
+      Each retry uses exponential backoff to handle transient network failures.
+    required: false
+    default: '5'
+  brew-retries:
+    description: |-
+      Number of attempts for Homebrew install operations.
+
+      Overrides the shared `retries` input for brew installs specifically.
+
+      When not provided, brew installs fall back to the shared `retries` value (default 5).
+
+      Each retry uses exponential backoff to handle transient network failures.
+    required: false
+  choco-retries:
+    description: |-
+      Number of attempts for Chocolatey install operations.
+
+      Overrides the shared `retries` input for choco installs specifically.
+
+      When not provided, choco installs fall back to the shared `retries` value (default 5).
+
+      The Chocolatey community repository enforces rate limits (~20 downloads/min per IP),
+      and GitHub-hosted runner IPs are shared across many users. This input allows you to
+      configure more retries for choco specifically to handle rate-limit-induced failures.
+
+      Each retry uses exponential backoff to handle transient network and rate-limit failures.
+    required: false
   apt-get-retries:
     description: |-
-      Number of times we should retry when apt-get fails.
+      Number of attempts when apt-get fails.
+
+      Overrides the shared `retries` input for apt-get operations specifically.
 
       This option is useful when apt-get fails due to a temporary network issue.
 
