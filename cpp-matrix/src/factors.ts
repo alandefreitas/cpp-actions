@@ -264,6 +264,11 @@ export async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): P
         } else if (entry['compiler'] === 'clang') {
             entry['cxxflags'] += ' -fprofile-instr-generate -fcoverage-mapping';
             entry['ccflags'] += ' -fprofile-instr-generate -fcoverage-mapping';
+            const clangVersion = semver.coerce(entry['version']);
+            const clangMajor = clangVersion ? clangVersion.major : '';
+            if (clangMajor) {
+                entry['install'] += ` llvm-${clangMajor}-tools elfutils`;
+            }
         }
         entry['build-type'] = 'Debug';
     }
