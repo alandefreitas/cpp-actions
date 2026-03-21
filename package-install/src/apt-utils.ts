@@ -7,8 +7,10 @@
  * @module apt-utils
  */
 
+import * as core from '@actions/core';
 import * as io from '@actions/io';
 import * as exec from '@actions/exec';
+import * as tc from '@actions/tool-cache';
 import * as semver from 'semver';
 import * as traceCommands from 'trace-commands';
 import { ExpectedError } from 'pretty-errors';
@@ -45,6 +47,125 @@ async function execWithSudo(
         return await exec.exec('sudo', ['-n', command, ...args], options);
     }
     return await exec.exec(command, args, options);
+}
+
+/**
+ * Ensures the /etc/apt/keyrings/ directory exists with correct permissions.
+ *
+ * Uses `install -m 0755 -d` which is idempotent — creates the directory
+ * if missing and does nothing if it already exists.
+ *
+ * @returns A promise that resolves when the directory is ensured to exist
+ * @throws Error if the install command fails
+ */
+export async function ensureKeyringsDir(): Promise<void> {
+    await execWithSudo('install', ['-m', '0755', '-d', '/etc/apt/keyrings']);
+}
+
+/**
+ * Downloads a GPG key and imports it using the best available method.
+ *
+ * On systems with `gpg` available: uses the modern pattern — downloads the key,
+ * dearmors it with `gpg --dearmor`, and stores it in `/etc/apt/keyrings/` with
+ * world-readable permissions. Returns the key path for use with `signed-by=`.
+ *
+ * On older systems without `gpg` (e.g., minimal containers): falls back to
+ * `apt-key add` which imports the key globally. Returns `null` since there is
+ * no key file path to reference with `signed-by=`.
+ *
+ * @param keyUrl - URL of the GPG key to download (ASCII-armored or binary)
+ * @param keyName - Base name for the key file (stored as `<keyName>.gpg`)
+ * @returns Absolute path to the key file in /etc/apt/keyrings/, or null if apt-key fallback was used
+ * @throws Error if both methods fail
+ */
+export async function importGpgKey(keyUrl: string, keyName: string): Promise<string | null> {
+    const fnlog = traceCommands.scoped('importGpgKey');
+    const downloadedPath = await tc.downloadTool(keyUrl);
+
+    // Try modern gpg --dearmor + /etc/apt/keyrings/ pattern first
+    let gpgAvailable = false;
+    try {
+        await io.which('gpg', true);
+        gpgAvailable = true;
+    } catch {
+        fnlog('gpg not found in PATH');
+    }
+
+    if (gpgAvailable) {
+        const keyPath = `/etc/apt/keyrings/${keyName}.gpg`;
+        await ensureKeyringsDir();
+        await execWithSudo('gpg', ['--dearmor', '-o', keyPath, downloadedPath]);
+        await execWithSudo('chmod', ['a+r', keyPath]);
+        fnlog(`Key imported to ${keyPath} (modern keyrings pattern)`);
+        return keyPath;
+    }
+
+    // Fallback: try apt-key add (deprecated but available on older systems)
+    let aptKeyAvailable = false;
+    try {
+        await io.which('apt-key', true);
+        aptKeyAvailable = true;
+    } catch {
+        fnlog('apt-key not found in PATH');
+    }
+
+    if (aptKeyAvailable) {
+        core.warning(
+            'gpg is not available — falling back to deprecated apt-key for GPG key import. ' +
+            'Install gnupg to use the modern /etc/apt/keyrings/ pattern.'
+        );
+        await execWithSudo('apt-key', ['add', downloadedPath]);
+        fnlog('Key imported via apt-key (legacy fallback)');
+        return null;
+    }
+
+    throw new Error(
+        `Cannot import GPG key: neither gpg nor apt-key is available. ` +
+        `Install gnupg (apt-get install -y gnupg) to proceed.`
+    );
+}
+
+/**
+ * Writes an APT source file with signed-by= pointing to a GPG key.
+ *
+ * If the repo line already contains `signed-by=`, it is written as-is.
+ * Otherwise, `[signed-by=<keyPath>]` is injected after the `deb` or `deb-src`
+ * prefix. Existing bracket options (e.g., `[arch=amd64]`) are preserved with
+ * `signed-by=` appended inside.
+ *
+ * @param repoLine - The APT repository line (e.g., `deb http://example.com/repo stable main`)
+ * @param keyPath - Absolute path to the GPG keyring file (e.g., `/etc/apt/keyrings/foo.gpg`)
+ * @param sourceName - Name for the source file (written to `/etc/apt/sources.list.d/<sourceName>.list`)
+ * @returns A promise that resolves when the source file has been written
+ * @throws Error if the write command fails
+ */
+export async function addAptSource(repoLine: string, keyPath: string, sourceName: string): Promise<void> {
+    let line = repoLine;
+
+    if (!line.includes('signed-by=')) {
+        // Inject signed-by into the repo line
+        // Handles: deb [...] URL or deb URL (and deb-src variants)
+        const bracketRegex = /^(deb(?:-src)?)\s+\[([^\]]*)\]\s+/;
+        const noBracketRegex = /^(deb(?:-src)?)\s+/;
+
+        const bracketMatch = line.match(bracketRegex);
+        if (bracketMatch) {
+            // Existing brackets: append signed-by inside them
+            const prefix = bracketMatch[1];
+            const existingOpts = bracketMatch[2];
+            line = line.replace(bracketRegex, `${prefix} [${existingOpts} signed-by=${keyPath}] `);
+        } else {
+            const noBracketMatch = line.match(noBracketRegex);
+            if (noBracketMatch) {
+                // No brackets: insert new bracket section
+                const prefix = noBracketMatch[1];
+                line = line.replace(noBracketRegex, `${prefix} [signed-by=${keyPath}] `);
+            }
+        }
+    }
+
+    const listPath = `/etc/apt/sources.list.d/${sourceName}.list`;
+    await execWithSudo('bash', ['-c', `echo '${line.replace(/'/g, "'\\''")}' | tee ${listPath} > /dev/null`]);
 }
 
 /**

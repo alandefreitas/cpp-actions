@@ -6,14 +6,13 @@
 
 import * as core from '@actions/core';
 import * as exec from '@actions/exec';
-import * as tc from '@actions/tool-cache';
 import * as io from '@actions/io';
 import * as traceCommands from 'trace-commands';
 
 import { type Inputs } from './schema';
 import { formatTime, semverGteLoose } from './utils';
 
-import { isSudoRequired } from './apt-utils';
+import { isSudoRequired, importGpgKey, addAptSource } from './apt-utils';
 
 /**
  * Builds a tool/args pair that prepends sudo when required.
@@ -65,25 +64,30 @@ export async function aptGetMain(inputs: Inputs): Promise<void> {
         PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
     };
 
+    const importedKeyPaths: Map<number, string | null> = new Map();
     if (inputs.aptGetSourceKeys.length > 0) {
         core.startGroup('🔑 Install apt-get source keys');
-        for (const key of inputs.aptGetSourceKeys) {
+        for (let keyIndex = 0; keyIndex < inputs.aptGetSourceKeys.length; keyIndex++) {
+            const key = inputs.aptGetSourceKeys[keyIndex];
+            const keyName = `source-key-${keyIndex}`;
             let retryTime = 2000;
             for (let i = 0; i < inputs.aptGetRetries; i++) {
-                core.info(`Add key ${key}`);
-                const keyPath = await tc.downloadTool(key);
-                const { tool, args } = buildSudoCommand(sudoRequired, 'apt-key', ['add', keyPath]);
-                const exitCode = await exec.exec(tool, args, {
-                    ignoreReturnCode: i !== inputs.aptGetRetries - 1
-                });
-                if (exitCode === 0) {
+                try {
+                    core.info(`Import key ${key} as ${keyName}`);
+                    const keyPath = await importGpgKey(key, keyName);
+                    importedKeyPaths.set(keyIndex, keyPath);
                     break;
-                }
-                if (i !== inputs.aptGetRetries - 1) {
-                    core.info(`Failed to add key ${key}, retrying in ${formatTime(retryTime)}`);
+                } catch (error) {
+                    if (i === inputs.aptGetRetries - 1) {
+                        throw error;
+                    }
+                    core.info(`Failed to import key ${key}, retrying in ${formatTime(retryTime)}`);
                     await new Promise((resolve) => setTimeout(resolve, retryTime));
                     retryTime *= 2;
                 }
+            }
+            if (!importedKeyPaths.has(keyIndex) && keyIndex >= inputs.aptGetSources.length) {
+                core.info(`Key ${key} imported to keyrings (no paired source)`);
             }
         }
         core.endGroup();
@@ -107,7 +111,18 @@ export async function aptGetMain(inputs: Inputs): Promise<void> {
         const aptAddRepoHasSourceArgs = semverGteLoose(softwarePropertiesCommonVersion, '0.98.10');
 
         // Iterate through each source and attempt to add it with retries
-        for (const source of inputs.aptGetSources) {
+        for (let sourceIndex = 0; sourceIndex < inputs.aptGetSources.length; sourceIndex++) {
+            const source = inputs.aptGetSources[sourceIndex];
+            const pairedKeyPath = importedKeyPaths.get(sourceIndex);
+
+            // If this source has a paired key, use addAptSource with signed-by injection
+            if (pairedKeyPath) {
+                core.info(`Adding source ${source} with signed-by=${pairedKeyPath}`);
+                await addAptSource(source, pairedKeyPath, `source-${sourceIndex}`);
+                continue;
+            }
+
+            // Otherwise fall back to apt-add-repository
             let retryTime = 2000;
 
             // Construct the arguments

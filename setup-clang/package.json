@@ -16,7 +16,6 @@
     "@actions/core": "^3.0.0",
     "@actions/exec": "^3.0.0",
     "@actions/io": "^3.0.2",
-    "@actions/tool-cache": "^4.0.0",
     "action-schema": "*",
     "semver": "^7.7.4",
     "package-install": "*",

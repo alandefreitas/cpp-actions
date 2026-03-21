@@ -5,6 +5,7 @@ jest.mock('@actions/core', () => ({
     info: jest.fn(),
     debug: jest.fn(),
     error: jest.fn(),
+    warning: jest.fn(),
     setFailed: jest.fn(),
     startGroup: jest.fn(),
     endGroup: jest.fn(),
@@ -225,8 +226,8 @@ describe('setup-gcc main', () => {
         const result = await main(makeInputs());
 
         expect(mockExec).toHaveBeenCalledWith(
-            expect.stringContaining('sudo'),
-            [],
+            'sudo',
+            ['-n', 'add-apt-repository', '-y', 'ppa:ubuntu-toolchain-r/ppa'],
             expect.objectContaining({ ignoreReturnCode: true })
         );
         expect(result.outputPath).toBe('/usr/bin/g++-11');
@@ -241,11 +242,39 @@ describe('setup-gcc main', () => {
         const result = await main(makeInputs());
 
         expect(mockExec).toHaveBeenCalledWith(
-            expect.stringContaining('add-apt-repository'),
-            [],
+            'add-apt-repository',
+            ['-y', 'ppa:ubuntu-toolchain-r/ppa'],
             expect.objectContaining({ ignoreReturnCode: true })
         );
         expect(result.outputPath).toBe('/usr/bin/g++-11');
+    });
+
+    it('warns when add-apt-repository fails with non-zero exit code', async () => {
+        mockIsSudoRequired.mockReturnValue(true);
+        mockWhich.mockResolvedValue('/usr/bin/add-apt-repository');
+        mockExec.mockResolvedValue(1);
+        mockFindProgramWithApt.mockResolvedValueOnce(nullResult); // software-properties-common
+        mockFindProgramWithApt.mockResolvedValueOnce({ outputVersion: '11.3.0', outputPath: '/usr/bin/g++-11' });
+        mockExistsSync.mockReturnValue(true);
+        const result = await main(makeInputs());
+
+        expect(core.warning).toHaveBeenCalledWith(
+            expect.stringContaining('add-apt-repository failed')
+        );
+        // Should still continue and find GCC via APT
+        expect(result.outputPath).toBe('/usr/bin/g++-11');
+    });
+
+    it('does not warn when add-apt-repository succeeds', async () => {
+        mockIsSudoRequired.mockReturnValue(false);
+        mockWhich.mockResolvedValue('/usr/bin/add-apt-repository');
+        mockExec.mockResolvedValue(0);
+        mockFindProgramWithApt.mockResolvedValueOnce(nullResult); // software-properties-common
+        mockFindProgramWithApt.mockResolvedValueOnce({ outputVersion: '11.3.0', outputPath: '/usr/bin/g++-11' });
+        mockExistsSync.mockReturnValue(true);
+        await main(makeInputs());
+
+        expect(core.warning).not.toHaveBeenCalled();
     });
 
     it('handles add-apt-repository not found', async () => {

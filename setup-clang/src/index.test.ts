@@ -22,10 +22,6 @@ jest.mock('@actions/io', () => ({
     which: jest.fn()
 }));
 
-jest.mock('@actions/tool-cache', () => ({
-    downloadTool: jest.fn().mockResolvedValue('/tmp/key.gpg')
-}));
-
 jest.mock('@actions/exec', () => ({
     exec: jest.fn().mockResolvedValue(0),
     getExecOutput: jest.fn().mockResolvedValue({ exitCode: 0, stdout: '', stderr: '' })
@@ -53,7 +49,9 @@ jest.mock('package-install', () => ({
     findProgramWithBrew: jest.fn().mockResolvedValue(null),
     installProgramWithBrew: jest.fn().mockResolvedValue(null),
     findProgramWithChoco: jest.fn().mockResolvedValue(null),
-    installProgramWithChoco: jest.fn().mockResolvedValue(null)
+    installProgramWithChoco: jest.fn().mockResolvedValue(null),
+    importGpgKey: jest.fn().mockResolvedValue('/etc/apt/keyrings/llvm-snapshot.gpg'),
+    addAptSource: jest.fn().mockResolvedValue(undefined)
 }));
 
 jest.mock('setup-program', () => ({
@@ -91,7 +89,6 @@ jest.mock('fs', () => ({
 import * as core from '@actions/core';
 import * as io from '@actions/io';
 import * as exec from '@actions/exec';
-import * as tc from '@actions/tool-cache';
 import * as setup_program from 'setup-program';
 import * as package_install from 'package-install';
 import * as download from './download';
@@ -101,7 +98,6 @@ import * as fs from 'fs';
 const mockCore = core as jest.Mocked<typeof core>;
 const mockIo = io as jest.Mocked<typeof io>;
 const mockExec = exec as jest.Mocked<typeof exec>;
-const mockTc = tc as jest.Mocked<typeof tc>;
 const mockSetupProgram = setup_program as jest.Mocked<typeof setup_program>;
 const mockPackageInstall = package_install as jest.Mocked<typeof package_install>;
 const mockDownload = download as jest.Mocked<typeof download>;
@@ -266,51 +262,64 @@ describe('setup-clang', () => {
             expect(mockPackageInstall.findProgramWithApt).toHaveBeenCalledWith(['gnupg'], '*', true);
         });
 
-        it('downloads GPG key and installs with gpg --dearmor', async () => {
+        it('calls importGpgKey with LLVM key URL and name', async () => {
             await main(makeInputs({ version: '>=15.0.0' }));
-            expect(mockTc.downloadTool).toHaveBeenCalledWith('https://apt.llvm.org/llvm-snapshot.gpg.key');
-            expect(mockExec.exec).toHaveBeenCalledWith(
-                expect.stringContaining('gpg --dearmor'),
-                [],
-                expect.objectContaining({ ignoreReturnCode: true })
+            expect(mockPackageInstall.importGpgKey).toHaveBeenCalledWith(
+                'https://apt.llvm.org/llvm-snapshot.gpg.key',
+                'llvm-snapshot'
             );
         });
 
-        it('uses sudo for gpg --dearmor when sudo is required', async () => {
-            mockSetupProgram.isSudoRequired.mockReturnValue(true);
+        it('uses unsigned repo line when importGpgKey returns null (apt-key fallback)', async () => {
+            mockPackageInstall.importGpgKey.mockResolvedValueOnce(null);
             await main(makeInputs({ version: '>=15.0.0' }));
-            expect(mockExec.exec).toHaveBeenCalledWith(
-                expect.stringMatching(/^sudo -n gpg --dearmor/),
-                [],
-                expect.objectContaining({ ignoreReturnCode: true })
+            const calls = mockPackageInstall.addAptSource.mock.calls;
+            expect(calls.length).toBeGreaterThan(0);
+            // Repo line should NOT contain signed-by when keyringPath is null
+            expect(calls[0][0]).not.toContain('signed-by=');
+            expect(calls[0][0]).toContain('deb https://apt.llvm.org/');
+            // keyPath argument should be empty string
+            expect(calls[0][1]).toBe('');
+        });
+
+        it('calls addAptSource for each matching LLVM major version', async () => {
+            await main(makeInputs({ version: '>=15.0.0' }));
+            // findClangVersions returns ['14.0.0', '15.0.0', '16.0.0'], filtered by >=15.0.0 → majors [16, 15]
+            expect(mockPackageInstall.addAptSource).toHaveBeenCalledTimes(2);
+            expect(mockPackageInstall.addAptSource).toHaveBeenCalledWith(
+                expect.stringContaining('deb [signed-by=/etc/apt/keyrings/llvm-snapshot.gpg] https://apt.llvm.org/jammy/'),
+                '/etc/apt/keyrings/llvm-snapshot.gpg',
+                expect.stringMatching(/^llvm-\d+$/)
             );
         });
 
-        it('adds repository via sources.list.d file', async () => {
+        it('passes correct repo line and source name for each major version', async () => {
             await main(makeInputs({ version: '>=15.0.0' }));
-            expect(mockExec.exec).toHaveBeenCalledWith(
-                expect.stringContaining('tee /etc/apt/sources.list.d/llvm-'),
-                [],
-                expect.objectContaining({ ignoreReturnCode: true })
-            );
-        });
-
-        it('uses sudo for repository file when required', async () => {
-            mockSetupProgram.isSudoRequired.mockReturnValue(true);
-            await main(makeInputs({ version: '>=15.0.0' }));
-            expect(mockExec.exec).toHaveBeenCalledWith(
-                expect.stringContaining('sudo -n tee /etc/apt/sources.list.d/llvm-'),
-                [],
-                expect.objectContaining({ ignoreReturnCode: true })
-            );
+            const calls = mockPackageInstall.addAptSource.mock.calls;
+            // Sorted descending: 16, 15
+            expect(calls[0][2]).toBe('llvm-16');
+            expect(calls[0][0]).toContain('llvm-toolchain-jammy-16');
+            expect(calls[1][2]).toBe('llvm-15');
+            expect(calls[1][0]).toContain('llvm-toolchain-jammy-15');
         });
 
         it('runs apt-get update after adding repositories', async () => {
             await main(makeInputs({ version: '>=15.0.0' }));
             expect(mockExec.exec).toHaveBeenCalledWith(
-                expect.stringContaining('apt-get update'),
-                [],
-                expect.objectContaining({ ignoreReturnCode: true })
+                'apt-get',
+                ['update'],
+                { ignoreReturnCode: true }
+            );
+        });
+
+        it('runs apt-get update with sudo when required', async () => {
+            mockSetupProgram.isSudoRequired.mockReturnValue(true);
+            await main(makeInputs({ version: '>=15.0.0' }));
+            expect(mockSetupProgram.ensureSudoIsAvailable).toHaveBeenCalled();
+            expect(mockExec.exec).toHaveBeenCalledWith(
+                'sudo',
+                ['-n', 'apt-get', 'update'],
+                { ignoreReturnCode: true }
             );
         });
 
@@ -338,14 +347,14 @@ describe('setup-clang', () => {
         it('skips repositories when ubuntuName is null', async () => {
             mockSetupProgram.getCurrentUbuntuName.mockReturnValue(null);
             await main(makeInputs());
-            // Should NOT call downloadTool for GPG key
-            expect(mockTc.downloadTool).not.toHaveBeenCalled();
+            // Should NOT call importGpgKey when repos are skipped
+            expect(mockPackageInstall.importGpgKey).not.toHaveBeenCalled();
         });
 
         it('skips repositories when no version majors match', async () => {
             mockSetupProgram.findClangVersions.mockResolvedValue([]);
             await main(makeInputs({ version: '>=99.0.0' }));
-            expect(mockTc.downloadTool).not.toHaveBeenCalled();
+            expect(mockPackageInstall.importGpgKey).not.toHaveBeenCalled();
         });
     });
 

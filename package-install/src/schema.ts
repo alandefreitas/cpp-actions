@@ -241,7 +241,7 @@ Sources are installed with \`apt-add-repository\`.`
         default: [] as string[],
         description: `List of source keys for apt-get.
 
-Source keys are installed with \`apt-key\`.`
+Each key URL is downloaded, dearmored with \`gpg --dearmor\`, and stored in \`/etc/apt/keyrings/\`. Keys are paired positionally with \`apt-get-sources\` entries: key at index N is paired with source at index N. For paired sources, \`signed-by=\` is automatically injected into the source line pointing to the imported key.`
     },
 
     aptGetIgnoreMissing: {

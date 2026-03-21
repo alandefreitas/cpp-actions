@@ -22,15 +22,23 @@ jest.mock('trace-commands', () => ({
     setTraceCommands: jest.fn()
 }));
 
+jest.mock('@actions/tool-cache', () => ({
+    downloadTool: jest.fn()
+}));
+
 jest.mock('./program-search', () => ({
     findProgramInSystemPaths: jest.fn().mockResolvedValue({ outputVersion: null, outputPath: null })
 }));
 
 import * as exec from '@actions/exec';
 import * as io from '@actions/io';
+import * as tc from '@actions/tool-cache';
 import * as programSearch from './program-search';
 import {
     isSudoRequired,
+    ensureKeyringsDir,
+    importGpgKey,
+    addAptSource,
     getPackagePreferenceTier,
     PackagePreferenceTier,
     searchAptPackages,
@@ -44,6 +52,7 @@ import {
 const mockExec = exec.exec as jest.MockedFunction<typeof exec.exec>;
 const mockGetExecOutput = exec.getExecOutput as jest.MockedFunction<typeof exec.getExecOutput>;
 const mockWhich = io.which as jest.MockedFunction<typeof io.which>;
+const mockDownloadTool = tc.downloadTool as jest.MockedFunction<typeof tc.downloadTool>;
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -78,6 +87,204 @@ describe('isSudoRequired', () => {
     it('returns false on windows', () => {
         Object.defineProperty(process, 'platform', { value: 'win32' });
         expect(isSudoRequired()).toBe(false);
+    });
+});
+
+describe('ensureKeyringsDir', () => {
+    const origPlatform = process.platform;
+    const origGetuid = process.getuid;
+
+    afterEach(() => {
+        Object.defineProperty(process, 'platform', { value: origPlatform });
+        process.getuid = origGetuid;
+    });
+
+    it('calls install with sudo when not root on linux', async () => {
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+        process.getuid = () => 1000;
+        mockExec.mockResolvedValue(0);
+
+        await ensureKeyringsDir();
+
+        expect(mockExec).toHaveBeenCalledWith(
+            'sudo',
+            ['-n', 'install', '-m', '0755', '-d', '/etc/apt/keyrings'],
+            {}
+        );
+    });
+
+    it('calls install without sudo when root', async () => {
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+        process.getuid = () => 0;
+        mockExec.mockResolvedValue(0);
+
+        await ensureKeyringsDir();
+
+        expect(mockExec).toHaveBeenCalledWith(
+            'install',
+            ['-m', '0755', '-d', '/etc/apt/keyrings'],
+            {}
+        );
+    });
+});
+
+describe('importGpgKey', () => {
+    const origPlatform = process.platform;
+    const origGetuid = process.getuid;
+
+    afterEach(() => {
+        Object.defineProperty(process, 'platform', { value: origPlatform });
+        process.getuid = origGetuid;
+    });
+
+    it('downloads key, dearmors it, sets permissions, and returns path', async () => {
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+        process.getuid = () => 0;
+        mockDownloadTool.mockResolvedValue('/tmp/downloaded-key');
+        mockExec.mockResolvedValue(0);
+
+        const result = await importGpgKey('https://example.com/key.asc', 'my-key');
+
+        expect(result).toBe('/etc/apt/keyrings/my-key.gpg');
+        expect(mockDownloadTool).toHaveBeenCalledWith('https://example.com/key.asc');
+        // ensureKeyringsDir
+        expect(mockExec).toHaveBeenCalledWith(
+            'install',
+            ['-m', '0755', '-d', '/etc/apt/keyrings'],
+            {}
+        );
+        // gpg --dearmor
+        expect(mockExec).toHaveBeenCalledWith(
+            'gpg',
+            ['--dearmor', '-o', '/etc/apt/keyrings/my-key.gpg', '/tmp/downloaded-key'],
+            {}
+        );
+        // chmod
+        expect(mockExec).toHaveBeenCalledWith(
+            'chmod',
+            ['a+r', '/etc/apt/keyrings/my-key.gpg'],
+            {}
+        );
+    });
+
+    it('uses sudo for gpg and chmod when not root on linux', async () => {
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+        process.getuid = () => 1000;
+        mockDownloadTool.mockResolvedValue('/tmp/downloaded-key');
+        mockExec.mockResolvedValue(0);
+
+        const result = await importGpgKey('https://example.com/key.asc', 'repo-key');
+
+        expect(result).toBe('/etc/apt/keyrings/repo-key.gpg');
+        // ensureKeyringsDir with sudo
+        expect(mockExec).toHaveBeenCalledWith(
+            'sudo',
+            ['-n', 'install', '-m', '0755', '-d', '/etc/apt/keyrings'],
+            {}
+        );
+        // gpg --dearmor with sudo
+        expect(mockExec).toHaveBeenCalledWith(
+            'sudo',
+            ['-n', 'gpg', '--dearmor', '-o', '/etc/apt/keyrings/repo-key.gpg', '/tmp/downloaded-key'],
+            {}
+        );
+        // chmod with sudo
+        expect(mockExec).toHaveBeenCalledWith(
+            'sudo',
+            ['-n', 'chmod', 'a+r', '/etc/apt/keyrings/repo-key.gpg'],
+            {}
+        );
+    });
+
+    it('returns correct key file path based on keyName', async () => {
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+        process.getuid = () => 0;
+        mockDownloadTool.mockResolvedValue('/tmp/key-file');
+        mockExec.mockResolvedValue(0);
+
+        const result = await importGpgKey('https://apt.llvm.org/llvm-snapshot.gpg.key', 'llvm-snapshot');
+
+        expect(result).toBe('/etc/apt/keyrings/llvm-snapshot.gpg');
+    });
+});
+
+describe('addAptSource', () => {
+    const origPlatform = process.platform;
+    const origGetuid = process.getuid;
+
+    afterEach(() => {
+        Object.defineProperty(process, 'platform', { value: origPlatform });
+        process.getuid = origGetuid;
+    });
+
+    it('injects signed-by when not present in deb line', async () => {
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+        process.getuid = () => 0;
+        mockExec.mockResolvedValue(0);
+
+        await addAptSource('deb http://example.com/repo stable main', '/etc/apt/keyrings/foo.gpg', 'example');
+
+        expect(mockExec).toHaveBeenCalledWith(
+            'bash',
+            ['-c', "echo 'deb [signed-by=/etc/apt/keyrings/foo.gpg] http://example.com/repo stable main' | tee /etc/apt/sources.list.d/example.list > /dev/null"],
+            {}
+        );
+    });
+
+    it('injects signed-by into existing brackets', async () => {
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+        process.getuid = () => 0;
+        mockExec.mockResolvedValue(0);
+
+        await addAptSource('deb [arch=amd64] http://example.com/repo stable main', '/etc/apt/keyrings/foo.gpg', 'example');
+
+        expect(mockExec).toHaveBeenCalledWith(
+            'bash',
+            ['-c', "echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/foo.gpg] http://example.com/repo stable main' | tee /etc/apt/sources.list.d/example.list > /dev/null"],
+            {}
+        );
+    });
+
+    it('preserves existing signed-by unchanged', async () => {
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+        process.getuid = () => 0;
+        mockExec.mockResolvedValue(0);
+
+        await addAptSource('deb [signed-by=/existing/path.gpg] http://example.com/repo stable main', '/etc/apt/keyrings/foo.gpg', 'example');
+
+        expect(mockExec).toHaveBeenCalledWith(
+            'bash',
+            ['-c', "echo 'deb [signed-by=/existing/path.gpg] http://example.com/repo stable main' | tee /etc/apt/sources.list.d/example.list > /dev/null"],
+            {}
+        );
+    });
+
+    it('handles deb-src prefix', async () => {
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+        process.getuid = () => 0;
+        mockExec.mockResolvedValue(0);
+
+        await addAptSource('deb-src http://example.com/repo stable main', '/etc/apt/keyrings/foo.gpg', 'example-src');
+
+        expect(mockExec).toHaveBeenCalledWith(
+            'bash',
+            ['-c', "echo 'deb-src [signed-by=/etc/apt/keyrings/foo.gpg] http://example.com/repo stable main' | tee /etc/apt/sources.list.d/example-src.list > /dev/null"],
+            {}
+        );
+    });
+
+    it('writes to sources.list.d via sudo when not root', async () => {
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+        process.getuid = () => 1000;
+        mockExec.mockResolvedValue(0);
+
+        await addAptSource('deb http://example.com/repo stable main', '/etc/apt/keyrings/foo.gpg', 'my-repo');
+
+        expect(mockExec).toHaveBeenCalledWith(
+            'sudo',
+            ['-n', 'bash', '-c', "echo 'deb [signed-by=/etc/apt/keyrings/foo.gpg] http://example.com/repo stable main' | tee /etc/apt/sources.list.d/my-repo.list > /dev/null"],
+            {}
+        );
     });
 });
 

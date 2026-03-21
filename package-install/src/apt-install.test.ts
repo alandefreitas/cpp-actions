@@ -1,8 +1,8 @@
 import { aptGetMain } from './apt-install';
 import { type Inputs } from './schema';
 import * as exec from '@actions/exec';
-import * as tc from '@actions/tool-cache';
 import * as io from '@actions/io';
+import { importGpgKey, addAptSource } from './apt-utils';
 
 jest.mock('@actions/core', () => ({
     info: jest.fn(),
@@ -18,10 +18,6 @@ jest.mock('@actions/exec', () => ({
     getExecOutput: jest.fn()
 }));
 
-jest.mock('@actions/tool-cache', () => ({
-    downloadTool: jest.fn()
-}));
-
 jest.mock('@actions/io', () => ({
     which: jest.fn()
 }));
@@ -31,13 +27,16 @@ jest.mock('trace-commands', () => ({
 }));
 
 jest.mock('./apt-utils', () => ({
-    isSudoRequired: jest.fn(() => false)
+    isSudoRequired: jest.fn(() => false),
+    importGpgKey: jest.fn(async (_url: string, keyName: string) => `/etc/apt/keyrings/${keyName}.gpg`),
+    addAptSource: jest.fn()
 }));
 
 const mockExec = exec.exec as jest.MockedFunction<typeof exec.exec>;
 const mockGetExecOutput = exec.getExecOutput as jest.MockedFunction<typeof exec.getExecOutput>;
-const mockDownloadTool = tc.downloadTool as jest.MockedFunction<typeof tc.downloadTool>;
 const mockWhich = io.which as jest.MockedFunction<typeof io.which>;
+const mockImportGpgKey = importGpgKey as jest.MockedFunction<typeof importGpgKey>;
+const mockAddAptSource = addAptSource as jest.MockedFunction<typeof addAptSource>;
 
 /**
  * Creates a default Inputs object for testing with optional overrides.
@@ -114,30 +113,20 @@ describe('aptGetMain', () => {
     });
 
     describe('source keys', () => {
-        it('installs source keys with retry on success', async () => {
-            mockDownloadTool.mockResolvedValue('/tmp/key');
-            mockExec.mockResolvedValue(0);
-
+        it('imports source keys via importGpgKey', async () => {
             const inputs = makeInputs({
                 aptGetSourceKeys: ['https://example.com/key.gpg'],
                 aptGetRetries: 3
             });
             await aptGetMain(inputs);
 
-            expect(mockDownloadTool).toHaveBeenCalledWith('https://example.com/key.gpg');
-            expect(mockExec).toHaveBeenCalledWith(
-                'apt-key',
-                ['add', '/tmp/key'],
-                expect.objectContaining({ ignoreReturnCode: true })
-            );
+            expect(mockImportGpgKey).toHaveBeenCalledWith('https://example.com/key.gpg', 'source-key-0');
         });
 
-        it('retries on key add failure then succeeds', async () => {
-            mockDownloadTool.mockResolvedValue('/tmp/key');
-            // First attempt fails, second succeeds
-            mockExec
-                .mockResolvedValueOnce(1) // key add fail
-                .mockResolvedValue(0);    // key add success, then update
+        it('retries on key import failure then succeeds', async () => {
+            mockImportGpgKey
+                .mockRejectedValueOnce(new Error('download failed'))
+                .mockResolvedValue('/etc/apt/keyrings/source-key-0.gpg');
 
             const inputs = makeInputs({
                 aptGetSourceKeys: ['https://example.com/key.gpg'],
@@ -147,25 +136,60 @@ describe('aptGetMain', () => {
             await jest.advanceTimersByTimeAsync(10000);
             await promise;
 
-            // downloadTool called twice (once per retry)
-            expect(mockDownloadTool).toHaveBeenCalledTimes(2);
+            expect(mockImportGpgKey).toHaveBeenCalledTimes(2);
         });
 
-        it('does not ignore return code on last retry', async () => {
-            mockDownloadTool.mockResolvedValue('/tmp/key');
-            mockExec.mockResolvedValue(0);
+        it('throws on last retry failure', async () => {
+            mockImportGpgKey.mockRejectedValue(new Error('download failed'));
 
             const inputs = makeInputs({
                 aptGetSourceKeys: ['https://example.com/key.gpg'],
-                aptGetRetries: 2
+                aptGetRetries: 1
+            });
+
+            await expect(aptGetMain(inputs)).rejects.toThrow('download failed');
+        });
+
+        it('calls addAptSource for sources paired with keys', async () => {
+            mockImportGpgKey.mockResolvedValue('/etc/apt/keyrings/source-key-0.gpg');
+            mockGetExecOutput.mockResolvedValue({
+                exitCode: 0,
+                stdout: '0.99.0',
+                stderr: ''
+            });
+
+            const inputs = makeInputs({
+                aptGetSourceKeys: ['https://example.com/key.gpg'],
+                aptGetSources: ['deb http://example.com/repo stable main'],
+                aptGetRetries: 1
             });
             await aptGetMain(inputs);
 
-            // First call to exec for key add should have ignoreReturnCode: true (not last retry)
+            expect(mockAddAptSource).toHaveBeenCalledWith(
+                'deb http://example.com/repo stable main',
+                '/etc/apt/keyrings/source-key-0.gpg',
+                'source-0'
+            );
+        });
+
+        it('uses apt-add-repository for sources without paired keys', async () => {
+            mockGetExecOutput.mockResolvedValue({
+                exitCode: 0,
+                stdout: '0.99.0',
+                stderr: ''
+            });
+
+            const inputs = makeInputs({
+                aptGetSources: ['ppa:test/ppa'],
+                aptGetRetries: 1
+            });
+            await aptGetMain(inputs);
+
+            expect(mockAddAptSource).not.toHaveBeenCalled();
             expect(mockExec).toHaveBeenCalledWith(
-                'apt-key',
-                ['add', '/tmp/key'],
-                expect.objectContaining({ ignoreReturnCode: true })
+                'apt-add-repository',
+                ['-y', '-n', '-P', 'ppa:test/ppa'],
+                expect.anything()
             );
         });
     });

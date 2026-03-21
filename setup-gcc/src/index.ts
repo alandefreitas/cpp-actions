@@ -340,10 +340,14 @@ class SetupGccRunner {
         if (addAptRepositoryPath !== null && addAptRepositoryPath !== '') {
             const repo = `ppa:ubuntu-toolchain-r/ppa`;
             traceCommands.log(`Adding repository "${repo}"`);
+            let exitCode: number;
             if (setup_program.isSudoRequired()) {
-                await exec.exec(`sudo -n add-apt-repository -y "${repo}"`, [], { ignoreReturnCode: true });
+                exitCode = await exec.exec('sudo', ['-n', 'add-apt-repository', '-y', repo], { ignoreReturnCode: true });
             } else {
-                await exec.exec(`add-apt-repository -y "${repo}"`, [], { ignoreReturnCode: true });
+                exitCode = await exec.exec('add-apt-repository', ['-y', repo], { ignoreReturnCode: true });
+            }
+            if (exitCode !== 0) {
+                core.warning(`add-apt-repository failed with exit code ${exitCode}. GCC versions from the ubuntu-toolchain-r PPA may not be available.`);
             }
         }
 

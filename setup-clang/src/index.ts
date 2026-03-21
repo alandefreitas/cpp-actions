@@ -5,7 +5,6 @@
  */
 
 import * as core from '@actions/core';
-import * as tc from '@actions/tool-cache';
 import * as semver from 'semver';
 import * as fs from 'fs';
 import * as exec from '@actions/exec';
@@ -51,7 +50,9 @@ import {
     installProgramWithBrew,
     findProgramWithChoco,
     installProgramWithChoco,
-    findProgramWithApt
+    findProgramWithApt,
+    importGpgKey,
+    addAptSource
 } from 'package-install';
 
 // ─── SetupClangRunner ───────────────────────────────────────────────
@@ -359,20 +360,12 @@ class SetupClangRunner {
                 `Adding APT repositories for Clang ${this.inputs.version} major versions [${allVersionMajors.join(', ')}]`
             );
 
-            // Download and install repo signing key using modern signed-by approach
-            // (apt-key was removed in Ubuntu 24.10+)
+            // Download and install repo signing key using shared importGpgKey utility
             await findProgramWithApt(['gnupg'], '*', true);
-            const gpgKeyUrl = 'https://apt.llvm.org/llvm-snapshot.gpg.key';
-            const keyPath = await tc.downloadTool(gpgKeyUrl);
-            const keyringPath = '/etc/apt/keyrings/llvm-snapshot.gpg';
-            const sudo = setup_program.isSudoRequired() ? 'sudo -n' : '';
-            if (sudo) {
-                await setup_program.ensureSudoIsAvailable();
-            }
-            await exec.exec(`${sudo} mkdir -p /etc/apt/keyrings`.trim(), [], { ignoreReturnCode: true });
-            await exec.exec(`${sudo} gpg --dearmor -o ${keyringPath} ${keyPath}`.trim(), [], { ignoreReturnCode: true });
+            const keyringPath = await importGpgKey('https://apt.llvm.org/llvm-snapshot.gpg.key', 'llvm-snapshot');
 
-            // Add APT repositories with signed-by
+            // Add APT repositories — use signed-by when keyring is available (modern pattern),
+            // fall back to unsigned source line when apt-key was used (legacy pattern)
             for (const major of allVersionMajors) {
                 const ReleaseFileURL = `https://apt.llvm.org/${ubuntuName}/dists/llvm-toolchain-${ubuntuName}-${major}/Release`;
                 traceCommands.log(`Checking if ${ReleaseFileURL} exists`);
@@ -382,14 +375,19 @@ class SetupClangRunner {
                     );
                     continue;
                 }
-                const repoLine = `deb [signed-by=${keyringPath}] https://apt.llvm.org/${ubuntuName}/ llvm-toolchain-${ubuntuName}-${major} main`;
-                const listFile = `/etc/apt/sources.list.d/llvm-${major}.list`;
-                traceCommands.log(`Adding repository "${repoLine}" to ${listFile}`);
-                await exec.exec(`bash -c '${sudo} tee ${listFile} <<< "${repoLine}" > /dev/null'`.trim(), [], {
-                    ignoreReturnCode: true
-                });
+                const repoLine = keyringPath
+                    ? `deb [signed-by=${keyringPath}] https://apt.llvm.org/${ubuntuName}/ llvm-toolchain-${ubuntuName}-${major} main`
+                    : `deb https://apt.llvm.org/${ubuntuName}/ llvm-toolchain-${ubuntuName}-${major} main`;
+                traceCommands.log(`Adding repository "${repoLine}" to llvm-${major}.list`);
+                await addAptSource(repoLine, keyringPath ?? '', `llvm-${major}`);
             }
-            await exec.exec(`${sudo} apt-get update`.trim(), [], { ignoreReturnCode: true });
+            const sudoRequired = setup_program.isSudoRequired();
+            if (sudoRequired) {
+                await setup_program.ensureSudoIsAvailable();
+                await exec.exec('sudo', ['-n', 'apt-get', 'update'], { ignoreReturnCode: true });
+            } else {
+                await exec.exec('apt-get', ['update'], { ignoreReturnCode: true });
+            }
         }
 
         core.info(`Searching for Clang ${this.inputs.version} with APT`);
