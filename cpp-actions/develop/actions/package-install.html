@@ -658,7 +658,7 @@ exponential backoff.</p></td>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-source-keys</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">List of source keys for apt-get.</p>
-<p class="tableblock">Source keys are installed with <code>apt-key</code>.</p></td>
+<p class="tableblock">Each key URL is downloaded, dearmored with <code>gpg --dearmor</code>, and stored in <code>/etc/apt/keyrings/</code>. Keys are paired positionally with <code>apt-get-sources</code> entries: key at index N is paired with source at index N. For paired sources, <code>signed-by=</code> is automatically injected into the source line pointing to the imported key.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
