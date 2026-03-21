@@ -7,6 +7,7 @@ import { importGpgKey, addAptSource } from './apt-utils';
 jest.mock('@actions/core', () => ({
     info: jest.fn(),
     debug: jest.fn(),
+    warning: jest.fn(),
     error: jest.fn(),
     setFailed: jest.fn(),
     startGroup: jest.fn(),
@@ -32,9 +33,12 @@ jest.mock('./apt-utils', () => ({
     addAptSource: jest.fn()
 }));
 
+import * as core from '@actions/core';
+
 const mockExec = exec.exec as jest.MockedFunction<typeof exec.exec>;
 const mockGetExecOutput = exec.getExecOutput as jest.MockedFunction<typeof exec.getExecOutput>;
 const mockWhich = io.which as jest.MockedFunction<typeof io.which>;
+const mockWarning = core.warning as jest.MockedFunction<typeof core.warning>;
 const mockImportGpgKey = importGpgKey as jest.MockedFunction<typeof importGpgKey>;
 const mockAddAptSource = addAptSource as jest.MockedFunction<typeof addAptSource>;
 
@@ -203,19 +207,21 @@ describe('aptGetMain', () => {
             });
         });
 
-        it('throws if dpkg-query fails', async () => {
+        it('warns if software-properties-common is not installed for unpaired sources', async () => {
             mockGetExecOutput.mockResolvedValue({
                 exitCode: 1,
                 stdout: '',
                 stderr: 'error'
             });
+            mockExec.mockResolvedValue(0);
 
             const inputs = makeInputs({
                 aptGetSources: ['ppa:test/ppa']
             });
 
-            await expect(aptGetMain(inputs)).rejects.toThrow(
-                'Failed to get the version of software-properties-common'
+            await aptGetMain(inputs);
+            expect(mockWarning).toHaveBeenCalledWith(
+                expect.stringContaining('software-properties-common is not installed')
             );
         });
 

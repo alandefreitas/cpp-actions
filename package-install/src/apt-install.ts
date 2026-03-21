@@ -96,19 +96,27 @@ export async function aptGetMain(inputs: Inputs): Promise<void> {
     if (inputs.aptGetSources.length > 0) {
         core.startGroup('🌐 Install apt-get sources');
 
-        // Get the version of software-properties-common
-        const {
-            exitCode,
-            stdout
-        } = await exec.getExecOutput('dpkg-query', ['--showformat=${Version}', '--show', 'software-properties-common']);
-        if (exitCode !== 0) {
-            throw new Error('Failed to get the version of software-properties-common');
-        }
-        const softwarePropertiesCommonVersion = stdout.trim();
+        // Check if any source needs apt-add-repository (i.e., doesn't have a paired key)
+        const needsAptAddRepo = inputs.aptGetSources.some(
+            (_, i) => !importedKeyPaths.get(i)
+        );
 
-        // Identify features of apt-add-repository command and set initial args
-        const aptAddRepoCommonArgs = semverGteLoose(softwarePropertiesCommonVersion, '0.96.24.20') ? ['-y', '-n'] : ['-y'];
-        const aptAddRepoHasSourceArgs = semverGteLoose(softwarePropertiesCommonVersion, '0.98.10');
+        // Only query software-properties-common when apt-add-repository is needed
+        let aptAddRepoCommonArgs = ['-y'];
+        let aptAddRepoHasSourceArgs = false;
+        if (needsAptAddRepo) {
+            const {
+                exitCode,
+                stdout
+            } = await exec.getExecOutput('dpkg-query', ['--showformat=${Version}', '--show', 'software-properties-common'], { ignoreReturnCode: true });
+            if (exitCode === 0) {
+                const softwarePropertiesCommonVersion = stdout.trim();
+                aptAddRepoCommonArgs = semverGteLoose(softwarePropertiesCommonVersion, '0.96.24.20') ? ['-y', '-n'] : ['-y'];
+                aptAddRepoHasSourceArgs = semverGteLoose(softwarePropertiesCommonVersion, '0.98.10');
+            } else {
+                core.warning('software-properties-common is not installed — apt-add-repository may not be available for unpaired sources');
+            }
+        }
 
         // Iterate through each source and attempt to add it with retries
         for (let sourceIndex = 0; sourceIndex < inputs.aptGetSources.length; sourceIndex++) {

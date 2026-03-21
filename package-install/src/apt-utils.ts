@@ -82,13 +82,23 @@ export async function importGpgKey(keyUrl: string, keyName: string): Promise<str
     const fnlog = traceCommands.scoped('importGpgKey');
     const downloadedPath = await tc.downloadTool(keyUrl);
 
-    // Try modern gpg --dearmor + /etc/apt/keyrings/ pattern first
+    // Ensure gpg is available — install gnupg if needed
     let gpgAvailable = false;
     try {
         await io.which('gpg', true);
         gpgAvailable = true;
     } catch {
-        fnlog('gpg not found in PATH');
+        fnlog('gpg not found in PATH — attempting to install gnupg');
+        try {
+            await execWithSudo('apt-get', ['update'], { ignoreReturnCode: true } as exec.ExecOptions);
+            const installResult = await execWithSudo('apt-get', ['install', '-y', 'gnupg'], { ignoreReturnCode: true } as exec.ExecOptions);
+            if (installResult === 0) {
+                gpgAvailable = true;
+                fnlog('gnupg installed successfully');
+            }
+        } catch {
+            fnlog('Failed to install gnupg');
+        }
     }
 
     if (gpgAvailable) {

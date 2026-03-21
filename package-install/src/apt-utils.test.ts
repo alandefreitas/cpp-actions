@@ -206,6 +206,71 @@ describe('importGpgKey', () => {
 
         expect(result).toBe('/etc/apt/keyrings/llvm-snapshot.gpg');
     });
+
+    it('auto-installs gnupg when gpg is not available', async () => {
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+        process.getuid = () => 0;
+        mockDownloadTool.mockResolvedValue('/tmp/downloaded-key');
+        mockExec.mockResolvedValue(0);
+
+        // First call to io.which('gpg', true) throws — gpg not found
+        // After apt-get install gnupg, second call succeeds (implicit from mockExec success)
+        mockWhich.mockRejectedValueOnce(new Error('not found'));
+
+        const result = await importGpgKey('https://example.com/key.asc', 'test-key');
+
+        expect(result).toBe('/etc/apt/keyrings/test-key.gpg');
+        // Should have called apt-get update + apt-get install gnupg
+        expect(mockExec).toHaveBeenCalledWith(
+            'apt-get', ['update'], expect.objectContaining({ ignoreReturnCode: true })
+        );
+        expect(mockExec).toHaveBeenCalledWith(
+            'apt-get', ['install', '-y', 'gnupg'], expect.objectContaining({ ignoreReturnCode: true })
+        );
+        // Should still dearmor and store the key
+        expect(mockExec).toHaveBeenCalledWith(
+            'gpg', ['--dearmor', '-o', '/etc/apt/keyrings/test-key.gpg', '/tmp/downloaded-key'], {}
+        );
+    });
+
+    it('falls back to apt-key when gpg install fails and apt-key is available', async () => {
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+        process.getuid = () => 0;
+        mockDownloadTool.mockResolvedValue('/tmp/downloaded-key');
+
+        // gpg not found, gnupg install fails (non-zero exit)
+        mockWhich
+            .mockRejectedValueOnce(new Error('gpg not found'))
+            .mockResolvedValueOnce('/usr/bin/apt-key');
+        mockExec
+            .mockResolvedValueOnce(0)  // apt-get update
+            .mockResolvedValueOnce(1)  // apt-get install gnupg fails
+            .mockResolvedValueOnce(0); // apt-key add succeeds
+
+        const result = await importGpgKey('https://example.com/key.asc', 'test-key');
+
+        expect(result).toBeNull();
+        expect(mockExec).toHaveBeenCalledWith(
+            'apt-key', ['add', '/tmp/downloaded-key'], {}
+        );
+    });
+
+    it('throws when neither gpg nor apt-key is available', async () => {
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+        process.getuid = () => 0;
+        mockDownloadTool.mockResolvedValue('/tmp/downloaded-key');
+
+        // gpg not found, gnupg install fails, apt-key not found
+        mockWhich
+            .mockRejectedValueOnce(new Error('gpg not found'))
+            .mockRejectedValueOnce(new Error('apt-key not found'));
+        mockExec
+            .mockResolvedValueOnce(0)  // apt-get update
+            .mockResolvedValueOnce(1); // apt-get install gnupg fails
+
+        await expect(importGpgKey('https://example.com/key.asc', 'test-key'))
+            .rejects.toThrow('Cannot import GPG key');
+    });
 });
 
 describe('addAptSource', () => {

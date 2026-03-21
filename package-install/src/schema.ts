@@ -231,15 +231,22 @@ exponential backoff.`
     aptGetSources: {
         type: 'string[]' as const,
         default: [] as string[],
-        description: `List of sources for apt-get.
+        splitter: /\n/,
+        description: `List of APT repository sources, one per line.
 
-Sources are installed with \`apt-add-repository\`.`
+Each line can be a PPA (e.g., \`ppa:ubuntu-toolchain-r/ppa\`) or a full deb line
+(e.g., \`deb https://apt.llvm.org/noble/ llvm-toolchain-noble-21 main\`).
+
+When paired positionally with \`apt-get-source-keys\`, the source line gets
+\`signed-by=\` injected automatically pointing to the imported key in \`/etc/apt/keyrings/\`.
+Unpaired sources are added via \`apt-add-repository\`.`
     },
 
     aptGetSourceKeys: {
         type: 'string[]' as const,
         default: [] as string[],
-        description: `List of source keys for apt-get.
+        splitter: /\n/,
+        description: `List of GPG key URLs for APT sources, one per line.
 
 Each key URL is downloaded, dearmored with \`gpg --dearmor\`, and stored in \`/etc/apt/keyrings/\`. Keys are paired positionally with \`apt-get-sources\` entries: key at index N is paired with source at index N. For paired sources, \`signed-by=\` is automatically injected into the source line pointing to the imported key.`
     },
