@@ -651,13 +651,17 @@ exponential backoff.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-sources</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of sources for apt-get.</p>
-<p class="tableblock">Sources are installed with <code>apt-add-repository</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">List of APT repository sources, one per line.</p>
+<p class="tableblock">Each line can be a PPA (e.g., <code>ppa:ubuntu-toolchain-r/ppa</code>) or a full deb line
+(e.g., <code>deb <a href="https://apt.llvm.org/noble/" class="bare">https://apt.llvm.org/noble/</a> llvm-toolchain-noble-21 main</code>).</p>
+<p class="tableblock">When paired positionally with <code>apt-get-source-keys</code>, the source line gets
+<code>signed-by=</code> injected automatically pointing to the imported key in <code>/etc/apt/keyrings/</code>.
+Unpaired sources are added via <code>apt-add-repository</code>.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-source-keys</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of source keys for apt-get.</p>
+<td class="tableblock halign-left valign-top"><p class="tableblock">List of GPG key URLs for APT sources, one per line.</p>
 <p class="tableblock">Each key URL is downloaded, dearmored with <code>gpg --dearmor</code>, and stored in <code>/etc/apt/keyrings/</code>. Keys are paired positionally with <code>apt-get-sources</code> entries: key at index N is paired with source at index N. For paired sources, <code>signed-by=</code> is automatically injected into the source line pointing to the imported key.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
