@@ -469,7 +469,7 @@ required by the project.</p>
   with:
     vcpkg: ${{ matrix.vcpkg-packages }}
     vcpkg-triplet: ${{ matrix.triplet }}
-    apt-get: ${{ matrix.install }}
+    packages: ${{ matrix.install }}
     apt-get-ignore-missing: ${{ matrix.is-container }}
     cc: ${{ steps.setup-cpp.outputs.cc }}
     ccflags: ${{ matrix.ccflags }}
@@ -510,6 +510,45 @@ required by the project.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">List of packages we should install with apt-get.</p>
 <p class="tableblock">Additional options are provided to customize the behavior of apt-get.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>brew</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">List of Homebrew formula packages to install.</p>
+<p class="tableblock">Accepts formula names (e.g., <code>cmake</code>, <code>gcc</code>) and supports the <code>formula@version</code> syntax
+for versioned formulae (e.g., <code>gcc@14</code>, <code>llvm@18</code>).</p>
+<p class="tableblock">Packages are installed on macOS and Linux (via Linuxbrew). On Windows, this input is silently ignored.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>brew-cask</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">List of Homebrew cask packages to install.</p>
+<p class="tableblock">Casks are macOS GUI applications (e.g., <code>visual-studio-code</code>, <code>docker</code>, <code>firefox</code>).
+The <code>--cask</code> flag is used internally to avoid the formula/cask name ambiguity problem
+where <code>brew install</code> silently prefers formulae over casks when both share the same name.</p>
+<p class="tableblock">On Linux, cask installs are silently skipped since casks are macOS-only (.app bundles).
+On Windows, this input is silently ignored.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>choco</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">List of Chocolatey packages to install on Windows.</p>
+<p class="tableblock">Accepts package names (e.g., <code>cmake</code>, <code>ninja</code>) and supports the <code>--version=X.Y.Z</code> syntax
+for version pinning (e.g., <code>cmake --version=3.28.0</code>).</p>
+<p class="tableblock">Packages are installed on Windows only. On macOS and Linux, this input is silently ignored.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>packages</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">List of packages to install using the OS-native package manager.</p>
+<p class="tableblock">Packages are automatically routed to the appropriate package manager based on the runner platform:
+<code>apt-get</code> on Linux, <code>brew</code> on macOS, and <code>choco</code> on Windows.</p>
+<p class="tableblock">Supports the <code>@version</code> syntax for version pinning, which is translated to the PM-native format:
+- On Linux (apt-get): <code>pkg@14</code> becomes <code>pkg-14</code>
+- On macOS (brew): <code>pkg@14</code> is passed through as-is (native brew syntax)
+- On Windows (choco): <code>pkg@14</code> becomes <code>pkg --version=14</code></p>
+<p class="tableblock">Packages without <code>@version</code> are passed through unchanged on all platforms.
+Routed packages are merged with any PM-specific packages from dedicated inputs (e.g., <code>apt-get</code>, <code>brew</code>, <code>choco</code>).</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
@@ -572,8 +611,36 @@ or want to save cache storage.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>retries</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Default number of attempts for all package manager operations.</p>
+<p class="tableblock">This shared retry count applies to apt-get, brew, and choco installs unless overridden
+by a PM-specific retry input (e.g., <code>apt-get-retries</code>, <code>brew-retries</code>, <code>choco-retries</code>).</p>
+<p class="tableblock">Each retry uses exponential backoff to handle transient network failures.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>5</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>brew-retries</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Number of attempts for Homebrew install operations.</p>
+<p class="tableblock">Overrides the shared <code>retries</code> input for brew installs specifically.</p>
+<p class="tableblock">When not provided, brew installs fall back to the shared <code>retries</code> value (default 5).</p>
+<p class="tableblock">Each retry uses exponential backoff to handle transient network failures.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>choco-retries</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Number of attempts for Chocolatey install operations.</p>
+<p class="tableblock">Overrides the shared <code>retries</code> input for choco installs specifically.</p>
+<p class="tableblock">When not provided, choco installs fall back to the shared <code>retries</code> value (default 5).</p>
+<p class="tableblock">The Chocolatey community repository enforces rate limits (~20 downloads/min per IP),
+and GitHub-hosted runner IPs are shared across many users. This input allows you to
+configure more retries for choco specifically to handle rate-limit-induced failures.</p>
+<p class="tableblock">Each retry uses exponential backoff to handle transient network and rate-limit failures.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>apt-get-retries</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Number of times we should retry when apt-get fails.</p>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Number of attempts when apt-get fails.</p>
+<p class="tableblock">Overrides the shared <code>retries</code> input for apt-get operations specifically.</p>
 <p class="tableblock">This option is useful when apt-get fails due to a temporary network issue.</p>
 <p class="tableblock">When calling apt-get to install packages, this passes the <code>-o Acquire::Retries</code> option
 to apt-get.</p>
