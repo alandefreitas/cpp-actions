@@ -1,0 +1,49 @@
+name: Container Bootstrap Tests
+
+on:
+  workflow_call:
+
+jobs:
+  container-bootstrap:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Bare runner — action should detect "not in a container" and do nothing
+          - { name: 'bare runner', runs-on: ubuntu-latest, container: '' }
+          # Modern container — Node.js works, action should skip patching and configure safe.directory
+          - { name: 'modern container', runs-on: ubuntu-latest, container: 'ubuntu:24.04' }
+
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runs-on }}
+    container: ${{ matrix.container || null }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run container-bootstrap
+        id: bootstrap
+        uses: ./container-bootstrap
+        with:
+          trace-commands: 'true'
+
+      - name: Verify outputs
+        run: |
+          set -x
+          echo "node-patched=${{ steps.bootstrap.outputs.node-patched }}"
+          echo "node-installed=${{ steps.bootstrap.outputs.node-installed }}"
+          echo "safe-directory-configured=${{ steps.bootstrap.outputs.safe-directory-configured }}"
+
+          # Node patching should not have been needed
+          [ "${{ steps.bootstrap.outputs.node-patched }}" = "false" ]
+          # act installation should not have been triggered
+          [ "${{ steps.bootstrap.outputs.node-installed }}" = "false" ]
+
+          # safe.directory should have been configured (git installed if missing)
+          [ "${{ steps.bootstrap.outputs.safe-directory-configured }}" = "true" ]
+          git config --global --get-all safe.directory | grep -q '\*'

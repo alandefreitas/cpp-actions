@@ -65,7 +65,7 @@ def sort_step(d):
 
 readme_base = os.path.join('README.base.adoc')
 action_pages_dir = os.path.join('docs', 'generated-files', 'modules', 'ROOT', 'pages', 'actions')
-example_path = os.path.join('.github', 'workflows', 'ci.yml')
+workflows_dir = os.path.join('.github', 'workflows')
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 
 
@@ -85,12 +85,18 @@ def discover_actions(root_dir):
 
 actions = discover_actions(repo_root)
 
-with open(example_path, 'r') as f:
-    ci_yml = yaml.load(f, Loader=OrderedLoader)
-    matrix = ci_yml['jobs']['build']['strategy']['matrix']['include']
-    steps = ci_yml['jobs']['build']['steps']
-    steps += ci_yml['jobs']['docs']['steps']
-    steps += ci_yml['jobs']['cpp-matrix']['steps']
+def load_workflow(name):
+    with open(os.path.join(workflows_dir, name), 'r') as f:
+        return yaml.load(f, Loader=OrderedLoader)
+
+ci_build = load_workflow('ci-build.yml')
+ci_docs = load_workflow('ci-docs.yml')
+ci_matrix = load_workflow('ci-matrix.yml')
+
+matrix = ci_build['jobs']['build']['strategy']['matrix']['include']
+steps = list(ci_build['jobs']['build']['steps'])
+steps += ci_docs['jobs']['docs']['steps']
+steps += ci_matrix['jobs']['generate']['steps']
 
 
 def gha_tokenize(expression):

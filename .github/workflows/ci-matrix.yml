@@ -1,0 +1,48 @@
+name: Generate Test Matrix
+
+on:
+  workflow_call:
+    outputs:
+      matrix:
+        description: 'JSON-encoded build matrix'
+        value: ${{ jobs.generate.outputs.matrix }}
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    name: Generate
+    outputs:
+      matrix: ${{ steps.cpp-matrix.outputs.matrix }}
+    steps:
+      - name: Clone cpp-actions
+        uses: actions/checkout@v4
+
+      - name: Generate Test Matrix
+        uses: ./cpp-matrix
+        id: cpp-matrix
+        with:
+          standards: '>=14'
+          compilers: |
+            gcc >=4.8 <6 || >=9
+            clang >=3.8 <6 || >11
+            msvc >=14
+            apple-clang *
+            mingw *
+            clang-cl *
+            macos-gcc *
+            macos-clang *
+          latest-factors: |
+            gcc Coverage TSan UBSan Fetch-Content
+            clang Fetch-Content
+          factors: |
+            gcc ASan IntSan BoundSan LSan Shared No-Deps
+            msvc Shared x86
+            clang Time-Trace ASan+UBSan IntSan BoundSan LSan CFI
+            mingw Shared
+          force-factors: |
+            mingw: No-Deps
+          trace-commands: true
+          extra-values: |
+            vcpkg-packages: {{#if (not fetch-content)}}fmt{{/if}}
+            address-model: {{#if (eq arch 'x86')}}32{{else}}64{{/if}}
+          github-token: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,187 @@
+name: Build & Test
+
+on:
+  workflow_call:
+    inputs:
+      matrix:
+        description: 'JSON-encoded build matrix from cpp-matrix'
+        type: string
+        required: true
+
+env:
+  GIT_FETCH_JOBS: 8
+  NET_RETRY_COUNT: 5
+  DEFAULT_BUILD_VARIANT: debug,release
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(inputs.matrix) }}
+
+    defaults:
+      run:
+        shell: bash
+
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runs-on }}
+    container: ${{ matrix.container }}
+
+    env: ${{ matrix.env }}
+    timeout-minutes: 30
+    permissions:
+      contents: write
+
+    steps:
+      # GitHub Actions no longer support older containers.
+      # The workaround is to install our own Node.js for the actions.
+      # We cannot use `uses: ./container-bootstrap` here because checkout
+      # hasn't happened yet and that action needs Node.js to run checkout first.
+      # The containers that need Node.js 20 will have volumes set up so that
+      # the Node.js 20 installation can go there.
+      - name: Patch Node
+        if: ${{ matrix.container.volumes }}
+        run: |
+          set -x
+          apt-get update
+          apt-get install -y curl
+          curl -fsSL "https://unofficial-builds.nodejs.org/download/release/v20.9.0/node-v20.9.0-linux-x64-glibc-217.tar.gz" -o /tmp/node-glibc217.tar.gz
+          tar -xzf /tmp/node-glibc217.tar.gz --strip-components 1 -C /node20217
+          rm -f /tmp/node-glibc217.tar.gz
+          /__e/node20/bin/node --version
+
+      - name: Clone cpp-actions
+        uses: actions/checkout@v4
+
+      # Set up the compiler before package-install in case one of the packages needs a compiler
+      - name: Setup C++
+        uses: ./setup-cpp
+        id: setup-cpp
+        with:
+          compiler: ${{ matrix.compiler }}
+          # For GCC/Clang, we are iterating majors, so we get whatever major is available from the system
+          # so that we get the version most likely to be installed by default.
+          # For other libraries, any logic might be acceptable here.
+          version: ${{ matrix.version }}
+          trace-commands: true
+          arch: ${{ matrix.arch }}
+
+      # We're not really going to use doxygen. This is only here to test the action.
+      - name: Setup Doxygen
+        uses: ./setup-program
+        id: setup-doxygen
+        with:
+          name: doxygen
+          version: '>=1.9'
+          url: |
+            https://github.com/doxygen/doxygen/releases/download/Release_1_9_7/doxygen-1.9.7.{{ os }}${{ ( runner.os == 'Windows' && '.x64' ) || '' }}.bin.${{ ( runner.os == 'Windows' && 'zip' ) || 'tar.gz' }}
+          install-prefix: ${{ ( runner.os == 'Linux' && '/usr/local' ) || '' }}
+          check-latest: true
+          update-environment: true
+          fail-on-error: ${{ runner.os != 'macOS' }}
+          trace-commands: true
+
+      - name: Install packages
+        uses: ./package-install
+        id: package-install
+        with:
+          vcpkg: ${{ matrix.vcpkg-packages }}
+          vcpkg-triplet: ${{ matrix.triplet }}
+          packages: ${{ matrix.install }}
+          apt-get-ignore-missing: ${{ matrix.is-container }}
+          cc: ${{ steps.setup-cpp.outputs.cc }}
+          ccflags: ${{ matrix.ccflags }}
+          cxx: ${{ steps.setup-cpp.outputs.cxx }}
+          cxxflags: ${{ matrix.cxxflags }}
+          trace-commands: true
+
+      - name: Clone Boost.Variant2
+        uses: ./boost-clone
+        id: boost-clone
+        with:
+          branch: master
+          modules: variant2
+          modules-scan-paths: 'test'
+          modules-exclude-paths: ''
+          trace-commands: true
+
+      - name: B2 Workflow
+        if: ${{ !matrix.has-factors && runner.os != 'Windows' }}
+        uses: ./b2-workflow
+        with:
+          source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
+          modules: variant2
+          toolset: ${{ matrix.b2-toolset }}
+          build-variant: ${{ matrix.build-type }}
+          cxx: ${{ steps.setup-cpp.outputs.cxx || '' }}
+          cxxstd: ${{ matrix.cxxstd }}
+          address-model: ${{ matrix.address-model }}
+          arch: ${{ matrix.arch }}
+          asan: ${{ matrix.asan }}
+          ubsan: ${{ matrix.ubsan }}
+          tsan: ${{ matrix.tsan }}
+          shared: ${{ matrix.shared }}
+          trace-commands: true
+
+      - name: CMake Workflow
+        uses: ./cmake-workflow
+        with:
+          cmake-version: '>=3.20'
+          source-dir: tests
+          generator: ${{ matrix.generator }}
+          generator-toolset: ${{ matrix.generator-toolset }}
+          arch: ${{ matrix.arch }}
+          toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
+          build-type: ${{ matrix.build-type }}
+          run-tests: true
+          install-prefix: .local
+          cxxstd: ${{ matrix.cxxstd }}
+          cc: ${{ steps.setup-cpp.outputs.cc }}
+          ccflags: ${{ matrix.ccflags }}
+          cxx: ${{ steps.setup-cpp.outputs.cxx }}
+          cxxflags: ${{ matrix.cxxflags }}
+          shared: ${{ matrix.shared }}
+          extra-args: |
+            ${{ ( !matrix.no-deps && format('-D BOOST_SRC_DIR="{0}"', steps.boost-clone.outputs.boost-dir) ) || '' }}
+            ${{ ( matrix.no-deps && '-D CPP_ACTIONS_NO_DEPS=ON' ) || '' }}
+          export-compile-commands: ${{ matrix.time-trace }}
+          package: true
+          package-artifact: ${{ matrix.is-main }}
+          ref-source-dir: .
+          trace-commands: true
+
+      - name: FlameGraph
+        uses: ./flamegraph
+        if: matrix.time-trace
+        with:
+          source-dir: tests
+          build-dir: tests/build
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          trace-commands: true
+
+      - name: Codecov
+        if: ${{ matrix.coverage }}
+        run: |
+          set -x
+          gcov_tool="gcov"
+          if command -v "gcov-${{ steps.setup-cpp.outputs.version-major }}.${{ steps.setup-cpp.outputs.version-minor }}" &> /dev/null; then
+              gcov_tool="gcov"
+          elif command -v "gcov-${{ steps.setup-cpp.outputs.version-major }}" &> /dev/null; then
+              gcov_tool="gcov-${{ steps.setup-cpp.outputs.version-major }}"
+          fi
+          lcov -c -q -o "./tests/build/coverage.info" -d "./tests/build" --include "$(pwd)/*" --gcov-tool "$gcov_tool"
+          # genhtml --legend -f -q "./tests/build/coverage.info" -p "./tests" -o "./tests/build/coverage_html"
+          cat "./tests/build/coverage.info"
+
+          bash <(curl -s https://codecov.io/bash) -f "./tests/build/coverage.info"
+
+          echo "# Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "[![codecov](https://codecov.io/github/$GITHUB_REPOSITORY/commit/$GITHUB_SHA/graphs/sunburst.svg)](https://codecov.io/github/$GITHUB_REPOSITORY/commit/$GITHUB_SHA)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Commit: [![codecov](https://codecov.io/github/$GITHUB_REPOSITORY/commit/$GITHUB_SHA/graph/badge.svg)](https://codecov.io/github/$GITHUB_REPOSITORY/commit/$GITHUB_SHA)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Branch: [![codecov](https://codecov.io/github/$GITHUB_REPOSITORY/branch/$GITHUB_REF_NAME/graph/badge.svg)](https://codecov.io/github/$GITHUB_REPOSITORY/branch/$GITHUB_REF_NAME)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY

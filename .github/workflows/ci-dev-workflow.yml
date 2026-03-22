@@ -1,0 +1,65 @@
+name: Developer Workflow
+
+on:
+  workflow_call:
+
+jobs:
+  dev-workflow:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies and build
+        run: npm install
+
+      - name: Run tests
+        run: npm test -- ${{ matrix.os == 'ubuntu-latest' && '--coverage' || '' }}
+
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage/lcov.info
+          flags: typescript
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Check action.yml files
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          # npm install already ran prepare (which regenerates action.yml from schemas).
+          # If any action.yml differs from what is committed, the schema is out of sync.
+          if ! git diff --quiet -- '*/action.yml'; then
+            echo "::error::action.yml files are out of date. Run 'npm run build' and commit the updated action.yml files."
+            git diff --name-only -- '*/action.yml'
+            exit 1
+          fi
+          echo "action.yml check passed"
+
+      - name: Check dist bundles
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          # npm install already ran prepare (which rebuilds all workspaces).
+          # If any dist/ file differs from what is committed, the bundle is stale.
+          if ! git diff --quiet -- '*/dist/'; then
+            echo "::error::dist/ files are out of date. Run 'npm run build' and commit the updated dist/ files."
+            git diff --name-only -- '*/dist/'
+            exit 1
+          fi
+          echo "Dist bundle check passed"
