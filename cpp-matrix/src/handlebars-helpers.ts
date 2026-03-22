@@ -88,8 +88,13 @@ export function registerHelpers(): void {
     Handlebars.registerHelper('substr', function (str: string, start: number, end: number) {
         return str.substring(start, end);
     });
-    Handlebars.registerHelper('replace', function (str: string, search: string, replacement: string) {
-        return str.split(search).join(replacement);
+    Handlebars.registerHelper('replace', function (...args: unknown[]) {
+        args.pop(); // Remove Handlebars options
+        let str = String(args[0]);
+        for (let i = 1; i < args.length - 1; i += 2) {
+            str = str.split(String(args[i])).join(String(args[i + 1]));
+        }
+        return str;
     });
     Handlebars.registerHelper('replaceFirst', function (str: string, search: string, replacement: string) {
         return str.replace(search, replacement);
@@ -151,8 +156,18 @@ export function registerHelpers(): void {
     Handlebars.registerHelper('not', function (value: unknown) {
         return !value;
     });
-    Handlebars.registerHelper('select', function (condition: unknown, trueValue: unknown, falseValue: unknown) {
-        return condition ? trueValue : falseValue;
+    Handlebars.registerHelper('select', function (...args: unknown[]) {
+        args.pop(); // Remove Handlebars options
+        for (let i = 0; i < args.length - 1; i += 2) {
+            if (args[i]) {
+                return args[i + 1];
+            }
+        }
+        // Odd trailing argument = default value
+        if (args.length % 2 === 1) {
+            return args[args.length - 1];
+        }
+        return '';
     });
     // Relational operators
     Handlebars.registerHelper('eq', function (a: unknown, b: unknown) {
@@ -242,6 +257,19 @@ export function registerHelpers(): void {
     Handlebars.registerHelper('pow', function (base: number, exp: number) {
         return Math.pow(Number(base), Number(exp));
     });
+    // Constructors
+    Handlebars.registerHelper('list', function (...args: unknown[]) {
+        args.pop(); // Remove Handlebars options
+        return args;
+    });
+    Handlebars.registerHelper('dict', function (...args: unknown[]) {
+        args.pop(); // Remove Handlebars options
+        const obj: Record<string, unknown> = {};
+        for (let i = 0; i < args.length - 1; i += 2) {
+            obj[String(args[i])] = args[i + 1];
+        }
+        return obj;
+    });
     // Array operators
     Handlebars.registerHelper('join', function (arr: unknown[], delimiter: string) {
         return arr.join(delimiter);
@@ -291,6 +319,6 @@ export function registerHelpers(): void {
     });
     Handlebars.registerHelper('format', function (str: string, ...args: unknown[]) {
         args.pop(); // Remove Handlebars options
-        return str.replace(/\{(\d+)\}/g, (_, i) => String(args[Number(i)] ?? ''));
+        return str.replace(/\{(\d+)}/g, (_, i) => String(args[Number(i)] ?? ''));
     });
 }

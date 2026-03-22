@@ -46,6 +46,11 @@ describe('Handlebars helpers', () => {
             expect(template({ str: 'a:b:c' })).toBe('a-b-c');
         });
 
+        test('replace chains multiple search/replacement pairs', () => {
+            const template = Handlebars.compile('{{{replace str ":" "-" "." "-"}}}');
+            expect(template({ str: 'ubuntu:24.04' })).toBe('ubuntu-24-04');
+        });
+
         test('replaceFirst replaces first occurrence only', () => {
             const template = Handlebars.compile('{{{replaceFirst str ":" "-"}}}');
             expect(template({ str: 'a:b:c' })).toBe('a-b:c');
@@ -157,10 +162,27 @@ describe('Handlebars helpers', () => {
             expect(template({ a: true })).toBe('no');
         });
 
-        test('select returns value based on condition', () => {
+        test('select returns value based on condition (ternary)', () => {
             const template = Handlebars.compile('{{{select cond "yes" "no"}}}');
             expect(template({ cond: true })).toBe('yes');
             expect(template({ cond: false })).toBe('no');
+        });
+
+        test('select with multiple condition-value pairs returns first match', () => {
+            const template = Handlebars.compile('{{{select a "A" b "B" c "C"}}}');
+            expect(template({ a: false, b: true, c: true })).toBe('B');
+            expect(template({ a: true, b: true, c: false })).toBe('A');
+            expect(template({ a: false, b: false, c: true })).toBe('C');
+        });
+
+        test('select with no match and no default returns empty string', () => {
+            const template = Handlebars.compile('{{{select a "A" b "B"}}}');
+            expect(template({ a: false, b: false })).toBe('');
+        });
+
+        test('select with trailing default returns default when no match', () => {
+            const template = Handlebars.compile('{{{select a "A" b "B" "fallback"}}}');
+            expect(template({ a: false, b: false })).toBe('fallback');
         });
     });
 
@@ -281,6 +303,44 @@ describe('Handlebars helpers', () => {
         test('pow computes power', () => {
             const template = Handlebars.compile('{{pow base exp}}');
             expect(template({ base: 2, exp: 3 })).toBe('8');
+        });
+    });
+
+    describe('constructor helpers', () => {
+        test('list creates an array from arguments', () => {
+            const template = Handlebars.compile('{{{toJSON (list "a" "b" "c")}}}');
+            expect(template({})).toBe('["a","b","c"]');
+        });
+
+        test('list with no arguments creates empty array', () => {
+            const template = Handlebars.compile('{{{toJSON (list)}}}');
+            expect(template({})).toBe('[]');
+        });
+
+        test('list works with includes for set membership', () => {
+            const template = Handlebars.compile('{{#if (includes (list "gcc" "msvc" "apple-clang") compiler)}}yes{{else}}no{{/if}}');
+            expect(template({ compiler: 'gcc' })).toBe('yes');
+            expect(template({ compiler: 'clang' })).toBe('no');
+        });
+
+        test('dict creates an object from key-value pairs', () => {
+            const template = Handlebars.compile('{{{toJSON (dict "os" "Linux" "compiler" "gcc")}}}');
+            expect(template({})).toBe('{"os":"Linux","compiler":"gcc"}');
+        });
+
+        test('dict with no arguments creates empty object', () => {
+            const template = Handlebars.compile('{{{toJSON (dict)}}}');
+            expect(template({})).toBe('{}');
+        });
+
+        test('dict with context values', () => {
+            const template = Handlebars.compile('{{{toJSON (dict "name" compiler "ver" version)}}}');
+            expect(template({ compiler: 'gcc', version: '14' })).toBe('{"name":"gcc","ver":"14"}');
+        });
+
+        test('dict with odd number of args ignores last unpaired key', () => {
+            const template = Handlebars.compile('{{{toJSON (dict "a" "1" "b")}}}');
+            expect(template({})).toBe('{"a":"1"}');
         });
     });
 
