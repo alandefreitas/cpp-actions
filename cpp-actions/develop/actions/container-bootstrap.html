@@ -3,8 +3,8 @@
   <head>
         <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Setup MSVC :: C++ Actions</title>
-    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/actions/setup-msvc.html">
+    <title>Container Bootstrap :: C++ Actions</title>
+    <link rel="canonical" href="https://alandefreitas.github.io/cpp-actions/cpp-actions/develop/actions/container-bootstrap.html">
     <meta name="generator" content="Antora 3.1.3">
     <link rel="stylesheet" href="../../../_/css/site.css">
     <link rel="stylesheet" href="../../../_/css/vendor/tabs.css">
@@ -123,7 +123,7 @@
         <div id="topbar-nav" class="navbar-menu">
                 <div class="navbar-item is-hoverable">
                         <a class="navbar-link" href="https://alandefreitas.github.io/cpp-actions">C++ Actions
-                            : Setup MSVC</a>
+                            : Container Bootstrap</a>
                 </div>
                     <div class="navbar-item is-hoverable">
                         <a class="navbar-link" href="https://github.com/alandefreitas/cpp-actions" target="_blank">GitHub</a>
@@ -178,7 +178,7 @@
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="setup-clang.html">Setup Clang Action</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="2">
+  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="setup-msvc.html">Setup MSVC Action</a>
   </li>
 </ul>
@@ -187,7 +187,7 @@
     <button class="nav-item-toggle"></button>
     <span class="nav-text">Tools</span>
 <ul class="nav-list">
-  <li class="nav-item" data-depth="2">
+  <li class="nav-item is-current-page" data-depth="2">
     <a class="nav-link" href="container-bootstrap.html">Container Bootstrap Action</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -364,19 +364,19 @@
     <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">C++ Actions</a></li>
-    <li>Compilers</li>
-    <li><a href="setup-msvc.html">Setup MSVC Action</a></li>
+    <li>Tools</li>
+    <li><a href="container-bootstrap.html">Container Bootstrap Action</a></li>
   </ul>
 </nav>
     <div class="page-versions">
   <button class="version-menu-toggle" title="Show other versions of page">develop</button>
   <div class="version-menu">
-    <a class="version" href="../../actions/setup-msvc.html">master</a>
-    <a class="version is-current" href="setup-msvc.html">develop</a>
-    <a class="version" href="../../v1.9.3/actions/setup-msvc.html">v1.9.3</a>
-    <a class="version" href="../../v1.9.2/actions/setup-msvc.html">v1.9.2</a>
-    <a class="version" href="../../v1.9.1/actions/setup-msvc.html">v1.9.1</a>
-    <a class="version" href="../../v1.9/actions/setup-msvc.html">v1.9</a>
+    <a class="version is-missing" href="../../index.html">master</a>
+    <a class="version is-current" href="container-bootstrap.html">develop</a>
+    <a class="version is-missing" href="../../v1.9.3/index.html">v1.9.3</a>
+    <a class="version is-missing" href="../../v1.9.2/index.html">v1.9.2</a>
+    <a class="version is-missing" href="../../v1.9.1/index.html">v1.9.1</a>
+    <a class="version is-missing" href="../../v1.9/index.html">v1.9</a>
     <a class="version is-missing" href="../../v1.9.0/index.html">v1.9.0</a>
     <a class="version is-missing" href="../../v1.8.12/index.html">v1.8.12</a>
     <a class="version is-missing" href="../../v1.8.11/index.html">v1.8.11</a>
@@ -402,7 +402,7 @@
     <a class="version is-missing" href="../../v1.2.1/index.html">v1.2.1</a>
     <a class="version is-missing" href="../../v1.2.0/index.html">v1.2.0</a>
     <a class="version is-missing" href="../../v1.1.0/index.html">v1.1.0</a>
-    <a class="version" href="../../v1/actions/setup-msvc.html">v1</a>
+    <a class="version is-missing" href="../../v1/index.html">v1</a>
     <a class="version is-missing" href="../../v1.0.0/index.html">v1.0.0</a>
   </div>
 </div>
@@ -412,44 +412,93 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Setup MSVC</h1>
+<h1 class="page">Container Bootstrap</h1>
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>Configure the Microsoft Visual C&#43;&#43; (MSVC) toolchain and expose consistent compiler outputs.</p>
+<p>Prepare a container environment for GitHub Actions before checkout.</p>
 </div>
 <div class="paragraph">
-<p>MSVC advertises four overlapping version identifiers:</p>
+<p>This composite action handles three scenarios that arise when running GitHub Actions
+inside Docker containers:</p>
 </div>
-<div class="ulist">
-<ul>
+<div class="olist arabic">
+<ol class="arabic">
 <li>
-<p><strong>Release year</strong> – marketing name such as 2022 or 2026.</p>
+<p><strong>Node.js glibc patching</strong> — GitHub Actions ships its own Node.js 20 binary at
+<code>/__e/node20/bin/node</code>, but older containers (e.g., Ubuntu 18.04) have a glibc
+too old for that binary. This action detects the failure and replaces the binary with
+an unofficial glibc-217-compatible build.</p>
 </li>
 <li>
-<p><strong>Product version</strong> – IDE channel numbers like 17.11.</p>
+<p><strong>nektos/act support</strong> — When running locally with <a href="https://github.com/nektos/act">nektos/act</a>,
+the <code>/__e/</code> mechanism does not exist. This action installs system Node.js as a fallback.</p>
 </li>
 <li>
-<p><strong>MSVC toolset version</strong> – compiler/toolchain identifier such as 14.44.35207. This is the value used by <code>version</code>.</p>
+<p><strong>git safe.directory</strong> — Containers run as root while the workspace may be owned by a
+different user, causing git to refuse operations. This action sets <code>safe.directory</code> to <code>*</code>.</p>
 </li>
-<li>
-<p><strong>MSVC compiler version</strong> – the <code>cl.exe</code> front-end version reported by <code>cl /Bv</code> (for example 19.44.35219).</p>
-</li>
-</ul>
+</ol>
 </div>
 <div class="paragraph">
-<p>This action finds an installed Visual Studio toolchain, runs <code>vcvarsall.bat</code> to configure the Developer
-Command Prompt, and emits all of these identifiers so downstream steps can unambiguously select the toolchain.
-Unlike GCC or Clang, this action does not download MSVC – it configures the version already available on the runner.</p>
+<p>This action must be the <strong>first step</strong> in a job, before <code>actions/checkout</code>. It requires
+no Node.js runtime because it is a composite action that uses only <code>bash</code> steps.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+Node 24 unofficial glibc-217 builds do not currently exist. When GitHub Actions
+migrates to Node 24, this action will need an updated build or a different strategy.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>The <a href="cpp-matrix.html" class="xref page">C++ Matrix</a> action automatically configures the volume mounts
+(<code>/node20217</code>) that this action writes to for old containers.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next steps</h2>
+<h2 id="_usage"><a class="anchor" href="#_usage"></a>Usage</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>After setting up the proper C&#43;&#43; compiler for a matrix entry, the next step in your workflow should usually be
-<a href="package-install.html" class="xref page">Install Packages</a>.</p>
+<p>Basic usage (auto-detects everything):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+  - name: Container Bootstrap
+    uses: alandefreitas/cpp-actions/container-bootstrap@develop</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Custom Node.js version:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+  - name: Container Bootstrap
+    uses: alandefreitas/cpp-actions/container-bootstrap@develop
+    with:
+      node-version: '20.11.0'</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Custom mirror URL (e.g., Boost mirror at <code>archives.boost.io</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+  - name: Container Bootstrap
+    uses: alandefreitas/cpp-actions/container-bootstrap@develop
+    with:
+      node-url: 'https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.gz'</code></pre>
+</div>
 </div>
 </div>
 </div>
@@ -469,43 +518,31 @@ Unlike GCC or Clang, this action does not download MSVC – it configures the ve
 <td class="tableblock halign-left valign-top"><p class="tableblock">Default</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>node-version</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Node.js version to download from unofficial glibc-217 builds.
+Used only when the runner&#8217;s Node.js binary is broken inside the container.
+The URL is constructed as:
+  <a href="https://unofficial-builds.nodejs.org/download/release/v&lt;VERSION&gt;/node-v&lt;VERSION&gt;-linux-x64-glibc-217.tar.gz" class="bare">https://unofficial-builds.nodejs.org/download/release/v&lt;VERSION&gt;/node-v&lt;VERSION&gt;-linux-x64-glibc-217.tar.gz</a>
+NOTE: Node 24 glibc-217 builds do not exist. Only Node 20.x versions are available.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>20.9.0</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>node-url</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Override URL for the Node.js tarball. When non-empty, this URL is used instead of
+constructing one from <code>node-version</code>. Useful for custom mirrors.
+Example: <code><a href="https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.gz" class="bare">https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.gz</a></code>.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>setup-safe-directory</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether to configure <code>git config --global --add safe.directory '*'</code>.
+Set to 'false' to skip safe.directory configuration.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>trace-commands</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Trace commands executed by the workflow.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">MSVC toolset version (SemVer range). When provided, it is forwarded to <code>vcvarsall.bat</code> via <code>-vcvars_ver</code>.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>*</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>arch</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Target architecture passed to vcvarsall (for example x86, x64, arm64).</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>x64</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>sdk</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Optional Windows SDK version to pass to vcvarsall.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>toolset</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Explicit MSVC toolset version override. When empty we fall back to <code>version</code>.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>visual-studio-version</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Visual Studio product version or year constraint forwarded to vswhere/vcvarsall.</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>uwp</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Set to true to request the UWP environment (appends 'uwp' when invoking vcvarsall).</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>spectre</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Set to true to request Spectre-mitigated libraries.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enable <code>set -x</code> in each step for debugging. Prints every command before execution.
+Consistent with the <code>trace-commands</code> input in other cpp-actions.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
 </tr>
 </tbody>
@@ -526,52 +563,16 @@ Unlike GCC or Clang, this action does not download MSVC – it configures the ve
 <td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cc</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Absolute path to cl.exe.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>node-patched</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">'true' if a glibc-217-compatible Node.js was downloaded and installed, 'false' otherwise.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxx</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Absolute path to the C&#43;&#43; compiler (same as cl.exe).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>node-installed</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">'true' if system Node.js was installed via apt-get (act workaround), 'false' otherwise.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>bindir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Directory that contains cl.exe.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Root Visual C&#43;&#43; installation directory.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Resolved MSVC toolset version (matches <code>version</code>).</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-major</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">MSVC toolset major version.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-minor</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">MSVC toolset minor version.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>version-patch</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">MSVC toolset patch version.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>msvc-toolset-version</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Exact MSVC toolset version reported by the environment.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>msvc-product-version</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Visual Studio product version (channel).</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>msvc-release-year</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Visual Studio release year derived from the product version.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>msvc-compiler-version</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">cl.exe front-end version read from <code>cl /Bv</code>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>safe-directory-configured</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">'true' if git safe.directory was configured, 'false' otherwise.</p></td>
 </tr>
 </tbody>
 </table>

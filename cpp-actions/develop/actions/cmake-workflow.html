@@ -188,6 +188,9 @@
     <span class="nav-text">Tools</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="container-bootstrap.html">Container Bootstrap Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="package-install.html">Install Packages Action</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -544,8 +547,12 @@ CMake workflow steps as integration tests for CMake.</p>
     cxx: ${{ steps.setup-cpp.outputs.cxx }}
     cxxflags: ${{ matrix.cxxflags }}
     shared: ${{ matrix.shared }}
-    extra-args: "${{ ( !matrix.no-deps &amp;&amp; format('-D BOOST_SRC_DIR=\"{0}\"', steps.boost-clone.outputs.boost-dir)\
-      \ ) || '' }} \n${{ ( matrix.no-deps &amp;&amp; '-D CPP_ACTIONS_NO_DEPS=ON' ) || '' }}\n"
+    extra-args: '${{ ( !matrix.no-deps &amp;&amp; format(''-D BOOST_SRC_DIR="{0}"'', steps.boost-clone.outputs.boost-dir)
+      ) || '''' }}
+
+      ${{ ( matrix.no-deps &amp;&amp; ''-D CPP_ACTIONS_NO_DEPS=ON'' ) || '''' }}
+
+      '
     export-compile-commands: ${{ matrix.time-trace }}
     package: true
     package-artifact: ${{ matrix.is-main }}
