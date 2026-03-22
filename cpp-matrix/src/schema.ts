@@ -210,6 +210,25 @@ Omitting \`<compiler-range|compiler-factor>\` is equivalent to it being set to \
 When the build type is unspecified, the action will infer the build type from the compiler name and its version.`
     },
 
+    submatrices: {
+        type: 'multiline' as const,
+        default: [] as string[],
+        transform: (v) => parseKeyValues(v as string[]),
+        description: `A multi-line list of named sub-matrices derived from the full matrix using Handlebars predicate templates.
+
+Each line has the format:
+
+\`<name>: <handlebars-template>\`
+
+For instance, \`main-entries: {{is-main}}\` creates a sub-matrix containing only entries where \`is-main\` is truthy. Expression predicates are also supported, e.g. \`gcc-only: {{#if (eq compiler "gcc")}}true{{/if}}\`.
+
+The template is evaluated against each matrix entry. The result is normalized for truthiness: empty string, 'false', '0', 'null', and 'undefined' (case-insensitive) are treated as falsy. Any other non-empty string is truthy.
+
+All existing Handlebars helpers (eq, ne, not, and, or, etc.) are available in the templates.
+
+The resulting sub-matrices are available via the \`submatrices\` output, keyed by name.`
+    },
+
     extraValues: {
         type: 'multiline' as const,
         default: [] as string[],
@@ -609,6 +628,13 @@ Each entry in the test matrix dictionary contains key-value pairs in the followi
 - \`env\`: A dictionary of environment variables to be set for this entry.
 
 - \`install\`: The recommended packages to be installed before running the workflow. This includes packages such as build-essential for ubuntu containers and lcov for coverage entries.`
+    },
+    submatrices: {
+        description: `A JSON object keyed by filter name, where each value is a filtered sub-matrix array containing only the entries that matched the corresponding filter predicate.
+
+Usage: \`fromJSON(needs.matrix.outputs.submatrices).filter-name\`
+
+When no filters are defined, this output is \`{}\`.`
     }
 } satisfies ActionOutputsSchema;
 

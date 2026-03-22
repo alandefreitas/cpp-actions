@@ -32,7 +32,10 @@ import {
     generateMatrix,
     generateTable,
     parseCompilerSuggestions,
-    normalizeCppVersionRequirement
+    normalizeCppVersionRequirement,
+    isTruthyFilterResult,
+    isValidFilterName,
+    evaluateFilters
 } from './index';
 import type { Inputs } from './schema';
 import * as core from '@actions/core';
@@ -54,6 +57,7 @@ function makeDefaultMatrixInputs(overrides: Partial<Inputs> = {}): Inputs {
         factors: {},
         combinatorialFactors: {},
         forceFactors: [],
+        submatrices: [],
         extraValues: [],
         runsOn: [],
         containers: [],
@@ -101,7 +105,7 @@ describe('generateMatrix', () => {
             factors: { gcc: ['Asan', 'Shared'], msvc: ['Shared', 'x86'] },
             cxxflags: parseCompilerSuggestions(['gcc >=10 <12: -static'], Object.keys(compilerVersions))
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         expect(matrix.length === 0).toBe(false);
         const table = await generateTable(matrix, inputs);
         expect(table.length === 0).toBe(false);
@@ -130,7 +134,7 @@ test('msvc x86 entries prefer arch metadata over /m32 flags', async () => {
         maxStandards: 1,
         factors: { msvc: ['x86'] }
     });
-    const matrix = await generateMatrix(inputs);
+    const { matrix } = await generateMatrix(inputs);
     const msvcX86Entry = matrix.find(entry => entry.compiler === 'msvc' && entry.x86 === true);
     expect(msvcX86Entry).toBeDefined();
     expect(msvcX86Entry?.cxxflags).not.toMatch(/\/m32/);
@@ -144,7 +148,7 @@ test('non-x86 entries default arch to x64 unless overridden', async () => {
         standards: normalizeCppVersionRequirement('>=17'),
         maxStandards: 1
     });
-    const matrix = await generateMatrix(inputs);
+    const { matrix } = await generateMatrix(inputs);
     const gccEntry = matrix.find(entry => entry.compiler === 'gcc');
     expect(gccEntry?.arch).toBe('x64');
 });
@@ -158,7 +162,7 @@ test('generates entries for mingw and clang-cl with data-driven versions', async
     });
     const warnSpy = jest.spyOn(core, 'warning').mockImplementation(() => { });
     try {
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
 
         const mingwEntries = matrix.filter(entry => entry.compiler === 'mingw');
         expect(mingwEntries.length).toBeGreaterThan(0);
@@ -188,7 +192,7 @@ test('generates entries for apple-clang with data-driven versions', async () => 
         standards: normalizeCppVersionRequirement('>=14'),
         maxStandards: 1
     });
-    const matrix = await generateMatrix(inputs);
+    const { matrix } = await generateMatrix(inputs);
 
     // Verify apple-clang entries were generated with version info
     const appleClangEntries = matrix.filter(entry => entry.compiler === 'apple-clang');
@@ -211,7 +215,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
             maxStandards: 1,
             latestFactors: { gcc: ['Asan'] }
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'gcc' && e.asan === true);
         expect(entry).toBeDefined();
         expect(entry?.cxxflags).toContain('-fsanitize=address');
@@ -227,7 +231,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
             maxStandards: 1,
             latestFactors: { msvc: ['Asan'] }
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'msvc' && e.asan === true);
         expect(entry).toBeDefined();
         expect(entry?.cxxflags).toContain('/fsanitize=address');
@@ -240,7 +244,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
             maxStandards: 1,
             latestFactors: { gcc: ['UBSan'] }
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'gcc' && e.ubsan === true);
         expect(entry).toBeDefined();
         expect(entry?.cxxflags).toContain('-fsanitize=undefined');
@@ -254,7 +258,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
             maxStandards: 1,
             latestFactors: { clang: ['TSan'] }
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'clang' && e.tsan === true);
         expect(entry).toBeDefined();
         expect(entry?.cxxflags).toContain('-fsanitize=thread');
@@ -267,7 +271,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
             maxStandards: 1,
             latestFactors: { clang: ['MSan'] }
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'clang' && e.msan === true);
         expect(entry).toBeDefined();
         expect(entry?.cxxflags).toContain('-fsanitize=memory');
@@ -280,7 +284,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
             maxStandards: 1,
             latestFactors: { clang: ['IntSan'] }
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'clang' && e.intsan === true);
         expect(entry).toBeDefined();
         expect(entry?.cxxflags).toContain('-fsanitize=integer');
@@ -295,7 +299,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
             maxStandards: 1,
             latestFactors: { gcc: ['IntSan'] }
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'gcc' && e.intsan === true);
         expect(entry).toBeDefined();
         expect(entry?.cxxflags).toContain('signed-integer-overflow');
@@ -312,7 +316,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
             maxStandards: 1,
             latestFactors: { clang: ['BoundSan'] }
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'clang' && e.boundsan === true);
         expect(entry).toBeDefined();
         expect(entry?.cxxflags).toContain('-fsanitize=bounds');
@@ -326,7 +330,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
             maxStandards: 1,
             latestFactors: { gcc: ['BoundSan'] }
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'gcc' && e.boundsan === true);
         expect(entry).toBeDefined();
         expect(entry?.cxxflags).toContain('-fsanitize=bounds');
@@ -339,7 +343,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
             maxStandards: 1,
             latestFactors: { clang: ['LSan'] }
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'clang' && e.lsan === true);
         expect(entry).toBeDefined();
         expect(entry?.cxxflags).toContain('-fsanitize=leak');
@@ -354,7 +358,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
             maxStandards: 1,
             latestFactors: { gcc: ['LSan'] }
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'gcc' && e.lsan === true);
         expect(entry).toBeDefined();
         expect(entry?.cxxflags).toContain('-fsanitize=leak');
@@ -369,7 +373,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
             maxStandards: 1,
             latestFactors: { clang: ['CFI'] }
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'clang' && e.cfi === true);
         expect(entry).toBeDefined();
         expect(entry?.cxxflags).toContain('-fsanitize=cfi');
@@ -386,7 +390,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
             maxStandards: 1,
             latestFactors: { clang: ['ASan+UBSan'] }
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'clang' && e.asan === true && e.ubsan === true);
         expect(entry).toBeDefined();
         expect(entry?.cxxflags).toContain('address');
@@ -401,7 +405,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
             latestFactors: { gcc: ['Asan'] },
             sanitizerBuildType: 'RelWithDebInfo'
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'gcc' && e.asan === true);
         expect(entry).toBeDefined();
         expect(entry?.['build-type']).toBe('RelWithDebInfo');
@@ -414,7 +418,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
             maxStandards: 1,
             latestFactors: { gcc: ['Asan'] }
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const nonAsanEntries = matrix.filter(e => e.compiler === 'gcc' && e.asan !== true);
         expect(nonAsanEntries.length).toBeGreaterThan(0);
         for (const entry of nonAsanEntries) {
@@ -436,7 +440,7 @@ describe('append suggestions', () => {
                 Object.keys(compilerVersions)
             )
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'gcc' && e.coverage === true);
         expect(entry).toBeDefined();
         expect(entry?.install).toContain('lcov');
@@ -455,7 +459,7 @@ describe('append suggestions', () => {
                 Object.keys(compilerVersions)
             )
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'gcc' && e.asan === true);
         expect(entry).toBeDefined();
         expect(entry?.cxxflags).toContain('-fsanitize=address');
@@ -474,7 +478,7 @@ describe('append suggestions', () => {
                 Object.keys(compilerVersions)
             )
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'gcc' && e.asan === true);
         expect(entry).toBeDefined();
         expect(entry?.ccflags).toContain('-fsanitize=address');
@@ -493,7 +497,7 @@ describe('append suggestions', () => {
                 Object.keys(compilerVersions)
             )
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'gcc' && e.asan === true);
         expect(entry).toBeDefined();
         expect(entry?.install).toContain('pkg-a');
@@ -516,7 +520,7 @@ describe('append suggestions', () => {
                 Object.keys(compilerVersions)
             )
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'gcc' && e.asan === true);
         expect(entry).toBeDefined();
         expect(entry?.install).toContain('replaced-pkg');
@@ -533,7 +537,7 @@ describe('injectExtraValues via generateMatrix', () => {
             maxStandards: 1,
             extraValues: [{ key: 'custom-key', value: '{{compiler}}-custom' }]
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'gcc');
         expect(entry).toBeDefined();
         expect(entry?.['custom-key']).toBe('gcc-custom');
@@ -564,7 +568,7 @@ describe('setOS via generateMatrix', () => {
             maxStandards: 1,
             useContainers: true
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const containerEntry = matrix.find(e => e.container);
         if (containerEntry) {
             expect(containerEntry.os).toBe('Linux');
@@ -577,7 +581,7 @@ describe('setOS via generateMatrix', () => {
             standards: normalizeCppVersionRequirement('>=17'),
             maxStandards: 1
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const msvcEntry = matrix.find(e => e.compiler === 'msvc');
         expect(msvcEntry?.os).toBe('Windows');
     });
@@ -588,7 +592,7 @@ describe('setOS via generateMatrix', () => {
             standards: normalizeCppVersionRequirement('>=17'),
             maxStandards: 1
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const acEntry = matrix.find(e => e.compiler === 'apple-clang');
         expect(acEntry?.os).toBe('macOS');
     });
@@ -601,7 +605,7 @@ describe('setOS via generateMatrix', () => {
             maxStandards: 1,
             runsOn: parseCompilerSuggestions(['gcc: custom-runner'], Object.keys(compilerVersions))
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'gcc');
         expect(entry?.os).toBe('Linux');
     });
@@ -617,7 +621,7 @@ describe('CppMatrixRunner features', () => {
                 maxStandards: 1,
                 logMatrix: true
             });
-            const matrix = await generateMatrix(inputs);
+            const { matrix } = await generateMatrix(inputs);
             expect(matrix.length).toBeGreaterThan(0);
             const infoCalls = infoSpy.mock.calls.map(c => c[0]);
             expect(infoCalls.some(msg => typeof msg === 'string' && msg.startsWith('- {'))).toBe(true);
@@ -637,7 +641,7 @@ describe('CppMatrixRunner features', () => {
             maxStandards: 1,
             generateSummary: true
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         expect(matrix.length).toBeGreaterThan(0);
         expect(addHeadingSpy).toHaveBeenCalled();
     });
@@ -652,7 +656,7 @@ describe('CppMatrixRunner features', () => {
             maxStandards: 1,
             outputFile: tmpFile
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         expect(matrix.length).toBeGreaterThan(0);
         expect(fs.existsSync(tmpFile)).toBe(true);
         const content = JSON.parse(fs.readFileSync(tmpFile, 'utf-8'));
@@ -670,7 +674,7 @@ describe('CppMatrixRunner features', () => {
             githubToken: ''
         });
         // This will attempt to fetch failure rates (and likely fail gracefully)
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         expect(matrix.length).toBeGreaterThan(0);
     });
 
@@ -681,7 +685,7 @@ describe('CppMatrixRunner features', () => {
             maxStandards: 1,
             combinatorialFactors: { gcc: ['Shared'] }
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const sharedEntries = matrix.filter(e => e.compiler === 'gcc' && e.shared === true);
         const nonSharedEntries = matrix.filter(e => e.compiler === 'gcc' && e.shared === false);
         expect(sharedEntries.length).toBeGreaterThan(0);
@@ -695,7 +699,7 @@ describe('CppMatrixRunner features', () => {
             maxStandards: 1,
             factors: { gcc: ['Shared'] }
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         const sharedEntries = matrix.filter(e => e.compiler === 'gcc' && e.shared === true);
         expect(sharedEntries.length).toBeGreaterThan(0);
     });
@@ -707,9 +711,375 @@ describe('CppMatrixRunner features', () => {
             maxStandards: 1,
             factors: { gcc: ['Shared', 'x86', 'Coverage'] }
         });
-        const matrix = await generateMatrix(inputs);
+        const { matrix } = await generateMatrix(inputs);
         expect(matrix.length).toBeGreaterThan(3);
         const factorEntries = matrix.filter(e => e.compiler === 'gcc' && e['has-factors'] === true);
         expect(factorEntries.length).toBeGreaterThan(0);
+    });
+
+    test('run returns submatrices from filter evaluation', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compilers: { gcc: '>=13' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            maxStandards: 1,
+            submatrices: [
+                { key: 'main-only', value: '{{is-main}}' }
+            ]
+        });
+        const { matrix, submatrices } = await generateMatrix(inputs);
+        expect(matrix.length).toBeGreaterThan(0);
+        expect(submatrices).toBeDefined();
+        expect(submatrices['main-only']).toBeDefined();
+        expect(submatrices['main-only']!.length).toBeLessThanOrEqual(matrix.length);
+        // Every entry in the sub-matrix should have is-main truthy
+        for (const entry of submatrices['main-only']!) {
+            expect(entry['is-main']).toBe(true);
+        }
+    });
+
+    test('run returns empty submatrices when no filters defined', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compilers: { gcc: '>=13' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            maxStandards: 1,
+            submatrices: []
+        });
+        const { submatrices } = await generateMatrix(inputs);
+        expect(submatrices).toEqual({});
+    });
+
+    test('applyFilters logs filter match counts', async () => {
+        const infoSpy = jest.spyOn(core, 'info').mockImplementation(() => { });
+        try {
+            const inputs = makeDefaultMatrixInputs({
+                compilers: { gcc: '>=13' },
+                standards: normalizeCppVersionRequirement('>=17'),
+                maxStandards: 1,
+                submatrices: [
+                    { key: 'main-only', value: '{{is-main}}' }
+                ]
+            });
+            await generateMatrix(inputs);
+            const infoCalls = infoSpy.mock.calls.map(c => c[0]);
+            expect(infoCalls.some(msg =>
+                typeof msg === 'string' && msg.includes("Filter 'main-only'") && msg.includes('of') && msg.includes('entries')
+            )).toBe(true);
+        } finally {
+            infoSpy.mockRestore();
+        }
+    });
+
+    test('multiple filters produce independent submatrices in pipeline', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compilers: { gcc: '>=10' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            maxStandards: 1,
+            submatrices: [
+                { key: 'main-only', value: '{{is-main}}' },
+                { key: 'latest-only', value: '{{is-latest}}' }
+            ]
+        });
+        const { matrix, submatrices } = await generateMatrix(inputs);
+        expect(matrix.length).toBeGreaterThan(1);
+        expect(Object.keys(submatrices)).toHaveLength(2);
+        expect(submatrices['main-only']).toBeDefined();
+        expect(submatrices['latest-only']).toBeDefined();
+        // latest-only should have exactly one entry (the latest gcc version)
+        expect(submatrices['latest-only']!.length).toBeGreaterThan(0);
+        for (const entry of submatrices['latest-only']!) {
+            expect(entry['is-latest']).toBe(true);
+        }
+    });
+});
+
+describe('matrix filters - integration', () => {
+    test('expression filter only includes matching compiler entries', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compilers: { gcc: '>=13', clang: '>=16' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            maxStandards: 1,
+            submatrices: [
+                { key: 'gcc-only', value: '{{#if (eq compiler "gcc")}}true{{/if}}' }
+            ]
+        });
+        const { matrix, submatrices } = await generateMatrix(inputs);
+        expect(matrix.length).toBeGreaterThan(0);
+        expect(submatrices['gcc-only']).toBeDefined();
+        expect(submatrices['gcc-only']!.length).toBeGreaterThan(0);
+        for (const entry of submatrices['gcc-only']!) {
+            expect(entry.compiler).toBe('gcc');
+        }
+        // Ensure some non-gcc entries exist in full matrix
+        expect(matrix.some(e => e.compiler !== 'gcc')).toBe(true);
+    });
+
+    test('filter that matches zero entries returns empty array', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compilers: { gcc: '>=13' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            maxStandards: 1,
+            submatrices: [
+                { key: 'no-match', value: '{{#if (eq compiler "icc")}}true{{/if}}' }
+            ]
+        });
+        const { matrix, submatrices } = await generateMatrix(inputs);
+        expect(matrix.length).toBeGreaterThan(0);
+        expect(submatrices['no-match']).toEqual([]);
+    });
+
+    test('string field filter includes all entries (truthiness)', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compilers: { gcc: '>=13' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            maxStandards: 1,
+            submatrices: [
+                { key: 'has-compiler', value: '{{compiler}}' }
+            ]
+        });
+        const { matrix, submatrices } = await generateMatrix(inputs);
+        expect(matrix.length).toBeGreaterThan(0);
+        expect(submatrices['has-compiler']).toHaveLength(matrix.length);
+    });
+
+    test('boolean field excludes false entries', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compilers: { gcc: '>=10' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            maxStandards: 1,
+            submatrices: [
+                { key: 'main-only', value: '{{is-main}}' }
+            ]
+        });
+        const { matrix, submatrices } = await generateMatrix(inputs);
+        expect(matrix.length).toBeGreaterThan(1);
+        const mainEntries = submatrices['main-only']!;
+        expect(mainEntries.length).toBeLessThan(matrix.length);
+        for (const entry of mainEntries) {
+            expect(entry['is-main']).toBe(true);
+        }
+        // Non-main entries should exist in full matrix
+        expect(matrix.some(e => !e['is-main'])).toBe(true);
+    });
+
+    test('invalid filter name is skipped with warning, valid filters still work', async () => {
+        const warnSpy = jest.spyOn(core, 'warning').mockImplementation(() => { });
+        try {
+            const inputs = makeDefaultMatrixInputs({
+                compilers: { gcc: '>=13' },
+                standards: normalizeCppVersionRequirement('>=17'),
+                maxStandards: 1,
+                submatrices: [
+                    { key: 'INVALID-NAME', value: '{{is-main}}' },
+                    { key: 'valid-filter', value: '{{is-main}}' }
+                ]
+            });
+            const { submatrices } = await generateMatrix(inputs);
+            expect(submatrices['INVALID-NAME']).toBeUndefined();
+            expect(submatrices['valid-filter']).toBeDefined();
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('INVALID-NAME'));
+        } finally {
+            warnSpy.mockRestore();
+        }
+    });
+
+    test('filter results preserve matrix sort order', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compilers: { gcc: '>=10' },
+            standards: normalizeCppVersionRequirement('>=17'),
+            maxStandards: 1,
+            submatrices: [
+                { key: 'all-entries', value: '{{compiler}}' }
+            ]
+        });
+        const { matrix, submatrices } = await generateMatrix(inputs);
+        const filtered = submatrices['all-entries']!;
+        expect(filtered).toHaveLength(matrix.length);
+        // Order should match exactly
+        for (let i = 0; i < matrix.length; i++) {
+            expect(filtered[i]!.name).toBe(matrix[i]!.name);
+        }
+    });
+});
+
+describe('isTruthyFilterResult', () => {
+    test('empty string is falsy', () => {
+        expect(isTruthyFilterResult('')).toBe(false);
+    });
+
+    test('whitespace-only string is falsy', () => {
+        expect(isTruthyFilterResult('   ')).toBe(false);
+    });
+
+    test('"false" is falsy (case-insensitive)', () => {
+        expect(isTruthyFilterResult('false')).toBe(false);
+        expect(isTruthyFilterResult('FALSE')).toBe(false);
+        expect(isTruthyFilterResult('False')).toBe(false);
+    });
+
+    test('"0" is falsy', () => {
+        expect(isTruthyFilterResult('0')).toBe(false);
+    });
+
+    test('"null" is falsy (case-insensitive)', () => {
+        expect(isTruthyFilterResult('null')).toBe(false);
+        expect(isTruthyFilterResult('NULL')).toBe(false);
+        expect(isTruthyFilterResult('Null')).toBe(false);
+    });
+
+    test('"undefined" is falsy (case-insensitive)', () => {
+        expect(isTruthyFilterResult('undefined')).toBe(false);
+        expect(isTruthyFilterResult('UNDEFINED')).toBe(false);
+        expect(isTruthyFilterResult('Undefined')).toBe(false);
+    });
+
+    test('"true" is truthy', () => {
+        expect(isTruthyFilterResult('true')).toBe(true);
+    });
+
+    test('"1" is truthy', () => {
+        expect(isTruthyFilterResult('1')).toBe(true);
+    });
+
+    test('arbitrary non-empty strings are truthy', () => {
+        expect(isTruthyFilterResult('gcc')).toBe(true);
+        expect(isTruthyFilterResult('yes')).toBe(true);
+        expect(isTruthyFilterResult('anything')).toBe(true);
+    });
+
+    test('trimmed values are evaluated', () => {
+        expect(isTruthyFilterResult('  true  ')).toBe(true);
+        expect(isTruthyFilterResult('  false  ')).toBe(false);
+    });
+});
+
+describe('isValidFilterName', () => {
+    test('simple lowercase names are valid', () => {
+        expect(isValidFilterName('gcc')).toBe(true);
+        expect(isValidFilterName('a1')).toBe(true);
+    });
+
+    test('hyphenated lowercase names are valid', () => {
+        expect(isValidFilterName('main-entries')).toBe(true);
+        expect(isValidFilterName('linux-builds')).toBe(true);
+        expect(isValidFilterName('test-2-foo')).toBe(true);
+    });
+
+    test('uppercase names are invalid', () => {
+        expect(isValidFilterName('UPPER')).toBe(false);
+        expect(isValidFilterName('Mixed')).toBe(false);
+    });
+
+    test('names with spaces are invalid', () => {
+        expect(isValidFilterName('has spaces')).toBe(false);
+    });
+
+    test('trailing hyphen is invalid', () => {
+        expect(isValidFilterName('trailing-')).toBe(false);
+    });
+
+    test('leading hyphen is invalid', () => {
+        expect(isValidFilterName('-leading')).toBe(false);
+    });
+
+    test('consecutive hyphens are invalid', () => {
+        expect(isValidFilterName('a--b')).toBe(false);
+    });
+
+    test('empty string is invalid', () => {
+        expect(isValidFilterName('')).toBe(false);
+    });
+
+    test('underscores are invalid', () => {
+        expect(isValidFilterName('foo_bar')).toBe(false);
+    });
+
+    test('single character is valid', () => {
+        expect(isValidFilterName('a')).toBe(true);
+        expect(isValidFilterName('1')).toBe(true);
+    });
+
+    test('numeric names are valid', () => {
+        expect(isValidFilterName('123')).toBe(true);
+    });
+});
+
+describe('evaluateFilters', () => {
+    const mockMatrix = [
+        { name: 'GCC 13', compiler: 'gcc', version: '13.0.0', 'is-main': true } as any,
+        { name: 'GCC 12', compiler: 'gcc', version: '12.0.0', 'is-main': false } as any,
+        { name: 'Clang 16', compiler: 'clang', version: '16.0.0', 'is-main': true } as any,
+        { name: 'MSVC 14.3', compiler: 'msvc', version: '14.3.0', 'is-main': false } as any
+    ];
+
+    test('returns empty object when filters is undefined', () => {
+        expect(evaluateFilters(mockMatrix, undefined)).toEqual({});
+    });
+
+    test('returns empty object when filters is empty array', () => {
+        expect(evaluateFilters(mockMatrix, [])).toEqual({});
+    });
+
+    test('simple boolean filter {{is-main}}', () => {
+        const result = evaluateFilters(mockMatrix, [
+            { key: 'main-entries', value: '{{is-main}}' }
+        ]);
+        expect(result['main-entries']).toHaveLength(2);
+        expect(result['main-entries']![0]!.name).toBe('GCC 13');
+        expect(result['main-entries']![1]!.name).toBe('Clang 16');
+    });
+
+    test('expression filter with eq helper', () => {
+        const result = evaluateFilters(mockMatrix, [
+            { key: 'gcc-only', value: '{{#if (eq compiler "gcc")}}true{{/if}}' }
+        ]);
+        expect(result['gcc-only']).toHaveLength(2);
+        expect(result['gcc-only']!.every(e => e.compiler === 'gcc')).toBe(true);
+    });
+
+    test('multiple filters produce independent sub-matrices', () => {
+        const result = evaluateFilters(mockMatrix, [
+            { key: 'main-entries', value: '{{is-main}}' },
+            { key: 'gcc-only', value: '{{#if (eq compiler "gcc")}}true{{/if}}' }
+        ]);
+        expect(Object.keys(result)).toHaveLength(2);
+        expect(result['main-entries']).toHaveLength(2);
+        expect(result['gcc-only']).toHaveLength(2);
+    });
+
+    test('filter that matches zero entries returns empty array', () => {
+        const result = evaluateFilters(mockMatrix, [
+            { key: 'no-match', value: '{{#if (eq compiler "icc")}}true{{/if}}' }
+        ]);
+        expect(result['no-match']).toEqual([]);
+    });
+
+    test('invalid filter name is skipped with warning', () => {
+        const warnSpy = jest.spyOn(core, 'warning').mockImplementation(() => { });
+        try {
+            const result = evaluateFilters(mockMatrix, [
+                { key: 'INVALID', value: '{{is-main}}' },
+                { key: 'valid-one', value: '{{is-main}}' }
+            ]);
+            expect(result['INVALID']).toBeUndefined();
+            expect(result['valid-one']).toHaveLength(2);
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('INVALID'));
+        } finally {
+            warnSpy.mockRestore();
+        }
+    });
+
+    test('filter results preserve original matrix order', () => {
+        const result = evaluateFilters(mockMatrix, [
+            { key: 'all-gcc', value: '{{#if (eq compiler "gcc")}}true{{/if}}' }
+        ]);
+        expect(result['all-gcc']![0]!.name).toBe('GCC 13');
+        expect(result['all-gcc']![1]!.name).toBe('GCC 12');
+    });
+
+    test('string field filter includes all entries with that field', () => {
+        const result = evaluateFilters(mockMatrix, [
+            { key: 'has-compiler', value: '{{compiler}}' }
+        ]);
+        expect(result['has-compiler']).toHaveLength(4);
     });
 });

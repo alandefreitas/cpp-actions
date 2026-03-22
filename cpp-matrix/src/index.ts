@@ -108,6 +108,74 @@ export {
     splitRanges
 } from './versions';
 
+/** Set of values considered falsy when evaluating filter template results. */
+const FALSY_VALUES = new Set(['', 'false', '0', 'null', 'undefined']);
+
+/**
+ * Determines whether a Handlebars template result should be treated as truthy for filtering.
+ *
+ * Trims the input and checks against a set of falsy values: empty string, 'false', '0',
+ * 'null', and 'undefined' (all case-insensitive except '0').
+ *
+ * @param value - The rendered template string to evaluate
+ * @returns True if the value is considered truthy
+ */
+export function isTruthyFilterResult(value: string): boolean {
+    const trimmed = value.trim();
+    return !FALSY_VALUES.has(trimmed.toLowerCase());
+}
+
+/**
+ * Validates that a filter name is safe to use as a JSON key.
+ *
+ * Valid names are lowercase alphanumeric with hyphens, no leading/trailing/consecutive hyphens.
+ * Pattern: `/^[a-z0-9]+(-[a-z0-9]+)*$/`
+ *
+ * @param name - The filter name to validate
+ * @returns True if the name is valid
+ */
+export function isValidFilterName(name: string): boolean {
+    return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(name);
+}
+
+/**
+ * Evaluates all filter predicates against the matrix and returns sub-matrices.
+ *
+ * Each filter's Handlebars template is compiled once and evaluated against every matrix entry.
+ * Entries where the template result is truthy are included in that filter's sub-matrix.
+ *
+ * @param matrix - The full matrix entries to filter
+ * @param filters - Named filter predicates as key-value pairs
+ * @returns Object keyed by filter name with arrays of matching entries
+ */
+export function evaluateFilters(matrix: MatrixEntry[], filters: KeyValue[] | undefined): Record<string, MatrixEntry[]> {
+    if (!filters || filters.length === 0) {
+        return {};
+    }
+
+    registerHelpers();
+
+    const result: Record<string, MatrixEntry[]> = {};
+
+    for (const { key, value } of filters) {
+        if (!isValidFilterName(key)) {
+            core.warning(`Invalid filter name "${key}" — skipping (must match /^[a-z0-9]+(-[a-z0-9]+)*$/)`);
+            continue;
+        }
+        const template = Handlebars.compile(value);
+        const matches: MatrixEntry[] = [];
+        for (const entry of matrix) {
+            const output = template(entry);
+            if (isTruthyFilterResult(output)) {
+                matches.push(entry);
+            }
+        }
+        result[key] = matches;
+    }
+
+    return result;
+}
+
 /**
  * Injects extra key-value pairs into all matrix entries.
  *
@@ -182,6 +250,9 @@ class CppMatrixRunner {
     /** Accumulated matrix entries */
     private matrix: MatrixEntry[] = [];
 
+    /** Filtered sub-matrices keyed by filter name */
+    private filterResults: Record<string, MatrixEntry[]> = {};
+
     /** Filtered C++ standard versions matching the standards requirement */
     private cxxstds: number[] = [];
 
@@ -197,9 +268,9 @@ class CppMatrixRunner {
     /**
      * Runs the full matrix generation pipeline.
      *
-     * @returns Array of matrix entries ready for use in GitHub Actions workflows
+     * @returns Object containing the matrix entries and filtered sub-matrices
      */
-    async run(): Promise<MatrixEntry[]> {
+    async run(): Promise<{ matrix: MatrixEntry[]; submatrices: Record<string, MatrixEntry[]> }> {
         this.resolveCxxStandards();
         await this.generateEntries();
         await this.applyRecommendedFlags();
@@ -208,10 +279,11 @@ class CppMatrixRunner {
         this.applyExtraValues();
         this.sortEntries();
         await this.applySortByFailureRate();
+        this.applyFilters();
         this.logFinalMatrix();
         this.generateSummaryTable();
         this.writeOutputFile();
-        return this.matrix;
+        return { matrix: this.matrix, submatrices: this.filterResults };
     }
 
     /**
@@ -443,6 +515,16 @@ class CppMatrixRunner {
     }
 
     /**
+     * Evaluates filter predicates against the matrix and stores results.
+     */
+    private applyFilters(): void {
+        this.filterResults = evaluateFilters(this.matrix, this.inputs.submatrices);
+        for (const [name, entries] of Object.entries(this.filterResults)) {
+            core.info(`Filter '${name}': ${entries.length} of ${this.matrix.length} entries`);
+        }
+    }
+
+    /**
      * Logs the final matrix to the action output.
      */
     private logFinalMatrix(): void {
@@ -511,9 +593,9 @@ class CppMatrixRunner {
  *
  * @param inputs - Configuration inputs controlling matrix generation including
  *                 compiler versions, standards, factors, and container suggestions
- * @returns Array of matrix entries ready for use in GitHub Actions workflows
+ * @returns Object containing the matrix entries and filtered sub-matrices
  */
-export async function generateMatrix(inputs: Inputs): Promise<MatrixEntry[]> {
+export async function generateMatrix(inputs: Inputs): Promise<{ matrix: MatrixEntry[]; submatrices: Record<string, MatrixEntry[]> }> {
     return new CppMatrixRunner(inputs).run();
 }
 
@@ -521,9 +603,9 @@ export async function generateMatrix(inputs: Inputs): Promise<MatrixEntry[]> {
  * Generates the matrix from schema-inferred inputs.
  *
  * @param inputs - Schema-inferred inputs with transforms applied
- * @returns The generated matrix entries
+ * @returns The generated matrix entries and filtered sub-matrices
  */
-export async function main(inputs: Inputs): Promise<MatrixEntry[]> {
+export async function main(inputs: Inputs): Promise<{ matrix: MatrixEntry[]; submatrices: Record<string, MatrixEntry[]> }> {
     return await generateMatrix(inputs);
 }
 
@@ -535,10 +617,11 @@ runAction({
     outputsSchema,
     title: 'C++ Matrix',
     main: async (inputs: Inputs) => {
-        const matrixEntries = await main(inputs);
+        const { matrix: matrixEntries, submatrices } = await main(inputs);
         const matrixJson = JSON.stringify(matrixEntries);
         core.setOutput('matrix', matrixJson);
-        return { matrix: matrixJson };
+        core.setOutput('submatrices', JSON.stringify(submatrices));
+        return { matrix: matrixJson, submatrices: JSON.stringify(submatrices) };
     },
     callerModule: module
 });
