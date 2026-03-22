@@ -1,0 +1,227 @@
+name: "Container Bootstrap"
+description: |
+  Prepare a container environment for GitHub Actions before checkout.
+
+  This composite action handles three scenarios that arise when running GitHub Actions
+  inside Docker containers:
+
+  1. **Node.js glibc patching** — GitHub Actions ships its own Node.js 20 binary at
+     `/__e/node20/bin/node`, but older containers (e.g., Ubuntu 18.04) have a glibc
+     too old for that binary. This action detects the failure and replaces the binary with
+     an unofficial glibc-217-compatible build.
+  2. **nektos/act support** — When running locally with https://github.com/nektos/act[nektos/act],
+     the `/__e/` mechanism does not exist. This action installs system Node.js as a fallback.
+  3. **git safe.directory** — Containers run as root while the workspace may be owned by a
+     different user, causing git to refuse operations. This action sets `safe.directory` to `*`.
+
+  This action must be the **first step** in a job, before `actions/checkout`. It requires
+  no Node.js runtime because it is a composite action that uses only `bash` steps.
+
+  NOTE: Node 24 unofficial glibc-217 builds do not currently exist. When GitHub Actions
+  migrates to Node 24, this action will need an updated build or a different strategy.
+
+  The xref:actions/cpp-matrix.adoc[] action automatically configures the volume mounts
+  (`/node20217`) that this action writes to for old containers.
+
+  == Usage
+
+  Basic usage (auto-detects everything):
+
+  [source,yml,subs="attributes+"]
+  ----
+  steps:
+    - name: Container Bootstrap
+      uses: alandefreitas/cpp-actions/container-bootstrap@{page-version}
+  ----
+
+  Custom Node.js version:
+
+  [source,yml,subs="attributes+"]
+  ----
+  steps:
+    - name: Container Bootstrap
+      uses: alandefreitas/cpp-actions/container-bootstrap@{page-version}
+      with:
+        node-version: '20.11.0'
+  ----
+
+  Custom mirror URL (e.g., Boost mirror at `archives.boost.io`):
+
+  [source,yml,subs="attributes+"]
+  ----
+  steps:
+    - name: Container Bootstrap
+      uses: alandefreitas/cpp-actions/container-bootstrap@{page-version}
+      with:
+        node-url: 'https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.gz'
+  ----
+
+inputs:
+  node-version:
+    description: |
+      Node.js version to download from unofficial glibc-217 builds.
+      Used only when the runner's Node.js binary is broken inside the container.
+      The URL is constructed as:
+        https://unofficial-builds.nodejs.org/download/release/v<VERSION>/node-v<VERSION>-linux-x64-glibc-217.tar.gz
+      NOTE: Node 24 glibc-217 builds do not exist. Only Node 20.x versions are available.
+    required: false
+    default: '20.9.0'
+  node-url:
+    description: |
+      Override URL for the Node.js tarball. When non-empty, this URL is used instead of
+      constructing one from `node-version`. Useful for custom mirrors.
+      Example: `https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.gz`
+    required: false
+    default: ''
+  setup-safe-directory:
+    description: |
+      Whether to configure `git config --global --add safe.directory '*'`.
+      Set to 'false' to skip safe.directory configuration.
+    required: false
+    default: 'true'
+  trace-commands:
+    description: |
+      Enable `set -x` in each step for debugging. Prints every command before execution.
+      Consistent with the `trace-commands` input in other cpp-actions.
+    required: false
+    default: 'false'
+
+outputs:
+  node-patched:
+    description: "'true' if a glibc-217-compatible Node.js was downloaded and installed, 'false' otherwise."
+    value: ${{ steps.node-patch.outputs.node-patched }}
+  node-installed:
+    description: "'true' if system Node.js was installed via apt-get (act workaround), 'false' otherwise."
+    value: ${{ steps.act-node.outputs.node-installed }}
+  safe-directory-configured:
+    description: "'true' if git safe.directory was configured, 'false' otherwise."
+    value: ${{ steps.safe-dir.outputs.safe-directory-configured }}
+
+branding:
+  icon: 'code'
+  color: 'yellow'
+
+runs:
+  using: composite
+  steps:
+    - name: Detect Node.js and patch glibc-217
+      id: node-patch
+      shell: bash
+      run: |
+        if [ '${{ inputs.trace-commands }}' = 'true' ]; then set -x; fi
+
+        # Default output
+        echo 'node-patched=false' >> "$GITHUB_OUTPUT"
+
+        # If the runner's Node.js path doesn't exist, we're not in a container — nothing to do
+        if [ ! -e /__e/node20/bin/node ]; then
+          exit 0
+        fi
+
+        # Check if the runner's Node.js binary works
+        if /__e/node20/bin/node --version 2>/dev/null; then
+          echo "Node.js is functional: $(/__e/node20/bin/node --version)"
+          exit 0
+        fi
+
+        echo "Node.js binary at /__e/node20/bin/node is not functional (likely glibc incompatibility)"
+
+        # Check if /node20217 volume mount exists (set up by cpp-matrix)
+        if [ ! -d /node20217 ] || [ ! -w /node20217 ]; then
+          echo "::warning::/node20217 is not available or not writable. Ensure cpp-matrix volume mounts are configured for old containers."
+          exit 0
+        fi
+
+        # Determine download URL
+        VERSION='${{ inputs.node-version }}'
+        URL='${{ inputs.node-url }}'
+        if [ -z "$URL" ]; then
+          URL="https://unofficial-builds.nodejs.org/download/release/v${VERSION}/node-v${VERSION}-linux-x64-glibc-217.tar.gz"
+        fi
+
+        # Install curl if not available
+        if ! command -v curl >/dev/null 2>&1; then
+          if command -v apt-get >/dev/null 2>&1; then
+            apt-get update && apt-get install -y curl
+          else
+            echo "::warning::curl is not available and apt-get is not available to install it. Cannot download Node.js."
+            exit 0
+          fi
+        fi
+
+        # Download and extract
+        echo "Downloading Node.js from: $URL"
+        curl -fsSL "$URL" -o /tmp/node-glibc217.tar.gz
+        tar -xzf /tmp/node-glibc217.tar.gz --strip-components 1 -C /node20217
+        rm -f /tmp/node-glibc217.tar.gz
+
+        # Verify
+        echo "Patched Node.js version: $(/__e/node20/bin/node --version)"
+        echo 'node-patched=true' >> "$GITHUB_OUTPUT"
+
+    - name: Install Node.js for act
+      id: act-node
+      shell: bash
+      run: |
+        if [ '${{ inputs.trace-commands }}' = 'true' ]; then set -x; fi
+
+        # Default output
+        echo 'node-installed=false' >> "$GITHUB_OUTPUT"
+
+        # Only run if Node.js patching was not done and we're running under act
+        if [ '${{ steps.node-patch.outputs.node-patched }}' = 'true' ]; then
+          exit 0
+        fi
+
+        # Check if Node.js is already functional
+        if /__e/node20/bin/node --version 2>/dev/null || command -v node >/dev/null 2>&1; then
+          exit 0
+        fi
+
+        # Only proceed if running under act
+        if [ "$ACT" != 'true' ]; then
+          exit 0
+        fi
+
+        echo "Running under nektos/act — installing system Node.js"
+
+        if ! command -v apt-get >/dev/null 2>&1; then
+          echo "::warning::apt-get is not available. Cannot install Node.js for act."
+          exit 0
+        fi
+
+        apt-get update && apt-get install -y nodejs npm
+
+        # Create symlink if needed
+        if ! command -v node >/dev/null 2>&1 && command -v nodejs >/dev/null 2>&1; then
+          ln -s /usr/bin/nodejs /usr/bin/node
+        fi
+
+        echo "Installed Node.js version: $(node --version)"
+        echo 'node-installed=true' >> "$GITHUB_OUTPUT"
+
+    - name: Configure git safe.directory
+      id: safe-dir
+      shell: bash
+      run: |
+        if [ '${{ inputs.trace-commands }}' = 'true' ]; then set -x; fi
+
+        # Default output
+        echo 'safe-directory-configured=false' >> "$GITHUB_OUTPUT"
+
+        if [ '${{ inputs.setup-safe-directory }}' != 'true' ]; then
+          exit 0
+        fi
+
+        if ! command -v git >/dev/null 2>&1; then
+          if command -v apt-get >/dev/null 2>&1; then
+            echo "git is not installed — installing via apt-get"
+            apt-get update && apt-get install -y git
+          else
+            echo "::warning::git is not installed and apt-get is not available to install it. Skipping safe.directory configuration."
+            exit 0
+          fi
+        fi
+
+        git config --global --add safe.directory '*'
+        echo 'safe-directory-configured=true' >> "$GITHUB_OUTPUT"

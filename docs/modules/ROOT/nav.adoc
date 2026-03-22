@@ -5,6 +5,7 @@
 ** xref:actions/setup-clang.adoc[]
 ** xref:actions/setup-msvc.adoc[]
 * Tools
+** xref:actions/container-bootstrap.adoc[]
 ** xref:actions/package-install.adoc[]
 ** xref:actions/boost-clone.adoc[]
 ** xref:actions/setup-cmake.adoc[]

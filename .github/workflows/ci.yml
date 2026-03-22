@@ -86,6 +86,55 @@ jobs:
           echo "Dist bundle check passed"
 
   # ===========================================================================
+  # Container bootstrap action tests
+  # Tests the composite action on bare runners and in containers
+  # ===========================================================================
+  container-bootstrap:
+    needs: dev-workflow
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Bare runner — action should detect "not in a container" and do nothing
+          - { name: 'bare runner', runs-on: ubuntu-latest, container: '' }
+          # Modern container — Node.js works, action should skip patching and configure safe.directory
+          - { name: 'modern container', runs-on: ubuntu-latest, container: 'ubuntu:24.04' }
+
+    name: Container Bootstrap (${{ matrix.name }})
+    runs-on: ${{ matrix.runs-on }}
+    container: ${{ matrix.container || null }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run container-bootstrap
+        id: bootstrap
+        uses: ./container-bootstrap
+        with:
+          trace-commands: 'true'
+
+      - name: Verify outputs
+        run: |
+          set -x
+          echo "node-patched=${{ steps.bootstrap.outputs.node-patched }}"
+          echo "node-installed=${{ steps.bootstrap.outputs.node-installed }}"
+          echo "safe-directory-configured=${{ steps.bootstrap.outputs.safe-directory-configured }}"
+
+          # Node patching should not have been needed
+          [ "${{ steps.bootstrap.outputs.node-patched }}" = "false" ]
+          # act installation should not have been triggered
+          [ "${{ steps.bootstrap.outputs.node-installed }}" = "false" ]
+
+          # safe.directory should have been configured (git installed if missing)
+          [ "${{ steps.bootstrap.outputs.safe-directory-configured }}" = "true" ]
+          git config --global --get-all safe.directory | grep -q '\*'
+
+  # ===========================================================================
   # Action integration tests
   # Tests the actions in practice with various C++ compilers and platforms
   # ===========================================================================
@@ -153,18 +202,21 @@ jobs:
     steps:
       # GitHub Actions no longer support older containers.
       # The workaround is to install our own Node.js for the actions.
+      # We cannot use `uses: ./container-bootstrap` here because checkout
+      # hasn't happened yet and that action needs Node.js to run checkout first.
+      # The containers that need Node.js 20 will have volumes set up so that
+      # the Node.js 20 installation can go there.
       - name: Patch Node
-        # The containers that need Node.js 20 will have volumes set up so that
-        # the Node.js 20 installation can go there.
         if: ${{ matrix.container.volumes }}
         run: |
           set -x
           apt-get update
-          apt-get install -y curl xz-utils
-          curl -LO https://unofficial-builds.nodejs.org/download/release/v20.9.0/node-v20.9.0-linux-x64-glibc-217.tar.xz
-          tar -xf node-v20.9.0-linux-x64-glibc-217.tar.xz --strip-components 1 -C /node20217
-          ldd /__e/node20/bin/node
-          
+          apt-get install -y curl
+          curl -fsSL "https://unofficial-builds.nodejs.org/download/release/v20.9.0/node-v20.9.0-linux-x64-glibc-217.tar.gz" -o /tmp/node-glibc217.tar.gz
+          tar -xzf /tmp/node-glibc217.tar.gz --strip-components 1 -C /node20217
+          rm -f /tmp/node-glibc217.tar.gz
+          /__e/node20/bin/node --version
+
       - name: Clone cpp-actions
         uses: actions/checkout@v4
 
