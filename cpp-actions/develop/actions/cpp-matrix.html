@@ -1303,6 +1303,17 @@ in the <code>/__e/node20</code> directory.</p>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>submatrices</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of named sub-matrices derived from the full matrix using Handlebars predicate templates.</p>
+<p class="tableblock">Each line has the format:</p>
+<p class="tableblock"><code>&lt;name&gt;: &lt;handlebars-template&gt;</code></p>
+<p class="tableblock">For instance, <code>main-entries: {{is-main}}</code> creates a sub-matrix containing only entries where <code>is-main</code> is truthy. Expression predicates are also supported, e.g. <code>gcc-only: {{#if (eq compiler "gcc")}}true{{/if}}</code>.</p>
+<p class="tableblock">The template is evaluated against each matrix entry. The result is normalized for truthiness: empty string, 'false', '0', 'null', and 'undefined' (case-insensitive) are treated as falsy. Any other non-empty string is truthy.</p>
+<p class="tableblock">All existing Handlebars helpers (eq, ne, not, and, or, etc.) are available in the templates.</p>
+<p class="tableblock">The resulting sub-matrices are available via the <code>submatrices</code> output, keyed by name.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>extra-values</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of key-value pairs to be injected in each entry of the matrix.</p>
 <p class="tableblock">Each line has the format:</p>
@@ -1552,6 +1563,12 @@ in the <code>/__e/node20</code> directory.</p>
 <p class="tableblock">- <code>cxxflags</code>: The recommended C&#43;&#43; flags to be used by this entry. It reflects the values of special factors, such as sanitizers, coverage, and time-trace.</p>
 <p class="tableblock">- <code>env</code>: A dictionary of environment variables to be set for this entry.</p>
 <p class="tableblock">- <code>install</code>: The recommended packages to be installed before running the workflow. This includes packages such as build-essential for ubuntu containers and lcov for coverage entries.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>submatrices</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A JSON object keyed by filter name, where each value is a filtered sub-matrix array containing only the entries that matched the corresponding filter predicate.</p>
+<p class="tableblock">Usage: <code>fromJSON(needs.matrix.outputs.submatrices).filter-name</code></p>
+<p class="tableblock">When no filters are defined, this output is <code>{}</code>.</p></td>
 </tr>
 </tbody>
 </table>
