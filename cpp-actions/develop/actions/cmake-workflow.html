@@ -546,6 +546,7 @@ CMake workflow steps as integration tests for CMake.</p>
     ccflags: ${{ matrix.ccflags }}
     cxx: ${{ steps.setup-cpp.outputs.cxx }}
     cxxflags: ${{ matrix.cxxflags }}
+    ldflags: ${{ matrix.ldflags }}
     shared: ${{ matrix.shared }}
     extra-args: '${{ ( !matrix.no-deps &amp;&amp; format(''-D BOOST_SRC_DIR="{0}"'', steps.boost-clone.outputs.boost-dir)
       ) || '''' }}
@@ -692,6 +693,13 @@ the current working directory.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Flags to be used with the C++ compiler.</p>
 <p class="tableblock">If the input is not specified, the action will use the flags defined by the environment variable <code>CXXFLAGS</code>.</p>
+<p class="tableblock">If the environment variable is not specified, the action will use the default flags as identified by CMake.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ldflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Flags to be used with the linker.</p>
+<p class="tableblock">If the input is not specified, the action will use the flags defined by the environment variable <code>LDFLAGS</code>.</p>
 <p class="tableblock">If the environment variable is not specified, the action will use the default flags as identified by CMake.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
