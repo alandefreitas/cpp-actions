@@ -596,8 +596,11 @@ node lib/create-changelog.js --source_dir ~/projects/my-repo --limit 50</code></
 </div>
 </div>
 <div class="sect1">
-<h2 id="_example_2"><a class="anchor" href="#_example_2"></a>Example</h2>
+<h2 id="_examples"><a class="anchor" href="#_examples"></a>Examples</h2>
 <div class="sectionbody">
+<div class="paragraph">
+<p>Example 1:</p>
+</div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
@@ -608,6 +611,53 @@ node lib/create-changelog.js --source_dir ~/projects/my-repo --limit 50</code></
     thank-non-regular: ${{ startsWith(github.ref, 'refs/tags/') }}
     github-token: ${{ secrets.GITHUB_TOKEN }}
     link-commits: ${{ github.ref_name == 'develop' }}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 2 (<code>limit</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Create Changelog (basic)
+  uses: alandefreitas/cpp-actions/create-changelog@develop
+  with:
+    output-path: CHANGELOG-basic.md
+    limit: 50
+    link-commits: true
+    github-token: ${{ secrets.GITHUB_TOKEN }}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 3 (<code>check-unconventional</code>, <code>tag-pattern</code>, <code>update-summary</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Create Changelog (with tag-pattern)
+  uses: alandefreitas/cpp-actions/create-changelog@develop
+  with:
+    output-path: CHANGELOG-tags.md
+    tag-pattern: v.+\..+\..+
+    limit: 20
+    update-summary: true
+    check-unconventional: true
+    github-token: ${{ secrets.GITHUB_TOKEN }}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 4 (<code>sort-by</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Create Changelog (sort by date)
+  uses: alandefreitas/cpp-actions/create-changelog@develop
+  with:
+    output-path: CHANGELOG-dated.md
+    limit: 10
+    sort-by: date
+    github-token: ${{ secrets.GITHUB_TOKEN }}</code></pre>
 </div>
 </div>
 </div>

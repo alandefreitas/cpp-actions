@@ -487,12 +487,15 @@ used by other actions.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_example"><a class="anchor" href="#_example"></a>Example</h2>
+<h2 id="_examples"><a class="anchor" href="#_examples"></a>Examples</h2>
 <div class="sectionbody">
+<div class="paragraph">
+<p>Example 1:</p>
+</div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Setup Doxygen
+- name: Setup Doxygen (download)
   uses: alandefreitas/cpp-actions/setup-program@develop
   id: setup-doxygen
   with:
@@ -507,6 +510,36 @@ used by other actions.</p>
     check-latest: true
     update-environment: true
     fail-on-error: ${{ runner.os != 'macOS' }}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 2 ():</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Setup Git (PATH search only)
+  uses: alandefreitas/cpp-actions/setup-program@develop
+  id: setup-git
+  with:
+    name: git
+    version: '*'
+    update-environment: false</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 3 ():</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Setup nonexistent program (graceful failure)
+  uses: alandefreitas/cpp-actions/setup-program@develop
+  id: setup-missing
+  with:
+    name: this-program-does-not-exist-xyz
+    version: '*'
+    fail-on-error: false</code></pre>
 </div>
 </div>
 </div>
