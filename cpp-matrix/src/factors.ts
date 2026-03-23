@@ -177,8 +177,10 @@ export async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): P
     }
 
     // Flags for msan
+    let msanExtraFlags = '';
     if ('msan' in entry && entry['msan'] === true && supportsSanitizers) {
         sanitizers.push('memory');
+        msanExtraFlags = ' -fsanitize-memory-track-origins';
     }
 
     // Flags for tsan
@@ -250,8 +252,8 @@ export async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): P
                 ` /fsanitize=${sanitizersStr}` :
                 ` -fsanitize=${sanitizersStr} -fno-sanitize-recover=${sanitizersStr} -fno-omit-frame-pointer`;
         }
-        entry['cxxflags'] += sanitizerFlags + lsanExtraFlags + cfiExtraFlags;
-        entry['ccflags'] += sanitizerFlags + lsanExtraFlags + cfiExtraFlags;
+        entry['cxxflags'] += sanitizerFlags + msanExtraFlags + lsanExtraFlags + cfiExtraFlags;
+        entry['ccflags'] += sanitizerFlags + msanExtraFlags + lsanExtraFlags + cfiExtraFlags;
         entry['ldflags'] = (entry['ldflags'] || '') + sanitizerFlags + lsanExtraFlags + cfiExtraFlags;
         entry['build-type'] = inputs.sanitizerBuildType || 'Release';
     }
