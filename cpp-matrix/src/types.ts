@@ -85,6 +85,7 @@ export interface MatrixEntry {
     'build-type'?: string;
     cxxflags?: string;
     ccflags?: string;
+    ldflags?: string;
     install?: string;
     arch?: string;
     x86?: boolean;

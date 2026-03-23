@@ -252,6 +252,7 @@ export async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): P
         }
         entry['cxxflags'] += sanitizerFlags + lsanExtraFlags + cfiExtraFlags;
         entry['ccflags'] += sanitizerFlags + lsanExtraFlags + cfiExtraFlags;
+        entry['ldflags'] = (entry['ldflags'] || '') + sanitizerFlags + lsanExtraFlags + cfiExtraFlags;
         entry['build-type'] = inputs.sanitizerBuildType || 'Release';
     }
 
@@ -260,10 +261,12 @@ export async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): P
         if (entry['compiler'] === 'gcc') {
             entry['cxxflags'] += ' --coverage -fprofile-arcs -ftest-coverage';
             entry['ccflags'] += ' --coverage -fprofile-arcs -ftest-coverage';
+            entry['ldflags'] = (entry['ldflags'] || '') + ' --coverage';
             entry['install'] += ' lcov';
         } else if (entry['compiler'] === 'clang') {
             entry['cxxflags'] += ' -fprofile-instr-generate -fcoverage-mapping';
             entry['ccflags'] += ' -fprofile-instr-generate -fcoverage-mapping';
+            entry['ldflags'] = (entry['ldflags'] || '') + ' -fprofile-instr-generate';
             const clangVersion = semver.coerce(entry['version']);
             const clangMajor = clangVersion ? clangVersion.major : '';
             if (clangMajor) {

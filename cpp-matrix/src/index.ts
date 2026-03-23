@@ -452,11 +452,13 @@ class CppMatrixRunner {
             setSuggestion(entry, 'runs-on', this.inputs.runsOn, entry.version);
             setSuggestion(entry, 'ccflags', this.inputs.ccflags, entry.version);
             setSuggestion(entry, 'cxxflags', this.inputs.cxxflags, entry.version);
+            setSuggestion(entry, 'ldflags', this.inputs.ldflags, entry.version);
             setSuggestion(entry, 'install', this.inputs.install, entry.version);
             setSuggestion(entry, 'triplet', this.inputs.triplets, entry.version);
             setSuggestion(entry, 'build-type', this.inputs.buildTypes, entry.version);
             appendSuggestion(entry, 'ccflags', this.inputs.appendCcflags, entry.version);
             appendSuggestion(entry, 'cxxflags', this.inputs.appendCxxflags, entry.version);
+            appendSuggestion(entry, 'ldflags', this.inputs.appendLdflags, entry.version);
             appendSuggestion(entry, 'install', this.inputs.appendInstall, entry.version);
             applyForcedFactors(entry, this.inputs.forceFactors, entry.version);
         }

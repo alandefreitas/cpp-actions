@@ -126,6 +126,7 @@ jobs:
           ccflags: ${{ matrix.ccflags }}
           cxx: ${{ steps.setup-cpp.outputs.cxx }}
           cxxflags: ${{ matrix.cxxflags }}
+          ldflags: ${{ matrix.ldflags }}
           shared: ${{ matrix.shared }}
           extra-args: |
             ${{ ( !matrix.no-deps && format('-D BOOST_SRC_DIR="{0}"', steps.boost-clone.outputs.boost-dir) ) || '' }}
