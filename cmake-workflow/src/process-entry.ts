@@ -157,6 +157,10 @@ async function runConfigureStep(
         configureArgs.push('-D');
         configureArgs.push(`CMAKE_CXX_FLAGS=${cxxflags}`);
     }
+    if (entry.ldflags) {
+        configureArgs.push('-D');
+        configureArgs.push(`CMAKE_EXE_LINKER_FLAGS=${entry.ldflags}`);
+    }
     if (entry.cxxstd) {
         configureArgs.push('-D');
         configureArgs.push(`CMAKE_CXX_STANDARD=${entry.cxxstd}`);

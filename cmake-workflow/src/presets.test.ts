@@ -201,7 +201,7 @@ function makeInputs(overrides: Partial<Inputs> = {}): Inputs {
     return {
         cmakePath: 'cmake', cmakeVersion: '*', sourceDir: tmpDir, url: '', gitRepository: '',
         gitTag: '', downloadDir: '', patches: [], buildDir: 'build', preset: '', cc: '', ccflags: '',
-        cxx: '', cxxflags: '', cxxstd: [], shared: undefined, toolchain: '', generator: '',
+        cxx: '', cxxflags: '', ldflags: '', cxxstd: [], shared: undefined, toolchain: '', generator: '',
         generatorToolset: '', generatorArchitecture: '', arch: '', buildType: 'Release',
         buildTarget: [], extraArgs: [], exportCompileCommands: undefined, jobs: 4,
         runTests: undefined, configureTestsFlag: 'BUILD_TESTING', ctestTimeout: undefined,

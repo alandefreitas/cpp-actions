@@ -57,6 +57,7 @@ function makeInputs(overrides: { patches?: string[]; sourceDir?: string } = {}):
         ccflags: '',
         cxx: '',
         cxxflags: '',
+        ldflags: '',
         cxxstd: [],
         exportCompileCommands: undefined,
         runTests: undefined,

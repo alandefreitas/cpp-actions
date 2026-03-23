@@ -33,6 +33,7 @@ export interface ResolvedInputs {
     ccflags: string;
     cxx: string;
     cxxflags: string;
+    ldflags: string;
     /** Single C++ standard version for this entry */
     cxxstd: string | null;
     shared: boolean | undefined;

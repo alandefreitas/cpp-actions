@@ -209,6 +209,7 @@ export function expandInputs(inputs: Inputs): ResolvedInputs[] {
                 ccflags: inputs.ccflags,
                 cxx: inputs.cxx,
                 cxxflags: inputs.cxxflags,
+                ldflags: inputs.ldflags,
                 shared: inputs.shared,
                 toolchain: inputs.toolchain,
                 generator: inputs.generator,

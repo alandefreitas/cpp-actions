@@ -206,6 +206,17 @@ If the input is not specified, the action will use the flags defined by the envi
 If the environment variable is not specified, the action will use the default flags as identified by CMake.`
     },
 
+    ldflags: {
+        type: 'string' as const,
+        default: '',
+        fallbackEnv: 'LDFLAGS',
+        description: `Flags to be used with the linker.
+
+If the input is not specified, the action will use the flags defined by the environment variable \`LDFLAGS\`.
+
+If the environment variable is not specified, the action will use the default flags as identified by CMake.`
+    },
+
     cxxstd: {
         type: 'string[]' as const,
         default: [] as string[],

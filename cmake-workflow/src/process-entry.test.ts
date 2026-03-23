@@ -75,6 +75,7 @@ function makeInputs(overrides: Partial<ResolvedInputs> = {}): ResolvedInputs {
         ccflags: '',
         cxx: '/usr/bin/g++',
         cxxflags: '',
+        ldflags: '',
         cxxstd: '17',
         shared: undefined,
         toolchain: '',
@@ -270,6 +271,23 @@ describe('processEntry — configure step', () => {
         const ccflagsIdx = args.indexOf('CMAKE_C_FLAGS=-O2');
         expect(cxxflagsIdx).toBeGreaterThan(-1);
         expect(ccflagsIdx).toBeGreaterThan(-1);
+    });
+
+    it('sets CMAKE_EXE_LINKER_FLAGS from ldflags', async () => {
+        const entry = makeInputs({ ldflags: '-fsanitize=address' });
+        await processEntry(entry, makeSetupOutputs(), makeParams());
+
+        const args = mockedExec.getExecOutput.mock.calls[0][1] as string[];
+        expect(args).toContain('CMAKE_EXE_LINKER_FLAGS=-fsanitize=address');
+    });
+
+    it('does not set CMAKE_EXE_LINKER_FLAGS when ldflags is empty', async () => {
+        const entry = makeInputs({ ldflags: '' });
+        await processEntry(entry, makeSetupOutputs(), makeParams());
+
+        const args = mockedExec.getExecOutput.mock.calls[0][1] as string[];
+        const hasLinkerFlags = args.some(a => a.includes('CMAKE_EXE_LINKER_FLAGS'));
+        expect(hasLinkerFlags).toBe(false);
     });
 
     it('sets CMAKE_BUILD_TYPE for single-config generators', async () => {

@@ -66,6 +66,7 @@ function makeInputs(overrides: Partial<Inputs> = {}): Inputs {
         ccflags: '',
         cxx: '',
         cxxflags: '',
+        ldflags: '',
         cxxstd: [],
         exportCompileCommands: undefined,
         runTests: undefined,

@@ -52,6 +52,7 @@ function makeInputs(overrides: Partial<ResolvedInputs> = {}): ResolvedInputs {
         ccflags: '',
         cxx: '/usr/bin/g++',
         cxxflags: '',
+        ldflags: '',
         cxxstd: null,
         shared: undefined,
         toolchain: '',
