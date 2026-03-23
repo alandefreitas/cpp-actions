@@ -1,0 +1,68 @@
+name: Create Changelog Tests
+
+on:
+  workflow_call:
+
+jobs:
+  generate:
+    defaults:
+      run:
+        shell: bash
+
+    name: Generate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Clone cpp-actions
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      # Variant 1: Basic changelog with link-commits
+      - name: Create Changelog (basic)
+        uses: ./create-changelog
+        with:
+          output-path: CHANGELOG-basic.md
+          limit: 50
+          link-commits: true
+          trace-commands: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify basic changelog
+        run: |
+          [ -s CHANGELOG-basic.md ]
+          echo "Basic changelog: $(wc -l < CHANGELOG-basic.md) lines"
+
+      # Variant 2: With tag-pattern and update-summary
+      - name: Create Changelog (with tag-pattern)
+        uses: ./create-changelog
+        with:
+          output-path: CHANGELOG-tags.md
+          tag-pattern: 'v.+\..+\..+'
+          limit: 20
+          update-summary: true
+          check-unconventional: true
+          trace-commands: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify tag-pattern changelog
+        run: |
+          [ -s CHANGELOG-tags.md ]
+          echo "Tag-pattern changelog: $(wc -l < CHANGELOG-tags.md) lines"
+
+      # Variant 3: Sort by date instead of default
+      - name: Create Changelog (sort by date)
+        uses: ./create-changelog
+        with:
+          output-path: CHANGELOG-dated.md
+          limit: 10
+          sort-by: date
+          trace-commands: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify date-sorted changelog
+        run: |
+          [ -s CHANGELOG-dated.md ]
+          echo "Date-sorted changelog: $(wc -l < CHANGELOG-dated.md) lines"

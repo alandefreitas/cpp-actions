@@ -67,21 +67,6 @@ jobs:
           trace-commands: true
           arch: ${{ matrix.arch }}
 
-      # We're not really going to use doxygen. This is only here to test the action.
-      - name: Setup Doxygen
-        uses: ./setup-program
-        id: setup-doxygen
-        with:
-          name: doxygen
-          version: '>=1.9'
-          url: |
-            https://github.com/doxygen/doxygen/releases/download/Release_1_9_7/doxygen-1.9.7.{{ os }}${{ ( runner.os == 'Windows' && '.x64' ) || '' }}.bin.${{ ( runner.os == 'Windows' && 'zip' ) || 'tar.gz' }}
-          install-prefix: ${{ ( runner.os == 'Linux' && '/usr/local' ) || '' }}
-          check-latest: true
-          update-environment: true
-          fail-on-error: ${{ runner.os != 'macOS' }}
-          trace-commands: true
-
       - name: Install packages
         uses: ./package-install
         id: package-install

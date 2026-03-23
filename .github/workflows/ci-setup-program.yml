@@ -1,0 +1,74 @@
+name: Setup Program Tests
+
+on:
+  workflow_call:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    defaults:
+      run:
+        shell: bash
+
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+
+    steps:
+      - name: Clone cpp-actions
+        uses: actions/checkout@v4
+
+      # Variant 1: Download from URL with version range and install-prefix
+      - name: Setup Doxygen (download)
+        uses: ./setup-program
+        id: setup-doxygen
+        with:
+          name: doxygen
+          version: '>=1.9'
+          url: |
+            https://github.com/doxygen/doxygen/releases/download/Release_1_9_7/doxygen-1.9.7.{{ os }}${{ ( runner.os == 'Windows' && '.x64' ) || '' }}.bin.${{ ( runner.os == 'Windows' && 'zip' ) || 'tar.gz' }}
+          install-prefix: ${{ ( runner.os == 'Linux' && '/usr/local' ) || '' }}
+          check-latest: true
+          update-environment: true
+          fail-on-error: ${{ runner.os != 'macOS' }}
+          trace-commands: true
+
+      - name: Verify doxygen download
+        if: runner.os == 'Linux' || runner.os == 'Windows'
+        run: |
+          [ "${{ steps.setup-doxygen.outputs.found }}" = "true" ]
+          [ -n "${{ steps.setup-doxygen.outputs.version }}" ]
+          [ -n "${{ steps.setup-doxygen.outputs.path }}" ]
+
+      # Variant 2: Find program already on PATH (no URL, no download)
+      - name: Setup Git (PATH search only)
+        uses: ./setup-program
+        id: setup-git
+        with:
+          name: git
+          version: '*'
+          update-environment: false
+          trace-commands: true
+
+      - name: Verify git found on PATH
+        run: |
+          [ "${{ steps.setup-git.outputs.found }}" = "true" ]
+          [ -n "${{ steps.setup-git.outputs.version }}" ]
+
+      # Variant 3: Program not found with fail-on-error: false
+      - name: Setup nonexistent program (graceful failure)
+        uses: ./setup-program
+        id: setup-missing
+        with:
+          name: this-program-does-not-exist-xyz
+          version: '*'
+          fail-on-error: false
+          trace-commands: true
+
+      - name: Verify graceful failure
+        run: |
+          [ "${{ steps.setup-missing.outputs.found }}" != "true" ]

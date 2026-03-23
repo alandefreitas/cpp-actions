@@ -9,10 +9,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Bare runner — action should detect "not in a container" and do nothing
-          - { name: 'bare runner', runs-on: ubuntu-latest, container: '' }
-          # Modern container — Node.js works, action should skip patching and configure safe.directory
-          - { name: 'modern container', runs-on: ubuntu-latest, container: 'ubuntu:24.04' }
+          # Variant 1: Bare runner — action should detect "not in a container" and do nothing
+          - name: 'bare runner'
+            runs-on: ubuntu-latest
+            container: ''
+            expect-safe-dir: 'true'
+          # Variant 2: Modern container — Node.js works, skip patching, configure safe.directory
+          - name: 'modern container'
+            runs-on: ubuntu-latest
+            container: 'ubuntu:24.04'
+            expect-safe-dir: 'true'
+          # Variant 3: Modern container with safe.directory disabled
+          - name: 'safe-directory disabled'
+            runs-on: ubuntu-latest
+            container: 'ubuntu:24.04'
+            setup-safe-directory: 'false'
+            expect-safe-dir: 'false'
 
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.runs-on }}
@@ -31,6 +43,7 @@ jobs:
         uses: ./container-bootstrap
         with:
           trace-commands: 'true'
+          setup-safe-directory: ${{ matrix.setup-safe-directory || 'true' }}
 
       - name: Verify outputs
         run: |
@@ -39,11 +52,22 @@ jobs:
           echo "node-installed=${{ steps.bootstrap.outputs.node-installed }}"
           echo "safe-directory-configured=${{ steps.bootstrap.outputs.safe-directory-configured }}"
 
-          # Node patching should not have been needed
+          # Node patching should not have been needed (modern containers / bare runners)
           [ "${{ steps.bootstrap.outputs.node-patched }}" = "false" ]
           # act installation should not have been triggered
           [ "${{ steps.bootstrap.outputs.node-installed }}" = "false" ]
 
-          # safe.directory should have been configured (git installed if missing)
-          [ "${{ steps.bootstrap.outputs.safe-directory-configured }}" = "true" ]
-          git config --global --get-all safe.directory | grep -q '\*'
+          # safe.directory depends on the input
+          [ "${{ steps.bootstrap.outputs.safe-directory-configured }}" = "${{ matrix.expect-safe-dir }}" ]
+
+      - name: Verify safe.directory is set
+        if: matrix.expect-safe-dir == 'true'
+        run: git config --global --get-all safe.directory | grep -q '\*'
+
+      - name: Verify safe.directory is NOT set
+        if: matrix.expect-safe-dir == 'false'
+        run: |
+          if git config --global --get-all safe.directory 2>/dev/null | grep -q '\*'; then
+            echo "::error::safe.directory should not be set but was"
+            exit 1
+          fi

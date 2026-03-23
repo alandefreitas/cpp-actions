@@ -92,11 +92,15 @@ def load_workflow(name):
 ci_build = load_workflow('ci-build.yml')
 ci_docs = load_workflow('ci-docs.yml')
 ci_matrix = load_workflow('ci-matrix.yml')
+ci_setup_program = load_workflow('ci-setup-program.yml')
+ci_create_changelog = load_workflow('ci-create-changelog.yml')
 
 matrix = ci_build['jobs']['build']['strategy']['matrix']['include']
 steps = list(ci_build['jobs']['build']['steps'])
 steps += ci_docs['jobs']['docs']['steps']
 steps += ci_matrix['jobs']['generate']['steps']
+steps += ci_setup_program['jobs']['test']['steps']
+steps += ci_create_changelog['jobs']['generate']['steps']
 
 
 def gha_tokenize(expression):

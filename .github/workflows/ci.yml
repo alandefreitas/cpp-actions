@@ -27,6 +27,18 @@ jobs:
     uses: ./.github/workflows/ci-container-bootstrap.yml
     secrets: inherit
 
+  setup-program:
+    name: Setup Program Tests
+    needs: dev-workflow
+    uses: ./.github/workflows/ci-setup-program.yml
+    secrets: inherit
+
+  create-changelog:
+    name: Create Changelog Tests
+    needs: dev-workflow
+    uses: ./.github/workflows/ci-create-changelog.yml
+    secrets: inherit
+
   cpp-matrix:
     name: Generate Test Matrix
     needs: dev-workflow
@@ -45,7 +57,7 @@ jobs:
 
   docs:
     name: Docs & Release
-    needs: build
+    needs: [build, container-bootstrap, setup-program, create-changelog]
     permissions:
       contents: write
     uses: ./.github/workflows/ci-docs.yml
