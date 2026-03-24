@@ -1230,8 +1230,8 @@ in the <code>/__e/node20</code> directory.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>compilers</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A list of compilers to be tested. Each compiler can be complemented with its semver version requirements to be tested.</p>
-<p class="tableblock">When the compiler version requirements are provided, the action will break the requirements into subsets of major versions to be tested. When no version is provided, the '*' semver requirement is assumed. The action can identifies subsets of compiler versions for GCC, Clang, and MSVC. For any other compilers, the version requirements will passthrough to the output.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A list of compilers to be tested. Each compiler can be complemented by its SemVer version requirements for testing.</p>
+<p class="tableblock">When the compiler version requirements are provided, the action will break them into subsets of major versions to test. When no version is provided, the '*' semver requirement is assumed. The action can identifies subsets of compiler versions for GCC, Clang, and MSVC. For any other compilers, the version requirements will passthrough to the output.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>gcc &gt;=4.8</code></p>
 <p class="tableblock"><code>clang &gt;=3.8</code></p>
 <p class="tableblock"><code>msvc &gt;=14</code></p>
