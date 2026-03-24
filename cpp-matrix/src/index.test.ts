@@ -33,9 +33,9 @@ import {
     generateTable,
     parseCompilerSuggestions,
     normalizeCppVersionRequirement,
-    isTruthyFilterResult,
-    isValidFilterName,
-    evaluateFilters
+    isTruthyTemplateResult,
+    isValidSubmatrixName,
+    generateSubmatrices
 } from './index';
 import type { Inputs } from './schema';
 import * as core from '@actions/core';
@@ -717,7 +717,7 @@ describe('CppMatrixRunner features', () => {
         expect(factorEntries.length).toBeGreaterThan(0);
     });
 
-    test('run returns submatrices from filter evaluation', async () => {
+    test('run returns submatrices from predicate evaluation', async () => {
         const inputs = makeDefaultMatrixInputs({
             compilers: { gcc: '>=13' },
             standards: normalizeCppVersionRequirement('>=17'),
@@ -737,7 +737,7 @@ describe('CppMatrixRunner features', () => {
         }
     });
 
-    test('run returns empty submatrices when no filters defined', async () => {
+    test('run returns empty submatrices when none defined', async () => {
         const inputs = makeDefaultMatrixInputs({
             compilers: { gcc: '>=13' },
             standards: normalizeCppVersionRequirement('>=17'),
@@ -748,7 +748,7 @@ describe('CppMatrixRunner features', () => {
         expect(submatrices).toEqual({});
     });
 
-    test('applyFilters logs filter match counts', async () => {
+    test('applySubmatrices logs match counts', async () => {
         const infoSpy = jest.spyOn(core, 'info').mockImplementation(() => { });
         try {
             const inputs = makeDefaultMatrixInputs({
@@ -762,14 +762,14 @@ describe('CppMatrixRunner features', () => {
             await generateMatrix(inputs);
             const infoCalls = infoSpy.mock.calls.map(c => c[0]);
             expect(infoCalls.some(msg =>
-                typeof msg === 'string' && msg.includes("Filter 'main-only'") && msg.includes('of') && msg.includes('entries')
+                typeof msg === 'string' && msg.includes('main-only') && msg.includes('of') && msg.includes('entries')
             )).toBe(true);
         } finally {
             infoSpy.mockRestore();
         }
     });
 
-    test('multiple filters produce independent submatrices in pipeline', async () => {
+    test('multiple predicates produce independent submatrices in pipeline', async () => {
         const inputs = makeDefaultMatrixInputs({
             compilers: { gcc: '>=10' },
             standards: normalizeCppVersionRequirement('>=17'),
@@ -792,8 +792,8 @@ describe('CppMatrixRunner features', () => {
     });
 });
 
-describe('matrix filters - integration', () => {
-    test('expression filter only includes matching compiler entries', async () => {
+describe('submatrices - integration', () => {
+    test('expression predicate only includes matching compiler entries', async () => {
         const inputs = makeDefaultMatrixInputs({
             compilers: { gcc: '>=13', clang: '>=16' },
             standards: normalizeCppVersionRequirement('>=17'),
@@ -813,7 +813,7 @@ describe('matrix filters - integration', () => {
         expect(matrix.some(e => e.compiler !== 'gcc')).toBe(true);
     });
 
-    test('filter that matches zero entries returns empty array', async () => {
+    test('predicate that matches zero entries returns empty array', async () => {
         const inputs = makeDefaultMatrixInputs({
             compilers: { gcc: '>=13' },
             standards: normalizeCppVersionRequirement('>=17'),
@@ -827,7 +827,7 @@ describe('matrix filters - integration', () => {
         expect(submatrices['no-match']).toEqual([]);
     });
 
-    test('string field filter includes all entries (truthiness)', async () => {
+    test('string field predicate includes all entries (truthiness)', async () => {
         const inputs = makeDefaultMatrixInputs({
             compilers: { gcc: '>=13' },
             standards: normalizeCppVersionRequirement('>=17'),
@@ -861,7 +861,7 @@ describe('matrix filters - integration', () => {
         expect(matrix.some(e => !e['is-main'])).toBe(true);
     });
 
-    test('invalid filter name is skipped with warning, valid filters still work', async () => {
+    test('invalid submatrix name is skipped with warning, valid ones still work', async () => {
         const warnSpy = jest.spyOn(core, 'warning').mockImplementation(() => { });
         try {
             const inputs = makeDefaultMatrixInputs({
@@ -882,7 +882,7 @@ describe('matrix filters - integration', () => {
         }
     });
 
-    test('filter results preserve matrix sort order', async () => {
+    test('submatrix results preserve matrix sort order', async () => {
         const inputs = makeDefaultMatrixInputs({
             compilers: { gcc: '>=10' },
             standards: normalizeCppVersionRequirement('>=17'),
@@ -901,109 +901,109 @@ describe('matrix filters - integration', () => {
     });
 });
 
-describe('isTruthyFilterResult', () => {
+describe('isTruthyTemplateResult', () => {
     test('empty string is falsy', () => {
-        expect(isTruthyFilterResult('')).toBe(false);
+        expect(isTruthyTemplateResult('')).toBe(false);
     });
 
     test('whitespace-only string is falsy', () => {
-        expect(isTruthyFilterResult('   ')).toBe(false);
+        expect(isTruthyTemplateResult('   ')).toBe(false);
     });
 
     test('"false" is falsy (case-insensitive)', () => {
-        expect(isTruthyFilterResult('false')).toBe(false);
-        expect(isTruthyFilterResult('FALSE')).toBe(false);
-        expect(isTruthyFilterResult('False')).toBe(false);
+        expect(isTruthyTemplateResult('false')).toBe(false);
+        expect(isTruthyTemplateResult('FALSE')).toBe(false);
+        expect(isTruthyTemplateResult('False')).toBe(false);
     });
 
     test('"0" is falsy', () => {
-        expect(isTruthyFilterResult('0')).toBe(false);
+        expect(isTruthyTemplateResult('0')).toBe(false);
     });
 
     test('"null" is falsy (case-insensitive)', () => {
-        expect(isTruthyFilterResult('null')).toBe(false);
-        expect(isTruthyFilterResult('NULL')).toBe(false);
-        expect(isTruthyFilterResult('Null')).toBe(false);
+        expect(isTruthyTemplateResult('null')).toBe(false);
+        expect(isTruthyTemplateResult('NULL')).toBe(false);
+        expect(isTruthyTemplateResult('Null')).toBe(false);
     });
 
     test('"undefined" is falsy (case-insensitive)', () => {
-        expect(isTruthyFilterResult('undefined')).toBe(false);
-        expect(isTruthyFilterResult('UNDEFINED')).toBe(false);
-        expect(isTruthyFilterResult('Undefined')).toBe(false);
+        expect(isTruthyTemplateResult('undefined')).toBe(false);
+        expect(isTruthyTemplateResult('UNDEFINED')).toBe(false);
+        expect(isTruthyTemplateResult('Undefined')).toBe(false);
     });
 
     test('"true" is truthy', () => {
-        expect(isTruthyFilterResult('true')).toBe(true);
+        expect(isTruthyTemplateResult('true')).toBe(true);
     });
 
     test('"1" is truthy', () => {
-        expect(isTruthyFilterResult('1')).toBe(true);
+        expect(isTruthyTemplateResult('1')).toBe(true);
     });
 
     test('arbitrary non-empty strings are truthy', () => {
-        expect(isTruthyFilterResult('gcc')).toBe(true);
-        expect(isTruthyFilterResult('yes')).toBe(true);
-        expect(isTruthyFilterResult('anything')).toBe(true);
+        expect(isTruthyTemplateResult('gcc')).toBe(true);
+        expect(isTruthyTemplateResult('yes')).toBe(true);
+        expect(isTruthyTemplateResult('anything')).toBe(true);
     });
 
     test('trimmed values are evaluated', () => {
-        expect(isTruthyFilterResult('  true  ')).toBe(true);
-        expect(isTruthyFilterResult('  false  ')).toBe(false);
+        expect(isTruthyTemplateResult('  true  ')).toBe(true);
+        expect(isTruthyTemplateResult('  false  ')).toBe(false);
     });
 });
 
-describe('isValidFilterName', () => {
+describe('isValidSubmatrixName', () => {
     test('simple lowercase names are valid', () => {
-        expect(isValidFilterName('gcc')).toBe(true);
-        expect(isValidFilterName('a1')).toBe(true);
+        expect(isValidSubmatrixName('gcc')).toBe(true);
+        expect(isValidSubmatrixName('a1')).toBe(true);
     });
 
     test('hyphenated lowercase names are valid', () => {
-        expect(isValidFilterName('main-entries')).toBe(true);
-        expect(isValidFilterName('linux-builds')).toBe(true);
-        expect(isValidFilterName('test-2-foo')).toBe(true);
+        expect(isValidSubmatrixName('main-entries')).toBe(true);
+        expect(isValidSubmatrixName('linux-builds')).toBe(true);
+        expect(isValidSubmatrixName('test-2-foo')).toBe(true);
     });
 
     test('uppercase names are invalid', () => {
-        expect(isValidFilterName('UPPER')).toBe(false);
-        expect(isValidFilterName('Mixed')).toBe(false);
+        expect(isValidSubmatrixName('UPPER')).toBe(false);
+        expect(isValidSubmatrixName('Mixed')).toBe(false);
     });
 
     test('names with spaces are invalid', () => {
-        expect(isValidFilterName('has spaces')).toBe(false);
+        expect(isValidSubmatrixName('has spaces')).toBe(false);
     });
 
     test('trailing hyphen is invalid', () => {
-        expect(isValidFilterName('trailing-')).toBe(false);
+        expect(isValidSubmatrixName('trailing-')).toBe(false);
     });
 
     test('leading hyphen is invalid', () => {
-        expect(isValidFilterName('-leading')).toBe(false);
+        expect(isValidSubmatrixName('-leading')).toBe(false);
     });
 
     test('consecutive hyphens are invalid', () => {
-        expect(isValidFilterName('a--b')).toBe(false);
+        expect(isValidSubmatrixName('a--b')).toBe(false);
     });
 
     test('empty string is invalid', () => {
-        expect(isValidFilterName('')).toBe(false);
+        expect(isValidSubmatrixName('')).toBe(false);
     });
 
     test('underscores are invalid', () => {
-        expect(isValidFilterName('foo_bar')).toBe(false);
+        expect(isValidSubmatrixName('foo_bar')).toBe(false);
     });
 
     test('single character is valid', () => {
-        expect(isValidFilterName('a')).toBe(true);
-        expect(isValidFilterName('1')).toBe(true);
+        expect(isValidSubmatrixName('a')).toBe(true);
+        expect(isValidSubmatrixName('1')).toBe(true);
     });
 
     test('numeric names are valid', () => {
-        expect(isValidFilterName('123')).toBe(true);
+        expect(isValidSubmatrixName('123')).toBe(true);
     });
 });
 
-describe('evaluateFilters', () => {
+describe('generateSubmatrices', () => {
     const mockMatrix = [
         { name: 'GCC 13', compiler: 'gcc', version: '13.0.0', 'is-main': true } as any,
         { name: 'GCC 12', compiler: 'gcc', version: '12.0.0', 'is-main': false } as any,
@@ -1011,16 +1011,16 @@ describe('evaluateFilters', () => {
         { name: 'MSVC 14.3', compiler: 'msvc', version: '14.3.0', 'is-main': false } as any
     ];
 
-    test('returns empty object when filters is undefined', () => {
-        expect(evaluateFilters(mockMatrix, undefined)).toEqual({});
+    test('returns empty object when submatrices is undefined', () => {
+        expect(generateSubmatrices(mockMatrix, undefined)).toEqual({});
     });
 
-    test('returns empty object when filters is empty array', () => {
-        expect(evaluateFilters(mockMatrix, [])).toEqual({});
+    test('returns empty object when submatrices is empty array', () => {
+        expect(generateSubmatrices(mockMatrix, [])).toEqual({});
     });
 
-    test('simple boolean filter {{is-main}}', () => {
-        const result = evaluateFilters(mockMatrix, [
+    test('simple boolean predicate {{is-main}}', () => {
+        const result = generateSubmatrices(mockMatrix, [
             { key: 'main-entries', value: '{{is-main}}' }
         ]);
         expect(result['main-entries']).toHaveLength(2);
@@ -1028,16 +1028,16 @@ describe('evaluateFilters', () => {
         expect(result['main-entries']![1]!.name).toBe('Clang 16');
     });
 
-    test('expression filter with eq helper', () => {
-        const result = evaluateFilters(mockMatrix, [
+    test('expression predicate with eq helper', () => {
+        const result = generateSubmatrices(mockMatrix, [
             { key: 'gcc-only', value: '{{#if (eq compiler "gcc")}}true{{/if}}' }
         ]);
         expect(result['gcc-only']).toHaveLength(2);
         expect(result['gcc-only']!.every(e => e.compiler === 'gcc')).toBe(true);
     });
 
-    test('multiple filters produce independent sub-matrices', () => {
-        const result = evaluateFilters(mockMatrix, [
+    test('multiple predicates produce independent sub-matrices', () => {
+        const result = generateSubmatrices(mockMatrix, [
             { key: 'main-entries', value: '{{is-main}}' },
             { key: 'gcc-only', value: '{{#if (eq compiler "gcc")}}true{{/if}}' }
         ]);
@@ -1046,17 +1046,17 @@ describe('evaluateFilters', () => {
         expect(result['gcc-only']).toHaveLength(2);
     });
 
-    test('filter that matches zero entries returns empty array', () => {
-        const result = evaluateFilters(mockMatrix, [
+    test('predicate that matches zero entries returns empty array', () => {
+        const result = generateSubmatrices(mockMatrix, [
             { key: 'no-match', value: '{{#if (eq compiler "icc")}}true{{/if}}' }
         ]);
         expect(result['no-match']).toEqual([]);
     });
 
-    test('invalid filter name is skipped with warning', () => {
+    test('invalid submatrix name is skipped with warning', () => {
         const warnSpy = jest.spyOn(core, 'warning').mockImplementation(() => { });
         try {
-            const result = evaluateFilters(mockMatrix, [
+            const result = generateSubmatrices(mockMatrix, [
                 { key: 'INVALID', value: '{{is-main}}' },
                 { key: 'valid-one', value: '{{is-main}}' }
             ]);
@@ -1068,16 +1068,16 @@ describe('evaluateFilters', () => {
         }
     });
 
-    test('filter results preserve original matrix order', () => {
-        const result = evaluateFilters(mockMatrix, [
+    test('submatrix results preserve original matrix order', () => {
+        const result = generateSubmatrices(mockMatrix, [
             { key: 'all-gcc', value: '{{#if (eq compiler "gcc")}}true{{/if}}' }
         ]);
         expect(result['all-gcc']![0]!.name).toBe('GCC 13');
         expect(result['all-gcc']![1]!.name).toBe('GCC 12');
     });
 
-    test('string field filter includes all entries with that field', () => {
-        const result = evaluateFilters(mockMatrix, [
+    test('string field predicate includes all entries with that field', () => {
+        const result = generateSubmatrices(mockMatrix, [
             { key: 'has-compiler', value: '{{compiler}}' }
         ]);
         expect(result['has-compiler']).toHaveLength(4);

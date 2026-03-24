@@ -108,11 +108,11 @@ export {
     splitRanges
 } from './versions';
 
-/** Set of values considered falsy when evaluating filter template results. */
+/** Set of values considered falsy when evaluating Handlebars template results. */
 const FALSY_VALUES = new Set(['', 'false', '0', 'null', 'undefined']);
 
 /**
- * Determines whether a Handlebars template result should be treated as truthy for filtering.
+ * Determines whether a Handlebars template result should be treated as truthy.
  *
  * Trims the input and checks against a set of falsy values: empty string, 'false', '0',
  * 'null', and 'undefined' (all case-insensitive except '0').
@@ -120,36 +120,36 @@ const FALSY_VALUES = new Set(['', 'false', '0', 'null', 'undefined']);
  * @param value - The rendered template string to evaluate
  * @returns True if the value is considered truthy
  */
-export function isTruthyFilterResult(value: string): boolean {
+export function isTruthyTemplateResult(value: string): boolean {
     const trimmed = value.trim();
     return !FALSY_VALUES.has(trimmed.toLowerCase());
 }
 
 /**
- * Validates that a filter name is safe to use as a JSON key.
+ * Validates that a submatrix name is safe to use as a JSON key.
  *
  * Valid names are lowercase alphanumeric with hyphens, no leading/trailing/consecutive hyphens.
  * Pattern: `/^[a-z0-9]+(-[a-z0-9]+)*$/`
  *
- * @param name - The filter name to validate
+ * @param name - The submatrix name to validate
  * @returns True if the name is valid
  */
-export function isValidFilterName(name: string): boolean {
+export function isValidSubmatrixName(name: string): boolean {
     return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(name);
 }
 
 /**
- * Evaluates all filter predicates against the matrix and returns sub-matrices.
+ * Generates named sub-matrices by evaluating Handlebars predicates against the matrix.
  *
- * Each filter's Handlebars template is compiled once and evaluated against every matrix entry.
- * Entries where the template result is truthy are included in that filter's sub-matrix.
+ * Each submatrix's template is compiled once and evaluated against every matrix entry.
+ * Entries where the template result is truthy are included in that submatrix.
  *
- * @param matrix - The full matrix entries to filter
- * @param filters - Named filter predicates as key-value pairs
- * @returns Object keyed by filter name with arrays of matching entries
+ * @param matrix - The full matrix entries
+ * @param submatrices - Named submatrix predicates as key-value pairs
+ * @returns Object keyed by submatrix name with arrays of matching entries
  */
-export function evaluateFilters(matrix: MatrixEntry[], filters: KeyValue[] | undefined): Record<string, MatrixEntry[]> {
-    if (!filters || filters.length === 0) {
+export function generateSubmatrices(matrix: MatrixEntry[], submatrices: KeyValue[] | undefined): Record<string, MatrixEntry[]> {
+    if (!submatrices || submatrices.length === 0) {
         return {};
     }
 
@@ -157,19 +157,23 @@ export function evaluateFilters(matrix: MatrixEntry[], filters: KeyValue[] | und
 
     const result: Record<string, MatrixEntry[]> = {};
 
-    for (const { key, value } of filters) {
-        if (!isValidFilterName(key)) {
-            core.warning(`Invalid filter name "${key}" — skipping (must match /^[a-z0-9]+(-[a-z0-9]+)*$/)`);
+    for (const { key, value } of submatrices) {
+        if (!isValidSubmatrixName(key)) {
+            core.warning(`Invalid submatrix name "${key}" — skipping (must match /^[a-z0-9]+(-[a-z0-9]+)*$/)`);
             continue;
         }
+        core.info(`  ${key}: ${value}`);
         const template = Handlebars.compile(value);
         const matches: MatrixEntry[] = [];
         for (const entry of matrix) {
             const output = template(entry);
-            if (isTruthyFilterResult(output)) {
+            const match = isTruthyTemplateResult(output);
+            traceCommands.log(`  ${entry.name}: ${JSON.stringify(output)} → ${match ? 'include' : 'exclude'}`);
+            if (match) {
                 matches.push(entry);
             }
         }
+        core.info(`  ${key}: ${matches.length} of ${matrix.length} entries`);
         result[key] = matches;
     }
 
@@ -189,11 +193,15 @@ function injectExtraValues(matrix: MatrixEntry[], extraValues?: KeyValue[]): voi
 
     registerHelpers();
 
-    // Use Object.entries to iterate over the key-value pairs of extraValues
     const compiledTemplates = extraValues.map(({ key, value }) => ({
         key,
+        value,
         template: Handlebars.compile(value)
     }));
+
+    for (const { key, value } of compiledTemplates) {
+        core.info(`  ${key}: ${value}`);
+    }
 
     const warnedKeys: string[] = [];
     for (const entry of matrix) {
@@ -203,11 +211,12 @@ function injectExtraValues(matrix: MatrixEntry[], extraValues?: KeyValue[]): voi
                 if (!warnedKeys.includes(key)) {
                     core.warning(`Extra entry key "${key}" already exists in the matrix`);
                 }
-                // Add to the list of keys we already warned about
                 warnedKeys.push(key);
                 continue;
             }
-            entry[key] = template(entry);
+            const rendered = template(entry);
+            entry[key] = rendered;
+            traceCommands.log(`  ${entry.name}: ${key} = ${JSON.stringify(rendered)}`);
         }
     }
 }
@@ -250,8 +259,8 @@ class CppMatrixRunner {
     /** Accumulated matrix entries */
     private matrix: MatrixEntry[] = [];
 
-    /** Filtered sub-matrices keyed by filter name */
-    private filterResults: Record<string, MatrixEntry[]> = {};
+    /** Named sub-matrices keyed by submatrix name */
+    private submatrixResults: Record<string, MatrixEntry[]> = {};
 
     /** Filtered C++ standard versions matching the standards requirement */
     private cxxstds: number[] = [];
@@ -268,7 +277,7 @@ class CppMatrixRunner {
     /**
      * Runs the full matrix generation pipeline.
      *
-     * @returns Object containing the matrix entries and filtered sub-matrices
+     * @returns Object containing the matrix entries and named sub-matrices
      */
     async run(): Promise<{ matrix: MatrixEntry[]; submatrices: Record<string, MatrixEntry[]> }> {
         this.resolveCxxStandards();
@@ -279,11 +288,11 @@ class CppMatrixRunner {
         this.applyExtraValues();
         this.sortEntries();
         await this.applySortByFailureRate();
-        this.applyFilters();
+        this.buildSubmatrices();
         this.logFinalMatrix();
         this.generateSummaryTable();
         this.writeOutputFile();
-        return { matrix: this.matrix, submatrices: this.filterResults };
+        return { matrix: this.matrix, submatrices: this.submatrixResults };
     }
 
     /**
@@ -482,6 +491,7 @@ class CppMatrixRunner {
         if (this.inputs.extraValues) {
             core.startGroup('🔧 Add extra values');
             injectExtraValues(this.matrix, this.inputs.extraValues);
+            this.printMatrix();
             core.endGroup();
         }
     }
@@ -517,13 +527,15 @@ class CppMatrixRunner {
     }
 
     /**
-     * Evaluates filter predicates against the matrix and stores results.
+     * Generates named sub-matrices by evaluating predicates against the matrix.
      */
-    private applyFilters(): void {
-        this.filterResults = evaluateFilters(this.matrix, this.inputs.submatrices);
-        for (const [name, entries] of Object.entries(this.filterResults)) {
-            core.info(`Filter '${name}': ${entries.length} of ${this.matrix.length} entries`);
+    private buildSubmatrices(): void {
+        if (!this.inputs.submatrices || this.inputs.submatrices.length === 0) {
+            return;
         }
+        core.startGroup('🔍 Generate submatrices');
+        this.submatrixResults = generateSubmatrices(this.matrix, this.inputs.submatrices);
+        core.endGroup();
     }
 
     /**
@@ -595,7 +607,7 @@ class CppMatrixRunner {
  *
  * @param inputs - Configuration inputs controlling matrix generation including
  *                 compiler versions, standards, factors, and container suggestions
- * @returns Object containing the matrix entries and filtered sub-matrices
+ * @returns Object containing the matrix entries and named sub-matrices
  */
 export async function generateMatrix(inputs: Inputs): Promise<{ matrix: MatrixEntry[]; submatrices: Record<string, MatrixEntry[]> }> {
     return new CppMatrixRunner(inputs).run();
@@ -605,7 +617,7 @@ export async function generateMatrix(inputs: Inputs): Promise<{ matrix: MatrixEn
  * Generates the matrix from schema-inferred inputs.
  *
  * @param inputs - Schema-inferred inputs with transforms applied
- * @returns The generated matrix entries and filtered sub-matrices
+ * @returns The generated matrix entries and named sub-matrices
  */
 export async function main(inputs: Inputs): Promise<{ matrix: MatrixEntry[]; submatrices: Record<string, MatrixEntry[]> }> {
     return await generateMatrix(inputs);

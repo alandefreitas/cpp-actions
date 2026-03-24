@@ -93,9 +93,9 @@ export const inputsSchema = {
             normalizeCompilerNameKeys(versions as unknown as Record<string, unknown>);
             return versions;
         },
-        description: `A list of compilers to be tested. Each compiler can be complemented with its semver version requirements to be tested.
+        description: `A list of compilers to be tested. Each compiler can be complemented by its SemVer version requirements for testing.
 
-When the compiler version requirements are provided, the action will break the requirements into subsets of major versions to be tested. When no version is provided, the '*' semver requirement is assumed. The action can identifies subsets of compiler versions for GCC, Clang, and MSVC. For any other compilers, the version requirements will passthrough to the output.`
+When the compiler version requirements are provided, the action will break them into subsets of major versions to test. When no version is provided, the '*' semver requirement is assumed. The action can identifies subsets of compiler versions for GCC, Clang, and MSVC. For any other compilers, the version requirements will passthrough to the output.`
     },
 
     subrangePolicy: {
