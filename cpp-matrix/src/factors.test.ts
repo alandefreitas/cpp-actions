@@ -23,7 +23,8 @@ import {
     applyLatestFactors,
     applyVariantFactors,
     applyCombinatorialFactors,
-    setRecommendedFlags
+    setRecommendedFlags,
+    llvmProfileFilePattern
 } from './factors';
 
 /**
@@ -72,6 +73,31 @@ function makeInputs(overrides: Partial<Inputs> = {}): Inputs {
         ...overrides
     } as Inputs;
 }
+
+describe('llvmProfileFilePattern', () => {
+    test('returns %p-%m for clang < 21', () => {
+        const pattern = llvmProfileFilePattern(16);
+        expect(pattern).toContain('%p');
+        expect(pattern).toContain('%m');
+        expect(pattern).not.toContain('%b');
+        expect(pattern).toMatch(/\.profraw$/);
+    });
+
+    test('returns %b-%p-%m for clang >= 21', () => {
+        const pattern = llvmProfileFilePattern(21);
+        expect(pattern).toContain('%b');
+        expect(pattern).toContain('%p');
+        expect(pattern).toContain('%m');
+        expect(pattern).toMatch(/\.profraw$/);
+    });
+
+    test('returns %p-%m for undefined version', () => {
+        const pattern = llvmProfileFilePattern(undefined);
+        expect(pattern).toContain('%p');
+        expect(pattern).toContain('%m');
+        expect(pattern).not.toContain('%b');
+    });
+});
 
 describe('applyCombinatorialFactors', () => {
     test('duplicates entries for each combinatorial factor', () => {
@@ -228,5 +254,43 @@ describe('setRecommendedFlags', () => {
         const entry = makeEntry({ compiler: 'clang-cl' });
         await setRecommendedFlags(entry, makeInputs());
         expect(entry.triplet).toBe('x64-windows');
+    });
+
+    test('clang 9-20 coverage sets LLVM_PROFILE_FILE with %p and %m', async () => {
+        const entry = makeEntry({ compiler: 'clang', version: '>=16', coverage: true });
+        await setRecommendedFlags(entry, makeInputs());
+        expect(entry.env['LLVM_PROFILE_FILE']).toBeDefined();
+        expect(entry.env['LLVM_PROFILE_FILE']).toContain('%p');
+        expect(entry.env['LLVM_PROFILE_FILE']).toContain('%m');
+        expect(entry.env['LLVM_PROFILE_FILE']).not.toContain('%b');
+        expect(entry.env['LLVM_PROFILE_FILE']).toMatch(/\.profraw$/);
+    });
+
+    test('clang 21+ coverage sets LLVM_PROFILE_FILE with %b, %p, and %m', async () => {
+        const entry = makeEntry({ compiler: 'clang', version: '>=21', coverage: true });
+        await setRecommendedFlags(entry, makeInputs());
+        expect(entry.env['LLVM_PROFILE_FILE']).toBeDefined();
+        expect(entry.env['LLVM_PROFILE_FILE']).toContain('%b');
+        expect(entry.env['LLVM_PROFILE_FILE']).toContain('%p');
+        expect(entry.env['LLVM_PROFILE_FILE']).toContain('%m');
+        expect(entry.env['LLVM_PROFILE_FILE']).toMatch(/\.profraw$/);
+    });
+
+    test('gcc coverage does not set LLVM_PROFILE_FILE', async () => {
+        const entry = makeEntry({ compiler: 'gcc', version: '>=13', coverage: true });
+        await setRecommendedFlags(entry, makeInputs());
+        expect(entry.env['LLVM_PROFILE_FILE']).toBeUndefined();
+    });
+
+    test('LLVM_PROFILE_FILE preserves existing env vars', async () => {
+        const entry = makeEntry({
+            compiler: 'clang',
+            version: '>=16',
+            coverage: true,
+            env: { 'EXISTING_VAR': 'value' }
+        });
+        await setRecommendedFlags(entry, makeInputs());
+        expect(entry.env['EXISTING_VAR']).toBe('value');
+        expect(entry.env['LLVM_PROFILE_FILE']).toBeDefined();
     });
 });

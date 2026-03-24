@@ -22,6 +22,65 @@ import {
 } from './annotations';
 
 /**
+ * Detects the Clang major version by running the compiler with --version.
+ *
+ * Parses the output looking for "clang version X.Y.Z" and extracts X.
+ * Returns undefined if the compiler path is not set, the command fails,
+ * or the output does not contain a recognizable Clang version string.
+ *
+ * @param compilerPath - Path to the C or C++ compiler binary
+ * @returns The Clang major version number, or undefined
+ */
+export async function detectClangMajorVersion(compilerPath: string | undefined): Promise<number | undefined> {
+    if (!compilerPath) {
+        return undefined;
+    }
+    try {
+        const { exitCode, stdout } = await exec.getExecOutput(
+            `"${compilerPath}"`, ['--version'],
+            { silent: true, ignoreReturnCode: true }
+        );
+        if (exitCode !== 0) {
+            return undefined;
+        }
+        const match = /clang version (\d+)/.exec(stdout);
+        return match ? parseInt(match[1], 10) : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+/**
+ * Returns a collision-resistant LLVM_PROFILE_FILE pattern appropriate
+ * for the given Clang major version.
+ *
+ * Without LLVM_PROFILE_FILE, all instrumented binaries write to
+ * default.profraw, silently corrupting each other's data when multiple
+ * test executables run. Rust fixed the same issue by defaulting to
+ * %m_%p in rustc 1.65 (rust-lang/rust#100381).
+ *
+ * LLVM_PROFILE_FILE token reference by minimum Clang version:
+ *   %p  (3.9)  — process ID
+ *   %h  (3.9)  — hostname
+ *   %m  (3.9)  — binary signature / merge pool
+ *   %c  (10)   — continuous mode (Darwin-only in production)
+ *   %t  (12)   — TMPDIR (silently falls back to default.profraw if unset)
+ *   %b  (21)   — binary/build ID (resolves %m signature collision LLVM #52218)
+ *
+ * NOTE: Duplicated in cpp-matrix/src/factors.ts which sets the pattern
+ * at matrix-generation time. Keep both copies in sync.
+ *
+ * @param clangMajor - Clang major version, or undefined if unknown
+ * @returns The LLVM_PROFILE_FILE pattern string
+ */
+export function llvmProfileFilePattern(clangMajor: number | undefined): string {
+    if (clangMajor !== undefined && clangMajor >= 21) {
+        return 'default-%b-%p-%m.profraw';
+    }
+    return 'default-%p-%m.profraw';
+}
+
+/**
  * Converts an array of arguments to a shell-safe string.
  *
  * @param args - Array of command arguments
@@ -702,6 +761,18 @@ export async function processEntry(
     const shouldRunTests = entry.runTests !== false && (entry.testAllCxxstd || entry.is_main_entry);
     if (shouldRunTests) {
         core.startGroup(`🧪 Test (${factorDesc})`);
+
+        // Set LLVM_PROFILE_FILE when Clang source-based coverage is active
+        // and the variable is not already set, so CTest child processes
+        // inherit a collision-resistant profraw pattern.
+        const hasClangCoverage = entry.cxxflags.includes('-fprofile-instr-generate');
+        if (hasClangCoverage && !process.env['LLVM_PROFILE_FILE']) {
+            const clangMajor = await detectClangMajorVersion(entry.cxx || entry.cc);
+            const profilePattern = llvmProfileFilePattern(clangMajor);
+            process.env['LLVM_PROFILE_FILE'] = profilePattern;
+            core.info(`LLVM_PROFILE_FILE set to '${profilePattern}'`);
+        }
+
         await runTestStep(entry, setupCMakeOutputs, generatorIsMultiConfig, ctestPath);
         core.endGroup();
     }

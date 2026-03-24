@@ -3,7 +3,7 @@ import * as exec from '@actions/exec';
 import * as io from '@actions/io';
 import * as traceCommands from 'trace-commands';
 
-import { makeArgsString, makeFactorDescription, processEntry } from './process-entry';
+import { makeArgsString, makeFactorDescription, processEntry, detectClangMajorVersion, llvmProfileFilePattern } from './process-entry';
 import { type ResolvedInputs, type SetupCMakeOutputs, type ResolvedParameters } from './types';
 
 jest.mock('@actions/core', () => ({
@@ -205,6 +205,83 @@ describe('makeFactorDescription', () => {
     it('includes extra_args_key with default standard', () => {
         const entry = makeInputs({ extra_args_key: 'asan', cxxstd: null });
         expect(makeFactorDescription(entry)).toBe('asan: Default C++ standard');
+    });
+});
+
+// =====================================================
+// detectClangMajorVersion
+// =====================================================
+describe('detectClangMajorVersion', () => {
+    it('detects clang 16 from --version output', async () => {
+        mockedExec.getExecOutput.mockResolvedValueOnce({
+            exitCode: 0,
+            stdout: 'Ubuntu clang version 16.0.6 (++20231003085011+7cbf1a259152-1~exp1~20231003085123.106)\nTarget: x86_64-pc-linux-gnu\n',
+            stderr: ''
+        });
+        expect(await detectClangMajorVersion('/usr/bin/clang++')).toBe(16);
+    });
+
+    it('detects clang 21 from --version output', async () => {
+        mockedExec.getExecOutput.mockResolvedValueOnce({
+            exitCode: 0,
+            stdout: 'clang version 21.1.0\nTarget: x86_64-unknown-linux-gnu\n',
+            stderr: ''
+        });
+        expect(await detectClangMajorVersion('/usr/bin/c++')).toBe(21);
+    });
+
+    it('returns undefined for non-clang compiler output', async () => {
+        mockedExec.getExecOutput.mockResolvedValueOnce({
+            exitCode: 0,
+            stdout: 'g++ (Ubuntu 13.2.0-23ubuntu4) 13.2.0\n',
+            stderr: ''
+        });
+        expect(await detectClangMajorVersion('/usr/bin/g++')).toBeUndefined();
+    });
+
+    it('returns undefined when command fails', async () => {
+        mockedExec.getExecOutput.mockResolvedValueOnce({
+            exitCode: 1,
+            stdout: '',
+            stderr: 'error'
+        });
+        expect(await detectClangMajorVersion('/nonexistent')).toBeUndefined();
+    });
+
+    it('returns undefined for undefined path', async () => {
+        expect(await detectClangMajorVersion(undefined)).toBeUndefined();
+    });
+
+    it('returns undefined for empty string', async () => {
+        expect(await detectClangMajorVersion('')).toBeUndefined();
+    });
+});
+
+// =====================================================
+// llvmProfileFilePattern
+// =====================================================
+describe('llvmProfileFilePattern', () => {
+    it('returns %p-%m pattern for clang 16', () => {
+        const pattern = llvmProfileFilePattern(16);
+        expect(pattern).toContain('%p');
+        expect(pattern).toContain('%m');
+        expect(pattern).not.toContain('%b');
+        expect(pattern).toMatch(/\.profraw$/);
+    });
+
+    it('returns %b-%p-%m pattern for clang 21', () => {
+        const pattern = llvmProfileFilePattern(21);
+        expect(pattern).toContain('%b');
+        expect(pattern).toContain('%p');
+        expect(pattern).toContain('%m');
+        expect(pattern).toMatch(/\.profraw$/);
+    });
+
+    it('returns %p-%m pattern for undefined version', () => {
+        const pattern = llvmProfileFilePattern(undefined);
+        expect(pattern).toContain('%p');
+        expect(pattern).toContain('%m');
+        expect(pattern).not.toContain('%b');
     });
 });
 
@@ -598,6 +675,108 @@ describe('processEntry — test step', () => {
         const entry = makeInputs({ runTests: true, createAnnotations: true });
         await processEntry(entry, makeSetupOutputs(), makeParams());
         expect(createCMakeTestAnnotations).toHaveBeenCalled();
+    });
+});
+
+// =====================================================
+// processEntry — LLVM_PROFILE_FILE
+// =====================================================
+describe('processEntry — LLVM_PROFILE_FILE', () => {
+    let savedProfileFile: string | undefined;
+
+    beforeEach(() => {
+        savedProfileFile = process.env['LLVM_PROFILE_FILE'];
+        delete process.env['LLVM_PROFILE_FILE'];
+    });
+
+    afterEach(() => {
+        if (savedProfileFile !== undefined) {
+            process.env['LLVM_PROFILE_FILE'] = savedProfileFile;
+        } else {
+            delete process.env['LLVM_PROFILE_FILE'];
+        }
+    });
+
+    it('sets LLVM_PROFILE_FILE with %p and %m for pre-21 clang', async () => {
+        // configure, build, --version, test
+        mockedExec.getExecOutput
+            .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' })
+            .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' })
+            .mockResolvedValueOnce({ exitCode: 0, stdout: 'clang version 16.0.6\n', stderr: '' })
+            .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' });
+        const entry = makeInputs({
+            cxxflags: '-fprofile-instr-generate -fcoverage-mapping',
+            cxx: '/usr/bin/c++',
+            runTests: true,
+            install: false
+        });
+        await processEntry(entry, makeSetupOutputs(), makeParams());
+        expect(process.env['LLVM_PROFILE_FILE']).toBeDefined();
+        expect(process.env['LLVM_PROFILE_FILE']).toContain('%p');
+        expect(process.env['LLVM_PROFILE_FILE']).toContain('%m');
+        expect(process.env['LLVM_PROFILE_FILE']).not.toContain('%b');
+    });
+
+    it('sets LLVM_PROFILE_FILE with %b for clang 21+', async () => {
+        // configure, build, --version, test
+        mockedExec.getExecOutput
+            .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' })
+            .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' })
+            .mockResolvedValueOnce({ exitCode: 0, stdout: 'clang version 21.1.0\n', stderr: '' })
+            .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' });
+        const entry = makeInputs({
+            cxxflags: '-fprofile-instr-generate -fcoverage-mapping',
+            cxx: '/usr/bin/c++',
+            runTests: true,
+            install: false
+        });
+        await processEntry(entry, makeSetupOutputs(), makeParams());
+        expect(process.env['LLVM_PROFILE_FILE']).toBeDefined();
+        expect(process.env['LLVM_PROFILE_FILE']).toContain('%b');
+        expect(process.env['LLVM_PROFILE_FILE']).toContain('%p');
+        expect(process.env['LLVM_PROFILE_FILE']).toContain('%m');
+    });
+
+    it('falls back to %p-%m when --version output is not clang', async () => {
+        // configure, build, --version (gcc output), test
+        mockedExec.getExecOutput
+            .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' })
+            .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' })
+            .mockResolvedValueOnce({ exitCode: 0, stdout: 'g++ (Ubuntu 13.2.0) 13.2.0\n', stderr: '' })
+            .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' });
+        const entry = makeInputs({
+            cxxflags: '-fprofile-instr-generate -fcoverage-mapping',
+            cxx: '/usr/bin/c++',
+            runTests: true,
+            install: false
+        });
+        await processEntry(entry, makeSetupOutputs(), makeParams());
+        expect(process.env['LLVM_PROFILE_FILE']).toBeDefined();
+        expect(process.env['LLVM_PROFILE_FILE']).toContain('%p');
+        expect(process.env['LLVM_PROFILE_FILE']).toContain('%m');
+        expect(process.env['LLVM_PROFILE_FILE']).not.toContain('%b');
+    });
+
+    it('does not override existing LLVM_PROFILE_FILE', async () => {
+        process.env['LLVM_PROFILE_FILE'] = 'custom-%p.profraw';
+        const entry = makeInputs({
+            cxxflags: '-fprofile-instr-generate -fcoverage-mapping',
+            cxx: '/usr/bin/c++',
+            runTests: true,
+            install: false
+        });
+        await processEntry(entry, makeSetupOutputs(), makeParams());
+        expect(process.env['LLVM_PROFILE_FILE']).toBe('custom-%p.profraw');
+    });
+
+    it('does not set LLVM_PROFILE_FILE without coverage flags', async () => {
+        const entry = makeInputs({
+            cxxflags: '-Wall -O2',
+            runTests: true,
+            install: false
+        });
+        await processEntry(entry, makeSetupOutputs(), makeParams());
+        expect(process.env['LLVM_PROFILE_FILE']).toBeUndefined();
     });
 });
 

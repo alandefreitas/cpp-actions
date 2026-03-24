@@ -12,6 +12,42 @@ import { type Inputs } from './schema';
 import * as setup_program from 'setup-program';
 
 /**
+ * Returns a collision-resistant LLVM_PROFILE_FILE pattern appropriate
+ * for the given Clang major version.
+ *
+ * Without LLVM_PROFILE_FILE, all instrumented binaries write to
+ * default.profraw, silently corrupting each other's data when multiple
+ * test executables run. Rust fixed the same issue by defaulting to
+ * %m_%p in rustc 1.65 (rust-lang/rust#100381).
+ *
+ * LLVM_PROFILE_FILE token reference by minimum Clang version:
+ *   %p  (3.9)  — process ID
+ *   %h  (3.9)  — hostname
+ *   %m  (3.9)  — binary signature / merge pool
+ *   %c  (10)   — continuous mode (Darwin-only in production)
+ *   %t  (12)   — TMPDIR (silently falls back to default.profraw if unset)
+ *   %b  (21)   — binary/build ID (resolves %m signature collision LLVM #52218)
+ *
+ * NOTE: Duplicated in cmake-workflow/src/process-entry.ts for use as a
+ * standalone fallback. Keep both copies in sync.
+ *
+ * @param clangMajor - Clang major version, or undefined if unknown
+ * @returns The LLVM_PROFILE_FILE pattern string
+ */
+export function llvmProfileFilePattern(clangMajor: number | undefined): string {
+    if (clangMajor !== undefined && clangMajor >= 21) {
+        // Clang 21+ supports %b (binary/build ID) which provides
+        // stronger binary separation than %m alone, resolving the
+        // known %m signature collision (LLVM #52218).
+        return 'default-%b-%p-%m.profraw';
+    }
+    // Clang 9-20 (or unknown version): %p (PID) + %m (binary
+    // signature / merge pool). Both available since Clang 3.9
+    // and portable across Linux, macOS, and Windows.
+    return 'default-%p-%m.profraw';
+}
+
+/**
  * Applies latest factors to the matrix by duplicating latest entry.
  *
  * @param matrix - Matrix array to update
@@ -274,6 +310,15 @@ export async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): P
             if (clangMajor) {
                 entry['install'] += ` llvm-${clangMajor}-tools elfutils`;
             }
+
+            // Set LLVM_PROFILE_FILE to avoid profraw collisions.
+            // See llvmProfileFilePattern() for token reference.
+            entry['env'] = {
+                ...entry['env'],
+                'LLVM_PROFILE_FILE': llvmProfileFilePattern(
+                    typeof clangMajor === 'number' ? clangMajor : undefined
+                )
+            };
         }
         entry['build-type'] = 'Debug';
     }
