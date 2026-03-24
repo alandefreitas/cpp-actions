@@ -16,6 +16,25 @@ export interface InputOptions {
     commentPrefix?: string;
     /** Whether to filter out blank/whitespace-only lines. Defaults to true. */
     filterBlankLines?: boolean;
+    /**
+     * Whether to treat an empty string as a valid input value.
+     *
+     * When `true`, an empty string from `core.getInput` is accepted as-is
+     * without falling through to the next alias, environment variable, or
+     * default value.
+     *
+     * When `false`, empty strings are skipped and the next source is tried.
+     *
+     * Defaults to `false`.
+     *
+     * NOTE: GitHub Actions runner issue #924 means the runner sets
+     * `INPUT_<NAME>=""` for ALL declared inputs, even when the user does
+     * not provide a value. This makes it impossible to distinguish "not
+     * provided" from "explicitly set to empty." Use a sentinel default
+     * value (e.g., a string containing invalid characters for the domain)
+     * when you need this distinction.
+     */
+    acceptEmpty?: boolean;
 }
 
 /**

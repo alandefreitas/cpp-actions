@@ -113,7 +113,17 @@ export interface InputSchema<T extends InputType = InputType> {
      */
     required?: boolean;
 
-    /** Default value when input is not provided */
+    /**
+     * Default value when input is not provided.
+     *
+     * NOTE: GitHub Actions runner issue #924 means the runner sets
+     * `INPUT_<NAME>=""` for ALL declared inputs, even when the user
+     * does not provide a value. This makes it impossible to distinguish
+     * "not provided" from "explicitly set to empty string." If your
+     * action needs this distinction, use a sentinel default value
+     * (e.g., a string containing characters invalid for the domain,
+     * like `'<auto>'` for artifact names) and check for it at runtime.
+     */
     default?: InputTypeToTS[T];
 
     /** Environment variable(s) to check as fallback */

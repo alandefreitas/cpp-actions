@@ -63,7 +63,8 @@ const actionPackages = [
     'setup-cpp',
     'setup-gcc',
     'setup-msvc',
-    'setup-program'
+    'setup-program',
+    'process-coverage'
 ];
 
 // Common packages (no moduleNameMapper needed)
@@ -146,6 +147,7 @@ const coverageThreshold = {
     './create-changelog/src/':       { statements: 0, branches: -8, functions: 0, lines: 0 },
     './flamegraph/src/':             { statements: -52, branches: -39, functions: -12, lines: -51 },
     './package-install/src/':        { statements: -95, branches: -75, functions: -35, lines: -93 },
+    './process-coverage/src/':       { statements: -250, branches: -27, functions: -5, lines: -250 },
     './setup-clang/src/':            { statements: -28, branches: -20, functions: -8, lines: -28 },
     './setup-cmake/src/':            { statements: -10, branches: -10, functions: -6, lines: -10 },
     './setup-cpp/src/':              { statements: -14, branches: -10, functions: -5, lines: -14 },

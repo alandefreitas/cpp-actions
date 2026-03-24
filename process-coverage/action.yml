@@ -1,0 +1,337 @@
+name: "Process Coverage"
+description: |
+  This action processes raw C++ coverage data into reports, metrics, and uploads.
+
+  It replaces the per-project shell scripts that are typically needed for coverage processing.
+  Point it at a build directory and it handles everything: merging raw data, converting to LCOV,
+  filtering, stripping exclusion markers, generating reports, and uploading to coverage services.
+
+  The action supports both compiler families:
+
+  - **GCC** — discovers the version-matched `gcov`, runs `lcov --capture`, and merges results
+  - **Clang** — discovers `llvm-profdata`/`llvm-cov`, merges `.profraw` files, and exports to LCOV
+
+  The compiler family and version can be specified directly via the `compiler` and
+  `compiler-version` inputs. When not provided, they are auto-detected from the `cxx`
+  binary's `--version` output. Missing tools are installed automatically via `apt-get`.
+
+  After producing a unified LCOV `.info` file, the action can:
+
+  - Filter by path patterns (include/exclude with glob support)
+  - Strip `LCOV_EXCL` / `GCOV_EXCL` markers (not honored by most coverage services)
+  - Analyze new-code coverage by cross-referencing `git diff` with LCOV data
+  - Generate an HTML report via `genhtml` and upload it as a GitHub Actions artifact
+  - Write a coverage summary table to the GitHub Actions step summary
+  - Upload to **Codecov** and/or **Coveralls** via their official CLI tools
+
+  All coverage metrics are exposed as action outputs for downstream steps.
+
+  This action is typically used after xref:actions/cmake-workflow.adoc[] in your CI pipeline,
+  on matrix entries where `matrix.coverage` is true. The xref:actions/cpp-matrix.adoc[] action
+  automatically sets the right compiler flags and installs the coverage tools.
+
+  == Usage
+
+  Minimal usage (auto-detects compiler and version from `cxx`):
+
+  [source,yml,subs="attributes+"]
+  ----
+  steps:
+    - name: Process Coverage
+      uses: alandefreitas/cpp-actions/process-coverage@{page-version}
+      with:
+        cxx: $\{{ steps.setup-cpp.outputs.cxx }}
+        build-dir: build
+  ----
+
+  With Codecov upload and HTML report:
+
+  [source,yml,subs="attributes+"]
+  ----
+  steps:
+    - name: Process Coverage
+      uses: alandefreitas/cpp-actions/process-coverage@{page-version}
+      with:
+        cxx: $\{{ steps.setup-cpp.outputs.cxx }}
+        build-dir: build
+        include: src/**
+        exclude: third_party/**
+        html-report: true
+        codecov-token: $\{{ secrets.CODECOV_TOKEN }}
+        codecov-flags: cpp
+  ----
+
+  Explicit compiler (no auto-detection):
+
+  [source,yml,subs="attributes+"]
+  ----
+  steps:
+    - name: Process Coverage
+      uses: alandefreitas/cpp-actions/process-coverage@{page-version}
+      with:
+        compiler: clang
+        compiler-version: '18'
+        build-dir: build
+        binaries: build/bin/my_tests
+  ----
+
+  == Next steps
+
+  After processing coverage, you can use the action outputs in subsequent steps:
+
+  - `lcov-file` — path to the processed LCOV `.info` file
+  - `html-report-dir` — path to the HTML report directory
+  - `lines-percent`, `functions-percent`, `branches-percent` — overall coverage percentages
+  - `new-lines-percent` — coverage percentage of new/changed code
+
+# DO NOT EDIT: This section is auto-generated from src/schema.ts
+inputs:
+  trace-commands:
+    description: Trace commands executed by the workflow.
+    required: false
+    default: 'false'
+  compiler:
+    description: |-
+      The compiler family used to build the project.
+
+      Determines which coverage pipeline to use: `gcc` uses gcov/lcov,
+      `clang` uses llvm-profdata/llvm-cov.
+
+      When not provided, the action auto-detects the compiler by running
+      `cxx --version` (if `cxx` is set).
+    required: false
+    default: ''
+  compiler-version:
+    description: |-
+      The compiler version used to build the project.
+
+      Accepts any version format: a bare major number (`14`), a full version
+      (`14.2.0`), a semver range (`>=14`), or a wildcard (`*`). The action
+      extracts the major version to locate version-matched coverage tools
+      (e.g., `gcov-14`, `llvm-cov-18`). When the major version cannot be
+      determined (e.g., `*`), the action falls back to unversioned tools.
+
+      When not provided, the action auto-detects the version from the `cxx`
+      binary's `--version` output, or falls back to unversioned tools.
+
+      Typically set from `setup-cpp` outputs (`steps.setup-cpp.outputs.version`),
+      cpp-matrix fields (`matrix.major` or `matrix.version`), or a literal
+      version number.
+    required: false
+    default: ''
+  cxx:
+    description: |-
+      Path to the C++ compiler binary.
+
+      Used as a fallback to detect the compiler family and version when
+      `compiler` or `compiler-version` are not provided. The action runs
+      `cxx --version` and parses the output to identify the compiler.
+
+      Falls back to the `CXX` environment variable if not set.
+
+      Typically set from `setup-cpp` outputs (`steps.setup-cpp.outputs.cxx`).
+    required: false
+    default: ''
+  build-dir:
+    description: |-
+      List of build directories to search for coverage data.
+
+      For GCC, these directories contain `.gcda`/`.gcno` files.
+      For Clang, these directories are searched for `.profraw` files.
+    required: false
+    default: build
+  include:
+    description: |-
+      Glob patterns to include in coverage results.
+
+      Only LCOV sections whose source file path matches at least one pattern
+      are kept. Empty list means include all files.
+
+      Relative patterns like `src/**` or `../boost-root/libs/url/**`
+      are resolved to absolute paths relative to the working directory.
+      Use `*` to match within a single directory and `**` to match
+      across directories.
+    required: false
+    default: ''
+  exclude:
+    description: |-
+      Glob patterns to exclude from coverage results.
+
+      LCOV sections whose source file path matches any pattern are removed.
+      Applied after include filtering. Empty list means exclude nothing.
+
+      Relative patterns are resolved to absolute paths relative to
+      the working directory, same as `include`.
+    required: false
+    default: ''
+  summary:
+    description: |-
+      Write a coverage summary table to the GitHub Actions step summary.
+
+      Includes line, function, and branch coverage metrics.
+      If new-code analysis is available, includes a new-code section.
+    required: false
+    default: 'true'
+  html-report:
+    description: |-
+      Generate an HTML coverage report using genhtml.
+
+      The report directory path is available via the `html-report-dir` output
+      for use in subsequent steps (e.g., deploying to GitHub Pages).
+    required: false
+    default: 'false'
+  html-report-artifact:
+    description: |-
+      Name for the HTML coverage report artifact.
+
+      When set to `<auto>` (default), generates a unique name from the
+      compiler and platform (e.g., `coverage-report-gcc-linux`).
+
+      When set to any other value, that value is used as-is.
+
+      Set to an empty string to skip artifact upload — the report is
+      still generated and available via the `html-report-dir` output.
+    required: false
+    default: <auto>
+  html-report-retention-days:
+    description: Number of days to retain the HTML coverage report artifact.
+    required: false
+    default: '30'
+  diff-base:
+    description: |-
+      Git ref to compare against for new-code coverage analysis.
+
+      The action runs `git diff <diff-base>..HEAD` to identify which lines
+      were added or modified, then cross-references them with coverage data
+      to report what percentage of new code is covered.
+
+      Accepts any valid git ref: a branch name (`main`, `origin/develop`),
+      a commit SHA (`abc123` or full hash), a relative ref (`HEAD~1`), or
+      a tag (`v1.0.0`).
+
+      When not provided, the action auto-detects from the GitHub Actions
+      environment:
+      - **Pull requests**: uses `origin/$GITHUB_BASE_REF` (the PR target branch)
+      - **Push events**: uses `HEAD~1` (the previous commit)
+
+      Requires `actions/checkout` with `fetch-depth: 0` (or enough history
+      to reach the base ref). If the diff cannot be computed (e.g., shallow
+      clone), new-code analysis is silently skipped.
+    required: false
+    default: ''
+  strip-excl-markers:
+    description: |-
+      Strip LCOV_EXCL / GCOV_EXCL markers from coverage data.
+
+      When enabled, lines marked with LCOV_EXCL_LINE or between
+      LCOV_EXCL_START/LCOV_EXCL_STOP (and GCOV_EXCL equivalents)
+      are removed from the LCOV output. This is useful because some
+      coverage services and tools do not honor these markers natively.
+    required: false
+    default: 'true'
+  binaries:
+    description: |-
+      Paths to the instrumented test executables (Clang only).
+
+      Clang's `llvm-cov export` needs to know which executable produced the
+      coverage data. Each entry is a path or glob pattern pointing to a test
+      binary built with `-fprofile-instr-generate -fcoverage-mapping`
+      (e.g. `build/bin/my_tests`, `build/test_*`).
+
+      When not provided, the action searches the build directories for
+      executable files and attempts to use them automatically. Provide
+      this input explicitly when auto-discovery picks up the wrong
+      binaries or when the build directory contains many unrelated
+      executables.
+
+      Ignored for GCC pipelines (GCC coverage tools do not need binary paths).
+    required: false
+    default: ''
+  profraw-pattern:
+    description: |-
+      Glob pattern to match `.profraw` files in build directories.
+
+      Only used for Clang pipelines.
+    required: false
+    default: '*.profraw'
+  codecov-token:
+    description: |-
+      Codecov upload token. If non-empty, uploads coverage to Codecov.
+
+      The token can be found in your Codecov repository settings.
+    required: false
+    default: ''
+  codecov-flags:
+    description: Comma-separated list of Codecov flags to associate with the upload.
+    required: false
+    default: ''
+  codecov-args:
+    description: Extra arguments to pass to the Codecov CLI upload command.
+    required: false
+    default: ''
+  coveralls-token:
+    description: |-
+      Coveralls repo token. If non-empty, uploads coverage to Coveralls.
+
+      The token can be found in your Coveralls repository settings.
+    required: false
+    default: ''
+  coveralls-args:
+    description: Extra arguments to pass to the Coveralls coverage-reporter command.
+    required: false
+    default: ''
+  fail-on-upload-error:
+    description: |-
+      Fail the action if a coverage upload (Codecov or Coveralls) fails.
+
+      Set to `false` to treat upload failures as warnings instead of
+      errors. This is useful for forks where coverage tokens may not be
+      available as secrets.
+    required: false
+    default: 'true'
+
+outputs:
+  lcov-file:
+    description: Absolute path to the final LCOV .info file after filtering.
+  html-report-dir:
+    description: Absolute path to the HTML coverage report directory. Empty if html-report is not enabled.
+  lines-covered:
+    description: Number of lines with non-zero execution count.
+  lines-total:
+    description: Total number of instrumented lines.
+  lines-percent:
+    description: Line coverage percentage formatted with one decimal place (e.g. 85.7).
+  functions-covered:
+    description: Number of functions with non-zero execution count.
+  functions-total:
+    description: Total number of instrumented functions.
+  functions-percent:
+    description: Function coverage percentage formatted with one decimal place (e.g. 92.3).
+  branches-covered:
+    description: Number of branches with non-zero execution count.
+  branches-total:
+    description: Total number of instrumented branches.
+  branches-percent:
+    description: Branch coverage percentage formatted with one decimal place (e.g. 70.1).
+  new-lines-covered:
+    description: Number of new or modified lines with non-zero execution count. Zero if diff analysis is unavailable.
+  new-lines-total:
+    description: Total number of new or modified instrumented lines. Zero if diff analysis is unavailable.
+  new-lines-percent:
+    description: New-code line coverage percentage formatted with one decimal place. Zero if diff analysis is unavailable.
+  new-functions-covered:
+    description: Number of covered new/modified functions. Zero if diff analysis is unavailable.
+  new-functions-total:
+    description: Total number of new/modified instrumented functions. Zero if diff analysis is unavailable.
+  new-functions-percent:
+    description: New-code function coverage percentage formatted with one decimal place. Zero if diff analysis is unavailable.
+  new-branches-covered:
+    description: Number of covered new/modified branches. Zero if diff analysis is unavailable.
+  new-branches-total:
+    description: Total number of new/modified instrumented branches. Zero if diff analysis is unavailable.
+  new-branches-percent:
+    description: New-code branch coverage percentage formatted with one decimal place. Zero if diff analysis is unavailable.
+
+runs:
+  using: "node20"
+  main: "dist/index.js"

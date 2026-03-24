@@ -1,0 +1,30 @@
+{
+  "name": "process-coverage",
+  "version": "1.9.3",
+  "description": "Unified post-test C++ coverage processing pipeline for GCC and Clang",
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc -p .config/tsconfig.json && node ../utils/esbuild/dist/index.js .",
+    "typecheck": "tsc -p .config/tsconfig.json --noEmit",
+    "test": "jest --config ../jest.config.js --selectProjects process-coverage"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "Boost Software License 1.0",
+  "dependencies": {
+    "@actions/artifact": "^6.1.0",
+    "@actions/core": "^3.0.0",
+    "@actions/exec": "^3.0.0",
+    "@actions/glob": "^0.5.0",
+    "@actions/io": "^3.0.2",
+    "@actions/tool-cache": "^4.0.0",
+    "action-schema": "*",
+    "picomatch": "^2.3.1",
+    "semver": "^7.6.0",
+    "setup-program": "*",
+    "trace-commands": "*"
+  },
+  "devDependencies": {
+    "@types/picomatch": "^4.0.2"
+  }
+}

@@ -27,7 +27,8 @@ const defaultOptions: InputOptions = {
     defaultValue: '',
     filterComments: true,
     commentPrefix: '#',
-    filterBlankLines: true
+    filterBlankLines: true,
+    acceptEmpty: false
 };
 
 /** Default regex pattern for splitting array inputs. */
@@ -50,10 +51,6 @@ const isNonEmptyStr: FilterFn = (s: string): boolean => s !== '';
  * @param name - The input name as passed to core.getInput (spaces to underscores, uppercased)
  * @returns true if the INPUT_ env var is defined in the process environment
  */
-function isInputEnvSet(name: string): boolean {
-    const envKey = `INPUT_${name.replace(/ /g, '_').toUpperCase()}`;
-    return envKey in process.env;
-}
 
 /**
  * Retrieves a GitHub Actions input value with enhanced features.
@@ -78,7 +75,7 @@ export function getInput(name: string | string[], options: InputOptions = {}): s
     for (const n of nameArr) {
         const coreOptions = { ...opts, required: false };
         const str = core.getInput(n, coreOptions);
-        if (str || isInputEnvSet(n)) {
+        if (str || opts.acceptEmpty) {
             return str;
         }
     }
@@ -163,7 +160,7 @@ export function getMultilineInput(name: string | string[], options: InputOptions
     for (const n of nameArr) {
         const coreOptions = { ...opts, required: false };
         const lines = core.getMultilineInput(n, coreOptions);
-        if (isInputEnvSet(n)) {
+        if (opts.acceptEmpty) {
             return filterLines(lines, opts);
         }
         if (lines.length > 0) {

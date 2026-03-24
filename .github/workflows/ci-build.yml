@@ -34,22 +34,31 @@ jobs:
       contents: write
 
     steps:
-      # GitHub Actions no longer support older containers.
-      # The workaround is to install our own Node.js for the actions.
-      # We cannot use `uses: ./container-bootstrap` here because checkout
-      # hasn't happened yet and that action needs Node.js to run checkout first.
-      # The containers that need Node.js 20 will have volumes set up so that
-      # the Node.js 20 installation can go there.
-      - name: Patch Node
-        if: ${{ matrix.container.volumes }}
+      # Inline container bootstrap — we can't use ./container-bootstrap because
+      # checkout hasn't happened yet (chicken-and-egg). This replicates the
+      # essential steps: Node.js glibc patching, git installation, and
+      # safe.directory configuration.
+      - name: Container Bootstrap
+        if: ${{ matrix.is-container }}
         run: |
           set -x
-          apt-get update
-          apt-get install -y curl
-          curl -fsSL "https://unofficial-builds.nodejs.org/download/release/v20.9.0/node-v20.9.0-linux-x64-glibc-217.tar.gz" -o /tmp/node-glibc217.tar.gz
-          tar -xzf /tmp/node-glibc217.tar.gz --strip-components 1 -C /node20217
-          rm -f /tmp/node-glibc217.tar.gz
-          /__e/node20/bin/node --version
+          # Install git if missing (needed for checkout and later git operations)
+          if ! command -v git >/dev/null 2>&1; then
+            apt-get update && apt-get install -y git
+          fi
+          # Configure safe.directory for containers (root user vs workspace owner)
+          git config --global --add safe.directory '*'
+          # Patch Node.js for old containers with glibc-217 volume mounts
+          if [ -d /node20217 ] && [ -w /node20217 ]; then
+            if ! /__e/node20/bin/node --version 2>/dev/null; then
+              apt-get update 2>/dev/null || true
+              apt-get install -y curl 2>/dev/null || true
+              curl -fsSL "https://unofficial-builds.nodejs.org/download/release/v20.9.0/node-v20.9.0-linux-x64-glibc-217.tar.gz" -o /tmp/node-glibc217.tar.gz
+              tar -xzf /tmp/node-glibc217.tar.gz --strip-components 1 -C /node20217
+              rm -f /tmp/node-glibc217.tar.gz
+              /__e/node20/bin/node --version
+            fi
+          fi
 
       - name: Clone cpp-actions
         uses: actions/checkout@v4
@@ -146,28 +155,15 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           trace-commands: true
 
-      - name: Codecov
+      - name: Process Coverage
         if: ${{ matrix.coverage }}
-        run: |
-          set -x
-          gcov_tool="gcov"
-          if command -v "gcov-${{ steps.setup-cpp.outputs.version-major }}.${{ steps.setup-cpp.outputs.version-minor }}" &> /dev/null; then
-              gcov_tool="gcov"
-          elif command -v "gcov-${{ steps.setup-cpp.outputs.version-major }}" &> /dev/null; then
-              gcov_tool="gcov-${{ steps.setup-cpp.outputs.version-major }}"
-          fi
-          lcov -c -q -o "./tests/build/coverage.info" -d "./tests/build" --include "$(pwd)/*" --gcov-tool "$gcov_tool"
-          # genhtml --legend -f -q "./tests/build/coverage.info" -p "./tests" -o "./tests/build/coverage_html"
-          cat "./tests/build/coverage.info"
-
-          bash <(curl -s https://codecov.io/bash) -f "./tests/build/coverage.info"
-
-          echo "# Coverage" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "[![codecov](https://codecov.io/github/$GITHUB_REPOSITORY/commit/$GITHUB_SHA/graphs/sunburst.svg)](https://codecov.io/github/$GITHUB_REPOSITORY/commit/$GITHUB_SHA)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Commit: [![codecov](https://codecov.io/github/$GITHUB_REPOSITORY/commit/$GITHUB_SHA/graph/badge.svg)](https://codecov.io/github/$GITHUB_REPOSITORY/commit/$GITHUB_SHA)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Branch: [![codecov](https://codecov.io/github/$GITHUB_REPOSITORY/branch/$GITHUB_REF_NAME/graph/badge.svg)](https://codecov.io/github/$GITHUB_REPOSITORY/branch/$GITHUB_REF_NAME)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+        uses: ./process-coverage
+        with:
+          cxx: ${{ steps.setup-cpp.outputs.cxx }}
+          build-dir: tests/build
+          include: tests/**
+          html-report: true
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
+          codecov-flags: cpp
+          coveralls-token: ${{ github.token }}
+          trace-commands: true

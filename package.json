@@ -25,7 +25,8 @@
     "boost-clone",
     "cpp-matrix",
     "cmake-workflow",
-    "setup-cpp"
+    "setup-cpp",
+    "process-coverage"
   ],
   "scripts": {
     "update-data": "node utils/update-data/dist/index.js",
