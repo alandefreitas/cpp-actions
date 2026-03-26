@@ -639,9 +639,10 @@ set by LLVM_PROFILE_FILE.</p></td>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>fail-on-upload-error</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Fail the action if a coverage upload (Codecov or Coveralls) fails.</p>
-<p class="tableblock">When false, upload failures are reported as warnings but do not
-fail the action.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+<p class="tableblock">Set to <code>false</code> to treat upload failures as warnings instead of
+errors. This is useful for forks where coverage tokens may not be
+available as secrets.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>true</code></p></td>
 </tr>
 </tbody>
 </table>
