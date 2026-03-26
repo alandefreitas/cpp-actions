@@ -440,6 +440,7 @@ to Codecov and Coveralls.</p>
     cxx: ${{ steps.setup-cpp.outputs.cxx }}
     build-dir: tests/build
     include: tests/**
+    html-report: true
     codecov-token: ${{ secrets.CODECOV_TOKEN }}
     codecov-flags: cpp</code></pre>
 </div>
