@@ -547,12 +547,12 @@ for use in subsequent steps (e.g., deploying to GitHub Pages).</p></td>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>html-report-artifact</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Name for the HTML coverage report artifact.</p>
-<p class="tableblock">When not provided, generates a unique name from the compiler and
-platform (e.g., <code>coverage-report-gcc-linux</code>).</p>
-<p class="tableblock">When provided, the value is used exactly as-is.</p>
+<p class="tableblock">When set to <code>auto</code> (default), generates a unique name from the
+compiler and platform (e.g., <code>coverage-report-gcc-linux</code>).</p>
+<p class="tableblock">When set to any other value, that value is used as-is.</p>
 <p class="tableblock">Set to an empty string to skip artifact upload — the report is
 still generated and available via the <code>html-report-dir</code> output.</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>auto</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>html-report-retention-days</code></p></td>
