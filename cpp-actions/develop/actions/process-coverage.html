@@ -546,11 +546,10 @@ for use in subsequent steps (e.g., deploying to GitHub Pages).</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>html-report-artifact</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Artifact name for the uploaded HTML coverage report.</p>
-<p class="tableblock">When not provided, defaults to a unique name based on the compiler
-and platform (e.g., <code>coverage-report-gcc-linux</code>).</p>
-<p class="tableblock">Set to a custom name to control the artifact name (compiler and
-platform are still appended to avoid matrix collisions).</p>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Name for the HTML coverage report artifact.</p>
+<p class="tableblock">When not provided, generates a unique name from the compiler and
+platform (e.g., <code>coverage-report-gcc-linux</code>).</p>
+<p class="tableblock">When provided, the value is used exactly as-is.</p>
 <p class="tableblock">Set to an empty string to skip artifact upload — the report is
 still generated and available via the <code>html-report-dir</code> output.</p></td>
 <td class="tableblock halign-left valign-top"></td>
