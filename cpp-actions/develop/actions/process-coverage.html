@@ -419,12 +419,138 @@
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>Unified post-test C&#43;&#43; coverage processing pipeline for GCC and Clang.</p>
+<p>This action processes raw C&#43;&#43; coverage data into reports, metrics, and uploads.</p>
 </div>
 <div class="paragraph">
-<p>Supports gcov/lcov (GCC) and llvm-cov (Clang) toolchains,
-with LCOV filtering, metrics extraction, and optional uploads
-to Codecov and Coveralls.</p>
+<p>It replaces the per-project shell scripts that are typically needed for coverage processing.
+Point it at a build directory and it handles everything: merging raw data, converting to LCOV,
+filtering, stripping exclusion markers, generating reports, and uploading to coverage services.</p>
+</div>
+<div class="paragraph">
+<p>The action supports both compiler families:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>GCC</strong> — discovers the version-matched <code>gcov</code>, runs <code>lcov --capture</code>, and merges results</p>
+</li>
+<li>
+<p><strong>Clang</strong> — discovers <code>llvm-profdata</code>/<code>llvm-cov</code>, merges <code>.profraw</code> files, and exports to LCOV</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The compiler family and version can be specified directly via the <code>compiler</code> and
+<code>compiler-version</code> inputs. When not provided, they are auto-detected from the <code>cxx</code>
+binary&#8217;s <code>--version</code> output. Missing tools are installed automatically via <code>apt-get</code>.</p>
+</div>
+<div class="paragraph">
+<p>After producing a unified LCOV <code>.info</code> file, the action can:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Filter by path patterns (include/exclude with glob support)</p>
+</li>
+<li>
+<p>Strip <code>LCOV_EXCL</code> / <code>GCOV_EXCL</code> markers (not honored by most coverage services)</p>
+</li>
+<li>
+<p>Analyze new-code coverage by cross-referencing <code>git diff</code> with LCOV data</p>
+</li>
+<li>
+<p>Generate an HTML report via <code>genhtml</code> and upload it as a GitHub Actions artifact</p>
+</li>
+<li>
+<p>Write a coverage summary table to the GitHub Actions step summary</p>
+</li>
+<li>
+<p>Upload to <strong>Codecov</strong> and/or <strong>Coveralls</strong> via their official CLI tools</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>All coverage metrics are exposed as action outputs for downstream steps.</p>
+</div>
+<div class="paragraph">
+<p>This action is typically used after <a href="cmake-workflow.html" class="xref page">CMake Workflow</a> in your CI pipeline,
+on matrix entries where <code>matrix.coverage</code> is true. The <a href="cpp-matrix.html" class="xref page">C++ Matrix</a> action
+automatically sets the right compiler flags and installs the coverage tools.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_usage"><a class="anchor" href="#_usage"></a>Usage</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Minimal usage (auto-detects compiler and version from <code>cxx</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+  - name: Process Coverage
+    uses: alandefreitas/cpp-actions/process-coverage@develop
+    with:
+      cxx: ${{ steps.setup-cpp.outputs.cxx }}
+      build-dir: build</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>With Codecov upload and HTML report:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+  - name: Process Coverage
+    uses: alandefreitas/cpp-actions/process-coverage@develop
+    with:
+      cxx: ${{ steps.setup-cpp.outputs.cxx }}
+      build-dir: build
+      include: src/**
+      exclude: third_party/**
+      html-report: true
+      codecov-token: ${{ secrets.CODECOV_TOKEN }}
+      codecov-flags: cpp</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Explicit compiler (no auto-detection):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+  - name: Process Coverage
+    uses: alandefreitas/cpp-actions/process-coverage@develop
+    with:
+      compiler: clang
+      compiler-version: '18'
+      build-dir: build
+      binaries: build/bin/my_tests</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next steps</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>After processing coverage, you can use the action outputs in subsequent steps:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>lcov-file</code> — path to the processed LCOV <code>.info</code> file</p>
+</li>
+<li>
+<p><code>html-report-dir</code> — path to the HTML report directory</p>
+</li>
+<li>
+<p><code>lines-percent</code>, <code>functions-percent</code>, <code>branches-percent</code> — overall coverage percentages</p>
+</li>
+<li>
+<p><code>new-lines-percent</code> — coverage percentage of new/changed code</p>
+</li>
+</ul>
 </div>
 </div>
 </div>
@@ -442,7 +568,8 @@ to Codecov and Coveralls.</p>
     include: tests/**
     html-report: true
     codecov-token: ${{ secrets.CODECOV_TOKEN }}
-    codecov-flags: cpp</code></pre>
+    codecov-flags: cpp
+    coveralls-token: ${{ github.token }}</code></pre>
 </div>
 </div>
 </div>
@@ -473,9 +600,7 @@ to Codecov and Coveralls.</p>
 <p class="tableblock">Determines which coverage pipeline to use: <code>gcc</code> uses gcov/lcov,
 <code>clang</code> uses llvm-profdata/llvm-cov.</p>
 <p class="tableblock">When not provided, the action auto-detects the compiler by running
-<code>cxx --version</code> (if <code>cxx</code> is set) or by checking which coverage
-files exist in the build directories (<code>.profraw</code> → clang,
-<code>.gcda</code> → gcc).</p></td>
+<code>cxx --version</code> (if <code>cxx</code> is set).</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
@@ -515,10 +640,10 @@ For Clang, these directories are searched for <code>.profraw</code> files.</p></
 <td class="tableblock halign-left valign-top"><p class="tableblock">Glob patterns to include in coverage results.</p>
 <p class="tableblock">Only LCOV sections whose source file path matches at least one pattern
 are kept. Empty list means include all files.</p>
-<p class="tableblock">Relative patterns like <code>src/<strong></code> or <code>tests/<strong>.cpp</code> are automatically
-prefixed with <code></strong>/</code> so they match against the absolute paths in
-LCOV data without requiring the full workspace path. Use <code></strong></code> to
-match within a single directory and <code>**</code> to match across directories.</p></td>
+<p class="tableblock">Relative patterns like <code>src/<strong></code> or <code>../boost-root/libs/url/</strong></code>
+are resolved to absolute paths relative to the working directory.
+Use <code><strong></code> to match within a single directory and <code></strong>*</code> to match
+across directories.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
@@ -526,8 +651,8 @@ match within a single directory and <code>**</code> to match across directories.
 <td class="tableblock halign-left valign-top"><p class="tableblock">Glob patterns to exclude from coverage results.</p>
 <p class="tableblock">LCOV sections whose source file path matches any pattern are removed.
 Applied after include filtering. Empty list means exclude nothing.</p>
-<p class="tableblock">Relative patterns are automatically prefixed with <code>**/</code>, same as
-<code>include</code>.</p></td>
+<p class="tableblock">Relative patterns are resolved to absolute paths relative to
+the working directory, same as <code>include</code>.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
@@ -547,12 +672,12 @@ for use in subsequent steps (e.g., deploying to GitHub Pages).</p></td>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>html-report-artifact</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Name for the HTML coverage report artifact.</p>
-<p class="tableblock">When set to <code>auto</code> (default), generates a unique name from the
+<p class="tableblock">When set to <code>&lt;auto&gt;</code> (default), generates a unique name from the
 compiler and platform (e.g., <code>coverage-report-gcc-linux</code>).</p>
 <p class="tableblock">When set to any other value, that value is used as-is.</p>
 <p class="tableblock">Set to an empty string to skip artifact upload — the report is
 still generated and available via the <code>html-report-dir</code> output.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>auto</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>&lt;auto&gt;</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>html-report-retention-days</code></p></td>
@@ -604,10 +729,8 @@ executables.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>profraw-pattern</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Glob pattern to match <code>.profraw</code> files in build directories.</p>
-<p class="tableblock">Only used for Clang pipelines. The default matches both
-<code>default-%p-%m.profraw</code> and <code>default-%b-%p-%m.profraw</code> patterns
-set by LLVM_PROFILE_FILE.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>default-*.profraw</code></p></td>
+<p class="tableblock">Only used for Clang pipelines.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>*.profraw</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>codecov-token</code></p></td>
