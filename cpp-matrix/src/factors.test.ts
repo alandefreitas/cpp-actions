@@ -20,6 +20,7 @@ jest.mock('setup-program', () => ({
 import type { MatrixEntry } from './types';
 import type { Inputs } from './schema';
 import {
+    applyMainEntryFactors,
     applyLatestFactors,
     applyVariantFactors,
     applyCombinatorialFactors,
@@ -65,6 +66,7 @@ function makeEntry(overrides: Partial<MatrixEntry> = {}): MatrixEntry {
  */
 function makeInputs(overrides: Partial<Inputs> = {}): Inputs {
     return {
+        mainEntryFactors: {},
         latestFactors: {},
         factors: {},
         combinatorialFactors: {},
@@ -128,6 +130,96 @@ describe('applyCombinatorialFactors', () => {
         const inputs = makeInputs({ combinatorialFactors: { clang: ['Asan'] } });
         applyCombinatorialFactors(matrix, inputs, 0, 0, 'gcc');
         expect(matrix.length).toBe(1);
+    });
+});
+
+describe('applyMainEntryFactors', () => {
+    test('applies first factor directly to the main entry', () => {
+        const matrix = [
+            makeEntry({ name: 'Earliest' }),
+            makeEntry({ name: 'Latest', 'is-main': true, 'is-latest': true })
+        ];
+        const inputs = makeInputs({ mainEntryFactors: { gcc: ['Coverage'] } });
+        applyMainEntryFactors(matrix, inputs, 1, 'gcc');
+        expect(matrix[1]['coverage']).toBe(true);
+        expect(matrix[1]['is-main']).toBe(true);
+        expect(matrix[1]['has-factors']).toBe(true);
+        expect(matrix[1]['name']).toBe('Latest (Coverage)');
+        expect(matrix.length).toBe(2);
+        expect(matrix[0]['coverage']).toBe(false);
+    });
+
+    test('handles composite factor on main entry', () => {
+        const matrix = [makeEntry({ name: 'Main', 'is-main': true })];
+        const inputs = makeInputs({ mainEntryFactors: { gcc: ['ASan+UBSan'] } });
+        applyMainEntryFactors(matrix, inputs, 0, 'gcc');
+        expect(matrix[0]['asan']).toBe(true);
+        expect(matrix[0]['ubsan']).toBe(true);
+        expect(matrix[0]['name']).toBe('Main (ASan+UBSan)');
+        expect(matrix.length).toBe(1);
+    });
+
+    test('overflows extra factors to latest-factors behavior', () => {
+        const matrix = [makeEntry({ name: 'Main', 'is-main': true })];
+        const inputs = makeInputs({ mainEntryFactors: { gcc: ['Coverage', 'UBSan'] } });
+        applyMainEntryFactors(matrix, inputs, 0, 'gcc');
+        // First factor applied to main entry
+        expect(matrix[0]['coverage']).toBe(true);
+        expect(matrix[0]['ubsan']).toBe(false);
+        expect(matrix[0]['is-main']).toBe(true);
+        expect(matrix[0]['name']).toBe('Main (Coverage)');
+        // Second factor creates a copy (latest-factors behavior)
+        expect(matrix.length).toBe(2);
+        expect(matrix[1]['ubsan']).toBe(true);
+        expect(matrix[1]['coverage']).toBe(false);
+        expect(matrix[1]['is-main']).toBe(false);
+        expect(matrix[1]['name']).toBe('Main (UBSan)');
+    });
+
+    test('overflow copies do not carry the first factor', () => {
+        const matrix = [makeEntry({ name: 'Main', 'is-main': true })];
+        const inputs = makeInputs({ mainEntryFactors: { gcc: ['Coverage', 'TSan', 'UBSan'] } });
+        applyMainEntryFactors(matrix, inputs, 0, 'gcc');
+        // Main entry: Coverage only
+        expect(matrix[0]['coverage']).toBe(true);
+        expect(matrix[0]['tsan']).toBe(false);
+        expect(matrix[0]['ubsan']).toBe(false);
+        expect(matrix[0]['is-main']).toBe(true);
+        // Two overflow copies
+        expect(matrix.length).toBe(3);
+        expect(matrix[1]['tsan']).toBe(true);
+        expect(matrix[1]['coverage']).toBe(false);
+        expect(matrix[1]['is-main']).toBe(false);
+        expect(matrix[2]['ubsan']).toBe(true);
+        expect(matrix[2]['coverage']).toBe(false);
+        expect(matrix[2]['is-main']).toBe(false);
+    });
+
+    test('does nothing when compiler not in mainEntryFactors', () => {
+        const matrix = [makeEntry({ name: 'Main', 'is-main': true })];
+        const inputs = makeInputs({ mainEntryFactors: { clang: ['Coverage'] } });
+        applyMainEntryFactors(matrix, inputs, 0, 'gcc');
+        expect(matrix[0]['coverage']).toBeUndefined();
+        expect(matrix.length).toBe(1);
+    });
+
+    test('does not affect latest-factor copies created before it', () => {
+        const matrix = [
+            makeEntry({ name: 'Earliest' }),
+            makeEntry({ name: 'Latest', 'is-main': true, 'is-latest': true })
+        ];
+        const inputs = makeInputs({
+            latestFactors: { gcc: ['TSan'] },
+            mainEntryFactors: { gcc: ['Coverage'] }
+        });
+        applyLatestFactors(matrix, inputs, 1, 0, 'gcc');
+        expect(matrix.length).toBe(3);
+        applyMainEntryFactors(matrix, inputs, 1, 'gcc');
+        expect(matrix[1]['coverage']).toBe(true);
+        expect(matrix[1]['is-main']).toBe(true);
+        expect(matrix[2]['tsan']).toBe(true);
+        expect(matrix[2]['coverage']).toBe(false);
+        expect(matrix[2]['is-main']).toBe(false);
     });
 });
 

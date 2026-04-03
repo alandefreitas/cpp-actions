@@ -48,6 +48,7 @@ import {
 } from './entry-builder';
 
 import {
+    applyMainEntryFactors,
     applyLatestFactors,
     applyVariantFactors,
     applyCombinatorialFactors,
@@ -417,6 +418,7 @@ class CppMatrixRunner {
             const latestIdx = this.matrix.length - 1;
             fnlog(`${compilerName}: ${latestIdx - earliestIdx} basic entries`);
             applyLatestFactors(this.matrix, this.inputs, latestIdx, earliestIdx, compilerName);
+            applyMainEntryFactors(this.matrix, this.inputs, latestIdx, compilerName);
             applyVariantFactors(this.matrix, this.inputs, latestIdx, earliestIdx, compilerName);
             applyCombinatorialFactors(this.matrix, this.inputs, latestIdx, earliestIdx, compilerName);
             for (let i = earliestIdx; i < this.matrix.length; i++) {

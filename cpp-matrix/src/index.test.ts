@@ -53,6 +53,7 @@ function makeDefaultMatrixInputs(overrides: Partial<Inputs> = {}): Inputs {
         standards: '',
         subrangePolicy: { '': 'one-per-major' },
         maxStandards: 2,
+        mainEntryFactors: {},
         latestFactors: {},
         factors: {},
         combinatorialFactors: {},

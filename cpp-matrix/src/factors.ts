@@ -5,6 +5,7 @@
  */
 
 import * as semver from 'semver';
+import * as core from '@actions/core';
 
 import { type MatrixEntry } from './types';
 import { type Inputs } from './schema';
@@ -48,6 +49,85 @@ export function llvmProfileFilePattern(clangMajor: number | undefined): string {
 }
 
 /**
+ * Ensures every matrix entry has each factor key set, defaulting to `false`
+ * for entries that don't already have the factor set to `true`.
+ *
+ * Called at the end of each factor-application function to guarantee that
+ * downstream code (e.g. Handlebars templates, recommended-flag logic) can
+ * always check `entry[factor]` without worrying about missing keys.
+ *
+ * @param matrix - Matrix array to update
+ * @param factors - Factor strings (may contain composite `'A+B'` notation)
+ */
+function ensureFactorDefaults(matrix: MatrixEntry[], factors: string[]): void {
+    for (const entry of matrix) {
+        for (const factor of factors) {
+            for (const part of factor.split('+')) {
+                const key = part.toLowerCase();
+                if (!(key in entry)) {
+                    entry[key] = false;
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Applies main-entry factors to the matrix.
+ *
+ * The first factor listed for a compiler modifies the main entry in-place,
+ * so it retains `is-main = true`. Any additional factors overflow to
+ * latest-factors behavior — they create copies of the main entry with
+ * `is-main = false`, just as {@link applyLatestFactors} would.
+ *
+ * Must be called AFTER {@link applyLatestFactors} so that latest-factor
+ * copies are based on the clean (unmodified) main entry.
+ *
+ * @param matrix - Matrix array to update
+ * @param inputs - Action inputs
+ * @param latestIdx - Index of the latest (main) entry
+ * @param compilerName - Compiler name
+ */
+export function applyMainEntryFactors(matrix: MatrixEntry[], inputs: Inputs, latestIdx: number, compilerName: string): void {
+    if (!(compilerName in inputs.mainEntryFactors)) {
+        return;
+    }
+
+    const factors = inputs.mainEntryFactors[compilerName];
+
+    // First factor: apply directly to the main entry (keeps is-main = true)
+    const [firstFactor, ...overflowFactors] = factors;
+    for (const compositeFactor of firstFactor.split('+')) {
+        matrix[latestIdx][compositeFactor.toLowerCase()] = true;
+    }
+    matrix[latestIdx]['has-factors'] = true;
+    matrix[latestIdx]['name'] += ` (${firstFactor})`;
+
+    // Remaining factors: overflow to latest-factors behavior (copies with is-main = false)
+    for (const factor of overflowFactors) {
+        core.info(
+            `main-entry-factors: '${factor}' overflows to latest-factors behavior ` +
+            `for ${compilerName} — only the first factor modifies the main entry`
+        );
+        const latestCopy = { ...matrix[latestIdx] };
+        latestCopy['is-main'] = false;
+        // Reset the first factor's properties on the copy so it only has its own factor
+        for (const compositeFactor of firstFactor.split('+')) {
+            latestCopy[compositeFactor.toLowerCase()] = false;
+        }
+        // Remove the first factor's name suffix and add this factor's
+        latestCopy['name'] = latestCopy['name'].replace(` (${firstFactor})`, '');
+        for (const compositeFactor of factor.split('+')) {
+            latestCopy[compositeFactor.toLowerCase()] = true;
+        }
+        latestCopy['name'] += ` (${factor})`;
+        matrix.push(latestCopy);
+    }
+
+    ensureFactorDefaults(matrix, factors);
+}
+
+/**
  * Applies latest factors to the matrix by duplicating latest entry.
  *
  * @param matrix - Matrix array to update
@@ -73,16 +153,7 @@ export function applyLatestFactors(matrix: MatrixEntry[], inputs: Inputs, latest
             matrix.push(latestCopy);
         }
 
-        // Set the property to false for all other entries
-        for (let i = 0; i < matrix.length; i++) {
-            for (const factor of inputs.latestFactors[compilerName]) {
-                for (const compositeFactor of factor.split('+')) {
-                    if (!(compositeFactor.toLowerCase() in matrix[i])) {
-                        matrix[i][compositeFactor.toLowerCase()] = false;
-                    }
-                }
-            }
-        }
+        ensureFactorDefaults(matrix, inputs.latestFactors[compilerName]);
     }
 }
 
@@ -127,16 +198,7 @@ export function applyVariantFactors(matrix: MatrixEntry[], inputs: Inputs, lates
                 matrix.push(latestCopy);
             }
         }
-        // Set the property to false for all other entries
-        for (let i = 0; i < matrix.length; i++) {
-            for (const factor of inputs.factors[compilerName]) {
-                for (const compositeFactor of factor.split('+')) {
-                    if (!(compositeFactor.toLowerCase() in matrix[i])) {
-                        matrix[i][compositeFactor.toLowerCase()] = false;
-                    }
-                }
-            }
-        }
+        ensureFactorDefaults(matrix, inputs.factors[compilerName]);
     }
 }
 
@@ -166,16 +228,7 @@ export function applyCombinatorialFactors(matrix: MatrixEntry[], inputs: Inputs,
                 matrix.push(entryCopy);
             }
         }
-        // Set the property to false for all other entries
-        for (let i = 0; i < matrix.length; i++) {
-            for (const factor of inputs.combinatorialFactors[compilerName]) {
-                for (const compositeFactor of factor.split('+')) {
-                    if (!(compositeFactor.toLowerCase() in matrix[i])) {
-                        matrix[i][compositeFactor.toLowerCase()] = false;
-                    }
-                }
-            }
-        }
+        ensureFactorDefaults(matrix, inputs.combinatorialFactors[compilerName]);
     }
 }
 

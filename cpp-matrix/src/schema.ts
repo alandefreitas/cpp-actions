@@ -155,6 +155,21 @@ For instance, if 'max-standards' is 2 and the compiler supports '11,14,17,20,23'
     // -----------------------------------------------------------------
     // Factors
     // -----------------------------------------------------------------
+    mainEntryFactors: {
+        type: 'multiline' as const,
+        default: [] as string[],
+        crossTransform: parseFactorsCross,
+        description: `Factors to apply directly to the main entry of each compiler. The first factor listed for a compiler modifies the main entry in-place — the entry keeps \`is-main\` set to \`true\`. Any additional factors overflow to \`latest-factors\` behavior, creating separate copies of the main entry with \`is-main\` set to \`false\`.
+
+This is useful when you want to reuse the main entry for an additional purpose such as coverage, without creating a separate clean entry. For example, \`clang Coverage\` makes the main Clang entry a coverage build, so its recommended flags, install packages, and environment variables are set automatically.
+
+If you need multiple factors applied to the same entry simultaneously, use composite notation instead (e.g. \`clang Coverage+UBSan\`).
+
+Other entries will also include each factor as \`false\`.
+
+The following factors are considered special: 'asan', 'ubsan', 'msan', 'tsan', 'intsan', 'boundsan', 'lsan', 'cfi', and 'coverage'. When these factors are defined in an entry, its 'ccflags', 'cxxflags', and 'ldflags' value are also modified to include the suggested flags for factor.`
+    },
+
     latestFactors: {
         type: 'multiline' as const,
         default: ['gcc Coverage TSan UBSan'] as string[],

@@ -31,9 +31,11 @@ jobs:
             clang-cl *
             macos-gcc *
             macos-clang *
+          main-entry-factors: |
+            clang Coverage
           latest-factors: |
             gcc Coverage TSan UBSan Fetch-Content
-            clang Coverage Fetch-Content
+            clang Fetch-Content
           factors: |
             gcc ASan IntSan BoundSan LSan Shared No-Deps
             msvc Shared x86
