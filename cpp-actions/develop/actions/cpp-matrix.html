@@ -1148,6 +1148,175 @@ in the <code>/__e/node20</code> directory.</p>
 </div>
 </div>
 <div class="sect1">
+<h2 id="_common_vs_main_flags"><a class="anchor" href="#_common_vs_main_flags"></a>Common vs. main flags</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The action splits auto-generated compiler and linker flags into two buckets:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Common flags</strong> (<code>common-ccflags</code>, <code>common-cxxflags</code>, <code>common-ldflags</code>) — flags that should be applied to both dependency builds and the main project build. These are output separately so that consumers can pass them to dependency build systems (e.g. Boost.Build, vcpkg, Conan) in addition to the main CMake build.</p>
+</li>
+<li>
+<p><strong>Main flags</strong> (<code>ccflags</code>, <code>cxxflags</code>, <code>ldflags</code>) — the complete set of flags for the main project build, which includes the common flags as a base plus any project-only flags.</p>
+</li>
+</ul>
+</div>
+<div class="sect2">
+<h3 id="_factor_classification"><a class="anchor" href="#_factor_classification"></a>Factor classification</h3>
+<div class="paragraph">
+<p>Each built-in factor places its flags in one of the two buckets:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 25%;">
+<col style="width: 50%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Factor</th>
+<th class="tableblock halign-left valign-top">Bucket</th>
+<th class="tableblock halign-left valign-top">Flags</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">ASan</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Common</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>-fsanitize=address -fno-sanitize-recover=address -fno-omit-frame-pointer</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">MSan</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Common</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>-fsanitize=memory …</code> plus <code>-fsanitize-memory-track-origins</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">TSan</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Common</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>-fsanitize=thread -fno-sanitize-recover=thread -fno-omit-frame-pointer</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">UBSan</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Common</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>-fsanitize=undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">IntSan</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Common</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>-fsanitize=integer …</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">BoundSan</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Common</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>-fsanitize=bounds …</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">LSan</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Common</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>-fsanitize=leak</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">CFI</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Common</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>-fsanitize=cfi …</code> plus <code>-flto -fvisibility=hidden</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">x86</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Common</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>-m32</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Coverage</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Main only</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>-fprofile-instr-generate -fcoverage-mapping</code> (Clang) or <code>--coverage -fprofile-arcs -ftest-coverage</code> (GCC)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Time-Trace</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Main only</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>-ftime-trace</code></p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>Entries without any common-applicable factors still include the three <code>common-*</code> fields set to empty strings.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_resolution_order"><a class="anchor" href="#_resolution_order"></a>Resolution order</h3>
+<div class="paragraph">
+<p>The final values of both common and main flags are resolved in five steps:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Factor expansion</strong> — <code>setRecommendedFlags()</code> writes each factor&#8217;s flags into either the common or main bucket.</p>
+</li>
+<li>
+<p><strong>User common inputs</strong> — <code>common-ccflags</code> / <code>common-cxxflags</code> / <code>common-ldflags</code> (replace) and <code>append-common-ccflags</code> / <code>append-common-cxxflags</code> / <code>append-common-ldflags</code> (append) are applied to the common fields.</p>
+</li>
+<li>
+<p><strong>Inheritance</strong> — the finalized common flag values are copied as the base of the main <code>ccflags</code> / <code>cxxflags</code> / <code>ldflags</code> fields (concatenated before any project-only flags already present).</p>
+</li>
+<li>
+<p><strong>Project-only flags</strong> — coverage and time-trace flags that were already written to the main fields in step 1 remain in place after the common base.</p>
+</li>
+<li>
+<p><strong>User main inputs</strong> — <code>ccflags</code> / <code>cxxflags</code> / <code>ldflags</code> (replace) and <code>append-ccflags</code> / <code>append-cxxflags</code> / <code>append-ldflags</code> (append) are applied last. A replace input overwrites the entire string <strong>including</strong> the inherited common base.</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_example"><a class="anchor" href="#_example"></a>Example</h3>
+<div class="paragraph">
+<p>Consider an entry with ASan + Coverage using Clang, combined with user inputs <code>append-common-cxxflags: 'clang ASan: -DASAN_EXTRA'</code> and <code>append-cxxflags: 'clang Coverage: -DCOV_EXTRA'</code>:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 66.6667%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Resolved value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>common-cxxflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>-fsanitize=address -fno-sanitize-recover=address -fno-omit-frame-pointer -DASAN_EXTRA</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cxxflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>-fsanitize=address -fno-sanitize-recover=address -fno-omit-frame-pointer -DASAN_EXTRA -fprofile-instr-generate -fcoverage-mapping -DCOV_EXTRA</code></p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>In this example, the common flags (sanitizer + user append) are inherited as the base of <code>cxxflags</code>, then coverage flags and the user append are added on top.</p>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+Replace inputs (<code>ccflags</code>, <code>cxxflags</code>, <code>ldflags</code>) do <strong>not</strong> inherit from common. When a replace input matches an entry, it sets the entire main flag string to the specified value, bypassing the common base. Use append inputs (<code>append-ccflags</code>, etc.) when you want to add flags on top of the inherited common + project-only base.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>See also the <a href="#input-parameters">input parameters</a> for <code>common-ccflags</code>, <code>append-common-ccflags</code>, <code>ccflags</code>, and <code>append-ccflags</code> and the <a href="#outputs">outputs</a> for <code>common-ccflags</code>, <code>common-cxxflags</code>, and <code>common-ldflags</code>.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next steps</h2>
 <div class="sectionbody">
 <div class="paragraph">
@@ -1157,7 +1326,7 @@ in the <code>/__e/node20</code> directory.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_example"><a class="anchor" href="#_example"></a>Example</h2>
+<h2 id="_example_2"><a class="anchor" href="#_example_2"></a>Example</h2>
 <div class="sectionbody">
 <div class="listingblock">
 <div class="content">
@@ -1418,6 +1587,66 @@ in the <code>/__e/node20</code> directory.</p>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>common-ccflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of C compiler flags for dependency (common) builds. These replace inputs do not inherit from any other input — they set the common C flags to exactly the specified value for matching entries.</p>
+<p class="tableblock">Each line has the format:</p>
+<p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;ccflags&gt;</code></p>
+<p class="tableblock">For instance, <code>gcc &gt;=13.1: -O2</code> sets the common C flags to <code>-O2</code> for any <code>gcc</code> entry with version <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the flags to all versions of the compiler.</p>
+<p class="tableblock">Compiler and factor scoping (e.g. <code>gcc Coverage:</code>) is supported, following the same rules as <code>ccflags</code>.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>common-cxxflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of C compiler flags for dependency (common) builds. These replace inputs do not inherit from any other input — they set the common C flags to exactly the specified value for matching entries.</p>
+<p class="tableblock">Each line has the format:</p>
+<p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;cxxflags&gt;</code></p>
+<p class="tableblock">For instance, <code>gcc &gt;=13.1: -O2</code> sets the common C++ flags to <code>-O2</code> for any <code>gcc</code> entry with version <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the flags to all versions of the compiler.</p>
+<p class="tableblock">Compiler and factor scoping (e.g. <code>gcc Coverage:</code>) is supported, following the same rules as <code>cxxflags</code>.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>common-ldflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of linker flags for dependency (common) builds. These replace inputs do not inherit from any other input — they set the common linker flags to exactly the specified value for matching entries.</p>
+<p class="tableblock">Each line has the format:</p>
+<p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;ldflags&gt;</code></p>
+<p class="tableblock">For instance, <code>gcc &gt;=13.1: -static</code> sets the common linker flags to <code>-static</code> for any <code>gcc</code> entry with version <code>&gt;=13.1</code>.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will apply the flags to all versions of the compiler.</p>
+<p class="tableblock">Compiler and factor scoping (e.g. <code>gcc Coverage:</code>) is supported, following the same rules as <code>ldflags</code>.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>append-common-ccflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of C compiler flags to append to the common (dependency) build flags. Unlike <code>common-ccflags</code>, which replaces the entire common C flag string, this option appends to the auto-generated common flags (e.g. sanitizer flags, architecture flags).</p>
+<p class="tableblock">Each line has the format:</p>
+<p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;ccflags&gt;</code></p>
+<p class="tableblock">For instance, <code>clang ASan: -DEXTRA</code> appends <code>-DEXTRA</code> to the common C flags for any <code>clang</code> entry with the <code>ASan</code> factor.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will append the flags to all versions of the compiler.</p>
+<p class="tableblock">Compiler and factor scoping (e.g. <code>gcc Coverage:</code>) is supported, following the same rules as <code>append-ccflags</code>.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>append-common-cxxflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of C compiler flags to append to the common (dependency) build flags. Unlike `common-cxxflags`, which replaces the entire common C flag string, this option appends to the auto-generated common flags (e.g. sanitizer flags, architecture flags).</p>
+<p class="tableblock">Each line has the format:</p>
+<p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;cxxflags&gt;</code></p>
+<p class="tableblock">For instance, <code>gcc ASan: -Wextra</code> appends <code>-Wextra</code> to the common C++ flags for any <code>gcc</code> entry with the <code>ASan</code> factor.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will append the flags to all versions of the compiler.</p>
+<p class="tableblock">Compiler and factor scoping (e.g. <code>gcc Coverage:</code>) is supported, following the same rules as <code>append-cxxflags</code>.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>append-common-ldflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of linker flags to append to the common (dependency) build flags. Unlike <code>common-ldflags</code>, which replaces the entire common linker flag string, this option appends to the auto-generated common flags (e.g. sanitizer flags, architecture flags).</p>
+<p class="tableblock">Each line has the format:</p>
+<p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;ldflags&gt;</code></p>
+<p class="tableblock">For instance, <code>gcc ASan: -lpthread</code> appends <code>-lpthread</code> to the common linker flags for any <code>gcc</code> entry with the <code>ASan</code> factor.</p>
+<p class="tableblock">Omitting <code>&lt;compiler-range|compiler-factor&gt;</code> is equivalent to it being set to <code>*</code> and will append the flags to all versions of the compiler.</p>
+<p class="tableblock">Compiler and factor scoping (e.g. <code>gcc Coverage:</code>) is supported, following the same rules as <code>append-ldflags</code>.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>install</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">A multi-line list of packages to be installed with each range of compiler version. Each line has the format:</p>
 <p class="tableblock"><code>&lt;compiler-name&gt;[ &lt;compiler-range|compiler-factor&gt;]: &lt;packages&gt;</code></p>
@@ -1600,6 +1829,18 @@ in the <code>/__e/node20</code> directory.</p>
 <p class="tableblock">- <code>ldflags</code>: The recommended linker flags to be used by this entry. It reflects the values of special factors, such as sanitizers and coverage, which require matching flags at link time.</p>
 <p class="tableblock">- <code>env</code>: A dictionary of environment variables to be set for this entry.</p>
 <p class="tableblock">- <code>install</code>: The recommended packages to be installed before running the workflow. This includes packages such as build-essential for ubuntu containers and lcov for coverage entries.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>common-ccflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The subset of C compiler flags applied to dependency builds. These common flags are automatically inherited as the base of the corresponding non-common <code>ccflags</code> output, so dependencies and the main project share the same foundational flags (e.g. sanitizer flags, architecture flags). Entries without common-applicable factors have this field set to an empty string.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>common-cxxflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The subset of C&#43;&#43; compiler flags applied to dependency builds. These common flags are automatically inherited as the base of the corresponding non-common <code>cxxflags</code> output, so dependencies and the main project share the same foundational flags (e.g. sanitizer flags, architecture flags). Entries without common-applicable factors have this field set to an empty string.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>common-ldflags</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The subset of linker flags applied to dependency builds. These common flags are automatically inherited as the base of the corresponding non-common <code>ldflags</code> output, so dependencies and the main project share the same foundational flags (e.g. sanitizer flags, architecture flags). Entries without common-applicable factors have this field set to an empty string.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>submatrices</code></p></td>
