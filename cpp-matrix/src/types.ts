@@ -86,6 +86,9 @@ export interface MatrixEntry {
     cxxflags?: string;
     ccflags?: string;
     ldflags?: string;
+    'common-ccflags'?: string;
+    'common-cxxflags'?: string;
+    'common-ldflags'?: string;
     install?: string;
     arch?: string;
     x86?: boolean;

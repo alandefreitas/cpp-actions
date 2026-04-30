@@ -242,6 +242,9 @@ export async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): P
     entry['build-type'] = 'Release';
     entry['cxxflags'] = '';
     entry['ccflags'] = '';
+    entry['common-ccflags'] = '';
+    entry['common-cxxflags'] = '';
+    entry['common-ldflags'] = '';
     entry['install'] = '';
     const wantsX86 = entry['x86'] === true;
     const entryArch = typeof entry['arch'] === 'string' && entry['arch'].trim() !== '' ? entry['arch'].trim() : null;
@@ -250,59 +253,71 @@ export async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): P
     const normalizedArch = entryArch ? entryArch.toLowerCase() : defaultArch;
     entry['arch'] = normalizedArch;
 
-    // Flags for asan
-    const sanitizers: string[] = [];
+    // Sanitizer placement: ASan, MSan, TSan need dependency instrumentation
+    // to accurately detect bugs in our own code (uninstrumented dep code
+    // produces false positives or invisible races). Their flags go to
+    // common-* so they propagate to dependency builds.
+    //
+    // UBSan, IntSan, BoundSan, LSan, CFI find issues that either don't
+    // require dep instrumentation or require linker/runtime support that
+    // dependency build systems typically don't provide. Their flags stay
+    // in main-only ccflags/cxxflags/ldflags.
+    const commonSanitizers: string[] = [];
+    const projectSanitizers: string[] = [];
     const supportsAsan = ['gcc', 'clang', 'msvc'].includes(entry['compiler']);
-    if ('asan' in entry && entry['asan'] === true && supportsAsan) {
-        sanitizers.push('address');
-    }
-
-    // Flags for ubsan
     const supportsSanitizers = ['gcc', 'clang'].includes(entry['compiler']);
     let needsUbsanOptions = false;
+
+    // Flags for asan (common)
+    if ('asan' in entry && entry['asan'] === true && supportsAsan) {
+        commonSanitizers.push('address');
+    }
+
+    // Flags for ubsan (project-only)
     if ('ubsan' in entry && entry['ubsan'] === true && supportsSanitizers) {
-        sanitizers.push('undefined');
+        projectSanitizers.push('undefined');
         needsUbsanOptions = true;
     }
 
-    // Flags for msan
+    // Flags for msan (common)
     let msanExtraFlags = '';
     if ('msan' in entry && entry['msan'] === true && supportsSanitizers) {
-        sanitizers.push('memory');
+        commonSanitizers.push('memory');
         msanExtraFlags = ' -fsanitize-memory-track-origins';
     }
 
-    // Flags for tsan
+    // Flags for tsan (common)
     if ('tsan' in entry && entry['tsan'] === true && supportsSanitizers) {
-        sanitizers.push('thread');
+        commonSanitizers.push('thread');
     }
 
-    // Flags for intsan (integer sanitizer)
+    // Flags for intsan (integer sanitizer, project-only — UBSan family)
     // Clang supports -fsanitize=integer as a group; GCC only supports
     // the individual checks that overlap with that group.
     if ('intsan' in entry && entry['intsan'] === true && supportsSanitizers) {
         if (entry['compiler'] === 'clang') {
-            sanitizers.push('integer');
+            projectSanitizers.push('integer');
         } else {
-            sanitizers.push('signed-integer-overflow', 'integer-divide-by-zero', 'shift');
+            projectSanitizers.push('signed-integer-overflow', 'integer-divide-by-zero', 'shift');
         }
         needsUbsanOptions = true;
     }
 
-    // Flags for boundsan (bounds sanitizer)
+    // Flags for boundsan (bounds sanitizer, project-only — UBSan family)
     // Both Clang and GCC support -fsanitize=bounds.
     if ('boundsan' in entry && entry['boundsan'] === true && supportsSanitizers) {
-        sanitizers.push('bounds');
+        projectSanitizers.push('bounds');
         needsUbsanOptions = true;
     }
 
-    // Flags for lsan (leak sanitizer)
-    // GCC does not support -fno-sanitize-recover=leak, so leak is added
-    // separately outside the sanitizers array for GCC.
+    // Flags for lsan (leak sanitizer, project-only)
+    // LSan intercepts malloc/free at link time, so dep instrumentation is
+    // not required. GCC does not support -fno-sanitize-recover=leak, so
+    // leak is added separately outside the sanitizers array for GCC.
     let lsanExtraFlags = '';
     if ('lsan' in entry && entry['lsan'] === true && supportsSanitizers) {
         if (entry['compiler'] === 'clang') {
-            sanitizers.push('leak');
+            projectSanitizers.push('leak');
         } else {
             lsanExtraFlags = ' -fsanitize=leak';
         }
@@ -312,15 +327,17 @@ export async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): P
         };
     }
 
-    // Flags for cfi (control flow integrity) — Clang only, requires full
-    // LTO and visibility flags for virtual call / cast checks to work.
+    // Flags for cfi (control flow integrity, project-only) — Clang only,
+    // requires full LTO and visibility flags. Dependency build systems
+    // typically don't enforce LTO/visibility consistency, so propagating
+    // CFI to deps would break linking.
     // Full LTO (-flto) is used instead of thin LTO (-flto=thin) because
     // thin LTO produces relocations incompatible with PIE on some versions.
     // -fno-sanitize-trap=cfi is needed to get diagnostic output instead
     // of silent traps.
     let cfiExtraFlags = '';
     if ('cfi' in entry && entry['cfi'] === true && entry['compiler'] === 'clang') {
-        sanitizers.push('cfi');
+        projectSanitizers.push('cfi');
         cfiExtraFlags = ' -flto -fvisibility=hidden -fno-sanitize-trap=cfi';
         needsUbsanOptions = true;
     }
@@ -332,18 +349,27 @@ export async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): P
         entry['env'] = { ...entry['env'], 'UBSAN_OPTIONS': 'print_stacktrace=1' };
     }
 
-    if (sanitizers.length !== 0 || lsanExtraFlags !== '') {
-        const hasSanitizers = sanitizers.length !== 0;
-        let sanitizerFlags = '';
-        if (hasSanitizers) {
-            const sanitizersStr = sanitizers.join(',');
-            sanitizerFlags = entry['compiler'] === 'msvc' ?
-                ` /fsanitize=${sanitizersStr}` :
-                ` -fsanitize=${sanitizersStr} -fno-sanitize-recover=${sanitizersStr} -fno-omit-frame-pointer`;
-        }
-        entry['cxxflags'] += sanitizerFlags + msanExtraFlags + lsanExtraFlags + cfiExtraFlags;
-        entry['ccflags'] += sanitizerFlags + msanExtraFlags + lsanExtraFlags + cfiExtraFlags;
-        entry['ldflags'] = (entry['ldflags'] || '') + sanitizerFlags + lsanExtraFlags + cfiExtraFlags;
+    const buildSanitizerFlags = (names: string[]): string => {
+        if (names.length === 0) return '';
+        const joined = names.join(',');
+        return entry['compiler'] === 'msvc' ?
+            ` /fsanitize=${joined}` :
+            ` -fsanitize=${joined} -fno-sanitize-recover=${joined} -fno-omit-frame-pointer`;
+    };
+
+    if (commonSanitizers.length !== 0) {
+        const commonFlags = buildSanitizerFlags(commonSanitizers);
+        entry['common-cxxflags'] += commonFlags + msanExtraFlags;
+        entry['common-ccflags'] += commonFlags + msanExtraFlags;
+        entry['common-ldflags'] = (entry['common-ldflags'] || '') + commonFlags;
+        entry['build-type'] = inputs.sanitizerBuildType || 'Release';
+    }
+
+    if (projectSanitizers.length !== 0 || lsanExtraFlags !== '' || cfiExtraFlags !== '') {
+        const projectFlags = buildSanitizerFlags(projectSanitizers);
+        entry['cxxflags'] += projectFlags + lsanExtraFlags + cfiExtraFlags;
+        entry['ccflags'] += projectFlags + lsanExtraFlags + cfiExtraFlags;
+        entry['ldflags'] = (entry['ldflags'] || '') + projectFlags + lsanExtraFlags + cfiExtraFlags;
         entry['build-type'] = inputs.sanitizerBuildType || 'Release';
     }
 
@@ -379,8 +405,8 @@ export async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): P
     // Flags for x86
     if (wantsX86) {
         if (entry['compiler'] === 'clang') {
-            entry['cxxflags'] += ' -m32';
-            entry['ccflags'] += ' -m32';
+            entry['common-cxxflags'] += ' -m32';
+            entry['common-ccflags'] += ' -m32';
         }
         entry['build-type'] = inputs.x86BuildType || 'Release';
     }
@@ -421,6 +447,10 @@ export async function setRecommendedFlags(entry: MatrixEntry, inputs: Inputs): P
     entry['install'] = entry['install'].trim();
     entry['cxxflags'] = entry['cxxflags'].trim();
     entry['ccflags'] = entry['ccflags'].trim();
+    entry['ldflags'] = (entry['ldflags'] || '').trim();
+    entry['common-ccflags'] = (entry['common-ccflags'] || '').trim();
+    entry['common-cxxflags'] = (entry['common-cxxflags'] || '').trim();
+    entry['common-ldflags'] = (entry['common-ldflags'] || '').trim();
 
     // Include vcpkg triplet recommendations (vcpkg help triplet)
     const archPrefix = entry['arch'] || 'x64';

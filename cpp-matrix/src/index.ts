@@ -461,6 +461,27 @@ class CppMatrixRunner {
             setSuggestion(entry, 'generator', this.inputs.generators, entry.version);
             setSuggestion(entry, 'generator-toolset', this.inputs.generatorToolsets, entry.version);
             setSuggestion(entry, 'runs-on', this.inputs.runsOn, entry.version);
+
+            // Step 2: Apply user common-* replace and append inputs
+            setSuggestion(entry, 'common-ccflags', this.inputs.commonCcflags, entry.version);
+            setSuggestion(entry, 'common-cxxflags', this.inputs.commonCxxflags, entry.version);
+            setSuggestion(entry, 'common-ldflags', this.inputs.commonLdflags, entry.version);
+            appendSuggestion(entry, 'common-ccflags', this.inputs.appendCommonCcflags, entry.version);
+            appendSuggestion(entry, 'common-cxxflags', this.inputs.appendCommonCxxflags, entry.version);
+            appendSuggestion(entry, 'common-ldflags', this.inputs.appendCommonLdflags, entry.version);
+
+            // Step 3: Copy finalized common flags as the base of main flags
+            const commonCcflags = typeof entry['common-ccflags'] === 'string' ? entry['common-ccflags'].trim() : '';
+            const commonCxxflags = typeof entry['common-cxxflags'] === 'string' ? entry['common-cxxflags'].trim() : '';
+            const commonLdflags = typeof entry['common-ldflags'] === 'string' ? entry['common-ldflags'].trim() : '';
+            const mainCcflags = typeof entry['ccflags'] === 'string' ? entry['ccflags'].trim() : '';
+            const mainCxxflags = typeof entry['cxxflags'] === 'string' ? entry['cxxflags'].trim() : '';
+            const mainLdflags = typeof entry['ldflags'] === 'string' ? entry['ldflags'].trim() : '';
+            entry['ccflags'] = commonCcflags && mainCcflags ? `${commonCcflags} ${mainCcflags}` : commonCcflags || mainCcflags;
+            entry['cxxflags'] = commonCxxflags && mainCxxflags ? `${commonCxxflags} ${mainCxxflags}` : commonCxxflags || mainCxxflags;
+            entry['ldflags'] = commonLdflags && mainLdflags ? `${commonLdflags} ${mainLdflags}` : commonLdflags || mainLdflags;
+
+            // Step 5: Apply user main flag replace and append inputs (replace bypasses common base)
             setSuggestion(entry, 'ccflags', this.inputs.ccflags, entry.version);
             setSuggestion(entry, 'cxxflags', this.inputs.cxxflags, entry.version);
             setSuggestion(entry, 'ldflags', this.inputs.ldflags, entry.version);

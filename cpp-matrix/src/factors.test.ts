@@ -260,14 +260,30 @@ describe('setRecommendedFlags', () => {
         await setRecommendedFlags(entry, makeInputs());
         expect(entry.cxxflags).toContain('-fprofile-instr-generate');
         expect(entry.cxxflags).toContain('-fcoverage-mapping');
+        expect(entry['common-cxxflags']).not.toContain('-fprofile-instr-generate');
+        expect(entry['common-cxxflags']).not.toContain('-fcoverage-mapping');
+        expect(entry['common-ldflags']).not.toContain('-fprofile-instr-generate');
         expect(entry['build-type']).toBe('Debug');
     });
 
-    test('clang x86 produces -m32 flag', async () => {
+    test('gcc coverage produces --coverage and stays out of common flags', async () => {
+        const entry = makeEntry({ compiler: 'gcc', coverage: true });
+        await setRecommendedFlags(entry, makeInputs());
+        expect(entry.cxxflags).toContain('--coverage');
+        expect(entry.ccflags).toContain('--coverage');
+        expect(entry.ldflags).toContain('--coverage');
+        expect(entry['common-cxxflags']).not.toContain('--coverage');
+        expect(entry['common-ccflags']).not.toContain('--coverage');
+        expect(entry['common-ldflags']).not.toContain('--coverage');
+    });
+
+    test('clang x86 produces -m32 in common flags', async () => {
         const entry = makeEntry({ compiler: 'clang', x86: true });
         await setRecommendedFlags(entry, makeInputs({ x86BuildType: 'Debug' }));
-        expect(entry.cxxflags).toContain('-m32');
-        expect(entry.ccflags).toContain('-m32');
+        expect(entry['common-cxxflags']).toContain('-m32');
+        expect(entry['common-ccflags']).toContain('-m32');
+        expect(entry.cxxflags).not.toContain('-m32');
+        expect(entry.ccflags).not.toContain('-m32');
         expect(entry['build-type']).toBe('Debug');
     });
 
@@ -282,6 +298,8 @@ describe('setRecommendedFlags', () => {
         });
         await setRecommendedFlags(entry, makeInputs());
         expect(entry.cxxflags).toContain('-ftime-trace');
+        expect(entry['common-cxxflags']).not.toContain('-ftime-trace');
+        expect(entry['common-ccflags']).not.toContain('-ftime-trace');
         expect(entry.install).toContain('wget');
         expect(entry.cxxstd).toBe('20');
     });
@@ -384,5 +402,156 @@ describe('setRecommendedFlags', () => {
         await setRecommendedFlags(entry, makeInputs());
         expect(entry.env['EXISTING_VAR']).toBe('value');
         expect(entry.env['LLVM_PROFILE_FILE']).toBeDefined();
+    });
+});
+
+describe('setRecommendedFlags — common vs project-only placement', () => {
+    test('asan flags land in common-* fields, not in main fields', async () => {
+        const entry = makeEntry({ compiler: 'gcc', asan: true });
+        await setRecommendedFlags(entry, makeInputs());
+        expect(entry['common-cxxflags']).toContain('-fsanitize=address');
+        expect(entry['common-ccflags']).toContain('-fsanitize=address');
+        expect(entry['common-ldflags']).toContain('-fsanitize=address');
+        expect(entry.cxxflags).not.toContain('-fsanitize=address');
+        expect(entry.ccflags).not.toContain('-fsanitize=address');
+    });
+
+    test('msan flags and extras land in common-* fields', async () => {
+        const entry = makeEntry({ compiler: 'clang', msan: true });
+        await setRecommendedFlags(entry, makeInputs());
+        expect(entry['common-cxxflags']).toContain('-fsanitize=memory');
+        expect(entry['common-cxxflags']).toContain('-fsanitize-memory-track-origins');
+        expect(entry['common-ccflags']).toContain('-fsanitize=memory');
+        expect(entry['common-ldflags']).toContain('-fsanitize=memory');
+        expect(entry.cxxflags).not.toContain('-fsanitize=memory');
+    });
+
+    test('tsan flags land in common-* fields', async () => {
+        const entry = makeEntry({ compiler: 'gcc', tsan: true });
+        await setRecommendedFlags(entry, makeInputs());
+        expect(entry['common-cxxflags']).toContain('-fsanitize=thread');
+        expect(entry['common-ccflags']).toContain('-fsanitize=thread');
+        expect(entry['common-ldflags']).toContain('-fsanitize=thread');
+        expect(entry.cxxflags).not.toContain('-fsanitize=thread');
+    });
+
+    test('ubsan flags stay in project-only fields, not in common-*', async () => {
+        const entry = makeEntry({ compiler: 'clang', ubsan: true });
+        await setRecommendedFlags(entry, makeInputs());
+        expect(entry.cxxflags).toContain('-fsanitize=undefined');
+        expect(entry.ccflags).toContain('-fsanitize=undefined');
+        expect(entry.ldflags).toContain('-fsanitize=undefined');
+        expect(entry['common-cxxflags']).not.toContain('-fsanitize=undefined');
+        expect(entry['common-ccflags']).not.toContain('-fsanitize=undefined');
+        expect(entry['common-ldflags']).not.toContain('-fsanitize=undefined');
+    });
+
+    test('intsan flags stay in project-only fields (clang)', async () => {
+        const entry = makeEntry({ compiler: 'clang', intsan: true });
+        await setRecommendedFlags(entry, makeInputs());
+        expect(entry.cxxflags).toContain('-fsanitize=integer');
+        expect(entry.ccflags).toContain('-fsanitize=integer');
+        expect(entry.ldflags).toContain('-fsanitize=integer');
+        expect(entry['common-cxxflags']).not.toContain('-fsanitize=integer');
+    });
+
+    test('intsan flags stay in project-only fields (gcc)', async () => {
+        const entry = makeEntry({ compiler: 'gcc', intsan: true });
+        await setRecommendedFlags(entry, makeInputs());
+        expect(entry.cxxflags).toContain('-fsanitize=signed-integer-overflow');
+        expect(entry.ccflags).toContain('-fsanitize=signed-integer-overflow');
+        expect(entry['common-cxxflags']).not.toContain('-fsanitize=signed-integer-overflow');
+    });
+
+    test('boundsan flags stay in project-only fields', async () => {
+        const entry = makeEntry({ compiler: 'gcc', boundsan: true });
+        await setRecommendedFlags(entry, makeInputs());
+        expect(entry.cxxflags).toContain('-fsanitize=bounds');
+        expect(entry.ccflags).toContain('-fsanitize=bounds');
+        expect(entry.ldflags).toContain('-fsanitize=bounds');
+        expect(entry['common-cxxflags']).not.toContain('-fsanitize=bounds');
+    });
+
+    test('lsan flags stay in project-only fields (clang)', async () => {
+        const entry = makeEntry({ compiler: 'clang', lsan: true });
+        await setRecommendedFlags(entry, makeInputs());
+        expect(entry.cxxflags).toContain('-fsanitize=leak');
+        expect(entry.ccflags).toContain('-fsanitize=leak');
+        expect(entry.ldflags).toContain('-fsanitize=leak');
+        expect(entry['common-cxxflags']).not.toContain('-fsanitize=leak');
+    });
+
+    test('lsan flags stay in project-only fields (gcc)', async () => {
+        const entry = makeEntry({ compiler: 'gcc', lsan: true });
+        await setRecommendedFlags(entry, makeInputs());
+        expect(entry.cxxflags).toContain('-fsanitize=leak');
+        expect(entry.ccflags).toContain('-fsanitize=leak');
+        expect(entry.ldflags).toContain('-fsanitize=leak');
+        expect(entry['common-cxxflags']).not.toContain('-fsanitize=leak');
+    });
+
+    test('cfi flags and extras stay in project-only fields', async () => {
+        const entry = makeEntry({ compiler: 'clang', cfi: true });
+        await setRecommendedFlags(entry, makeInputs());
+        expect(entry.cxxflags).toContain('-fsanitize=cfi');
+        expect(entry.cxxflags).toContain('-flto');
+        expect(entry.cxxflags).toContain('-fvisibility=hidden');
+        expect(entry.cxxflags).toContain('-fno-sanitize-trap=cfi');
+        expect(entry.ccflags).toContain('-fsanitize=cfi');
+        expect(entry.ldflags).toContain('-fsanitize=cfi');
+        expect(entry.ldflags).toContain('-flto');
+        expect(entry['common-cxxflags']).not.toContain('-fsanitize=cfi');
+        expect(entry['common-cxxflags']).not.toContain('-flto');
+    });
+
+    test('x86 -m32 lands in common-cxxflags/common-ccflags', async () => {
+        const entry = makeEntry({ compiler: 'clang', x86: true });
+        await setRecommendedFlags(entry, makeInputs());
+        expect(entry['common-cxxflags']).toContain('-m32');
+        expect(entry['common-ccflags']).toContain('-m32');
+        expect(entry.cxxflags).not.toContain('-m32');
+        expect(entry.ccflags).not.toContain('-m32');
+    });
+
+    test('coverage flags land in main (project-only) for clang', async () => {
+        const entry = makeEntry({ compiler: 'clang', coverage: true });
+        await setRecommendedFlags(entry, makeInputs());
+        expect(entry.cxxflags).toContain('-fprofile-instr-generate');
+        expect(entry.cxxflags).toContain('-fcoverage-mapping');
+        expect(entry.ccflags).toContain('-fprofile-instr-generate');
+        expect(entry['common-cxxflags']).not.toContain('-fprofile-instr-generate');
+        expect(entry['common-ccflags']).not.toContain('-fprofile-instr-generate');
+    });
+
+    test('coverage flags land in main (project-only) for gcc', async () => {
+        const entry = makeEntry({ compiler: 'gcc', coverage: true });
+        await setRecommendedFlags(entry, makeInputs());
+        expect(entry.cxxflags).toContain('--coverage');
+        expect(entry.cxxflags).toContain('-fprofile-arcs');
+        expect(entry.ccflags).toContain('--coverage');
+        expect(entry['common-cxxflags']).not.toContain('--coverage');
+        expect(entry['common-ccflags']).not.toContain('--coverage');
+    });
+
+    test('time-trace -ftime-trace lands in main (project-only)', async () => {
+        const entry = makeEntry({
+            compiler: 'clang',
+            version: '>=16',
+            'time-trace': true,
+            cxxstd: '17,20',
+            'latest-cxxstd': '20',
+            name: 'Clang C++17-20'
+        });
+        await setRecommendedFlags(entry, makeInputs());
+        expect(entry.cxxflags).toContain('-ftime-trace');
+        expect(entry['common-cxxflags']).not.toContain('-ftime-trace');
+    });
+
+    test('entry with no common-applicable factors has empty common-* fields', async () => {
+        const entry = makeEntry({ compiler: 'gcc' });
+        await setRecommendedFlags(entry, makeInputs());
+        expect(entry['common-ccflags']).toBe('');
+        expect(entry['common-cxxflags']).toBe('');
+        expect(entry['common-ldflags']).toBe('');
     });
 });

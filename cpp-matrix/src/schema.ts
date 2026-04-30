@@ -392,6 +392,111 @@ Omitting \`<compiler-range|compiler-factor>\` is equivalent to it being set to \
 When the flag is unspecified, the action will infer the flag from the compiler name and its version.`
     },
 
+    // -----------------------------------------------------------------
+    // Common flags (dependency builds)
+    // -----------------------------------------------------------------
+    commonCcflags: {
+        type: 'multiline' as const,
+        default: [] as string[],
+        crossTransform: parseSuggestionsCross,
+        description: `A multi-line list of C compiler flags for dependency (common) builds. These replace inputs do not inherit from any other input — they set the common C flags to exactly the specified value for matching entries.
+
+Each line has the format:
+
+\`<compiler-name>[ <compiler-range|compiler-factor>]: <ccflags>\`
+
+For instance, \`gcc >=13.1: -O2\` sets the common C flags to \`-O2\` for any \`gcc\` entry with version \`>=13.1\`.
+
+Omitting \`<compiler-range|compiler-factor>\` is equivalent to it being set to \`*\` and will apply the flags to all versions of the compiler.
+
+Compiler and factor scoping (e.g. \`gcc Coverage:\`) is supported, following the same rules as \`ccflags\`.`
+    },
+
+    commonCxxflags: {
+        type: 'multiline' as const,
+        default: [] as string[],
+        crossTransform: parseSuggestionsCross,
+        description: `A multi-line list of C++ compiler flags for dependency (common) builds. These replace inputs do not inherit from any other input — they set the common C++ flags to exactly the specified value for matching entries.
+
+Each line has the format:
+
+\`<compiler-name>[ <compiler-range|compiler-factor>]: <cxxflags>\`
+
+For instance, \`gcc >=13.1: -O2\` sets the common C++ flags to \`-O2\` for any \`gcc\` entry with version \`>=13.1\`.
+
+Omitting \`<compiler-range|compiler-factor>\` is equivalent to it being set to \`*\` and will apply the flags to all versions of the compiler.
+
+Compiler and factor scoping (e.g. \`gcc Coverage:\`) is supported, following the same rules as \`cxxflags\`.`
+    },
+
+    commonLdflags: {
+        type: 'multiline' as const,
+        default: [] as string[],
+        crossTransform: parseSuggestionsCross,
+        description: `A multi-line list of linker flags for dependency (common) builds. These replace inputs do not inherit from any other input — they set the common linker flags to exactly the specified value for matching entries.
+
+Each line has the format:
+
+\`<compiler-name>[ <compiler-range|compiler-factor>]: <ldflags>\`
+
+For instance, \`gcc >=13.1: -static\` sets the common linker flags to \`-static\` for any \`gcc\` entry with version \`>=13.1\`.
+
+Omitting \`<compiler-range|compiler-factor>\` is equivalent to it being set to \`*\` and will apply the flags to all versions of the compiler.
+
+Compiler and factor scoping (e.g. \`gcc Coverage:\`) is supported, following the same rules as \`ldflags\`.`
+    },
+
+    appendCommonCcflags: {
+        type: 'multiline' as const,
+        default: [] as string[],
+        crossTransform: parseSuggestionsCross,
+        description: `A multi-line list of C compiler flags to append to the common (dependency) build flags. Unlike \`common-ccflags\`, which replaces the entire common C flag string, this option appends to the auto-generated common flags (e.g. sanitizer flags, architecture flags).
+
+Each line has the format:
+
+\`<compiler-name>[ <compiler-range|compiler-factor>]: <ccflags>\`
+
+For instance, \`clang ASan: -DEXTRA\` appends \`-DEXTRA\` to the common C flags for any \`clang\` entry with the \`ASan\` factor.
+
+Omitting \`<compiler-range|compiler-factor>\` is equivalent to it being set to \`*\` and will append the flags to all versions of the compiler.
+
+Compiler and factor scoping (e.g. \`gcc Coverage:\`) is supported, following the same rules as \`append-ccflags\`.`
+    },
+
+    appendCommonCxxflags: {
+        type: 'multiline' as const,
+        default: [] as string[],
+        crossTransform: parseSuggestionsCross,
+        description: `A multi-line list of C++ compiler flags to append to the common (dependency) build flags. Unlike \`common-cxxflags\`, which replaces the entire common C++ flag string, this option appends to the auto-generated common flags (e.g. sanitizer flags, architecture flags).
+
+Each line has the format:
+
+\`<compiler-name>[ <compiler-range|compiler-factor>]: <cxxflags>\`
+
+For instance, \`gcc ASan: -Wextra\` appends \`-Wextra\` to the common C++ flags for any \`gcc\` entry with the \`ASan\` factor.
+
+Omitting \`<compiler-range|compiler-factor>\` is equivalent to it being set to \`*\` and will append the flags to all versions of the compiler.
+
+Compiler and factor scoping (e.g. \`gcc Coverage:\`) is supported, following the same rules as \`append-cxxflags\`.`
+    },
+
+    appendCommonLdflags: {
+        type: 'multiline' as const,
+        default: [] as string[],
+        crossTransform: parseSuggestionsCross,
+        description: `A multi-line list of linker flags to append to the common (dependency) build flags. Unlike \`common-ldflags\`, which replaces the entire common linker flag string, this option appends to the auto-generated common flags (e.g. sanitizer flags, architecture flags).
+
+Each line has the format:
+
+\`<compiler-name>[ <compiler-range|compiler-factor>]: <ldflags>\`
+
+For instance, \`gcc ASan: -lpthread\` appends \`-lpthread\` to the common linker flags for any \`gcc\` entry with the \`ASan\` factor.
+
+Omitting \`<compiler-range|compiler-factor>\` is equivalent to it being set to \`*\` and will append the flags to all versions of the compiler.
+
+Compiler and factor scoping (e.g. \`gcc Coverage:\`) is supported, following the same rules as \`append-ldflags\`.`
+    },
+
     install: {
         type: 'multiline' as const,
         default: [] as string[],
@@ -676,6 +781,18 @@ Each entry in the test matrix dictionary contains key-value pairs in the followi
 
 - \`install\`: The recommended packages to be installed before running the workflow. This includes packages such as build-essential for ubuntu containers and lcov for coverage entries.`
     },
+    commonCcflags: {
+        description: `The subset of C compiler flags applied to dependency builds. These common flags are automatically inherited as the base of the corresponding non-common \`ccflags\` output, so dependencies and the main project share the same foundational flags (e.g. sanitizer flags, architecture flags). Entries without common-applicable factors have this field set to an empty string.`
+    },
+
+    commonCxxflags: {
+        description: `The subset of C++ compiler flags applied to dependency builds. These common flags are automatically inherited as the base of the corresponding non-common \`cxxflags\` output, so dependencies and the main project share the same foundational flags (e.g. sanitizer flags, architecture flags). Entries without common-applicable factors have this field set to an empty string.`
+    },
+
+    commonLdflags: {
+        description: `The subset of linker flags applied to dependency builds. These common flags are automatically inherited as the base of the corresponding non-common \`ldflags\` output, so dependencies and the main project share the same foundational flags (e.g. sanitizer flags, architecture flags). Entries without common-applicable factors have this field set to an empty string.`
+    },
+
     submatrices: {
         description: `A JSON object keyed by filter name, where each value is a filtered sub-matrix array containing only the entries that matched the corresponding filter predicate.
 

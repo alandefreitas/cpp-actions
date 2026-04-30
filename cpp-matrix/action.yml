@@ -375,6 +375,64 @@ description: |
   However, the user should still include a step in the workflow to install the required Node version
   in the `/__e/node20` directory.
 
+  == Common vs. main flags
+
+  The action splits auto-generated compiler and linker flags into two buckets:
+
+  * **Common flags** (`common-ccflags`, `common-cxxflags`, `common-ldflags`) — flags that should be applied to both dependency builds and the main project build. These are output separately so that consumers can pass them to dependency build systems (e.g. Boost.Build, vcpkg, Conan) in addition to the main CMake build.
+  * **Main flags** (`ccflags`, `cxxflags`, `ldflags`) — the complete set of flags for the main project build, which includes the common flags as a base plus any project-only flags.
+
+  === Factor classification
+
+  Each built-in factor places its flags in one of the two buckets:
+
+  [cols="1,1,2"]
+  |===
+  |Factor |Bucket |Flags
+
+  |ASan |Common |`-fsanitize=address -fno-sanitize-recover=address -fno-omit-frame-pointer`
+  |MSan |Common |`-fsanitize=memory …` plus `-fsanitize-memory-track-origins`
+  |TSan |Common |`-fsanitize=thread -fno-sanitize-recover=thread -fno-omit-frame-pointer`
+  |UBSan |Common |`-fsanitize=undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer`
+  |IntSan |Common |`-fsanitize=integer …`
+  |BoundSan |Common |`-fsanitize=bounds …`
+  |LSan |Common |`-fsanitize=leak`
+  |CFI |Common |`-fsanitize=cfi …` plus `-flto -fvisibility=hidden`
+  |x86 |Common |`-m32`
+  |Coverage |Main only |`-fprofile-instr-generate -fcoverage-mapping` (Clang) or `--coverage -fprofile-arcs -ftest-coverage` (GCC)
+  |Time-Trace |Main only |`-ftime-trace`
+  |===
+
+  Entries without any common-applicable factors still include the three `common-*` fields set to empty strings.
+
+  === Resolution order
+
+  The final values of both common and main flags are resolved in five steps:
+
+  1. **Factor expansion** — `setRecommendedFlags()` writes each factor's flags into either the common or main bucket.
+  2. **User common inputs** — `common-ccflags` / `common-cxxflags` / `common-ldflags` (replace) and `append-common-ccflags` / `append-common-cxxflags` / `append-common-ldflags` (append) are applied to the common fields.
+  3. **Inheritance** — the finalized common flag values are copied as the base of the main `ccflags` / `cxxflags` / `ldflags` fields (concatenated before any project-only flags already present).
+  4. **Project-only flags** — coverage and time-trace flags that were already written to the main fields in step 1 remain in place after the common base.
+  5. **User main inputs** — `ccflags` / `cxxflags` / `ldflags` (replace) and `append-ccflags` / `append-cxxflags` / `append-ldflags` (append) are applied last. A replace input overwrites the entire string **including** the inherited common base.
+
+  === Example
+
+  Consider an entry with ASan + Coverage using Clang, combined with user inputs `append-common-cxxflags: 'clang ASan: -DASAN_EXTRA'` and `append-cxxflags: 'clang Coverage: -DCOV_EXTRA'`:
+
+  [cols="1,2"]
+  |===
+  |Field |Resolved value
+
+  |`common-cxxflags` |`-fsanitize=address -fno-sanitize-recover=address -fno-omit-frame-pointer -DASAN_EXTRA`
+  |`cxxflags` |`-fsanitize=address -fno-sanitize-recover=address -fno-omit-frame-pointer -DASAN_EXTRA -fprofile-instr-generate -fcoverage-mapping -DCOV_EXTRA`
+  |===
+
+  In this example, the common flags (sanitizer + user append) are inherited as the base of `cxxflags`, then coverage flags and the user append are added on top.
+
+  IMPORTANT: Replace inputs (`ccflags`, `cxxflags`, `ldflags`) do **not** inherit from common. When a replace input matches an entry, it sets the entire main flag string to the specified value, bypassing the common base. Use append inputs (`append-ccflags`, etc.) when you want to add flags on top of the inherited common + project-only base.
+
+  See also the <<input-parameters,input parameters>> for `common-ccflags`, `append-common-ccflags`, `ccflags`, and `append-ccflags` and the <<outputs,outputs>> for `common-ccflags`, `common-cxxflags`, and `common-ldflags`.
+
   == Next steps
 
   After creating the test matrix, the next step in your workflow should usually be
@@ -648,6 +706,96 @@ inputs:
       When the flag is unspecified, the action will infer the flag from the compiler name and its version.
     required: false
     default: ''
+  common-ccflags:
+    description: |-
+      A multi-line list of C compiler flags for dependency (common) builds. These replace inputs do not inherit from any other input — they set the common C flags to exactly the specified value for matching entries.
+
+      Each line has the format:
+
+      `<compiler-name>[ <compiler-range|compiler-factor>]: <ccflags>`
+
+      For instance, `gcc >=13.1: -O2` sets the common C flags to `-O2` for any `gcc` entry with version `>=13.1`.
+
+      Omitting `<compiler-range|compiler-factor>` is equivalent to it being set to `*` and will apply the flags to all versions of the compiler.
+
+      Compiler and factor scoping (e.g. `gcc Coverage:`) is supported, following the same rules as `ccflags`.
+    required: false
+    default: ''
+  common-cxxflags:
+    description: |-
+      A multi-line list of C++ compiler flags for dependency (common) builds. These replace inputs do not inherit from any other input — they set the common C++ flags to exactly the specified value for matching entries.
+
+      Each line has the format:
+
+      `<compiler-name>[ <compiler-range|compiler-factor>]: <cxxflags>`
+
+      For instance, `gcc >=13.1: -O2` sets the common C++ flags to `-O2` for any `gcc` entry with version `>=13.1`.
+
+      Omitting `<compiler-range|compiler-factor>` is equivalent to it being set to `*` and will apply the flags to all versions of the compiler.
+
+      Compiler and factor scoping (e.g. `gcc Coverage:`) is supported, following the same rules as `cxxflags`.
+    required: false
+    default: ''
+  common-ldflags:
+    description: |-
+      A multi-line list of linker flags for dependency (common) builds. These replace inputs do not inherit from any other input — they set the common linker flags to exactly the specified value for matching entries.
+
+      Each line has the format:
+
+      `<compiler-name>[ <compiler-range|compiler-factor>]: <ldflags>`
+
+      For instance, `gcc >=13.1: -static` sets the common linker flags to `-static` for any `gcc` entry with version `>=13.1`.
+
+      Omitting `<compiler-range|compiler-factor>` is equivalent to it being set to `*` and will apply the flags to all versions of the compiler.
+
+      Compiler and factor scoping (e.g. `gcc Coverage:`) is supported, following the same rules as `ldflags`.
+    required: false
+    default: ''
+  append-common-ccflags:
+    description: |-
+      A multi-line list of C compiler flags to append to the common (dependency) build flags. Unlike `common-ccflags`, which replaces the entire common C flag string, this option appends to the auto-generated common flags (e.g. sanitizer flags, architecture flags).
+
+      Each line has the format:
+
+      `<compiler-name>[ <compiler-range|compiler-factor>]: <ccflags>`
+
+      For instance, `clang ASan: -DEXTRA` appends `-DEXTRA` to the common C flags for any `clang` entry with the `ASan` factor.
+
+      Omitting `<compiler-range|compiler-factor>` is equivalent to it being set to `*` and will append the flags to all versions of the compiler.
+
+      Compiler and factor scoping (e.g. `gcc Coverage:`) is supported, following the same rules as `append-ccflags`.
+    required: false
+    default: ''
+  append-common-cxxflags:
+    description: |-
+      A multi-line list of C++ compiler flags to append to the common (dependency) build flags. Unlike `common-cxxflags`, which replaces the entire common C++ flag string, this option appends to the auto-generated common flags (e.g. sanitizer flags, architecture flags).
+
+      Each line has the format:
+
+      `<compiler-name>[ <compiler-range|compiler-factor>]: <cxxflags>`
+
+      For instance, `gcc ASan: -Wextra` appends `-Wextra` to the common C++ flags for any `gcc` entry with the `ASan` factor.
+
+      Omitting `<compiler-range|compiler-factor>` is equivalent to it being set to `*` and will append the flags to all versions of the compiler.
+
+      Compiler and factor scoping (e.g. `gcc Coverage:`) is supported, following the same rules as `append-cxxflags`.
+    required: false
+    default: ''
+  append-common-ldflags:
+    description: |-
+      A multi-line list of linker flags to append to the common (dependency) build flags. Unlike `common-ldflags`, which replaces the entire common linker flag string, this option appends to the auto-generated common flags (e.g. sanitizer flags, architecture flags).
+
+      Each line has the format:
+
+      `<compiler-name>[ <compiler-range|compiler-factor>]: <ldflags>`
+
+      For instance, `gcc ASan: -lpthread` appends `-lpthread` to the common linker flags for any `gcc` entry with the `ASan` factor.
+
+      Omitting `<compiler-range|compiler-factor>` is equivalent to it being set to `*` and will append the flags to all versions of the compiler.
+
+      Compiler and factor scoping (e.g. `gcc Coverage:`) is supported, following the same rules as `append-ldflags`.
+    required: false
+    default: ''
   install:
     description: |-
       A multi-line list of packages to be installed with each range of compiler version. Each line has the format:
@@ -884,6 +1032,12 @@ outputs:
       - `env`: A dictionary of environment variables to be set for this entry.
 
       - `install`: The recommended packages to be installed before running the workflow. This includes packages such as build-essential for ubuntu containers and lcov for coverage entries.
+  common-ccflags:
+    description: The subset of C compiler flags applied to dependency builds. These common flags are automatically inherited as the base of the corresponding non-common `ccflags` output, so dependencies and the main project share the same foundational flags (e.g. sanitizer flags, architecture flags). Entries without common-applicable factors have this field set to an empty string.
+  common-cxxflags:
+    description: The subset of C++ compiler flags applied to dependency builds. These common flags are automatically inherited as the base of the corresponding non-common `cxxflags` output, so dependencies and the main project share the same foundational flags (e.g. sanitizer flags, architecture flags). Entries without common-applicable factors have this field set to an empty string.
+  common-ldflags:
+    description: The subset of linker flags applied to dependency builds. These common flags are automatically inherited as the base of the corresponding non-common `ldflags` output, so dependencies and the main project share the same foundational flags (e.g. sanitizer flags, architecture flags). Entries without common-applicable factors have this field set to an empty string.
   submatrices:
     description: |-
       A JSON object keyed by filter name, where each value is a filtered sub-matrix array containing only the entries that matched the corresponding filter predicate.

@@ -67,9 +67,17 @@ function makeDefaultMatrixInputs(overrides: Partial<Inputs> = {}): Inputs {
         b2Toolsets: [],
         ccflags: [],
         cxxflags: [],
+        ldflags: [],
         install: [],
+        commonCcflags: [],
+        commonCxxflags: [],
+        commonLdflags: [],
+        appendCommonCcflags: [],
+        appendCommonCxxflags: [],
+        appendCommonLdflags: [],
         appendCcflags: [],
         appendCxxflags: [],
+        appendLdflags: [],
         appendInstall: [],
         triplets: [],
         buildTypes: [],
@@ -219,6 +227,8 @@ describe('setRecommendedFlags sanitizer factors', () => {
         const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'gcc' && e.asan === true);
         expect(entry).toBeDefined();
+        expect(entry?.['common-cxxflags']).toContain('-fsanitize=address');
+        expect(entry?.['common-ccflags']).toContain('-fsanitize=address');
         expect(entry?.cxxflags).toContain('-fsanitize=address');
         expect(entry?.cxxflags).toContain('-fno-sanitize-recover=address');
         expect(entry?.cxxflags).toContain('-fno-omit-frame-pointer');
@@ -235,6 +245,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
         const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'msvc' && e.asan === true);
         expect(entry).toBeDefined();
+        expect(entry?.['common-cxxflags']).toContain('/fsanitize=address');
         expect(entry?.cxxflags).toContain('/fsanitize=address');
     });
 
@@ -249,6 +260,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
         const entry = matrix.find(e => e.compiler === 'gcc' && e.ubsan === true);
         expect(entry).toBeDefined();
         expect(entry?.cxxflags).toContain('-fsanitize=undefined');
+        expect(entry?.['common-cxxflags']).not.toContain('-fsanitize=undefined');
         expect(entry?.env).toHaveProperty('UBSAN_OPTIONS', 'print_stacktrace=1');
     });
 
@@ -262,6 +274,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
         const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'clang' && e.tsan === true);
         expect(entry).toBeDefined();
+        expect(entry?.['common-cxxflags']).toContain('-fsanitize=thread');
         expect(entry?.cxxflags).toContain('-fsanitize=thread');
     });
 
@@ -275,6 +288,8 @@ describe('setRecommendedFlags sanitizer factors', () => {
         const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'clang' && e.msan === true);
         expect(entry).toBeDefined();
+        expect(entry?.['common-cxxflags']).toContain('-fsanitize=memory');
+        expect(entry?.['common-cxxflags']).toContain('-fsanitize-memory-track-origins');
         expect(entry?.cxxflags).toContain('-fsanitize=memory');
     });
 
@@ -290,6 +305,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
         expect(entry).toBeDefined();
         expect(entry?.cxxflags).toContain('-fsanitize=integer');
         expect(entry?.cxxflags).toContain('-fno-sanitize-recover=integer');
+        expect(entry?.['common-cxxflags']).not.toContain('-fsanitize=integer');
         expect(entry?.env).toHaveProperty('UBSAN_OPTIONS', 'print_stacktrace=1');
     });
 
@@ -307,6 +323,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
         expect(entry?.cxxflags).toContain('integer-divide-by-zero');
         expect(entry?.cxxflags).toContain('shift');
         expect(entry?.cxxflags).not.toContain('-fsanitize=integer');
+        expect(entry?.['common-cxxflags']).not.toContain('signed-integer-overflow');
         expect(entry?.env).toHaveProperty('UBSAN_OPTIONS', 'print_stacktrace=1');
     });
 
@@ -321,6 +338,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
         const entry = matrix.find(e => e.compiler === 'clang' && e.boundsan === true);
         expect(entry).toBeDefined();
         expect(entry?.cxxflags).toContain('-fsanitize=bounds');
+        expect(entry?.['common-cxxflags']).not.toContain('-fsanitize=bounds');
         expect(entry?.env).toHaveProperty('UBSAN_OPTIONS', 'print_stacktrace=1');
     });
 
@@ -335,6 +353,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
         const entry = matrix.find(e => e.compiler === 'gcc' && e.boundsan === true);
         expect(entry).toBeDefined();
         expect(entry?.cxxflags).toContain('-fsanitize=bounds');
+        expect(entry?.['common-cxxflags']).not.toContain('-fsanitize=bounds');
     });
 
     test('lsan on clang produces -fsanitize=leak with LSAN_OPTIONS', async () => {
@@ -349,6 +368,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
         expect(entry).toBeDefined();
         expect(entry?.cxxflags).toContain('-fsanitize=leak');
         expect(entry?.cxxflags).toContain('-fno-sanitize-recover=leak');
+        expect(entry?.['common-cxxflags']).not.toContain('-fsanitize=leak');
         expect(entry?.env).toHaveProperty('LSAN_OPTIONS');
     });
 
@@ -364,6 +384,7 @@ describe('setRecommendedFlags sanitizer factors', () => {
         expect(entry).toBeDefined();
         expect(entry?.cxxflags).toContain('-fsanitize=leak');
         expect(entry?.cxxflags).not.toContain('-fno-sanitize-recover=leak');
+        expect(entry?.['common-cxxflags']).not.toContain('-fsanitize=leak');
         expect(entry?.env).toHaveProperty('LSAN_OPTIONS');
     });
 
@@ -381,6 +402,8 @@ describe('setRecommendedFlags sanitizer factors', () => {
         expect(entry?.cxxflags).toContain('-flto');
         expect(entry?.cxxflags).toContain('-fvisibility=hidden');
         expect(entry?.cxxflags).toContain('-fno-sanitize-trap=cfi');
+        expect(entry?.['common-cxxflags']).not.toContain('-fsanitize=cfi');
+        expect(entry?.['common-cxxflags']).not.toContain('-flto');
         expect(entry?.env).toHaveProperty('UBSAN_OPTIONS', 'print_stacktrace=1');
     });
 
@@ -394,6 +417,9 @@ describe('setRecommendedFlags sanitizer factors', () => {
         const { matrix } = await generateMatrix(inputs);
         const entry = matrix.find(e => e.compiler === 'clang' && e.asan === true && e.ubsan === true);
         expect(entry).toBeDefined();
+        // ASan is common (propagates to deps); UBSan is project-only.
+        expect(entry?.['common-cxxflags']).toContain('address');
+        expect(entry?.['common-cxxflags']).not.toContain('undefined');
         expect(entry?.cxxflags).toContain('address');
         expect(entry?.cxxflags).toContain('undefined');
     });
@@ -1082,5 +1108,67 @@ describe('generateSubmatrices', () => {
             { key: 'has-compiler', value: '{{compiler}}' }
         ]);
         expect(result['has-compiler']).toHaveLength(4);
+    });
+});
+
+describe('common-to-main flag resolution pipeline', () => {
+    test('multiple factors + user common-* replace + append-common-* + append-cxxflags produces expected values', async () => {
+        const compilers = ['gcc'];
+        const inputs = makeDefaultMatrixInputs({
+            compilers: { gcc: '>=13' },
+            standards: normalizeCppVersionRequirement('>=20'),
+            maxStandards: 1,
+            latestFactors: { gcc: ['ASan'] },
+            mainEntryFactors: { gcc: ['Coverage'] },
+            // Replace common-cxxflags for gcc ASan entries
+            commonCxxflags: parseCompilerSuggestions(['gcc ASan: -DCOMMON_REPLACED'], compilers),
+            // Append to common-cxxflags for gcc ASan entries
+            appendCommonCxxflags: parseCompilerSuggestions(['gcc ASan: -DCOMMON_APPENDED'], compilers),
+            // Append to main cxxflags for gcc ASan entries
+            appendCxxflags: parseCompilerSuggestions(['gcc ASan: -DMAIN_APPENDED'], compilers)
+        });
+        const { matrix } = await generateMatrix(inputs);
+        const asanEntry = matrix.find(e => e.asan === true);
+        expect(asanEntry).toBeDefined();
+        // common-cxxflags: replace with -DCOMMON_REPLACED, then append -DCOMMON_APPENDED
+        expect(asanEntry!['common-cxxflags']).toContain('-DCOMMON_REPLACED');
+        expect(asanEntry!['common-cxxflags']).toContain('-DCOMMON_APPENDED');
+        // main cxxflags: inherits common base + append
+        expect(asanEntry!.cxxflags).toContain('-DCOMMON_REPLACED');
+        expect(asanEntry!.cxxflags).toContain('-DMAIN_APPENDED');
+    });
+
+    test('replace inputs (ccflags) do NOT inherit from common', async () => {
+        const compilers = ['gcc'];
+        const inputs = makeDefaultMatrixInputs({
+            compilers: { gcc: '>=13' },
+            standards: normalizeCppVersionRequirement('>=20'),
+            maxStandards: 1,
+            latestFactors: { gcc: ['ASan'] },
+            // Replace main ccflags entirely for gcc ASan entries — bypasses common base
+            ccflags: parseCompilerSuggestions(['gcc ASan: -DREPLACED_MAIN'], compilers)
+        });
+        const { matrix } = await generateMatrix(inputs);
+        const asanEntry = matrix.find(e => e.asan === true);
+        expect(asanEntry).toBeDefined();
+        // Common flags should still have sanitizer flags
+        expect(asanEntry!['common-ccflags']).toContain('-fsanitize=address');
+        // Main ccflags should be the replacement value only — no inherited common base
+        expect(asanEntry!.ccflags).toBe('-DREPLACED_MAIN');
+        expect(asanEntry!.ccflags).not.toContain('-fsanitize=address');
+    });
+
+    test('entry with no common-applicable factors has empty common-* fields', async () => {
+        const inputs = makeDefaultMatrixInputs({
+            compilers: { gcc: '>=13' },
+            standards: normalizeCppVersionRequirement('>=20'),
+            maxStandards: 1
+        });
+        const { matrix } = await generateMatrix(inputs);
+        const gccEntry = matrix.find(e => e.compiler === 'gcc');
+        expect(gccEntry).toBeDefined();
+        expect(gccEntry!['common-ccflags']).toBe('');
+        expect(gccEntry!['common-cxxflags']).toBe('');
+        expect(gccEntry!['common-ldflags']).toBe('');
     });
 });
