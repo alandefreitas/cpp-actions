@@ -319,10 +319,12 @@ describe('updateMacOSXcodeDefaults', () => {
             }
         ];
 
-        // macOS toolset with Xcode, GCC, and LLVM
+        // macOS toolset with Xcode, GCC, and LLVM. The `default` field uses the
+        // bare-version format that current upstream toolsets ship (e.g. "15.4")
+        // rather than the legacy `/Applications/Xcode_15.4.app` symlink form.
         const toolset14 = {
             xcode: {
-                default: '/Applications/Xcode_15.4.app',
+                default: '15.4',
                 arm64: {
                     versions: [
                         { version: '15.4.0+15F31d', link: '/Applications/Xcode_15.4.app' }

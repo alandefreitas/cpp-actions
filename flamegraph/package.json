@@ -11,8 +11,8 @@
   "author": "",
   "license": "Boost Software License 1.0",
   "dependencies": {
-    "@actions/artifact": "^6.1.0",
-    "@actions/core": "^3.0.0",
+    "@actions/artifact": "^6.2.1",
+    "@actions/core": "^3.0.1",
     "action-schema": "*",
     "pretty-errors": "*",
     "trace-commands": "*"

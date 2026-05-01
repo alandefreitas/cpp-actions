@@ -1,10 +1,24 @@
 {
-  "generated": "2026-03-17T00:00:00.000Z",
+  "generated": "2026-05-01T05:09:46.636Z",
   "source": "actions/runner-images toolsets + xcodereleases.com",
   "runners": {
     "macos-14": {
       "default_xcode": "15.4",
       "xcode_versions": [
+        {
+          "xcode": "16.2",
+          "build": "16C5032a",
+          "apple_clang": "16.0.0",
+          "clang_build": "1600.0.26.6",
+          "is_default": false
+        },
+        {
+          "xcode": "16.1",
+          "build": "16B40",
+          "apple_clang": "16.0.0",
+          "clang_build": "1600.0.26.4",
+          "is_default": false
+        },
         {
           "xcode": "15.4",
           "build": "15F31d",
@@ -20,38 +34,70 @@
           "is_default": false
         },
         {
-          "xcode": "16.0",
-          "build": "16A242d",
-          "apple_clang": "16.0.0",
-          "clang_build": "1600.0.26.4",
+          "xcode": "15.2",
+          "build": "15C500b",
+          "apple_clang": "15.0.0",
+          "clang_build": "1500.1.0.2.5",
+          "is_default": false
+        },
+        {
+          "xcode": "15.1",
+          "build": "15C65",
+          "apple_clang": "15.0.0",
+          "clang_build": "1500.1.0.2.5",
+          "is_default": false
+        },
+        {
+          "xcode": "15.0.1",
+          "build": "15A507",
+          "apple_clang": "15.0.0",
+          "clang_build": "1500.0.40.1",
           "is_default": false
         }
       ],
-      "gcc_versions": ["13", "14", "15"],
+      "gcc_versions": [
+        "13",
+        "14",
+        "15"
+      ],
       "llvm_version": "15"
     },
     "macos-15": {
-      "default_xcode": "16.2",
+      "default_xcode": "16.4",
       "xcode_versions": [
         {
-          "xcode": "16.0",
-          "build": "16A242d",
-          "apple_clang": "16.0.0",
-          "clang_build": "1600.0.26.4",
+          "xcode": "26.3",
+          "build": "17C529",
+          "apple_clang": "17.0.0",
+          "clang_build": "1700.6.4.2",
           "is_default": false
         },
         {
-          "xcode": "16.1",
-          "build": "16B40",
-          "apple_clang": "16.0.0",
-          "clang_build": "1600.0.26.6",
+          "xcode": "26.2",
+          "build": "17C52",
+          "apple_clang": "17.0.0",
+          "clang_build": "1700.6.3.2",
           "is_default": false
         },
         {
-          "xcode": "16.2",
-          "build": "16C5032a",
-          "apple_clang": "16.0.0",
-          "clang_build": "1600.0.26.8",
+          "xcode": "26.1.1",
+          "build": "17B100",
+          "apple_clang": "17.0.0",
+          "clang_build": "1700.4.4.1",
+          "is_default": false
+        },
+        {
+          "xcode": "26.0.1",
+          "build": "17A400",
+          "apple_clang": "17.0.0",
+          "clang_build": "1700.3.19.1",
+          "is_default": false
+        },
+        {
+          "xcode": "16.4",
+          "build": "16F6",
+          "apple_clang": "17.0.0",
+          "clang_build": "1700.0.13.5",
           "is_default": true
         },
         {
@@ -60,27 +106,141 @@
           "apple_clang": "17.0.0",
           "clang_build": "1700.0.13.3",
           "is_default": false
+        },
+        {
+          "xcode": "16.2",
+          "build": "16C5032a",
+          "apple_clang": "16.0.0",
+          "clang_build": "1600.0.26.6",
+          "is_default": false
+        },
+        {
+          "xcode": "16.1",
+          "build": "16B40",
+          "apple_clang": "16.0.0",
+          "clang_build": "1600.0.26.4",
+          "is_default": false
+        },
+        {
+          "xcode": "16.0",
+          "build": "16A242d",
+          "apple_clang": "16.0.0",
+          "clang_build": "1600.0.26.3",
+          "is_default": false
         }
       ],
-      "gcc_versions": ["13", "14", "15"],
+      "gcc_versions": [
+        "13",
+        "14",
+        "15"
+      ],
       "llvm_version": "18"
+    },
+    "macos-26": {
+      "default_xcode": "26.2",
+      "xcode_versions": [
+        {
+          "xcode": "26.4.1",
+          "build": "17E202",
+          "apple_clang": "21.0.0",
+          "clang_build": "2100.0.123.102",
+          "is_default": false
+        },
+        {
+          "xcode": "26.3",
+          "build": "17C529",
+          "apple_clang": "17.0.0",
+          "clang_build": "1700.6.4.2",
+          "is_default": false
+        },
+        {
+          "xcode": "26.2",
+          "build": "17C52",
+          "apple_clang": "17.0.0",
+          "clang_build": "1700.6.3.2",
+          "is_default": true
+        },
+        {
+          "xcode": "26.1.1",
+          "build": "17B100",
+          "apple_clang": "17.0.0",
+          "clang_build": "1700.4.4.1",
+          "is_default": false
+        },
+        {
+          "xcode": "26.0.1",
+          "build": "17A400",
+          "apple_clang": "17.0.0",
+          "clang_build": "1700.3.19.1",
+          "is_default": false
+        }
+      ],
+      "gcc_versions": [
+        "13",
+        "14",
+        "15"
+      ],
+      "llvm_version": "20"
     }
   },
   "installable_gcc": [
-    {"major": 11, "version": "11.5.0"},
-    {"major": 12, "version": "12.5.0"},
-    {"major": 13, "version": "13.4.0"},
-    {"major": 14, "version": "14.3.0"},
-    {"major": 15, "version": "15.2.0"}
+    {
+      "major": 11,
+      "version": "11.5.0"
+    },
+    {
+      "major": 12,
+      "version": "12.5.0"
+    },
+    {
+      "major": 13,
+      "version": "13.4.0"
+    },
+    {
+      "major": 14,
+      "version": "14.3.0"
+    },
+    {
+      "major": 15,
+      "version": "15.2.0"
+    }
   ],
   "installable_llvm": [
-    {"major": 15, "version": "15.0.7"},
-    {"major": 16, "version": "16.0.6"},
-    {"major": 17, "version": "17.0.6"},
-    {"major": 18, "version": "18.1.8"},
-    {"major": 19, "version": "19.1.7"},
-    {"major": 20, "version": "20.1.8"},
-    {"major": 21, "version": "21.1.8"},
-    {"major": 22, "version": "22.1.1"}
+    {
+      "major": 14,
+      "version": "14.0.6"
+    },
+    {
+      "major": 15,
+      "version": "15.0.7"
+    },
+    {
+      "major": 16,
+      "version": "16.0.6"
+    },
+    {
+      "major": 17,
+      "version": "17.0.6"
+    },
+    {
+      "major": 18,
+      "version": "18.1.8"
+    },
+    {
+      "major": 19,
+      "version": "19.1.7"
+    },
+    {
+      "major": 20,
+      "version": "20.1.8"
+    },
+    {
+      "major": 21,
+      "version": "21.1.8"
+    },
+    {
+      "major": 22,
+      "version": "22.1.4"
+    }
   ]
 }

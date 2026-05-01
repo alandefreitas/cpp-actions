@@ -210,8 +210,8 @@ describe('setCompilerContainerNoVersion', () => {
     test('apple-clang uses newest runner from data', () => {
         const entry = makeEntry();
         setCompilerContainerNoVersion(entry, 'apple-clang');
-        // Newest runner in data is macos-15
-        expect(entry['runs-on']).toBe('macos-15');
+        // Newest runner in data is macos-26
+        expect(entry['runs-on']).toBe('macos-26');
     });
 
     test('mingw sets newest Windows runner', () => {
@@ -416,19 +416,20 @@ describe('applyForcedFactors', () => {
 });
 
 describe('setCompilerContainer', () => {
-    test('gcc >= 15 uses non-LTS where it is the default (25.10)', () => {
+    test('gcc >= 15 uses LTS where it is the default (26.04)', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs(), 'gcc', semver.parse('15.0.0')!, '15');
         expect(entry['runs-on']).toBe('ubuntu-22.04');
-        // GCC 15 is default on 25.10 — apt install gcc works there without PPA
-        expect(entry.container).toBe('ubuntu:25.10');
+        // GCC 15 is default on 25.10 and 26.04; LTS default (26.04) wins
+        expect(entry.container).toBe('ubuntu:26.04');
     });
 
-    test('gcc >= 14 uses ubuntu 24.04 container (available on LTS)', () => {
+    test('gcc >= 14 uses ubuntu 26.04 container (available on newest LTS)', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs(), 'gcc', semver.parse('14.0.0')!, '14');
-        // GCC 14 is available on 24.04 (LTS) but not default; newest available LTS = 24.04
-        expect(entry.container).toBe('ubuntu:24.04');
+        // GCC 14 is available on 24.04 and 26.04 (LTS) but not default on any LTS
+        // Newest available LTS = 26.04
+        expect(entry.container).toBe('ubuntu:26.04');
     });
 
     test('gcc >= 13 uses ubuntu 24.04 container', () => {
@@ -438,19 +439,19 @@ describe('setCompilerContainer', () => {
         expect(entry.container).toBe('ubuntu:24.04');
     });
 
-    test('gcc 12 uses ubuntu 24.04 container (newest LTS where available)', () => {
+    test('gcc 12 uses ubuntu 26.04 container (newest LTS where available)', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs({ useContainers: false }), 'gcc', semver.parse('12.0.0')!, '12');
-        // GCC 12 is available on 22.04 and 24.04 (LTS); not default on any LTS
-        // Newest available LTS = 24.04; releaseNum 24.04 > 22.04 means a container is always used
+        // GCC 12 is available on 22.04, 24.04, and 26.04 (LTS); not default on any LTS
+        // Newest available LTS = 26.04; releaseNum 26.04 > 22.04 means a container is always used
         expect(entry['runs-on']).toBe('ubuntu-22.04');
-        expect(entry.container).toBe('ubuntu:24.04');
+        expect(entry.container).toBe('ubuntu:26.04');
     });
 
-    test('gcc 12 with containers uses ubuntu 24.04', () => {
+    test('gcc 12 with containers uses ubuntu 26.04', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs({ useContainers: true }), 'gcc', semver.parse('12.0.0')!, '12');
-        expect(entry.container).toBe('ubuntu:24.04');
+        expect(entry.container).toBe('ubuntu:26.04');
     });
 
     test('gcc 8 without containers uses ubuntu-20.04', () => {
@@ -479,11 +480,12 @@ describe('setCompilerContainer', () => {
         expect(entry.container).toBeUndefined();
     });
 
-    test('clang 17 uses ubuntu 24.04 container (newest LTS where available)', () => {
+    test('clang 17 uses ubuntu 26.04 container (newest LTS where available)', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs(), 'clang', semver.parse('17.0.0')!, '17');
-        // Clang 17 is available on 24.04 (LTS); not default on any LTS
-        expect(entry.container).toBe('ubuntu:24.04');
+        // Clang 17 is available on 24.04 and 26.04 (LTS); not default on any LTS
+        // Newest available LTS = 26.04
+        expect(entry.container).toBe('ubuntu:26.04');
     });
 
     test('clang 16 uses ubuntu 24.04 container (available on LTS)', () => {
@@ -560,48 +562,48 @@ describe('setCompilerContainer', () => {
         expect(entry.container).toBe('ubuntu:22.04');
     });
 
-    test('gcc 16 uses newest release (not in any release)', () => {
+    test('gcc 16 uses newest LTS where available', () => {
         const entry = makeEntry();
-        // GCC 16 is not in any release → falls back to newest release (25.10)
+        // GCC 16 is available on 26.04 (LTS) but not default → newest LTS available = 26.04
         setCompilerContainer(entry, makeInputs({ useContainers: false }), 'gcc', semver.parse('16.0.0')!, '16');
         expect(entry['runs-on']).toBe('ubuntu-22.04');
-        expect(entry.container).toBe('ubuntu:24.04');
+        expect(entry.container).toBe('ubuntu:26.04');
     });
 
-    test('gcc 16 with containers uses newest release', () => {
+    test('gcc 16 with containers uses newest LTS', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs({ useContainers: true }), 'gcc', semver.parse('16.0.0')!, '16');
         expect(entry['runs-on']).toBe('ubuntu-22.04');
-        expect(entry.container).toBe('ubuntu:24.04');
+        expect(entry.container).toBe('ubuntu:26.04');
     });
 
-    test('clang 6 uses newest release (not in any release)', () => {
+    test('clang 6 uses newest LTS (not in any release)', () => {
         const entry = makeEntry();
-        // Clang 6 is not available on any release in the data → newest release (25.10)
+        // Clang 6 is not available on any LTS → falls back to newest LTS (26.04)
         setCompilerContainer(entry, makeInputs({ useContainers: false }), 'clang', semver.parse('6.0.0')!, '6');
         expect(entry['runs-on']).toBe('ubuntu-22.04');
-        expect(entry.container).toBe('ubuntu:24.04');
+        expect(entry.container).toBe('ubuntu:26.04');
     });
 
-    test('clang 6 with containers uses newest release', () => {
+    test('clang 6 with containers uses newest LTS', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs({ useContainers: true }), 'clang', semver.parse('6.0.0')!, '6');
         expect(entry['runs-on']).toBe('ubuntu-22.04');
-        expect(entry.container).toBe('ubuntu:24.04');
+        expect(entry.container).toBe('ubuntu:26.04');
     });
 
-    test('clang 5 uses newest release (not in any release)', () => {
+    test('clang 5 uses newest LTS (not in any release)', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs(), 'clang', semver.parse('5.0.0')!, '5');
         expect(entry['runs-on']).toBe('ubuntu-22.04');
-        expect(entry.container).toBe('ubuntu:24.04');
+        expect(entry.container).toBe('ubuntu:26.04');
     });
 
-    test('clang 3.5 uses newest release (not in any release)', () => {
+    test('clang 3.5 uses newest LTS (not in any release)', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs(), 'clang', semver.parse('3.5.0')!, '3.5');
         expect(entry['runs-on']).toBe('ubuntu-22.04');
-        expect(entry.container).toBe('ubuntu:24.04');
+        expect(entry.container).toBe('ubuntu:26.04');
     });
 
     test('msvc >= 14.42 uses windows-2025', () => {
@@ -655,8 +657,8 @@ describe('setCompilerContainer', () => {
     test('container with object config gets overwritten by data-driven selection', () => {
         const entry = makeEntry({ container: { image: 'ubuntu:22.04' } });
         setCompilerContainer(entry, makeInputs({ useContainers: true }), 'gcc', semver.parse('12.0.0')!, '12');
-        // GCC 12 is available on 24.04 (LTS, > 22.04), so data-driven selection sets container to ubuntu:24.04
-        expect(entry.container).toBe('ubuntu:24.04');
+        // GCC 12 is available on 26.04 (LTS, > 22.04), so data-driven selection sets container to ubuntu:26.04
+        expect(entry.container).toBe('ubuntu:26.04');
     });
 
     test('container object with old ubuntu gets volumes added', () => {
@@ -1006,26 +1008,26 @@ describe('findBestUbuntuRelease', () => {
     });
 
     test('returns newest LTS where version is available (not default on any LTS)', () => {
-        // GCC 14 is available on 24.04 (LTS) but not default there (13 is default)
-        // Not default on any LTS → returns newest available LTS = 24.04
-        expect(findBestUbuntuRelease('gcc', 14)).toBe('24.04');
+        // GCC 14 is available on 24.04 and 26.04 (LTS) but not default there
+        // Not default on any LTS → returns newest available LTS = 26.04
+        expect(findBestUbuntuRelease('gcc', 14)).toBe('26.04');
     });
 
     test('returns newest LTS where version is available when not default on any LTS', () => {
         // GCC 10 is available on 20.04, 22.04, 24.04 (LTS) but not default on any
-        // Newest available LTS = 24.04
+        // Newest available LTS = 24.04 (26.04 doesn't have GCC 10)
         expect(findBestUbuntuRelease('gcc', 10)).toBe('24.04');
     });
 
     test('returns newest available LTS for non-default version', () => {
-        // GCC 12 is available on 22.04 and 24.04 (LTS) but not default on any
-        // Newest available LTS = 24.04
-        expect(findBestUbuntuRelease('gcc', 12)).toBe('24.04');
+        // GCC 12 is available on 22.04, 24.04, and 26.04 (LTS) but not default on any
+        // Newest available LTS = 26.04
+        expect(findBestUbuntuRelease('gcc', 12)).toBe('26.04');
     });
 
     test('returns newest LTS when no LTS has the version', () => {
-        // GCC 99 is not in any LTS → falls back to newest LTS (24.04)
-        expect(findBestUbuntuRelease('gcc', 99)).toBe('24.04');
+        // GCC 99 is not in any LTS → falls back to newest LTS (26.04)
+        expect(findBestUbuntuRelease('gcc', 99)).toBe('26.04');
     });
 
     test('works with clang', () => {
@@ -1045,13 +1047,13 @@ describe('findBestUbuntuRelease', () => {
     });
 
     test('returns newest LTS for non-gcc/clang compilers', () => {
-        expect(findBestUbuntuRelease('msvc', 14)).toBe('24.04');
-        expect(findBestUbuntuRelease('apple-clang', 14)).toBe('24.04');
-        expect(findBestUbuntuRelease('mingw', 12)).toBe('24.04');
+        expect(findBestUbuntuRelease('msvc', 14)).toBe('26.04');
+        expect(findBestUbuntuRelease('apple-clang', 14)).toBe('26.04');
+        expect(findBestUbuntuRelease('mingw', 12)).toBe('26.04');
     });
 
     test('returns newest LTS for unknown compiler', () => {
-        expect(findBestUbuntuRelease('unknown', 11)).toBe('24.04');
+        expect(findBestUbuntuRelease('unknown', 11)).toBe('26.04');
     });
 
     test('newest default release wins when multiple have it as default', () => {
@@ -1062,8 +1064,9 @@ describe('findBestUbuntuRelease', () => {
 
 // Tests for findBestMacOSRunner / findNewestMacOSRunner auto-select logic.
 // Uses real macos-xcode-defaults.json data:
-//   macos-14: Apple Clang 15 (default via Xcode 15.4), 16 (Xcode 16.0)
-//   macos-15: Apple Clang 16 (default via Xcode 16.2), 17 (Xcode 16.3)
+//   macos-14: Apple Clang 15 (default via Xcode 15.4), 16
+//   macos-15: Apple Clang 15, 16, 17 (default via Xcode 16.4)
+//   macos-26: Apple Clang 17 (default via Xcode 26.2), 21
 describe('findBestMacOSRunner', () => {
     test('Apple Clang 15 selects macos-14 (default Xcode)', () => {
         // Apple Clang 15 is_default on macos-14 (Xcode 15.4)
@@ -1071,19 +1074,19 @@ describe('findBestMacOSRunner', () => {
     });
 
     test('Apple Clang 16 selects macos-15 (default Xcode on newest runner)', () => {
-        // Apple Clang 16 is available on both macos-14 and macos-15
-        // It is_default on macos-15 (Xcode 16.2), so macos-15 wins
+        // Apple Clang 16 is available on macos-14 and macos-15 (not default on either)
+        // Newest runner with it is macos-15
         expect(findBestMacOSRunner(16)).toBe('macos-15');
     });
 
-    test('Apple Clang 17 selects macos-15 (only runner with it)', () => {
-        // Apple Clang 17 is only available on macos-15 (Xcode 16.3, not default)
-        expect(findBestMacOSRunner(17)).toBe('macos-15');
+    test('Apple Clang 17 selects macos-26 (default on newest runner with it)', () => {
+        // Apple Clang 17 is_default on both macos-15 and macos-26 → newest wins
+        expect(findBestMacOSRunner(17)).toBe('macos-26');
     });
 
     test('unknown version falls back to newest runner', () => {
-        // Apple Clang 99 is not in any runner → newest runner = macos-15
-        expect(findBestMacOSRunner(99)).toBe('macos-15');
+        // Apple Clang 99 is not in any runner → newest runner = macos-26
+        expect(findBestMacOSRunner(99)).toBe('macos-26');
     });
 
     test('setCompilerContainer routes apple-clang 16 to macos-15', () => {
@@ -1092,16 +1095,16 @@ describe('findBestMacOSRunner', () => {
         expect(entry['runs-on']).toBe('macos-15');
     });
 
-    test('setCompilerContainer routes apple-clang 17 to macos-15', () => {
+    test('setCompilerContainer routes apple-clang 17 to macos-26', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs(), 'apple-clang', semver.parse('17.0.0')!, '17');
-        expect(entry['runs-on']).toBe('macos-15');
+        expect(entry['runs-on']).toBe('macos-26');
     });
 });
 
 describe('findNewestMacOSRunner', () => {
     test('returns newest runner from data', () => {
-        expect(findNewestMacOSRunner()).toBe('macos-15');
+        expect(findNewestMacOSRunner()).toBe('macos-26');
     });
 });
 
@@ -1122,9 +1125,9 @@ describe('findBestWindowsRunner', () => {
         expect(findBestWindowsRunner(29)).toBe('windows-2025');
     });
 
-    test('MSVC 14.50 selects windows-2025-vs2026 (default there)', () => {
-        // 14.50 is default on windows-2025-vs2026
-        expect(findBestWindowsRunner(50)).toBe('windows-2025-vs2026');
+    test('MSVC 14.50 falls back to newest runner (not in current data)', () => {
+        // 14.50 is not in any runner currently → fallback to newest (windows-2025)
+        expect(findBestWindowsRunner(50)).toBe('windows-2025');
     });
 
     test('unknown version falls back to newest runner', () => {
@@ -1193,19 +1196,20 @@ describe('findBestWindowsRunnerForLlvm', () => {
 // Uses real macos-xcode-defaults.json data:
 //   macos-14: gcc_versions ["13", "14", "15"]
 //   macos-15: gcc_versions ["13", "14", "15"]
+//   macos-26: gcc_versions ["13", "14", "15"]
 describe('findBestMacOSRunnerForGcc', () => {
-    test('gcc 15 selects macos-15 (newest runner with matching version)', () => {
-        // Both runners have gcc 15, newest wins
-        expect(findBestMacOSRunnerForGcc(15)).toBe('macos-15');
+    test('gcc 15 selects macos-26 (newest runner with matching version)', () => {
+        // All three runners have gcc 15, newest wins
+        expect(findBestMacOSRunnerForGcc(15)).toBe('macos-26');
     });
 
-    test('gcc 13 selects macos-15 (newest runner with matching version)', () => {
-        expect(findBestMacOSRunnerForGcc(13)).toBe('macos-15');
+    test('gcc 13 selects macos-26 (newest runner with matching version)', () => {
+        expect(findBestMacOSRunnerForGcc(13)).toBe('macos-26');
     });
 
     test('unknown version falls back to newest runner', () => {
-        // gcc 10 is not pre-installed on any runner → newest = macos-15
-        expect(findBestMacOSRunnerForGcc(10)).toBe('macos-15');
+        // gcc 10 is not pre-installed on any runner → newest = macos-26
+        expect(findBestMacOSRunnerForGcc(10)).toBe('macos-26');
     });
 });
 
@@ -1213,6 +1217,7 @@ describe('findBestMacOSRunnerForGcc', () => {
 // Uses real macos-xcode-defaults.json data:
 //   macos-14: llvm_version "15"
 //   macos-15: llvm_version "18"
+//   macos-26: llvm_version "20"
 describe('findBestMacOSRunnerForLlvm', () => {
     test('llvm 15 selects macos-14 (matching pre-installed version)', () => {
         expect(findBestMacOSRunnerForLlvm(15)).toBe('macos-14');
@@ -1223,8 +1228,8 @@ describe('findBestMacOSRunnerForLlvm', () => {
     });
 
     test('unknown version falls back to newest runner', () => {
-        // llvm 12 is not pre-installed on any runner → newest = macos-15
-        expect(findBestMacOSRunnerForLlvm(12)).toBe('macos-15');
+        // llvm 12 is not pre-installed on any runner → newest = macos-26
+        expect(findBestMacOSRunnerForLlvm(12)).toBe('macos-26');
     });
 });
 

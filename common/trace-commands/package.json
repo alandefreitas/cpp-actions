@@ -13,6 +13,6 @@
   "author": "",
   "license": "Boost Software License 1.0",
   "dependencies": {
-    "@actions/core": "^3.0.0"
+    "@actions/core": "^3.0.1"
   }
 }

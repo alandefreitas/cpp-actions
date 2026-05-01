@@ -142,7 +142,7 @@ runs:
         # Install curl if not available
         if ! command -v curl >/dev/null 2>&1; then
           if command -v apt-get >/dev/null 2>&1; then
-            apt-get update && apt-get install -y curl
+            apt-get -o Acquire::Retries=3 update && apt-get -o Acquire::Retries=3 install -y curl
           else
             echo "::warning::curl is not available and apt-get is not available to install it. Cannot download Node.js."
             exit 0
@@ -190,7 +190,7 @@ runs:
           exit 0
         fi
 
-        apt-get update && apt-get install -y nodejs npm
+        apt-get -o Acquire::Retries=3 update && apt-get -o Acquire::Retries=3 install -y nodejs npm
 
         # Create symlink if needed
         if ! command -v node >/dev/null 2>&1 && command -v nodejs >/dev/null 2>&1; then
@@ -216,7 +216,7 @@ runs:
         if ! command -v git >/dev/null 2>&1; then
           if command -v apt-get >/dev/null 2>&1; then
             echo "git is not installed — installing via apt-get"
-            apt-get update && apt-get install -y git
+            apt-get -o Acquire::Retries=3 update && apt-get -o Acquire::Retries=3 install -y git
           else
             echo "::warning::git is not installed and apt-get is not available to install it. Skipping safe.directory configuration."
             exit 0

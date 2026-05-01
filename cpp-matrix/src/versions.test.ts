@@ -266,7 +266,7 @@ describe('splitRanges', () => {
         expect(splitRanges('9.2 - 11', await setup_program.findGCCVersions())).toStrictEqual(['^9.2', '10', '11']);
         expect(splitRanges('9.2 - 9.4 || 11', await setup_program.findGCCVersions())).toStrictEqual(['9.2 - 9.4', '11']);
         expect(splitRanges('>=8 <9.100', await setup_program.findGCCVersions())).toStrictEqual(['8', '9']);
-        expect(splitRanges('>=14 <14.50', findMSVCVersions())).toStrictEqual(['14 - 14.44']);
+        expect(splitRanges('>=14 <14.50', findMSVCVersions())).toStrictEqual(['14']);
         expect(splitRanges('<=9.2', ['9.1.0', '9.2.0', '9.3.0', '9.4.0', '9.5.0'], SubrangePolicies.ONE_PER_MAJOR)).toStrictEqual(['9 - 9.2']);
         expect(splitRanges('>14.29.4 <14.40', ['14.29.30139', '14.29.30140'])).toStrictEqual(['14']);
         expect(splitRanges('>14.29.30140 <14.40', ['14.29.30139', '14.29.30150'])).toStrictEqual(['^14.29.30150']);
@@ -553,16 +553,16 @@ describe('splitRanges UBUNTU_DEFAULTS_AND_LATEST', () => {
 
 describe('splitRanges ONE_PER_VS_YEAR', () => {
     // Uses real windows-msvc-defaults.json data:
-    //   windows-2022: MSVC 14.44 (default), 14.29
-    //   windows-2025: MSVC 14.44 (default), 14.29
-    //   windows-2025-vs2026: MSVC 14.50 (default), 14.44
-    // Defaults: [44, 50], Available: [29, 44, 50]
-    const msvcVersions = findMSVCVersions(); // ['14.29.0', '14.44.0', '14.50.0']
+    //   windows-2022: MSVC 14.44 (default)
+    //   windows-2025: MSVC 14.44 (default)
+    //   windows-2025-vs2026: MSVC 14.44 (not default)
+    // Defaults: [44], Available: [44]
+    const msvcVersions = findMSVCVersions(); // ['14.44.0']
 
     test('selects default versions plus latest available', () => {
         const result = splitRanges('>=14.20', msvcVersions, SubrangePolicies.ONE_PER_VS_YEAR, 'msvc');
-        // Defaults 14.44 and 14.50 in range, latest available 14.50 is same as default → no extra
-        expect(result).toStrictEqual(['14.44', '14.50']);
+        // Default 14.44 in range, latest available 14.44 is same as default → no extra
+        expect(result).toStrictEqual(['14.44']);
     });
 
     test('latest is not duplicated when it matches a default', () => {
@@ -573,8 +573,8 @@ describe('splitRanges ONE_PER_VS_YEAR', () => {
 
     test('excludes defaults outside user range', () => {
         const result = splitRanges('>=14.50', msvcVersions, SubrangePolicies.ONE_PER_VS_YEAR, 'msvc');
-        // Default 14.44 is NOT in range, only 14.50 matches → latest only
-        expect(result).toStrictEqual(['14.50']);
+        // Default 14.44 is NOT in range, no other versions available → no match
+        expect(result).toStrictEqual(['*']);
     });
 
     test('falls back to latest for non-MSVC compiler', () => {
@@ -594,8 +594,8 @@ describe('getWindowsDefaultMsvcVersions', () => {
     it('returns default MSVC minors from data file', () => {
         const defaults = setup_program.loadWindowsMsvcDefaults();
         const minors = getWindowsDefaultMsvcVersions(defaults);
-        // 14.44 is_default on windows-2022/2025, 14.50 is_default on windows-2025-vs2026
-        expect(minors).toStrictEqual([44, 50]);
+        // 14.44 is_default on windows-2022/2025
+        expect(minors).toStrictEqual([44]);
     });
 });
 
@@ -603,21 +603,21 @@ describe('getWindowsAvailableMsvcVersions', () => {
     it('returns all available MSVC minors from data file', () => {
         const defaults = setup_program.loadWindowsMsvcDefaults();
         const minors = getWindowsAvailableMsvcVersions(defaults);
-        // 14.29, 14.44 across windows-2022/2025 + 14.50 from windows-2025-vs2026
-        expect(minors).toStrictEqual([29, 44, 50]);
+        // 14.44 across all runners
+        expect(minors).toStrictEqual([44]);
     });
 });
 
 describe('findMSVCVersions', () => {
     it('returns unique MSVC versions with .0 patch sorted ascending by semver', () => {
         const versions = findMSVCVersions();
-        // windows-msvc-defaults.json has: 14.29 (2019), 14.44 (2022), 14.50 (2026 on windows-2025-vs2026)
-        expect(versions).toStrictEqual(['14.29.0', '14.44.0', '14.50.0']);
+        // windows-msvc-defaults.json has: 14.44 across all runners
+        expect(versions).toStrictEqual(['14.44.0']);
     });
 
     it('deduplicates versions across runners', () => {
         const versions = findMSVCVersions();
-        // 14.29 and 14.44 appear on both windows-2022 and windows-2025 but should only appear once
+        // 14.44 appears on multiple windows runners but should only appear once
         const duplicates = versions.filter((v, i) => versions.indexOf(v) !== i);
         expect(duplicates).toHaveLength(0);
     });
@@ -626,8 +626,9 @@ describe('findMSVCVersions', () => {
 describe('findAppleClangVersions', () => {
     it('returns unique Apple Clang versions sorted ascending by semver', () => {
         const versions = findAppleClangVersions();
-        // macos-xcode-defaults.json has: 15.0.0 (macos-14), 16.0.0 (macos-14/15), 17.0.0 (macos-15)
-        expect(versions).toStrictEqual(['15.0.0', '16.0.0', '17.0.0']);
+        // macos-xcode-defaults.json has: 15.0.0 (macos-14), 16.0.0 (macos-14/15),
+        // 17.0.0 (macos-15/26), 21.0.0 (macos-26)
+        expect(versions).toStrictEqual(['15.0.0', '16.0.0', '17.0.0', '21.0.0']);
     });
 
     it('deduplicates versions across runners', () => {
@@ -665,9 +666,9 @@ describe('findMingwVersions', () => {
 describe('findClangClVersions', () => {
     it('returns unique LLVM versions sorted ascending by semver', () => {
         const versions = findClangClVersions();
-        // windows-msvc-defaults.json has: pre-installed 20 + installable 14.0.0..22.1.0
+        // windows-msvc-defaults.json has: pre-installed 20 + installable up to 22.1.0
         expect(versions.length).toBeGreaterThan(0);
-        expect(versions).toContain('14.0.0');
+        expect(versions).toContain('14.0.1');
         expect(versions).toContain('20.0.0');
         expect(versions).toContain('22.1.0');
     });
@@ -706,11 +707,11 @@ describe('findMacOSGccVersions', () => {
 describe('findMacOSClangVersions', () => {
     it('returns unique macOS LLVM versions sorted ascending by semver', () => {
         const versions = findMacOSClangVersions();
-        // macos-xcode-defaults.json has: pre-installed 15, 18 + installable 15.0.7..22.1.1
+        // macos-xcode-defaults.json has: pre-installed 15, 18, 20 + installable up to 22.1.4
         expect(versions.length).toBeGreaterThan(0);
         expect(versions).toContain('15.0.0');
         expect(versions).toContain('18.0.0');
-        expect(versions).toContain('22.1.1');
+        expect(versions).toContain('22.1.4');
     });
 
     it('deduplicates pre-installed and installable versions', () => {
@@ -785,31 +786,32 @@ describe('splitRanges with apple-clang versions', () => {
 // Tests for MACOS_DEFAULTS_AND_LATEST subrange policy.
 // These use real macos-xcode-defaults.json data loaded via setup_program.
 // The data file has:
-//   macos-14: default Xcode 15.4 → Apple Clang 15.0.0 (default), 16.0.0
-//   macos-15: default Xcode 16.2 → Apple Clang 16.0.0 (default), 17.0.0
-// Default Apple Clang majors: [15, 16] (from is_default entries)
-// Available Apple Clang majors: [15, 16, 17] (all entries)
+//   macos-14: default Xcode 15.4 → Apple Clang 15.0.0 (default)
+//   macos-15: default Xcode 16.4 → Apple Clang 17.0.0 (default)
+//   macos-26: default Xcode 26.2 → Apple Clang 17.0.0 (default)
+// Default Apple Clang majors: [15, 17] (from is_default entries, deduplicated)
+// Available Apple Clang majors: [15, 16, 17, 21] (across all entries)
 
 describe('splitRanges MACOS_DEFAULTS_AND_LATEST', () => {
     test('includes macOS defaults plus the latest available version', () => {
-        // Defaults: 15 (macos-14), 16 (macos-15). Latest available: 17.
+        // Defaults [15, 17] in range. Latest available in range is 17, already selected.
         const versions = ['15.0.0', '16.0.0', '17.0.0'];
         const result = splitRanges('>=15', versions, SubrangePolicies.MACOS_DEFAULTS_AND_LATEST, 'apple-clang');
-        expect(result).toStrictEqual(['15', '16', '17']);
+        expect(result).toStrictEqual(['15', '17']);
     });
 
     test('no duplicate when latest is already a default', () => {
-        // Restrict to range where latest available (16) is already a default
+        // Range >=15 <=16: default 15 in range (17 is not). Latest available in range 16 → push 16.
         const versions = ['15.0.0', '16.0.0'];
         const result = splitRanges('>=15 <=16', versions, SubrangePolicies.MACOS_DEFAULTS_AND_LATEST, 'apple-clang');
         expect(result).toStrictEqual(['15', '16']);
     });
 
     test('adds latest even when only one default matches', () => {
-        // Range >=16: defaults in range = [16]. Latest available in range = 17
+        // Range >=16: defaults in range = [17] only. Latest available 17, already selected.
         const versions = ['15.0.0', '16.0.0', '17.0.0'];
         const result = splitRanges('>=16', versions, SubrangePolicies.MACOS_DEFAULTS_AND_LATEST, 'apple-clang');
-        expect(result).toStrictEqual(['16', '17']);
+        expect(result).toStrictEqual(['17']);
     });
 
     test('excludes default versions outside user range', () => {

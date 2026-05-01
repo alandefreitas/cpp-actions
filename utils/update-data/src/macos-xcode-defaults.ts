@@ -425,14 +425,18 @@ function extractXcodeVersion(version: string): string {
 }
 
 /**
- * Extracts the default Xcode version string from the toolset's default symlink path.
+ * Extracts the default Xcode version string from the toolset's default field.
  *
- * Parses paths like `"/Applications/Xcode_15.4.app"` to extract `"15.4"`.
+ * Handles both formats: a bare version string like `"15.4"`, and the legacy
+ * symlink path format like `"/Applications/Xcode_15.4.app"`.
  *
- * @param defaultLink - The default Xcode symlink path from the toolset JSON
+ * @param defaultLink - The default Xcode value from the toolset JSON
  * @returns The default Xcode version string, or an empty string if parsing fails
  */
 function extractDefaultVersion(defaultLink: string): string {
+    if (/^\d+(\.\d+)*$/.test(defaultLink)) {
+        return defaultLink;
+    }
     const match = defaultLink.match(/Xcode[_-]?([\d.]+)/);
     return match ? match[1] : '';
 }

@@ -1,5 +1,5 @@
 {
-  "generated": "2026-03-16T21:05:36.642Z",
+  "generated": "2026-05-01T05:09:44.009Z",
   "source": "archive.ubuntu.com apt metadata",
   "releases": {
     "16.04.7": {
@@ -947,6 +947,79 @@
           {
             "major": 21,
             "package_version": "1:21.1.2-2ubuntu6",
+            "is_default": false
+          }
+        ]
+      }
+    },
+    "26.04": {
+      "codename": "resolute",
+      "gcc": {
+        "default_version": "15",
+        "available_versions": [
+          {
+            "major": 11,
+            "package_version": "11.5.0-11ubuntu2",
+            "is_default": false
+          },
+          {
+            "major": 12,
+            "package_version": "12.5.0-9ubuntu1",
+            "is_default": false
+          },
+          {
+            "major": 13,
+            "package_version": "13.4.0-10ubuntu1",
+            "is_default": false
+          },
+          {
+            "major": 14,
+            "package_version": "14.3.0-14ubuntu1",
+            "is_default": false
+          },
+          {
+            "major": 15,
+            "package_version": "15.2.0-16ubuntu1",
+            "is_default": true
+          },
+          {
+            "major": 16,
+            "package_version": "16-20260322-1ubuntu1",
+            "is_default": false
+          }
+        ]
+      },
+      "clang": {
+        "default_version": "21",
+        "available_versions": [
+          {
+            "major": 17,
+            "package_version": "1:17.0.6-23ubuntu7",
+            "is_default": false
+          },
+          {
+            "major": 18,
+            "package_version": "1:18.1.8-20ubuntu8",
+            "is_default": false
+          },
+          {
+            "major": 19,
+            "package_version": "1:19.1.7-20ubuntu4",
+            "is_default": false
+          },
+          {
+            "major": 20,
+            "package_version": "1:20.1.8-2ubuntu8",
+            "is_default": false
+          },
+          {
+            "major": 21,
+            "package_version": "1:21.1.8-6ubuntu1",
+            "is_default": true
+          },
+          {
+            "major": 22,
+            "package_version": "1:22.1.2-1ubuntu1",
             "is_default": false
           }
         ]

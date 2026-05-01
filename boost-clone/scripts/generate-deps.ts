@@ -42,8 +42,6 @@ import {
  */
 interface ModuleDeps {
     direct_deps: string[];
-    transitive_deps: string[];
-    total_count: number;
 }
 
 /**
@@ -99,46 +97,21 @@ function downloadFile(url: string): Promise<string> {
 }
 
 /**
- * Builds the transitive dependency closure for all modules.
+ * Builds the per-module dependency record from collected direct deps.
+ *
+ * Transitive closures are computed at runtime by consumers, so we only
+ * persist direct_deps to keep the JSON small.
  *
  * @param directDepsMap - Map of module name to its direct dependencies
- * @returns Map of module name to its complete dependency info
+ * @returns Map of module name to its module deps record
  */
-function buildTransitiveClosures(
+function buildModuleDeps(
     directDepsMap: Map<string, Set<string>>
 ): Map<string, ModuleDeps> {
     const result = new Map<string, ModuleDeps>();
-
     for (const [moduleName, deps] of directDepsMap) {
-        const transitiveDeps = new Set<string>();
-        const queue = [...deps];
-        const visited = new Set<string>();
-
-        while (queue.length > 0) {
-            const dep = queue.shift()!;
-            if (visited.has(dep)) {
-                continue;
-            }
-            visited.add(dep);
-            transitiveDeps.add(dep);
-
-            const depDeps = directDepsMap.get(dep);
-            if (depDeps) {
-                for (const d of depDeps) {
-                    if (!visited.has(d)) {
-                        queue.push(d);
-                    }
-                }
-            }
-        }
-
-        result.set(moduleName, {
-            direct_deps: [...deps].sort(),
-            transitive_deps: [...transitiveDeps].sort(),
-            total_count: transitiveDeps.size
-        });
+        result.set(moduleName, { direct_deps: [...deps].sort() });
     }
-
     return result;
 }
 
@@ -176,8 +149,7 @@ async function scanAllModules(
         }
     }
 
-    console.log(`Building transitive closures...`);
-    const moduleData = buildTransitiveClosures(directDepsMap);
+    const moduleData = buildModuleDeps(directDepsMap);
 
     const modules: Record<string, ModuleDeps> = {};
     for (const [name, deps] of moduleData) {

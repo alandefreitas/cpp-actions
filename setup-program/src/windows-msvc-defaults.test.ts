@@ -49,11 +49,20 @@ describe('loadWindowsMsvcDefaults', () => {
         expect(data.runners).toHaveProperty('windows-2025');
     });
 
-    it('has mingw_version and llvm_version per runner', () => {
+    it('has mingw_version and llvm_version on at least one runner', () => {
         const data = loadWindowsMsvcDefaults();
-        for (const runner of Object.values(data.runners)) {
-            expect(typeof runner.mingw_version).toBe('string');
-            expect(typeof runner.llvm_version).toBe('string');
+        const runners = Object.values(data.runners);
+        // Both fields are optional per schema (some special runners like
+        // windows-2025-vs2026 omit them), but at least one runner should have them.
+        expect(runners.some(r => typeof r.mingw_version === 'string')).toBe(true);
+        expect(runners.some(r => typeof r.llvm_version === 'string')).toBe(true);
+        for (const runner of runners) {
+            if (runner.mingw_version !== undefined) {
+                expect(typeof runner.mingw_version).toBe('string');
+            }
+            if (runner.llvm_version !== undefined) {
+                expect(typeof runner.llvm_version).toBe('string');
+            }
         }
     });
 
@@ -63,7 +72,9 @@ describe('loadWindowsMsvcDefaults', () => {
         expect(data.installable_mingw!.length).toBeGreaterThan(0);
         for (const v of data.installable_mingw!) {
             expect(typeof v).toBe('string');
-            expect(v).toMatch(/^\d+\.\d+\.\d+$/);
+            // Chocolatey ships some entries with extra date-coded suffixes
+            // (e.g. "11.2.0.07112021"), so accept extra dot-separated segments.
+            expect(v).toMatch(/^\d+\.\d+\.\d+(\.\d+)*$/);
         }
     });
 

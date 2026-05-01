@@ -12,19 +12,19 @@
   "author": "",
   "license": "Boost Software License 1.0",
   "dependencies": {
-    "@actions/artifact": "^6.1.0",
-    "@actions/core": "^3.0.0",
+    "@actions/artifact": "^6.2.1",
+    "@actions/core": "^3.0.1",
     "@actions/exec": "^3.0.0",
-    "@actions/glob": "^0.5.0",
+    "@actions/glob": "^0.7.0",
     "@actions/io": "^3.0.2",
     "@actions/tool-cache": "^4.0.0",
     "action-schema": "*",
-    "picomatch": "^2.3.1",
-    "semver": "^7.6.0",
+    "picomatch": "^4.0.4",
+    "semver": "^7.7.4",
     "setup-program": "*",
     "trace-commands": "*"
   },
   "devDependencies": {
-    "@types/picomatch": "^4.0.2"
+    "@types/picomatch": "^4.0.3"
   }
 }

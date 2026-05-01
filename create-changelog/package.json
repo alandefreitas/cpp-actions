@@ -16,10 +16,10 @@
   "author": "",
   "license": "Boost Software License 1.0",
   "dependencies": {
-    "@actions/core": "^3.0.0",
+    "@actions/core": "^3.0.1",
     "@actions/exec": "^3.0.0",
     "action-schema": "*",
-    "axios": "^1.13.5",
+    "axios": "^1.15.2",
     "pretty-errors": "*",
     "trace-commands": "*"
   }
