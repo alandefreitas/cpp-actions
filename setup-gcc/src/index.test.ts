@@ -48,10 +48,6 @@ jest.mock('package-install', () => ({
     findProgramWithApt: jest.fn()
 }));
 
-jest.mock('./gcc-download', () => ({
-    downloadGccFromUrl: jest.fn()
-}));
-
 jest.mock('fs', () => ({
     existsSync: jest.fn()
 }));
@@ -62,7 +58,6 @@ import * as exec from '@actions/exec';
 import * as fs from 'fs';
 import * as setup_program from 'setup-program';
 import * as package_install from 'package-install';
-import { downloadGccFromUrl } from './gcc-download';
 import { main } from './index';
 import type { Inputs } from './schema';
 
@@ -71,7 +66,6 @@ const mockFindProgramInPath = setup_program.findProgramInPath as jest.MockedFunc
 const mockFindProgramInSystemPaths = setup_program.findProgramInSystemPaths as jest.MockedFunction<typeof setup_program.findProgramInSystemPaths>;
 const mockFindProgramWithApt = package_install.findProgramWithApt as jest.MockedFunction<typeof package_install.findProgramWithApt>;
 const mockIsSudoRequired = setup_program.isSudoRequired as jest.MockedFunction<typeof setup_program.isSudoRequired>;
-const mockDownloadGccFromUrl = downloadGccFromUrl as jest.MockedFunction<typeof downloadGccFromUrl>;
 const mockFindLlvmSymbolizer = setup_program.findLlvmSymbolizer as jest.MockedFunction<typeof setup_program.findLlvmSymbolizer>;
 const mockExportSymbolizerEnvVars = setup_program.exportSymbolizerEnvVars as jest.MockedFunction<typeof setup_program.exportSymbolizerEnvVars>;
 const mockFindProgramWithBrew = package_install.findProgramWithBrew as jest.MockedFunction<typeof package_install.findProgramWithBrew>;
@@ -116,7 +110,6 @@ describe('setup-gcc main', () => {
         mockFindProgramInPath.mockResolvedValue(nullResult);
         mockFindProgramInSystemPaths.mockResolvedValue(nullResult);
         mockFindProgramWithApt.mockResolvedValue(nullResult);
-        mockDownloadGccFromUrl.mockResolvedValue(nullResult);
         mockExistsSync.mockReturnValue(false);
         mockIsSudoRequired.mockReturnValue(true);
         mockExec.mockResolvedValue(0);
@@ -286,25 +279,6 @@ describe('setup-gcc main', () => {
 
         // Should still find GCC via APT
         expect(result.outputPath).toBe('/usr/bin/g++-11');
-    });
-
-    it('skips download when version found via APT', async () => {
-        mockFindProgramWithApt.mockResolvedValueOnce(nullResult); // software-properties-common
-        mockFindProgramWithApt.mockResolvedValueOnce({ outputVersion: '12.1.0', outputPath: '/usr/bin/g++-12' });
-        mockExistsSync.mockReturnValue(true);
-        await main(makeInputs());
-
-        expect(mockDownloadGccFromUrl).not.toHaveBeenCalled();
-    });
-
-    it('downloads from URL when APT fails', async () => {
-        mockFindProgramWithApt.mockResolvedValue(nullResult);
-        mockDownloadGccFromUrl.mockResolvedValue({ outputVersion: '12.1.0', outputPath: '/usr/local/bin/gcc-12' });
-        mockExistsSync.mockReturnValue(true);
-        const result = await main(makeInputs());
-
-        expect(mockDownloadGccFromUrl).toHaveBeenCalled();
-        expect(result.outputPath).toBe('/usr/local/bin/gcc-12');
     });
 
     describe('buildOutputs', () => {
@@ -610,7 +584,6 @@ describe('setup-gcc main', () => {
             await main(makeInputs({ version: '14' }));
 
             expect(mockFindProgramWithApt).not.toHaveBeenCalled();
-            expect(mockDownloadGccFromUrl).not.toHaveBeenCalled();
         });
 
         it('handles semver version input correctly', async () => {
@@ -742,7 +715,6 @@ describe('setup-gcc main', () => {
             await main(makeInputs({ version: '14' }));
 
             expect(mockFindProgramWithApt).not.toHaveBeenCalled();
-            expect(mockDownloadGccFromUrl).not.toHaveBeenCalled();
         });
 
         it('does not install when wildcard version and nothing found', async () => {

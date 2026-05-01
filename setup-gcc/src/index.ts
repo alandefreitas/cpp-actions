@@ -26,8 +26,7 @@ export { removeGCCPrefix } from './schema';
 
 // Type imports and re-exports
 import { type Inputs } from './schema';
-import { type ProgramResult } from './gcc-download';
-import { downloadGccFromUrl } from './gcc-download';
+import { type ProgramResult } from 'package-install';
 export type { Inputs };
 export type { ProgramResult };
 
@@ -55,17 +54,13 @@ export interface MainOutputs {
  * 1. Discover available GCC versions
  * 2. Search user-provided paths
  * 3. Search system paths
- * 4. Search via APT package manager
- * 5. Download from release binaries
- * 6. Find/install llvm-symbolizer and export env vars
- * 7. Build output values (cc, cxx, bindir, etc.)
+ * 4. Search via APT package manager (Linux only)
+ * 5. Find/install llvm-symbolizer and export env vars
+ * 6. Build output values (cc, cxx, bindir, etc.)
  */
 class SetupGccRunner {
     /** Frozen copy of action inputs */
     private readonly inputs: Inputs;
-
-    /** All known GCC versions fetched from version data */
-    private allVersions: string[] = [];
 
     /** Resolved path to the gcc/g++ binary, set progressively by search phases */
     private outputPath: string | null = null;
@@ -87,7 +82,7 @@ class SetupGccRunner {
      * Runs the full GCC setup pipeline and returns output values.
      *
      * Dispatches to platform-specific pipelines:
-     * - Linux: user paths → system paths → APT → download → symbolizer
+     * - Linux: user paths → system paths → APT → symbolizer
      * - macOS: user paths → system paths → Homebrew → symbolizer
      * - Windows: user paths → system paths → Chocolatey → symbolizer
      * - Other platforms: throws ExpectedError
@@ -100,7 +95,6 @@ class SetupGccRunner {
         await this.searchSystemPaths();
         if (process.platform === 'linux') {
             await this.searchApt();
-            await this.downloadFromUrl();
         } else if (process.platform === 'darwin') {
             await this.searchBrew();
         } else if (process.platform === 'win32') {
@@ -134,7 +128,7 @@ class SetupGccRunner {
             );
         }
 
-        this.allVersions = await setup_program.findGCCVersions();
+        await setup_program.findGCCVersions();
         core.endGroup();
     }
 
@@ -356,34 +350,6 @@ class SetupGccRunner {
         );
         this.outputVersion = aptResult.outputVersion;
         this.outputPath = aptResult.outputPath;
-        core.endGroup();
-    }
-
-    /**
-     * Downloads GCC from release binaries as a last resort.
-     * Tries Ubuntu-versioned binaries first, then generic Linux binaries.
-     * Skipped if a binary was already found.
-     */
-    private async downloadFromUrl(): Promise<void> {
-        if (this.outputVersion !== null) {
-            traceCommands.log(
-                `Skipping download step because GCC ${this.outputVersion} was already found in ${this.outputPath}`
-            );
-            return;
-        }
-
-        core.startGroup('⬇️ Download GCC from release binaries');
-        core.info(`Fetching GCC ${this.inputs.version} from release binaries`);
-
-        const result = await downloadGccFromUrl({
-            version: this.inputs.version,
-            checkLatest: this.inputs.checkLatest,
-            updateEnvironment: this.inputs.updateEnvironment,
-            allVersions: this.allVersions
-        });
-        this.outputVersion = result.outputVersion;
-        this.outputPath = result.outputPath;
-
         core.endGroup();
     }
 
