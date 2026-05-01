@@ -185,6 +185,9 @@
     <span class="nav-text">Tools</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="container-bootstrap.html">Container Bootstrap Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="package-install.html">Install Packages Action</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -214,6 +217,9 @@
     <button class="nav-item-toggle"></button>
     <span class="nav-text">Reports</span>
 <ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="process-coverage.html">Process Coverage Action</a>
+  </li>
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
   </li>
@@ -250,6 +256,9 @@
         </li>
         <li class="version">
           <a href="../develop/index.html">develop</a>
+        </li>
+        <li class="version">
+          <a href="../v1.9.4/index.html">v1.9.4</a>
         </li>
         <li class="version">
           <a href="../v1.9.3/index.html">v1.9.3</a>
@@ -367,6 +376,7 @@
   <div class="version-menu">
     <a class="version is-current" href="setup-program.html">master</a>
     <a class="version" href="../develop/actions/setup-program.html">develop</a>
+    <a class="version" href="../v1.9.4/actions/setup-program.html">v1.9.4</a>
     <a class="version" href="../v1.9.3/actions/setup-program.html">v1.9.3</a>
     <a class="version" href="../v1.9.2/actions/setup-program.html">v1.9.2</a>
     <a class="version" href="../v1.9.1/actions/setup-program.html">v1.9.1</a>
@@ -481,12 +491,15 @@ used by other actions.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_example"><a class="anchor" href="#_example"></a>Example</h2>
+<h2 id="_examples"><a class="anchor" href="#_examples"></a>Examples</h2>
 <div class="sectionbody">
+<div class="paragraph">
+<p>Example 1:</p>
+</div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
-- name: Setup Doxygen
+- name: Setup Doxygen (download)
   uses: alandefreitas/cpp-actions/setup-program@master
   id: setup-doxygen
   with:
@@ -501,6 +514,36 @@ used by other actions.</p>
     check-latest: true
     update-environment: true
     fail-on-error: ${{ runner.os != 'macOS' }}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 2 ():</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Setup Git (PATH search only)
+  uses: alandefreitas/cpp-actions/setup-program@master
+  id: setup-git
+  with:
+    name: git
+    version: '*'
+    update-environment: false</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 3 ():</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Setup nonexistent program (graceful failure)
+  uses: alandefreitas/cpp-actions/setup-program@master
+  id: setup-missing
+  with:
+    name: this-program-does-not-exist-xyz
+    version: '*'
+    fail-on-error: false</code></pre>
 </div>
 </div>
 </div>

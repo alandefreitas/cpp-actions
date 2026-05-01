@@ -188,6 +188,9 @@
     <span class="nav-text">Tools</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="container-bootstrap.html">Container Bootstrap Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="package-install.html">Install Packages Action</a>
   </li>
   <li class="nav-item is-current-page" data-depth="2">
@@ -217,6 +220,9 @@
     <button class="nav-item-toggle"></button>
     <span class="nav-text">Reports</span>
 <ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="process-coverage.html">Process Coverage Action</a>
+  </li>
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
   </li>
@@ -253,6 +259,9 @@
         </li>
         <li class="version">
           <a href="../../develop/index.html">develop</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.9.4/index.html">v1.9.4</a>
         </li>
         <li class="version">
           <a href="../../v1.9.3/index.html">v1.9.3</a>
@@ -370,6 +379,7 @@
   <div class="version-menu">
     <a class="version" href="../../actions/boost-clone.html">master</a>
     <a class="version" href="../../develop/actions/boost-clone.html">develop</a>
+    <a class="version" href="../../v1.9.4/actions/boost-clone.html">v1.9.4</a>
     <a class="version" href="../../v1.9.3/actions/boost-clone.html">v1.9.3</a>
     <a class="version" href="../../v1.9.2/actions/boost-clone.html">v1.9.2</a>
     <a class="version" href="../../v1.9.1/actions/boost-clone.html">v1.9.1</a>
@@ -544,32 +554,51 @@ to the project branch they are working on.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>scan-modules-dir</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">An independent directory we should scan for boost dependencies to clone.
+<td class="tableblock halign-left valign-top"><p class="tableblock">Directories to scan for <code>#include &lt;boost/&#8230;&#8203;&gt;</code> headers to discover which Boost modules to clone.
 This option also accepts a multi-line string with multiple directories.</p>
-<p class="tableblock">This is usually a directory in the current project that requires boost libraries.
-The Boost modules required in files from this directory will be added to the <code>modules</code> list.</p>
-<p class="tableblock">Only the subdirectories of this directory specified by <code>modules-scan-paths</code> will be scanned.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>.</code></p></td>
+<p class="tableblock">Each directory is scanned recursively for C++ source and header files.
+Directories that do not exist are silently skipped.</p>
+<p class="tableblock">This is usually a set of directories in the current project that may contain Boost includes.
+Set to an empty string to disable scanning entirely (useful when <code>modules</code> is specified explicitly).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>include</code></p>
+<p class="tableblock"><code>src</code></p>
+<p class="tableblock"><code>source</code></p>
+<p class="tableblock"><code>lib</code></p>
+<p class="tableblock"><code>libs</code></p>
+<p class="tableblock"><code>test</code></p>
+<p class="tableblock"><code>tests</code></p>
+<p class="tableblock"><code>example</code></p>
+<p class="tableblock"><code>examples</code></p>
+<p class="tableblock"><code>bench</code></p>
+<p class="tableblock"><code>benchmark</code></p>
+<p class="tableblock"><code>benchmarks</code></p>
+<p class="tableblock"><code>bin</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>modules-scan-paths</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Additional module subdirectory to scan.</p>
-<p class="tableblock">For instance, by setting it to <code>test</code> the action will scan the <code>test</code> directory for boost dependencies.</p>
-<p class="tableblock">By default, the action scans the ['include', 'src', 'source', 'test', 'tests', 'example', 'examples'] directories.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Additional subdirectories to scan for <code>#include &lt;boost/&#8230;&#8203;&gt;</code> headers when discovering dependencies of the requested Boost modules.</p>
+<p class="tableblock">For instance, setting this to <code>test</code> ensures that Boost headers included by your module&#8217;s
+test code are also cloned. This is useful when you want to build and run the module&#8217;s tests.
+This matches the behavior of Boost&#8217;s own <code>depinst.py --include</code> flag.</p>
+<p class="tableblock">This only affects the root modules you requested (via <code>modules</code> or <code>scan-modules-dir</code>).
+Transitive dependencies are always scanned with only include and src directories, since
+test dependencies of dependencies are not real transitive dependencies.</p>
+<p class="tableblock">Most users do not need to customize this. If you are simply using Boost as a dependency
+for your project, leave this empty.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>modules-exclude-paths</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Module subdirectory to exclude from scanning.</p>
-<p class="tableblock">Directories that match any of the values in this list will be ignored.</p>
-<p class="tableblock">By default, the action excludes the ['test', 'tests'] directories.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Subdirectories to exclude from the header scan when discovering dependencies of the requested Boost modules.</p>
+<p class="tableblock">This only affects which headers are scanned — it does not change which files are checked out.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>test</code></p>
 <p class="tableblock"><code>tests</code></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>scan-modules-ignore</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">List of modules that should be ignored in scan-modules.</p>
-<p class="tableblock">This if often useful to exclude the current project&#8217;s libraries from the scan.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">List of modules that should be ignored after scanning headers.</p>
+<p class="tableblock">Matching modules are removed from the discovered set before dependency resolution.
+This is often useful to exclude the current project&#8217;s own libraries from the scan results.</p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>

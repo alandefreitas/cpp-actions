@@ -188,6 +188,9 @@
     <span class="nav-text">Tools</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="container-bootstrap.html">Container Bootstrap Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="package-install.html">Install Packages Action</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -217,6 +220,9 @@
     <button class="nav-item-toggle"></button>
     <span class="nav-text">Reports</span>
 <ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="process-coverage.html">Process Coverage Action</a>
+  </li>
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
   </li>
@@ -253,6 +259,9 @@
         </li>
         <li class="version">
           <a href="../../develop/index.html">develop</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.9.4/index.html">v1.9.4</a>
         </li>
         <li class="version">
           <a href="../../v1.9.3/index.html">v1.9.3</a>
@@ -370,6 +379,7 @@
   <div class="version-menu">
     <a class="version" href="../../actions/create-changelog.html">master</a>
     <a class="version" href="../../develop/actions/create-changelog.html">develop</a>
+    <a class="version" href="../../v1.9.4/actions/create-changelog.html">v1.9.4</a>
     <a class="version" href="../../v1.9.3/actions/create-changelog.html">v1.9.3</a>
     <a class="version" href="../../v1.9.2/actions/create-changelog.html">v1.9.2</a>
     <a class="version" href="../../v1.9.1/actions/create-changelog.html">v1.9.1</a>
@@ -593,8 +603,11 @@ node lib/create-changelog.js --source_dir ~/projects/my-repo --limit 50</code></
 </div>
 </div>
 <div class="sect1">
-<h2 id="_example_2"><a class="anchor" href="#_example_2"></a>Example</h2>
+<h2 id="_examples"><a class="anchor" href="#_examples"></a>Examples</h2>
 <div class="sectionbody">
+<div class="paragraph">
+<p>Example 1:</p>
+</div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
@@ -605,6 +618,53 @@ node lib/create-changelog.js --source_dir ~/projects/my-repo --limit 50</code></
     thank-non-regular: ${{ startsWith(github.ref, 'refs/tags/') }}
     github-token: ${{ secrets.GITHUB_TOKEN }}
     link-commits: ${{ github.ref_name == 'develop' }}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 2 (<code>limit</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Create Changelog (basic)
+  uses: alandefreitas/cpp-actions/create-changelog@v1.9
+  with:
+    output-path: CHANGELOG-basic.md
+    limit: 50
+    link-commits: true
+    github-token: ${{ secrets.GITHUB_TOKEN }}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 3 (<code>check-unconventional</code>, <code>tag-pattern</code>, <code>update-summary</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Create Changelog (with tag-pattern)
+  uses: alandefreitas/cpp-actions/create-changelog@v1.9
+  with:
+    output-path: CHANGELOG-tags.md
+    tag-pattern: v.+\..+\..+
+    limit: 20
+    update-summary: true
+    check-unconventional: true
+    github-token: ${{ secrets.GITHUB_TOKEN }}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Example 4 (<code>sort-by</code>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yml hljs" data-lang="yml">steps:
+- name: Create Changelog (sort by date)
+  uses: alandefreitas/cpp-actions/create-changelog@v1.9
+  with:
+    output-path: CHANGELOG-dated.md
+    limit: 10
+    sort-by: date
+    github-token: ${{ secrets.GITHUB_TOKEN }}</code></pre>
 </div>
 </div>
 </div>

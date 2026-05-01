@@ -188,6 +188,9 @@
     <span class="nav-text">Tools</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="container-bootstrap.html">Container Bootstrap Action</a>
+  </li>
+  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="package-install.html">Install Packages Action</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -217,6 +220,9 @@
     <button class="nav-item-toggle"></button>
     <span class="nav-text">Reports</span>
 <ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="process-coverage.html">Process Coverage Action</a>
+  </li>
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="flamegraph.html">Create Flamegraph Action</a>
   </li>
@@ -253,6 +259,9 @@
         </li>
         <li class="version">
           <a href="../../develop/index.html">develop</a>
+        </li>
+        <li class="version">
+          <a href="../../v1.9.4/index.html">v1.9.4</a>
         </li>
         <li class="version">
           <a href="../../v1.9.3/index.html">v1.9.3</a>
@@ -370,6 +379,7 @@
   <div class="version-menu">
     <a class="version" href="../../actions/setup-clang.html">master</a>
     <a class="version" href="../../develop/actions/setup-clang.html">develop</a>
+    <a class="version" href="../../v1.9.4/actions/setup-clang.html">v1.9.4</a>
     <a class="version" href="../../v1.9.3/actions/setup-clang.html">v1.9.3</a>
     <a class="version" href="../../v1.9.2/actions/setup-clang.html">v1.9.2</a>
     <a class="version" href="../../v1.9.1/actions/setup-clang.html">v1.9.1</a>
@@ -574,9 +584,9 @@ This ensures the code respects its contract in terms of what minimum Clang versi
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>symbolizer-path</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The absolute path to llvm-symbolizer (Linux only).</p>
-<p class="tableblock">This is also exported as ASAN_SYMBOLIZER_PATH, MSAN_SYMBOLIZER_PATH,
-TSAN_SYMBOLIZER_PATH, and UBSAN_SYMBOLIZER_PATH environment variables
-when update-environment is true.</p></td>
+<p class="tableblock">This is also exported as LLVM_SYMBOLIZER_PATH, ASAN_SYMBOLIZER_PATH,
+MSAN_SYMBOLIZER_PATH, TSAN_SYMBOLIZER_PATH, and UBSAN_SYMBOLIZER_PATH
+environment variables when update-environment is true.</p></td>
 </tr>
 </tbody>
 </table>
