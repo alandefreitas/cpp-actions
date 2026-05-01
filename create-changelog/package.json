@@ -1,6 +1,6 @@
 {
   "name": "create-changelog",
-  "version": "1.9.3",
+  "version": "1.9.4",
   "description": "",
   "main": "lib/index.js",
   "bin": {

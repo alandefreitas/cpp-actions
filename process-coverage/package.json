@@ -1,6 +1,6 @@
 {
   "name": "process-coverage",
-  "version": "1.9.3",
+  "version": "1.9.4",
   "description": "Unified post-test C++ coverage processing pipeline for GCC and Clang",
   "main": "lib/index.js",
   "scripts": {

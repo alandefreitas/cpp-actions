@@ -1,6 +1,6 @@
 {
   "name": "trace-commands",
-  "version": "1.9.3",
+  "version": "1.9.4",
   "description": "Conditional command tracing for GitHub Actions",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

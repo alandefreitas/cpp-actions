@@ -1,6 +1,6 @@
 {
   "name": "release-cli",
-  "version": "1.9.3",
+  "version": "1.9.4",
   "private": true,
   "description": "Release orchestration CLI for cpp-actions monorepo",
   "main": "dist/index.js",

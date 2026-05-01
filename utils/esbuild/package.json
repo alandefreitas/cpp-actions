@@ -1,6 +1,6 @@
 {
   "name": "esbuild-cli",
-  "version": "1.9.3",
+  "version": "1.9.4",
   "private": true,
   "description": "esbuild bundler for GitHub Actions with proper source maps",
   "main": "dist/index.js",

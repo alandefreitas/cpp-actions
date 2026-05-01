@@ -1,6 +1,6 @@
 {
   "name": "pretty-errors",
-  "version": "1.9.3",
+  "version": "1.9.4",
   "description": "Small helper to render source-mapped, pretty-formatted errors for GitHub Actions",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
