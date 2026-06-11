@@ -333,5 +333,5 @@ outputs:
     description: New-code branch coverage percentage formatted with one decimal place. Zero if diff analysis is unavailable.
 
 runs:
-  using: "node20"
+  using: "node24"
   main: "dist/index.js"

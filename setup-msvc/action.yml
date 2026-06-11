@@ -79,7 +79,7 @@ outputs:
     description: cl.exe front-end version read from `cl /Bv`.
 
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'dist/index.js'
 
 branding:

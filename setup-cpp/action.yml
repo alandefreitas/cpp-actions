@@ -122,7 +122,7 @@ outputs:
     description: When using MSVC, the cl.exe front-end version reported by `cl /Bv` (for example 19.44.35219).
 
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'dist/index.js'
   post-if: success()
 branding:

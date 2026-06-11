@@ -5,10 +5,13 @@ description: |
   This composite action handles three scenarios that arise when running GitHub Actions
   inside Docker containers:
 
-  1. **Node.js glibc patching** — GitHub Actions ships its own Node.js 20 binary at
-     `/__e/node20/bin/node`, but older containers (e.g., Ubuntu 18.04) have a glibc
-     too old for that binary. This action detects the failure and replaces the binary with
-     an unofficial glibc-217-compatible build.
+  1. **Node.js glibc patching** — GitHub Actions ships its own Node.js binary (Node 20 at
+     `/__e/node20/bin/node`, Node 24 at `/__e/node24/bin/node`), but older containers
+     (e.g., Ubuntu 18.04) have a glibc too old for those binaries. This action detects the
+     failure and replaces the Node 20 binary with the official unofficial-builds
+     glibc-217 build. Node 24 patching is opt-in (see `node24-url`) and disabled by
+     default, because no working glibc-217 Node 24 build exists yet — so containers that
+     require Node 24 and a glibc older than 2.28 (GCC <= 6 / Clang <= 5) are unsupported.
   2. **nektos/act support** — When running locally with https://github.com/nektos/act[nektos/act],
      the `/__e/` mechanism does not exist. This action installs system Node.js as a fallback.
   3. **git safe.directory** — Containers run as root while the workspace may be owned by a
@@ -17,11 +20,14 @@ description: |
   This action must be the **first step** in a job, before `actions/checkout`. It requires
   no Node.js runtime because it is a composite action that uses only `bash` steps.
 
-  NOTE: Node 24 unofficial glibc-217 builds do not currently exist. When GitHub Actions
-  migrates to Node 24, this action will need an updated build or a different strategy.
+  NOTE: No working glibc-217 Node 24 build exists yet (nodejs/unofficial-builds#190 has not
+  shipped one, and the Boost mirror build crashes on heavy child_process operations on old
+  kernels), so Node 24 patching is opt-in and off by default. Containers needing Node 24 on
+  a pre-2.28 glibc (GCC <= 6 / Clang <= 5) are unsupported until a known-good build can be
+  passed via `node24-url`.
 
   The xref:actions/cpp-matrix.adoc[] action automatically configures the volume mounts
-  (`/node20217`) that this action writes to for old containers.
+  (`/node20217` and `/node24`) that this action writes to for old containers.
 
   == Usage
 
@@ -73,6 +79,18 @@ inputs:
       Example: `https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.gz`
     required: false
     default: ''
+  node24-url:
+    description: |
+      URL of a glibc-217-compatible Node.js 24 tarball to patch into `/node24` for old
+      containers. Node 24 patching is OPT-IN and disabled by default, because no working
+      glibc-217 Node 24 build exists yet: nodejs/unofficial-builds#190 has not shipped one,
+      and the Boost archive mirror build crashes silently on heavy `child_process`
+      operations (e.g. @actions/cache) on kernels older than 5.3. As a result, containers
+      that require Node 24 and a glibc older than 2.28 (GCC <= 6 / Clang <= 5) are not
+      supported. Set this to a known-good build to re-enable Node 24 patching once one
+      exists. Example: `https://example.com/node-v24.x.y-linux-x64-glibc-217.tar.xz`
+    required: false
+    default: ''
   setup-safe-directory:
     description: |
       Whether to configure `git config --global --add safe.directory '*'`.
@@ -88,8 +106,11 @@ inputs:
 
 outputs:
   node-patched:
-    description: "'true' if a glibc-217-compatible Node.js was downloaded and installed, 'false' otherwise."
+    description: "'true' if a glibc-217-compatible Node.js (20 and/or 24) was downloaded and installed, 'false' otherwise."
     value: ${{ steps.node-patch.outputs.node-patched }}
+  node24-patched:
+    description: "'true' if a glibc-217-compatible Node.js 24 was downloaded and installed into /node24, 'false' otherwise."
+    value: ${{ steps.node-patch.outputs.node24-patched }}
   node-installed:
     description: "'true' if system Node.js was installed via apt-get (act workaround), 'false' otherwise."
     value: ${{ steps.act-node.outputs.node-installed }}
@@ -110,54 +131,73 @@ runs:
       run: |
         if [ '${{ inputs.trace-commands }}' = 'true' ]; then set -x; fi
 
-        # Default output
+        # Default outputs
         echo 'node-patched=false' >> "$GITHUB_OUTPUT"
+        echo 'node24-patched=false' >> "$GITHUB_OUTPUT"
 
-        # If the runner's Node.js path doesn't exist, we're not in a container — nothing to do
-        if [ ! -e /__e/node20/bin/node ]; then
-          exit 0
-        fi
+        # patch_node LABEL MOUNT URL
+        #
+        # Replaces the runner-provided Node.js binary at /__e/node<LABEL> (which old
+        # containers cannot run because of a too-new glibc) with a glibc-217 build
+        # extracted into MOUNT — the writable directory cpp-matrix bind-mounts over
+        # /__e/node<LABEL> for old containers. A writable MOUNT is the signal that we
+        # are in such a container; without it there is nothing to patch.
+        # Prints nothing to GITHUB_OUTPUT; returns 0 only when a patch was applied.
+        patch_node() {
+          local LABEL="$1" MOUNT="$2" URL="$3"
 
-        # Check if the runner's Node.js binary works
-        if /__e/node20/bin/node --version 2>/dev/null; then
-          echo "Node.js is functional: $(/__e/node20/bin/node --version)"
-          exit 0
-        fi
-
-        echo "Node.js binary at /__e/node20/bin/node is not functional (likely glibc incompatibility)"
-
-        # Check if /node20217 volume mount exists (set up by cpp-matrix)
-        if [ ! -d /node20217 ] || [ ! -w /node20217 ]; then
-          echo "::warning::/node20217 is not available or not writable. Ensure cpp-matrix volume mounts are configured for old containers."
-          exit 0
-        fi
-
-        # Determine download URL
-        VERSION='${{ inputs.node-version }}'
-        URL='${{ inputs.node-url }}'
-        if [ -z "$URL" ]; then
-          URL="https://unofficial-builds.nodejs.org/download/release/v${VERSION}/node-v${VERSION}-linux-x64-glibc-217.tar.gz"
-        fi
-
-        # Install curl if not available
-        if ! command -v curl >/dev/null 2>&1; then
-          if command -v apt-get >/dev/null 2>&1; then
-            apt-get -o Acquire::Retries=3 update && apt-get -o Acquire::Retries=3 install -y curl
-          else
-            echo "::warning::curl is not available and apt-get is not available to install it. Cannot download Node.js."
-            exit 0
+          if [ ! -d "$MOUNT" ] || [ ! -w "$MOUNT" ]; then
+            return 1
           fi
+
+          # If the runner's binary already works, the container's glibc is new enough.
+          if "/__e/node${LABEL}/bin/node" --version >/dev/null 2>&1; then
+            echo "Node.js ${LABEL} is functional: $("/__e/node${LABEL}/bin/node" --version)"
+            return 1
+          fi
+
+          echo "Node.js ${LABEL} at /__e/node${LABEL}/bin/node is missing or not functional; patching from $URL"
+
+          # curl is required; xz-utils is required for .tar.xz (Node 24) tarballs.
+          if ! command -v curl >/dev/null 2>&1 || ! command -v xz >/dev/null 2>&1; then
+            if command -v apt-get >/dev/null 2>&1; then
+              apt-get -o Acquire::Retries=3 update && apt-get -o Acquire::Retries=3 install -y curl xz-utils
+            else
+              echo "::warning::curl/xz are unavailable and apt-get cannot install them. Cannot patch Node.js ${LABEL}."
+              return 1
+            fi
+          fi
+
+          local TMP="/tmp/node${LABEL}-glibc217.tar"
+          curl -fsSL --retry 3 --retry-delay 5 "$URL" -o "$TMP"
+          # GNU tar autodetects gzip/xz compression on extract.
+          tar -xf "$TMP" --strip-components 1 -C "$MOUNT"
+          rm -f "$TMP"
+
+          if "/__e/node${LABEL}/bin/node" --version >/dev/null 2>&1; then
+            echo "Patched Node.js ${LABEL}: $("/__e/node${LABEL}/bin/node" --version)"
+            return 0
+          fi
+          echo "::warning::Patched /__e/node${LABEL}/bin/node but it still does not run."
+          return 1
+        }
+
+        # Node 20 — official unofficial-builds glibc-217 tarball.
+        NODE20_URL='${{ inputs.node-url }}'
+        if [ -z "$NODE20_URL" ]; then
+          NODE20_URL="https://unofficial-builds.nodejs.org/download/release/v${{ inputs.node-version }}/node-v${{ inputs.node-version }}-linux-x64-glibc-217.tar.gz"
+        fi
+        if patch_node 20 /node20217 "$NODE20_URL"; then
+          echo 'node-patched=true' >> "$GITHUB_OUTPUT"
         fi
 
-        # Download and extract
-        echo "Downloading Node.js from: $URL"
-        curl -fsSL "$URL" -o /tmp/node-glibc217.tar.gz
-        tar -xzf /tmp/node-glibc217.tar.gz --strip-components 1 -C /node20217
-        rm -f /tmp/node-glibc217.tar.gz
-
-        # Verify
-        echo "Patched Node.js version: $(/__e/node20/bin/node --version)"
-        echo 'node-patched=true' >> "$GITHUB_OUTPUT"
+        # Node 24 — opt-in only. No working glibc-217 Node 24 build exists yet, so this
+        # is skipped unless the caller supplies a known-good `node24-url`.
+        NODE24_URL='${{ inputs.node24-url }}'
+        if [ -n "$NODE24_URL" ] && patch_node 24 /node24 "$NODE24_URL"; then
+          echo 'node-patched=true' >> "$GITHUB_OUTPUT"
+          echo 'node24-patched=true' >> "$GITHUB_OUTPUT"
+        fi
 
     - name: Install Node.js for act
       id: act-node

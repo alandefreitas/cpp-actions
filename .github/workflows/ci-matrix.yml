@@ -23,8 +23,8 @@ jobs:
         with:
           standards: '>=14'
           compilers: |
-            gcc >=4.8 <6 || >=9
-            clang >=3.8 <6 || >11
+            gcc >=9
+            clang >11
             msvc >=14
             apple-clang *
             mingw *

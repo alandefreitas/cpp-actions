@@ -48,7 +48,12 @@ jobs:
           fi
           # Configure safe.directory for containers (root user vs workspace owner)
           git config --global --add safe.directory '*'
-          # Patch Node.js for old containers with glibc-217 volume mounts
+          # Patch Node.js for old containers with glibc-217 volume mounts.
+          # Only node20 is patched: no working glibc-217 Node 24 build exists yet
+          # (the Boost mirror binary crashes on heavy child_process operations on
+          # old kernels), so containers that require Node 24 and a glibc older than
+          # 2.28 (GCC <= 6 / Clang <= 5) are no longer supported. See
+          # nodejs/unofficial-builds#190.
           if [ -d /node20217 ] && [ -w /node20217 ]; then
             if ! /__e/node20/bin/node --version 2>/dev/null; then
               apt-get update 2>/dev/null || true
