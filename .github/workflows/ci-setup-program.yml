@@ -8,7 +8,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-24.04, windows-2025-vs2026, macos-15]
 
     defaults:
       run:
@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Clone cpp-actions
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # Variant 1: Download from URL with version range and install-prefix
       - name: Setup Doxygen (download)

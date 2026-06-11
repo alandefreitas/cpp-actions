@@ -9,13 +9,13 @@ on:
 
 jobs:
   generate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     name: Generate
     outputs:
       matrix: ${{ steps.cpp-matrix.outputs.matrix }}
     steps:
       - name: Clone cpp-actions
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Generate Test Matrix
         uses: ./cpp-matrix

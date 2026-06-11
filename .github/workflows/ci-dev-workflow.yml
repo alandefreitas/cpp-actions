@@ -9,9 +9,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-latest, name: Linux }
-          - { os: windows-latest, name: Windows }
-          - { os: macos-latest, name: macOS }
+          - { os: ubuntu-24.04, name: Linux }
+          - { os: windows-2025-vs2026, name: Windows }
+          - { os: macos-15, name: macOS }
 
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -19,10 +19,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
 
@@ -30,11 +30,11 @@ jobs:
         run: npm install
 
       - name: Run tests
-        run: npm test -- ${{ matrix.os == 'ubuntu-latest' && '--coverage' || '' }}
+        run: npm test -- ${{ matrix.name == 'Linux' && '--coverage' || '' }}
 
       - name: Upload coverage to Codecov
-        if: matrix.os == 'ubuntu-latest'
-        uses: codecov/codecov-action@v5
+        if: matrix.name == 'Linux'
+        uses: codecov/codecov-action@v7
         with:
           files: coverage/lcov.info
           flags: typescript
@@ -44,7 +44,7 @@ jobs:
         run: npm run lint
 
       - name: Check action.yml files
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.name == 'Linux'
         run: |
           # npm install already ran prepare (which regenerates action.yml from schemas).
           # If any action.yml differs from what is committed, the schema is out of sync.
@@ -56,7 +56,7 @@ jobs:
           echo "action.yml check passed"
 
       - name: Check dist bundles
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.name == 'Linux'
         run: |
           # npm install already ran prepare (which rebuilds all workspaces).
           # If any dist/ file differs from what is committed, the bundle is stale.

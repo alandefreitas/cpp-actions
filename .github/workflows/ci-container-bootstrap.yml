@@ -11,17 +11,17 @@ jobs:
         include:
           # Variant 1: Bare runner — action should detect "not in a container" and do nothing
           - name: 'bare runner'
-            runs-on: ubuntu-latest
+            runs-on: ubuntu-24.04
             container: ''
             expect-safe-dir: 'true'
           # Variant 2: Modern container — Node.js works, skip patching, configure safe.directory
           - name: 'modern container'
-            runs-on: ubuntu-latest
+            runs-on: ubuntu-24.04
             container: 'ubuntu:24.04'
             expect-safe-dir: 'true'
           # Variant 3: Modern container with safe.directory disabled
           - name: 'safe-directory disabled'
-            runs-on: ubuntu-latest
+            runs-on: ubuntu-24.04
             container: 'ubuntu:24.04'
             setup-safe-directory: 'false'
             expect-safe-dir: 'false'
@@ -36,7 +36,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Run container-bootstrap
         id: bootstrap
