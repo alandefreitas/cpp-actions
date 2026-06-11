@@ -926,6 +926,20 @@ export function inferVisualStudioGeneratorFromRunsOn(entry: MatrixEntry): string
 export function setCompilerCMakeGenerator(entry: MatrixEntry, _inputs: Inputs, compilerName: string, minSubrangeVersion: semver.SemVer, maxSubrangeVersion: semver.SemVer, _subrange: string): void {
     // Recommended cmake generator
     if (compilerName === 'msvc') {
+        // The windows-2025 runner images (both `windows-2025` and the
+        // `windows-2025-vs2026` variant) now ship Visual Studio 2026, including for
+        // older compat toolsets like v14.44 — there is no standalone VS 2022 install
+        // to back a "Visual Studio 17 2022" generator, and CMake's
+        // "Visual Studio 18 2026" generator needs CMake 4.0+ (which setup-cmake may
+        // not install). Use Ninja with the explicit cl.exe (the MSVC environment,
+        // including arch, is activated by setup-cpp) for any windows-2025 runner,
+        // regardless of toolset version. This is immune to future image VS bumps.
+        const onWindows2025 = runsOnLabels(entry).some((label) => label.includes('windows-2025'));
+        if (onWindows2025) {
+            entry['generator'] = 'Ninja';
+            return;
+        }
+
         // Start with runner-based inference (matches the runner's primary VS)
         const generatorFromRunsOn = inferVisualStudioGeneratorFromRunsOn(entry);
         if (generatorFromRunsOn) {

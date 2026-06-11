@@ -782,15 +782,29 @@ describe('setCompilerCMakeGenerator', () => {
         expect(entry.generator).toBe('Visual Studio 17 2022');
     });
 
-    test('msvc 14.29 on windows-2025 uses runner VS (compat toolset)', () => {
+    test('msvc 14.29 compat toolset on windows-2025 uses Ninja (image ships VS 2026)', () => {
         const entry = makeEntry({ 'runs-on': 'windows-2025' });
         const v = semver.parse('14.29.0')!;
         setCompilerCMakeGenerator(entry, makeInputs(), 'msvc', v, v, '14.29');
-        expect(entry.generator).toBe('Visual Studio 17 2022');
+        expect(entry.generator).toBe('Ninja');
     });
 
     test('msvc 14.50 on windows-2025 uses Ninja (VS 2026 needs CMake 4.0+)', () => {
         const entry = makeEntry({ 'runs-on': 'windows-2025' });
+        const v = semver.parse('14.50.0')!;
+        setCompilerCMakeGenerator(entry, makeInputs(), 'msvc', v, v, '14.50');
+        expect(entry.generator).toBe('Ninja');
+    });
+
+    test('msvc 14.44 compat toolset on windows-2025-vs2026 uses Ninja (no standalone VS 2022 on image)', () => {
+        const entry = makeEntry({ 'runs-on': 'windows-2025-vs2026' });
+        const v = semver.parse('14.44.35207')!;
+        setCompilerCMakeGenerator(entry, makeInputs(), 'msvc', v, v, '14.44');
+        expect(entry.generator).toBe('Ninja');
+    });
+
+    test('msvc 14.50 on windows-2025-vs2026 uses Ninja', () => {
+        const entry = makeEntry({ 'runs-on': 'windows-2025-vs2026' });
         const v = semver.parse('14.50.0')!;
         setCompilerCMakeGenerator(entry, makeInputs(), 'msvc', v, v, '14.50');
         expect(entry.generator).toBe('Ninja');
