@@ -475,7 +475,7 @@ and create your workflow as usual with the parameters from the matrix:</p>
 
     steps:
       - name: Clone library
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: Setup C&amp;#43;&amp;#43; Compiler
         uses: alandefreitas/cpp-actions/setup-cpp@develop
@@ -1340,9 +1340,9 @@ Replace inputs (<code>ccflags</code>, <code>cxxflags</code>, <code>ldflags</code
   id: cpp-matrix
   with:
     standards: '&gt;=14'
-    compilers: 'gcc &gt;=4.8 &lt;6 || &gt;=9
+    compilers: 'gcc &gt;=9
 
-      clang &gt;=3.8 &lt;6 || &gt;11
+      clang &gt;11
 
       msvc &gt;=14
 
