@@ -261,6 +261,9 @@
           <a href="../../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../../v1.9.5/index.html">v1.9.5</a>
+        </li>
+        <li class="version">
           <a href="../../v1.9.4/index.html">v1.9.4</a>
         </li>
         <li class="version">
@@ -378,6 +381,7 @@
   <div class="version-menu">
     <a class="version" href="../../actions/cpp-matrix.html">master</a>
     <a class="version" href="../../develop/actions/cpp-matrix.html">develop</a>
+    <a class="version" href="../../v1.9.5/actions/cpp-matrix.html">v1.9.5</a>
     <a class="version" href="../../v1.9.4/actions/cpp-matrix.html">v1.9.4</a>
     <a class="version" href="../../v1.9.3/actions/cpp-matrix.html">v1.9.3</a>
     <a class="version" href="../../v1.9.2/actions/cpp-matrix.html">v1.9.2</a>
@@ -475,7 +479,7 @@ and create your workflow as usual with the parameters from the matrix:</p>
 
     steps:
       - name: Clone library
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: Setup C&amp;#43;&amp;#43; Compiler
         uses: alandefreitas/cpp-actions/setup-cpp@v1
@@ -1340,9 +1344,9 @@ Replace inputs (<code>ccflags</code>, <code>cxxflags</code>, <code>ldflags</code
   id: cpp-matrix
   with:
     standards: '&gt;=14'
-    compilers: 'gcc &gt;=4.8 &lt;6 || &gt;=9
+    compilers: 'gcc &gt;=9
 
-      clang &gt;=3.8 &lt;6 || &gt;11
+      clang &gt;11
 
       msvc &gt;=14
 

@@ -261,6 +261,9 @@
           <a href="../../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../../v1.9.5/index.html">v1.9.5</a>
+        </li>
+        <li class="version">
           <a href="../../v1.9.4/index.html">v1.9.4</a>
         </li>
         <li class="version">
@@ -379,6 +382,7 @@
   <div class="version-menu">
     <a class="version" href="../../actions/container-bootstrap.html">master</a>
     <a class="version" href="../../develop/actions/container-bootstrap.html">develop</a>
+    <a class="version" href="../../v1.9.5/actions/container-bootstrap.html">v1.9.5</a>
     <a class="version" href="../../v1.9.4/actions/container-bootstrap.html">v1.9.4</a>
     <a class="version is-missing" href="../../v1.9.3/index.html">v1.9.3</a>
     <a class="version is-missing" href="../../v1.9.2/index.html">v1.9.2</a>
@@ -432,10 +436,13 @@ inside Docker containers:</p>
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p><strong>Node.js glibc patching</strong> — GitHub Actions ships its own Node.js 20 binary at
-<code>/__e/node20/bin/node</code>, but older containers (e.g., Ubuntu 18.04) have a glibc
-too old for that binary. This action detects the failure and replaces the binary with
-an unofficial glibc-217-compatible build.</p>
+<p><strong>Node.js glibc patching</strong> — GitHub Actions ships its own Node.js binary (Node 20 at
+<code>/<em>e/node20/bin/node</code>, Node 24 at <code>/</em>e/node24/bin/node</code>), but older containers
+(e.g., Ubuntu 18.04) have a glibc too old for those binaries. This action detects the
+failure and replaces the Node 20 binary with the official unofficial-builds
+glibc-217 build. Node 24 patching is opt-in (see <code>node24-url</code>) and disabled by
+default, because no working glibc-217 Node 24 build exists yet — so containers that
+require Node 24 and a glibc older than 2.28 (GCC &#8656; 6 / Clang &#8656; 5) are unsupported.</p>
 </li>
 <li>
 <p><strong>nektos/act support</strong> — When running locally with <a href="https://github.com/nektos/act">nektos/act</a>,
@@ -458,15 +465,18 @@ no Node.js runtime because it is a composite action that uses only <code>bash</c
 <i class="fa icon-note" title="Note"></i>
 </td>
 <td class="content">
-Node 24 unofficial glibc-217 builds do not currently exist. When GitHub Actions
-migrates to Node 24, this action will need an updated build or a different strategy.
+No working glibc-217 Node 24 build exists yet (nodejs/unofficial-builds#190 has not
+shipped one, and the Boost mirror build crashes on heavy child_process operations on old
+kernels), so Node 24 patching is opt-in and off by default. Containers needing Node 24 on
+a pre-2.28 glibc (GCC &#8656; 6 / Clang &#8656; 5) are unsupported until a known-good build can be
+passed via <code>node24-url</code>.
 </td>
 </tr>
 </table>
 </div>
 <div class="paragraph">
 <p>The <a href="cpp-matrix.html" class="xref page">C++ Matrix</a> action automatically configures the volume mounts
-(<code>/node20217</code>) that this action writes to for old containers.</p>
+(<code>/node20217</code> and <code>/node24</code>) that this action writes to for old containers.</p>
 </div>
 </div>
 </div>
@@ -541,6 +551,18 @@ Example: <code><a href="https://archives.boost.io/misc/node/node-v20.9.0-linux-x
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>node24-url</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">URL of a glibc-217-compatible Node.js 24 tarball to patch into <code>/node24</code> for old
+containers. Node 24 patching is OPT-IN and disabled by default, because no working
+glibc-217 Node 24 build exists yet: nodejs/unofficial-builds#190 has not shipped one,
+and the Boost archive mirror build crashes silently on heavy <code>child_process</code>
+operations (e.g. @actions/cache) on kernels older than 5.3. As a result, containers
+that require Node 24 and a glibc older than 2.28 (GCC &#8656; 6 / Clang &#8656; 5) are not
+supported. Set this to a known-good build to re-enable Node 24 patching once one
+exists. Example: <code><a href="https://example.com/node-v24.x.y-linux-x64-glibc-217.tar.xz" class="bare">https://example.com/node-v24.x.y-linux-x64-glibc-217.tar.xz</a></code>.</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>setup-safe-directory</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Whether to configure <code>git config --global --add safe.directory '*'</code>.
 Set to 'false' to skip safe.directory configuration.</p></td>
@@ -571,7 +593,11 @@ Consistent with the <code>trace-commands</code> input in other cpp-actions.</p><
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>node-patched</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">'true' if a glibc-217-compatible Node.js was downloaded and installed, 'false' otherwise.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">'true' if a glibc-217-compatible Node.js (20 and/or 24) was downloaded and installed, 'false' otherwise.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>node24-patched</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">'true' if a glibc-217-compatible Node.js 24 was downloaded and installed into /node24, 'false' otherwise.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>node-installed</code></p></td>
