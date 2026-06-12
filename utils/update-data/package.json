@@ -1,6 +1,6 @@
 {
   "name": "update-data",
-  "version": "1.9.4",
+  "version": "1.9.5",
   "private": true,
   "description": "Fetches compiler tags, ubuntu versions, and boost dependency data",
   "main": "dist/index.js",

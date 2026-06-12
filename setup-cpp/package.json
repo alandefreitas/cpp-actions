@@ -1,6 +1,6 @@
 {
   "name": "setup-cpp",
-  "version": "1.9.4",
+  "version": "1.9.5",
   "description": "",
   "main": "lib/index.js",
   "scripts": {

@@ -1,6 +1,6 @@
 {
   "name": "action-schema",
-  "version": "1.9.4",
+  "version": "1.9.5",
   "description": "Schema-driven action definition and input parsing for GitHub Actions",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
