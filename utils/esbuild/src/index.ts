@@ -64,6 +64,16 @@ async function build(): Promise<void> {
             inject: [injectSourceMapRegister],
             // Also resolve ESM export conditions (needed for ESM-only @actions/* v3+ packages)
             conditions: ['import'],
+            // Some ESM dependencies (e.g. @azure/storage-common, pulled in via
+            // @actions/cache) call `createRequire(import.meta.url)`. When bundled to
+            // CJS, `import.meta.url` is undefined and that throws at load time. Map it
+            // to the bundle's own file URL so those calls resolve.
+            banner: {
+                js: "const __importMetaUrl = require('url').pathToFileURL(__filename).href;",
+            },
+            define: {
+                'import.meta.url': '__importMetaUrl',
+            },
             // Mark native modules as external
             external: [],
             // Generate metafile for analysis
