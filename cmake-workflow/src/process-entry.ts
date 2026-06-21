@@ -403,7 +403,7 @@ async function runTestStep(
     if (entry.createAnnotations) {
         createCMakeTestAnnotations(stdout, entry);
     }
-    if (exitCode !== 0 && entry.runTests === true) {
+    if (exitCode !== 0) {
         throw new ExpectedError(`CMake tests failed with exit code ${exitCode}. Check the test output above for details.`, 'CMake Tests Failed');
     }
 }
@@ -760,7 +760,7 @@ export async function processEntry(
     // Run tests if: tests are enabled AND (testAllCxxstd OR this is the main entry)
     const shouldRunTests = entry.runTests !== false && (entry.testAllCxxstd || entry.is_main_entry);
     if (shouldRunTests) {
-        core.startGroup(`🧪 Test (${factorDesc})${entry.runTests === undefined ? ' [⚠️ Unchecked]' : ''}`);
+        core.startGroup(`🧪 Test (${factorDesc})`);
 
         // Set LLVM_PROFILE_FILE when Clang source-based coverage is active
         // and the variable is not already set, so CTest child processes
