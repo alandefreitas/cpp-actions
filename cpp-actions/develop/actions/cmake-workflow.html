@@ -815,8 +815,7 @@ system.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>run-tests</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Whether we should run tests.</p>
 <p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>CMAKE_RUN_TESTS</code>.</p>
-<p class="tableblock">If the environment variable is also not specified, the action will attempt to run tests but will not fail if
-there are no tests.</p>
+<p class="tableblock">If the environment variable is also not specified, the action will run tests if there are any.</p>
 <p class="tableblock">When the value is <code>true</code> or <code>false</code>, the action will also set the <code>configure-tests-flag</code> to <code>ON</code> or <code>OFF</code>.
 When the value is undefined, the <code>configure-tests-flag</code> is ignored.</p></td>
 <td class="tableblock halign-left valign-top"></td>
