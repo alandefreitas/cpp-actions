@@ -336,8 +336,7 @@ inputs:
 
       If the input is not specified, the action will use the value defined by the environment variable `CMAKE_RUN_TESTS`.
 
-      If the environment variable is also not specified, the action will attempt to run tests but will not fail if
-      there are no tests.
+      If the environment variable is also not specified, the action will run tests if there are any.
 
       When the value is `true` or `false`, the action will also set the `configure-tests-flag` to `ON` or `OFF`.
       When the value is undefined, the `configure-tests-flag` is ignored.

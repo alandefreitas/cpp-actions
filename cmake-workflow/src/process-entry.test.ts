@@ -660,14 +660,15 @@ describe('processEntry — test step', () => {
             .rejects.toThrow('CMake tests failed with exit code 1');
     });
 
-    it('does not throw on test failure when runTests is undefined', async () => {
+    it('throws on test failure when runTests is undefined', async () => {
         mockedExec.getExecOutput
             .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' })  // configure
             .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' })  // build
             .mockResolvedValueOnce({ exitCode: 1, stdout: '', stderr: '' }); // test
 
         const entry = makeInputs({ runTests: undefined, is_main_entry: true });
-        await expect(processEntry(entry, makeSetupOutputs(), makeParams())).resolves.not.toThrow();
+        await expect(processEntry(entry, makeSetupOutputs(), makeParams()))
+            .rejects.toThrow('CMake tests failed with exit code 1');
     });
 
     it('calls createCMakeTestAnnotations', async () => {

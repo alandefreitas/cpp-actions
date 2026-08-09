@@ -403,7 +403,7 @@ async function runTestStep(
     if (entry.createAnnotations) {
         createCMakeTestAnnotations(stdout, entry);
     }
-    if (exitCode !== 0 && entry.runTests === true) {
+    if (exitCode !== 0) {
         throw new ExpectedError(`CMake tests failed with exit code ${exitCode}. Check the test output above for details.`, 'CMake Tests Failed');
     }
 }
