@@ -237,7 +237,31 @@ export async function processTags(projectPath: string, tagPattern: RegExp, repoU
  * @returns The populated commit
  */
 async function populateConventional(commit: Commit, repoUrl: string | undefined, versionPattern: RegExp, tags: Tag[]): Promise<Commit> {
-    for (const line of commit.message.split('\n')) {
+    // Conventional Commits footers live in the message's last paragraph,
+    // and only when every line of that paragraph is a `token: value` or
+    // `token #value` trailer. A body line that happens to start with a word
+    // and a colon (`object: ...`, `issue: ...`) is prose, not a footer.
+    const lines = commit.message.split('\n');
+    // Anchored as a whole: an unanchored alternative would match `issue #`
+    // in the middle of a sentence such as "Closes issue #1146." and take
+    // "issue" for the key. The `issue` word between an action and the
+    // number is accepted and dropped, so "Closes issue #1146" is "Closes #1146".
+    const footerKeyRegex = /^(?:([A-Za-z][\w-]*): |([A-Za-z][\w-]*) (?:issue )?#|(BREAKING CHANGE): )/;
+    const isBreakingLine = (l: string) => ['breaking', 'breaking-change', 'breaking change'].includes(l.trim().toLowerCase());
+    let footerStart = lines.length;
+    {
+        let end = lines.length - 1;
+        while (end >= 0 && !lines[end].trim()) end--;
+        let start = end;
+        while (start > 0 && lines[start - 1].trim()) start--;
+        // start === 0 would be the subject's own paragraph
+        if (start > 0 && end >= start
+            && lines.slice(start, end + 1).every(l => footerKeyRegex.test(l) || isBreakingLine(l))) {
+            footerStart = start;
+        }
+    }
+
+    for (const [lineIndex, line] of lines.entries()) {
         if (!line) {
             continue;
         }
@@ -270,13 +294,16 @@ async function populateConventional(commit: Commit, repoUrl: string | undefined,
         // 1. `([^ ]+): ` - A key followed by a colon and a space (e.g., "Fixes: ")
         // 2. `([^ ]+) #` - A key followed by a space and a hash symbol (e.g., "Issue #")
         // 3. `(BREAKING CHANGE): ` - The literal string "BREAKING CHANGE" followed by a colon and a space
-        const footerKeyRegex = /^(([^ ]+): )|(([^ ]+) #)|((BREAKING CHANGE): )/;
-        const m = line.match(footerKeyRegex);
+        const m = lineIndex >= footerStart ? line.match(footerKeyRegex) : null;
         if (m) {
-            const footerKey = m[1] ? m[2] : m[3] ? m[4] : m[5] ? m[6] : null;
+            const footerKey = m[1] ?? m[2] ?? m[3] ?? null;
             if (footerKey) {
-                const offset = m[1] || m[5] ? 2 : 1;
-                commit.footers[footerKey] = line.slice(footerKey.length + offset).trim();
+                let value = line.slice(m[0].length).trim();
+                if (m[2]) {
+                    // `key #123.` form: the value is the reference itself
+                    value = '#' + value.replace(/[.,;:]+$/, '');
+                }
+                commit.footers[footerKey] = value;
                 if (footerKey.toLowerCase().startsWith('breaking')) {
                     commit.breaking = true;
                 }
