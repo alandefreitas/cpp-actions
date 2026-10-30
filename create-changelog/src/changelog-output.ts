@@ -298,7 +298,7 @@ export function generateOutput(changes: Changes, changeTypePriority: string[], a
                     // Body Footnote Link
                     if (commit.body) {
                         output += `[^${footnotesCount}]`;
-                        const footnote = commit.body.replace(/\n/g, '').trim();
+                        const footnote = commit.body.replace(/\s*\n\s*/g, ' ').trim();
                         footnotesOutput += `[^${footnotesCount}]: ${capitalizeSentences(footnote)}\n`;
                         footnotesCount += 1;
                     }
