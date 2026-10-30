@@ -957,7 +957,7 @@ if __name__ == "__main__":
                     # Body Footnote Link
                     if commit.body:
                         output += f"[^{footnotes_count}]"
-                        footnote = commit.body.replace("\n", "").strip()
+                        footnote = re.sub(r'\s*\n\s*', ' ', commit.body).strip()
                         footnotes_output += f'[^{footnotes_count}]: {capitalize_sentences(footnote)}\n'
                         footnotes_count += 1
 
