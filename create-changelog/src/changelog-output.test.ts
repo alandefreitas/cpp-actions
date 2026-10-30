@@ -631,6 +631,19 @@ describe('generateOutput', () => {
         expect(output).toContain('[^1]: This is a detailed description of the feature.');
     });
 
+    it('should join the lines of a multi-line body with a space', () => {
+        const commit = new Commit();
+        commit.type = 'feat';
+        commit.description = 'Add feature';
+        commit.hash = 'abc1234000000000000000000000000000000000';
+        commit.body = 'word1 word2\nword3 word4';
+
+        const changes: Changes = { feat: { 'null': [commit] } };
+        const output = generateOutput(changes, ['feat'], makeArgs(), undefined, {}, null);
+
+        expect(output).toContain('[^1]: Word1 word2 word3 word4');
+    });
+
     it('should include footer keys', () => {
         const commit = new Commit();
         commit.type = 'feat';
