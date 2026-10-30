@@ -189,6 +189,23 @@ export function capitalizeSentences(text: string): string {
 }
 
 /**
+ * Formats a commit message body as the text of a Markdown footnote.
+ *
+ * The lines of each paragraph are joined with a space, and every paragraph
+ * after the first is indented by four spaces so that it continues the
+ * footnote instead of starting a new block.
+ *
+ * @param body - Commit message body, with paragraphs separated by a blank line
+ * @returns Footnote text to place after the footnote label
+ */
+export function formatFootnote(body: string): string {
+    return body
+        .split(/\n\s*\n/)
+        .map(paragraph => capitalizeSentences(paragraph.replace(/\s*\n\s*/g, ' ').trim()))
+        .join('\n\n    ');
+}
+
+/**
  * Returns a rotating icon for feature commits in the changelog.
  *
  * Cycles through sparkle/star icons (✨, 💫, 🌟) to add visual variety

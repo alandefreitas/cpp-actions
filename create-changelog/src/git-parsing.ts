@@ -236,7 +236,7 @@ export async function processTags(projectPath: string, tagPattern: RegExp, repoU
  * @param tags - Array of version tags
  * @returns The populated commit
  */
-async function populateConventional(commit: Commit, repoUrl: string | undefined, versionPattern: RegExp, tags: Tag[]): Promise<Commit> {
+export async function populateConventional(commit: Commit, repoUrl: string | undefined, versionPattern: RegExp, tags: Tag[]): Promise<Commit> {
     // Conventional Commits footers live in the message's last paragraph,
     // and only when every line of that paragraph is a `token: value` or
     // `token #value` trailer. A body line that happens to start with a word
@@ -261,8 +261,10 @@ async function populateConventional(commit: Commit, repoUrl: string | undefined,
         }
     }
 
+    let paragraphBreak = false;
     for (const [lineIndex, line] of lines.entries()) {
-        if (!line) {
+        if (!line.trim()) {
+            paragraphBreak = commit.body !== '';
             continue;
         }
 
@@ -332,9 +334,12 @@ async function populateConventional(commit: Commit, repoUrl: string | undefined,
         // No special syntax: this is a line from the body
         if (!commit.body) {
             commit.body += line;
+        } else if (paragraphBreak) {
+            commit.body += '\n\n' + line;
         } else {
             commit.body += '\n' + line;
         }
+        paragraphBreak = false;
     }
 
     const issueFooterKeys = ['Close', 'Closes', 'Closed', 'close', 'closes', 'closed',
