@@ -24,6 +24,7 @@ import {
     humanize,
     commitTypeDescription,
     capitalizeSentences,
+    formatFootnote,
     featureSubjectIcon
 } from './commit-formatting';
 
@@ -298,10 +299,7 @@ export function generateOutput(changes: Changes, changeTypePriority: string[], a
                     // Body Footnote Link
                     if (commit.body) {
                         output += `[^${footnotesCount}]`;
-                        // Body lines are rewrapped into one line; a plain
-                        // join would fuse the last and first words.
-                        const footnote = commit.body.replace(/\s*\n\s*/g, ' ').trim();
-                        footnotesOutput += `[^${footnotesCount}]: ${capitalizeSentences(footnote)}\n`;
+                        footnotesOutput += `[^${footnotesCount}]: ${formatFootnote(commit.body)}\n`;
                         footnotesCount += 1;
                     }
 
