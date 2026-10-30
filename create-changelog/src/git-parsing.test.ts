@@ -5,7 +5,7 @@ jest.mock('@actions/core', () => ({
 }));
 
 import { Commit } from './types';
-import { populateConventional } from './git-parsing';
+import { populateConventional, removeCommitDuplicates } from './git-parsing';
 
 /**
  * Parses a commit message the way the action parses local commits.
@@ -35,5 +35,21 @@ describe('populateConventional', () => {
         const commit = await parse('fix: subject\n\nbody\n\nCloses #12\n');
         expect(commit.body).toBe('body');
         expect(commit.footers).toEqual({ 'Closes': '#12' });
+    });
+});
+
+describe('removeCommitDuplicates', () => {
+    it('should separate merged bodies with a paragraph break', async () => {
+        const first = await parse('fix: subject\n\nfirst body\n');
+        const second = await parse('fix: subject\n\nsecond body\n');
+        const merged = removeCommitDuplicates([first, second]);
+        expect(merged).toHaveLength(1);
+        expect(merged[0].body).toBe('first body\n\nsecond body');
+    });
+
+    it('should take the body of a duplicate when the first has none', async () => {
+        const first = await parse('fix: subject\n');
+        const second = await parse('fix: subject\n\nsecond body\n');
+        expect(removeCommitDuplicates([first, second])[0].body).toBe('second body');
     });
 });

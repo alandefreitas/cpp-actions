@@ -489,7 +489,7 @@ export async function populateDiffStats(projectPath: string, commits: Commit[]):
  * @param commits - Array of commits to deduplicate
  * @returns Array of unique commits with merged metadata
  */
-function removeCommitDuplicates(commits: Commit[]): Commit[] {
+export function removeCommitDuplicates(commits: Commit[]): Commit[] {
     const uniqueCommits: Commit[] = [];
     const visitedCommits = new Set<string>();
 
@@ -518,8 +518,10 @@ function removeCommitDuplicates(commits: Commit[]): Commit[] {
         }
 
         // Merge the commit with the one we put on the list
-        if (uniqueCommits[idx].body !== commit.body) {
-            uniqueCommits[idx].body += commit.body;
+        if (!uniqueCommits[idx].body) {
+            uniqueCommits[idx].body = commit.body;
+        } else if (commit.body && uniqueCommits[idx].body !== commit.body) {
+            uniqueCommits[idx].body += '\n\n' + commit.body;
         }
         // Merge footers
         for (const [footerKey, footerValue] of Object.entries(commit.footers)) {
