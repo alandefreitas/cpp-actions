@@ -5,6 +5,7 @@ import {
     humanize,
     commitTypeDescription,
     capitalizeSentences,
+    formatFootnote,
     featureSubjectIcon
 } from './commit-formatting';
 
@@ -136,6 +137,17 @@ describe('capitalizeSentences', () => {
 
     it('should handle empty string', () => {
         expect(capitalizeSentences('')).toBe('.');
+    });
+});
+
+describe('formatFootnote', () => {
+    it('should join the lines of a paragraph with a space', () => {
+        expect(formatFootnote('word1 word2\nword3 word4')).toBe('Word1 word2 word3 word4.');
+    });
+
+    it('should indent every paragraph after the first', () => {
+        expect(formatFootnote('first one\ncontinued.\n\nsecond one.\n\nthird one.'))
+            .toBe('First one continued.\n\n    Second one.\n\n    Third one.');
     });
 });
 
