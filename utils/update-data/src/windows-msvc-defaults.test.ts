@@ -502,10 +502,11 @@ describe('updateWindowsMsvcDefaults', () => {
     });
 
     it('writes windows-msvc-defaults.json with discovered versions', async () => {
-        // Set up runner-images.json
+        // Set up runner-images.json; windows-2022-vs2019 is not a supported label
         const runnerImages = {
             generated: '2026-01-01T00:00:00.000Z',
             source: 'test',
+            supported_labels: ['windows-2022'],
             runners: {
                 ubuntu: [],
                 macos: [],
@@ -541,7 +542,8 @@ describe('updateWindowsMsvcDefaults', () => {
 
         // Directory listing for toolset files
         const dirListing = [
-            { name: 'toolset-2022.json', download_url: 'https://example.com/toolset-2022.json' }
+            { name: 'toolset-2022.json', download_url: 'https://example.com/toolset-2022.json' },
+            { name: 'toolset-2022-vs2019.json', download_url: 'https://example.com/toolset-2022-vs2019.json' }
         ];
 
         // Channel manifest
@@ -611,6 +613,8 @@ describe('updateWindowsMsvcDefaults', () => {
         expect(fs.existsSync(outputPath)).toBe(true);
 
         const data = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
+        // The suffixed runner outside the supported labels is left out
+        expect(Object.keys(data.runners)).toEqual(['windows-2022']);
         expect(data.runners['windows-2022']).toBeDefined();
         expect(data.runners['windows-2022'].msvc_versions.length).toBeGreaterThan(0);
 

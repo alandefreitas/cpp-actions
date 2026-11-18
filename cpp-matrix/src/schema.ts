@@ -123,7 +123,7 @@ The \`ubuntu-defaults-and-latest\` policy combines the \`one-per-ubuntu-default\
 
 The \`one-per-vs-year\` policy selects one MSVC toolset version per Visual Studio release year (e.g., one for VS 2019, one for VS 2022, one for VS 2026), plus the latest available MSVC version. This is the default policy for MSVC. Only applicable to MSVC; for other compilers it falls back to \`latest\`.
 
-The \`macos-defaults-and-latest\` policy selects the Apple Clang versions that are the runner default on each macOS runner image, plus the latest available Apple Clang version. For example, if macos-14 defaults to Apple Clang 15 and macos-15 defaults to Apple Clang 16, and Apple Clang 17 is the latest available, entries are generated for 15, 16, and 17. This is the default policy for Apple Clang. Only applicable to Apple Clang; for other compilers it falls back to \`latest\`.
+The \`macos-defaults-and-latest\` policy selects the Apple Clang versions that are the runner default on each macOS runner image, plus the latest available Apple Clang version. For example, if macos-15 defaults to Apple Clang 16 and macos-26 defaults to Apple Clang 17, and Apple Clang 21 is the latest available, entries are generated for 16, 17, and 21. This is the default policy for Apple Clang. Only applicable to Apple Clang; for other compilers it falls back to \`latest\`.
 
 The \`latest\` policy selects only the single highest version that satisfies the range. This is the default policy for compilers that do not have a platform-specific discovery mechanism (e.g., MinGW, clang-cl). If no versions are known for the compiler, it returns \`*\` so the runner's installed version is used.`
     },

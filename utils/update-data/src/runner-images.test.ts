@@ -6,9 +6,28 @@ import * as path from 'path';
 import * as os from 'os';
 import { PassThrough } from 'stream';
 
-import { deriveRunnerInfo, updateRunnerImages } from './runner-images';
+import { deriveRunnerInfo, parseSupportedRunnerLabels, updateRunnerImages } from './runner-images';
 
 const mockedGet = https.get as jest.MockedFunction<typeof https.get>;
+
+// ── parseSupportedRunnerLabels unit tests ──────────────────────────────────
+
+describe('parseSupportedRunnerLabels', () => {
+    it('reads labels in <code> elements, with or without a link', () => {
+        const doc = [
+            '<td>',
+            '  <code><a href="https://example.com/Ubuntu2404-Readme.md">ubuntu-24.04</a></code>,',
+            '  <code>windows-2025-vs2026</code>, <code>macos-latest</code>',
+            '</td>',
+            '<td>14 GB</td>'
+        ].join('\n');
+        expect([...parseSupportedRunnerLabels(doc)].sort()).toEqual(['macos-latest', 'ubuntu-24.04', 'windows-2025-vs2026']);
+    });
+
+    it('returns an empty set without labels', () => {
+        expect(parseSupportedRunnerLabels('# No table').size).toBe(0);
+    });
+});
 
 // ── deriveRunnerInfo unit tests ─────────────────────────────────────────────
 
@@ -168,6 +187,55 @@ describe('updateRunnerImages', () => {
         expect(data.runners.ubuntu[0].name).toBe('ubuntu-22.04');
         expect(data.runners.windows).toHaveLength(1);
         expect(data.runners.windows[0].name).toBe('windows-2022');
+        // The supported-labels table was not available (404), so nothing was filtered
+        expect(data.supported_labels).toBeUndefined();
+    });
+
+    it('leaves out runner images GitHub Actions no longer supports', async () => {
+        const doc = '<td><code><a href="x">macos-15</a></code>, <code>ubuntu-22.04</code>, <code>windows-2022</code></td>';
+        const listings: Record<string, unknown> = {
+            'ubuntu/toolsets': [{ name: 'toolset-2004.json', download_url: 'u20' }, { name: 'toolset-2204.json', download_url: 'u22' }],
+            'macos/toolsets': [{ name: 'toolset-14.json', download_url: 'm14' }, { name: 'toolset-15.json', download_url: 'm15' }],
+            'windows/toolsets': [{ name: 'toolset-2022.json', download_url: 'w22' }]
+        };
+        mockedGet.mockImplementation((_opts: unknown, cb: unknown) => {
+            const callback = cb as (res: PassThrough) => void;
+            const url = (_opts as { path: string }).path;
+            if (url.includes('supported-github-runners.md')) {
+                callback(mockResponse(200, { content: Buffer.from(doc).toString('base64') }));
+            } else {
+                const key = Object.keys(listings).find((k) => url.includes(k));
+                callback(key ? mockResponse(200, listings[key]) : mockResponse(404, null));
+            }
+            return { on: jest.fn().mockReturnThis() } as unknown as ReturnType<typeof https.get>;
+        });
+
+        expect(await updateRunnerImages(tmpDir)).toBe(true);
+        const data = JSON.parse(fs.readFileSync(path.join(tmpDir, 'setup-program/runner-images.json'), 'utf-8'));
+        expect(data.supported_labels).toEqual(['macos-15', 'ubuntu-22.04', 'windows-2022']);
+        expect(data.runners.macos.map((r: { name: string }) => r.name)).toEqual(['macos-15']);
+        expect(data.runners.ubuntu.map((r: { name: string }) => r.name)).toEqual(['ubuntu-22.04']);
+        expect(data.runners.windows.map((r: { name: string }) => r.name)).toEqual(['windows-2022']);
+    });
+
+    it('keeps every runner image when the supported-labels table has no labels', async () => {
+        mockedGet.mockImplementation((_opts: unknown, cb: unknown) => {
+            const callback = cb as (res: PassThrough) => void;
+            const url = (_opts as { path: string }).path;
+            if (url.includes('supported-github-runners.md')) {
+                callback(mockResponse(200, { content: Buffer.from('no table here').toString('base64') }));
+            } else if (url.includes('macos/toolsets')) {
+                callback(mockResponse(200, [{ name: 'toolset-14.json', download_url: 'm14' }]));
+            } else {
+                callback(mockResponse(200, []));
+            }
+            return { on: jest.fn().mockReturnThis() } as unknown as ReturnType<typeof https.get>;
+        });
+
+        expect(await updateRunnerImages(tmpDir)).toBe(true);
+        const data = JSON.parse(fs.readFileSync(path.join(tmpDir, 'setup-program/runner-images.json'), 'utf-8'));
+        expect(data.supported_labels).toBeUndefined();
+        expect(data.runners.macos[0].name).toBe('macos-14');
     });
 
     it('returns false when all platforms fail', async () => {
@@ -186,7 +254,8 @@ describe('updateRunnerImages', () => {
         mockedGet.mockImplementation((_opts: unknown, cb: unknown) => {
             const callback = cb as (res: PassThrough) => void;
             callCount++;
-            if (callCount === 1) {
+            // Call 1 is the supported-labels table; call 2 is the first platform listing
+            if (callCount === 2) {
                 callback(mockResponse(200, { message: 'not an array' }));
             } else {
                 callback(mockResponse(200, [

@@ -10,7 +10,7 @@ import { type CompilerSuggestion, type MatrixEntry } from './types';
 import { type Inputs } from './schema';
 import { getVisualCppYear, findMacOSGccVersions, findMacOSClangVersions } from './versions';
 import { humanizeCompilerName } from './compiler-support';
-import { loadUbuntuCompilerDefaults, loadMacOSXcodeDefaults, loadWindowsMsvcDefaults } from 'setup-program';
+import { loadUbuntuCompilerDefaults, loadMacOSXcodeDefaults, loadWindowsMsvcDefaults, loadRunnerImages } from 'setup-program';
 
 /**
  * Sets the semver components (major, minor, patch) on a matrix entry.
@@ -257,6 +257,28 @@ export function applyForcedFactors(entry: MatrixEntry, suggestionMap: CompilerSu
 }
 
 /**
+ * The Ubuntu runner that hosts containers: the oldest Ubuntu runner image
+ * GitHub Actions still provides, from runner-images.json.
+ *
+ * When the data has no Ubuntu runner, `ubuntu-latest` hosts every entry and
+ * its release is treated as newer than any other, so every entry gets a
+ * container.
+ *
+ * @returns The runner label (e.g., `"ubuntu-22.04"`) and its release number (e.g., `22.04`)
+ */
+export function findUbuntuHostRunner(): { label: string; release: number } {
+    const runners = loadRunnerImages().runners.ubuntu ?? [];
+    let best: { label: string; release: number } | null = null;
+    for (const runner of runners) {
+        const release = parseFloat(runner.version);
+        if (!Number.isNaN(release) && (!best || release < best.release)) {
+            best = { label: runner.name, release };
+        }
+    }
+    return best ?? { label: 'ubuntu-latest', release: Infinity };
+}
+
+/**
  * Finds the best Ubuntu release for a given compiler major version using
  * ubuntu-compiler-defaults.json data.
  *
@@ -352,7 +374,7 @@ export function findBestUbuntuRelease(compilerName: string, majorVersion: number
  * 3. The newest available runner (fallback when no runner has the version).
  *
  * @param majorVersion - Apple Clang major version number to look up
- * @returns macOS runner string (e.g., "macos-15") or "macos-14" if data is unavailable
+ * @returns macOS runner string (e.g., "macos-15") or "macos-latest" if data is unavailable
  */
 export function findBestMacOSRunner(majorVersion: number): string {
     try {
@@ -360,7 +382,7 @@ export function findBestMacOSRunner(majorVersion: number): string {
         const runners = Object.keys(defaults.runners);
 
         if (runners.length === 0) {
-            return 'macos-14';
+            return 'macos-latest';
         }
 
         // Parse runner number for sorting (e.g., "macos-15" → 15)
@@ -402,7 +424,7 @@ export function findBestMacOSRunner(majorVersion: number): string {
 
         return bestDefault || bestAvailable || newestRunner;
     } catch {
-        return 'macos-14';
+        return 'macos-latest';
     }
 }
 
@@ -413,7 +435,7 @@ export function findBestMacOSRunner(majorVersion: number): string {
  * (2) newest runner that has the version available, (3) newest runner overall (fallback).
  *
  * @param msvcMinor - The MSVC minor version number (e.g., 44 for MSVC 14.44)
- * @returns The best Windows runner string (e.g., "windows-2025") or "windows-2022" if data is unavailable
+ * @returns The best Windows runner string (e.g., "windows-2025") or "windows-latest" if data is unavailable
  */
 export function findBestWindowsRunner(msvcMinor: number): string {
     try {
@@ -421,7 +443,7 @@ export function findBestWindowsRunner(msvcMinor: number): string {
         const runners = Object.keys(defaults.runners);
 
         if (runners.length === 0) {
-            return 'windows-2022';
+            return 'windows-latest';
         }
 
         // Parse runner year for sorting (e.g., "windows-2025" → 2025)
@@ -475,21 +497,21 @@ export function findBestWindowsRunner(msvcMinor: number): string {
 
         return bestDefault || bestAvailable || newestRunner;
     } catch {
-        return 'windows-2022';
+        return 'windows-latest';
     }
 }
 
 /**
  * Finds the newest macOS runner from macos-xcode-defaults.json data.
  *
- * @returns The newest macOS runner string (e.g., "macos-15") or "macos-14" if data is unavailable
+ * @returns The newest macOS runner string (e.g., "macos-15") or "macos-latest" if data is unavailable
  */
 export function findNewestMacOSRunner(): string {
     try {
         const defaults = loadMacOSXcodeDefaults();
         const runners = Object.keys(defaults.runners);
         if (runners.length === 0) {
-            return 'macos-14';
+            return 'macos-latest';
         }
         const runnerNum = (r: string): number => {
             const m = r.match(/macos-(\d+)/);
@@ -497,21 +519,21 @@ export function findNewestMacOSRunner(): string {
         };
         return runners.reduce((best, r) => runnerNum(r) > runnerNum(best) ? r : best);
     } catch {
-        return 'macos-14';
+        return 'macos-latest';
     }
 }
 
 /**
  * Finds the newest Windows runner from windows-msvc-defaults.json data.
  *
- * @returns The newest Windows runner string (e.g., "windows-2025") or "windows-2022" if data is unavailable
+ * @returns The newest Windows runner string (e.g., "windows-2025") or "windows-latest" if data is unavailable
  */
 export function findNewestWindowsRunner(): string {
     try {
         const defaults = loadWindowsMsvcDefaults();
         const runners = Object.keys(defaults.runners);
         if (runners.length === 0) {
-            return 'windows-2022';
+            return 'windows-latest';
         }
         const runnerYear = (r: string): number => {
             const m = r.match(/windows-(\d+)/);
@@ -525,7 +547,7 @@ export function findNewestWindowsRunner(): string {
         });
     } catch {
         // Untested: requires data file to be missing/corrupt
-        return 'windows-2022';
+        return 'windows-latest';
     }
 }
 
@@ -536,7 +558,7 @@ export function findNewestWindowsRunner(): string {
  * (2) newest runner overall (fallback).
  *
  * @param majorVersion - MinGW GCC major version number to look up
- * @returns The best Windows runner string (e.g., "windows-2025") or "windows-2022" if data is unavailable
+ * @returns The best Windows runner string (e.g., "windows-2025") or "windows-latest" if data is unavailable
  */
 export function findBestWindowsRunnerForMingw(majorVersion: number): string {
     try {
@@ -544,7 +566,7 @@ export function findBestWindowsRunnerForMingw(majorVersion: number): string {
         const runners = Object.keys(defaults.runners);
 
         if (runners.length === 0) {
-            return 'windows-2022';
+            return 'windows-latest';
         }
 
         const runnerYear = (r: string): number => {
@@ -585,7 +607,7 @@ export function findBestWindowsRunnerForMingw(majorVersion: number): string {
         return bestMatch || newestRunner;
     } catch {
         // Untested: requires data file to be missing/corrupt
-        return 'windows-2022';
+        return 'windows-latest';
     }
 }
 
@@ -596,7 +618,7 @@ export function findBestWindowsRunnerForMingw(majorVersion: number): string {
  * (2) newest runner overall (fallback).
  *
  * @param majorVersion - LLVM major version number to look up
- * @returns The best Windows runner string (e.g., "windows-2025") or "windows-2022" if data is unavailable
+ * @returns The best Windows runner string (e.g., "windows-2025") or "windows-latest" if data is unavailable
  */
 export function findBestWindowsRunnerForLlvm(majorVersion: number): string {
     try {
@@ -604,7 +626,7 @@ export function findBestWindowsRunnerForLlvm(majorVersion: number): string {
         const runners = Object.keys(defaults.runners);
 
         if (runners.length === 0) {
-            return 'windows-2022';
+            return 'windows-latest';
         }
 
         const runnerYear = (r: string): number => {
@@ -645,7 +667,7 @@ export function findBestWindowsRunnerForLlvm(majorVersion: number): string {
         return bestMatch || newestRunner;
     } catch {
         // Untested: requires data file to be missing/corrupt
-        return 'windows-2022';
+        return 'windows-latest';
     }
 }
 
@@ -657,7 +679,7 @@ export function findBestWindowsRunnerForLlvm(majorVersion: number): string {
  * `gcc_versions`, (2) newest runner overall (fallback).
  *
  * @param majorVersion - GCC major version number to look up
- * @returns The best macOS runner string (e.g., "macos-15") or "macos-14" if data is unavailable
+ * @returns The best macOS runner string (e.g., "macos-15") or "macos-latest" if data is unavailable
  */
 export function findBestMacOSRunnerForGcc(majorVersion: number): string {
     try {
@@ -665,7 +687,7 @@ export function findBestMacOSRunnerForGcc(majorVersion: number): string {
         const runners = Object.keys(defaults.runners);
 
         if (runners.length === 0) {
-            return 'macos-14';
+            return 'macos-latest';
         }
 
         const runnerNum = (r: string): number => {
@@ -694,7 +716,7 @@ export function findBestMacOSRunnerForGcc(majorVersion: number): string {
         return bestMatch || newestRunner;
     } catch {
         // Untested: requires data file to be missing/corrupt
-        return 'macos-14';
+        return 'macos-latest';
     }
 }
 
@@ -706,7 +728,7 @@ export function findBestMacOSRunnerForGcc(majorVersion: number): string {
  * (2) newest runner overall (fallback).
  *
  * @param majorVersion - LLVM major version number to look up
- * @returns The best macOS runner string (e.g., "macos-15") or "macos-14" if data is unavailable
+ * @returns The best macOS runner string (e.g., "macos-15") or "macos-latest" if data is unavailable
  */
 export function findBestMacOSRunnerForLlvm(majorVersion: number): string {
     try {
@@ -714,7 +736,7 @@ export function findBestMacOSRunnerForLlvm(majorVersion: number): string {
         const runners = Object.keys(defaults.runners);
 
         if (runners.length === 0) {
-            return 'macos-14';
+            return 'macos-latest';
         }
 
         const runnerNum = (r: string): number => {
@@ -743,7 +765,7 @@ export function findBestMacOSRunnerForLlvm(majorVersion: number): string {
         return bestMatch || newestRunner;
     } catch {
         // Untested: requires data file to be missing/corrupt
-        return 'macos-14';
+        return 'macos-latest';
     }
 }
 
@@ -751,10 +773,11 @@ export function findBestMacOSRunnerForLlvm(majorVersion: number): string {
  * Applies data-driven Ubuntu container/runner selection for GCC and Clang compilers.
  *
  * Uses ubuntu-compiler-defaults.json to find the best Ubuntu release for the
- * requested compiler version. For releases newer than the default runner (22.04),
- * a container is always used. For 22.04, a container is used only when
- * {@link Inputs.useContainers} is enabled. For older releases, the matching
- * runner is used directly or a container on the 22.04 runner.
+ * requested compiler version. The host runner is the oldest Ubuntu runner
+ * GitHub Actions provides ({@link findUbuntuHostRunner}). For releases newer
+ * than the host, a container is always used. For the host's own release, a
+ * container is used only when {@link Inputs.useContainers} is enabled. Older
+ * releases have no runner of their own, so they get a container on the host.
  *
  * @param entry - Matrix entry to update
  * @param inputs - Action inputs
@@ -765,35 +788,34 @@ export function findBestMacOSRunnerForLlvm(majorVersion: number): string {
 function applyUbuntuAutoSelect(entry: MatrixEntry, inputs: Inputs, compilerName: string, minSubrangeVersion: semver.SemVer): void {
     const bestRelease = findBestUbuntuRelease(compilerName, minSubrangeVersion.major);
 
+    const host = findUbuntuHostRunner();
+
     // Clang 12–14 on ubuntu-22.04 runners require container isolation due to
     // incompatible libstdc++ versions shipped on the runner image.
     if (compilerName === 'clang'
         && minSubrangeVersion.major >= 12
         && minSubrangeVersion.major < 15
         && bestRelease === '22.04') {
-        entry['runs-on'] = 'ubuntu-22.04';
+        entry['runs-on'] = host.label;
         entry['container'] = 'ubuntu:22.04';
         return;
     }
 
     const releaseNum = parseFloat(bestRelease);
-    if (releaseNum > 22.04) {
-        // Newer than the default runner — always use a container
-        entry['runs-on'] = 'ubuntu-22.04';
+    if (releaseNum > host.release) {
+        // Newer than the host runner — always use a container
+        entry['runs-on'] = host.label;
         entry['container'] = `ubuntu:${bestRelease}`;
-    } else if (releaseNum === 22.04) {
-        entry['runs-on'] = 'ubuntu-22.04';
+    } else if (releaseNum === host.release) {
+        entry['runs-on'] = host.label;
         if (inputs.useContainers) {
             entry['container'] = `ubuntu:${bestRelease}`;
         }
     } else {
-        // Older than default runner
-        if (!inputs.useContainers) {
-            entry['runs-on'] = `ubuntu-${bestRelease}`;
-        } else {
-            entry['runs-on'] = 'ubuntu-22.04';
-            entry['container'] = `ubuntu:${bestRelease}`;
-        }
+        // Older than the host runner. The host is the oldest runner GitHub
+        // still provides, so this release has none of its own
+        entry['runs-on'] = host.label;
+        entry['container'] = `ubuntu:${bestRelease}`;
     }
 }
 
@@ -892,16 +914,52 @@ export function runsOnLabels(entry: MatrixEntry): string[] {
 }
 
 /**
+ * CMake generator for each Visual Studio release year.
+ *
+ * VS 2026 uses Ninja because CMake's "Visual Studio 18 2026" generator
+ * requires CMake 4.0+, but setup-cmake may install CMake 3.x.
+ * Revisit when cmake-workflow supports CMake 4.x version selection.
+ */
+const VS_YEAR_TO_GENERATOR: Record<string, string> = {
+    '2026': 'Ninja',
+    '2022': 'Visual Studio 17 2022',
+    '2019': 'Visual Studio 16 2019',
+    '2017': 'Visual Studio 15 2017',
+    '2015': 'Visual Studio 14 2015',
+    '2013': 'Visual Studio 12 2013',
+    '2012': 'Visual Studio 11 2012',
+    '2010': 'Visual Studio 10 2010',
+    '2008': 'Visual Studio 9 2008',
+    '2005': 'Visual Studio 8 2005'
+};
+
+/**
  * Infers the Visual Studio generator from the runs-on labels.
+ *
+ * A label of a runner in windows-msvc-defaults.json gets the generator of
+ * that runner's default MSVC toolset (or, without a default, of the newest
+ * Visual Studio on the runner). Labels of older runners that are no
+ * longer in the data (e.g., self-hosted `windows-2019` machines) fall back
+ * to the Visual Studio release their image shipped.
  *
  * @param entry - Matrix entry
  * @returns Visual Studio generator string or null
  */
 export function inferVisualStudioGeneratorFromRunsOn(entry: MatrixEntry): string | null {
     const labels = runsOnLabels(entry);
-    const hasLabel = (needle: string): boolean => labels.some((label) => label.includes(needle));
+    const runners = loadWindowsMsvcDefaults().runners;
+    for (const label of labels) {
+        const msvcs = runners[label]?.msvc_versions ?? [];
+        // The default toolset's Visual Studio, else the newest one on the runner
+        const year = msvcs.find((msvc) => msvc.is_default)?.vs_year
+            ?? msvcs.map((msvc) => msvc.vs_year).sort().pop();
+        if (year && VS_YEAR_TO_GENERATOR[year]) {
+            return VS_YEAR_TO_GENERATOR[year];
+        }
+    }
 
-    if (hasLabel('windows-2025') || hasLabel('windows-2022')) {
+    const hasLabel = (needle: string): boolean => labels.some((label) => label.includes(needle));
+    if (hasLabel('windows-2022')) {
         return 'Visual Studio 17 2022';
     }
     if (hasLabel('windows-2019')) {
@@ -954,22 +1012,7 @@ export function setCompilerCMakeGenerator(entry: MatrixEntry, _inputs: Inputs, c
         // since the compat toolset runs under the newer VS installation.
         const year = getVisualCppYear(minSubrangeVersion);
         if (year && (minSubrangeVersion === maxSubrangeVersion || year === getVisualCppYear(maxSubrangeVersion))) {
-            const yearToGenerator: Record<string, string> = {
-                // VS 2026 uses Ninja because CMake's "Visual Studio 18 2026" generator
-                // requires CMake 4.0+, but setup-cmake may install CMake 3.x.
-                // Revisit when cmake-workflow supports CMake 4.x version selection.
-                '2026': 'Ninja',
-                '2022': 'Visual Studio 17 2022',
-                '2019': 'Visual Studio 16 2019',
-                '2017': 'Visual Studio 15 2017',
-                '2015': 'Visual Studio 14 2015',
-                '2013': 'Visual Studio 12 2013',
-                '2012': 'Visual Studio 11 2012',
-                '2010': 'Visual Studio 10 2010',
-                '2008': 'Visual Studio 9 2008',
-                '2005': 'Visual Studio 8 2005'
-            };
-            const versionGenerator = yearToGenerator[year];
+            const versionGenerator = VS_YEAR_TO_GENERATOR[year];
             if (versionGenerator && parseInt(year, 10) > parseInt(generatorFromRunsOn?.match(/\d{4}/)?.[0] || '0', 10)) {
                 entry['generator'] = versionGenerator;
             }

@@ -44,7 +44,8 @@ import {
     setCompilerB2Toolset,
     setCompilerCMakeGenerator,
     setEntryVersionFlags,
-    setEntryName
+    setEntryName,
+    findUbuntuHostRunner
 } from './entry-builder';
 
 import {
@@ -455,7 +456,7 @@ class CppMatrixRunner {
         core.startGroup('👤 Set custom values');
         for (const entry of this.matrix) {
             if (setSuggestion(entry, 'container', this.inputs.containers, entry.version)) {
-                entry['runs-on'] = 'ubuntu-22.04';
+                entry['runs-on'] = findUbuntuHostRunner().label;
             }
             setSuggestion(entry, 'b2-toolset', this.inputs.generators, entry.version);
             setSuggestion(entry, 'generator', this.inputs.generators, entry.version);

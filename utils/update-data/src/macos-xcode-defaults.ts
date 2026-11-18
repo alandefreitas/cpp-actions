@@ -146,7 +146,7 @@ interface MacOSXcodeDefaults {
     generated: string;
     /** Description of the data source. */
     source: string;
-    /** Runner data keyed by runner name (e.g., `"macos-14"`). */
+    /** Runner data keyed by runner name (e.g., `"macos-15"`). */
     runners: Record<string, OutputRunnerXcodeInfo>;
     /** All GCC versions installable via Homebrew. */
     installable_gcc: InstallableVersion[];

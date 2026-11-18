@@ -26,7 +26,7 @@ interface GitHubContentsEntry {
  * A runner image entry for the output JSON.
  */
 interface RunnerEntry {
-    /** Runner name as used in `runs-on` (e.g., `"macos-14"`). */
+    /** Runner name as used in `runs-on` (e.g., `"macos-15"`). */
     name: string;
     /** Version identifier derived from the toolset filename. */
     version: string;
@@ -40,6 +40,11 @@ interface RunnerEntry {
 interface RunnerImagesJson {
     generated: string;
     source: string;
+    /**
+     * Runner labels GitHub Actions accepts in `runs-on`, from the GitHub Docs
+     * table of hosted runners. Absent when that table could not be fetched.
+     */
+    supported_labels?: string[];
     runners: {
         ubuntu: RunnerEntry[];
         macos: RunnerEntry[];
@@ -69,6 +74,17 @@ const PLATFORM_PATHS: Record<string, string> = {
  * (e.g., `toolset-2025-vs2026.json`) are skipped.
  */
 const TOOLSET_FILENAME_RE = /^toolset-(\d+)\.json$/;
+
+/**
+ * GitHub Contents API URL of the GitHub Docs table that lists the runner
+ * labels GitHub Actions accepts in `runs-on`.
+ *
+ * `actions/runner-images` keeps the toolset of an image after GitHub Actions
+ * retires it (Azure DevOps may still run it), so its listing alone is not
+ * enough: `macos-14` kept its toolset after its retirement from GitHub
+ * Actions on November 2, 2026, and every job sent to it was cancelled.
+ */
+const SUPPORTED_RUNNERS_DOC_URL = 'https://api.github.com/repos/github/docs/contents/data/reusables/actions/supported-github-runners.md';
 
 // ── HTTP helper ─────────────────────────────────────────────────────────────
 
@@ -169,11 +185,52 @@ export function deriveRunnerInfo(platform: string, filename: string): { name: st
     return null;
 }
 
+// ── Supported runner labels ─────────────────────────────────────────────────
+
+/**
+ * Extracts the runner labels from the GitHub Docs table of supported
+ * GitHub-hosted runners, where each label is a `<code>` element, optionally
+ * wrapping a link to the image readme.
+ *
+ * @param markdown - Contents of `supported-github-runners.md`
+ * @returns Set of runner labels (e.g., `"macos-15"`, `"ubuntu-24.04"`)
+ */
+export function parseSupportedRunnerLabels(markdown: string): Set<string> {
+    const labels = new Set<string>();
+    const re = /<code>(?:<a [^>]*>)?([a-z0-9][a-z0-9.-]*)(?:<\/a>)?<\/code>/g;
+    for (const match of markdown.matchAll(re)) {
+        labels.add(match[1]);
+    }
+    return labels;
+}
+
+/**
+ * Fetches the runner labels GitHub Actions currently accepts.
+ *
+ * @param token - Optional GitHub token for authenticated requests
+ * @returns Set of supported runner labels, or null if they could not be fetched
+ */
+async function fetchSupportedRunnerLabels(token?: string): Promise<Set<string> | null> {
+    try {
+        const file = await fetchGitHubJson(SUPPORTED_RUNNERS_DOC_URL, token) as { content?: string };
+        const labels = parseSupportedRunnerLabels(Buffer.from(file.content ?? '', 'base64').toString('utf8'));
+        if (labels.size === 0) {
+            console.warn('  Warning: no runner labels found in the GitHub Docs runner table');
+            return null;
+        }
+        return labels;
+    } catch (err) {
+        console.warn(`  Warning: failed to fetch the supported runner labels: ${err}`);
+        return null;
+    }
+}
+
 // ── Main export ─────────────────────────────────────────────────────────────
 
 /**
  * Fetches toolset directory listings from the GitHub Contents API for all
  * platforms and writes the result to `setup-program/runner-images.json`.
+ * Images whose runner label GitHub Actions no longer accepts are left out.
  *
  * Uses the `GITHUB_TOKEN` environment variable for authenticated requests
  * if available, which increases the rate limit from 60 to 5000 requests/hour.
@@ -191,9 +248,16 @@ export async function updateRunnerImages(rootDir: string): Promise<boolean> {
         console.log('  Using GITHUB_TOKEN for authenticated API requests');
     }
 
+    console.log('  Fetching supported runner labels...');
+    const supported = await fetchSupportedRunnerLabels(token);
+    if (!supported) {
+        console.warn('  Warning: keeping every runner image, including any retired from GitHub Actions');
+    }
+
     const result: RunnerImagesJson = {
         generated: new Date().toISOString(),
-        source: 'GitHub Contents API: actions/runner-images',
+        source: 'GitHub Contents API: actions/runner-images, github/docs',
+        ...(supported ? { supported_labels: [...supported].sort() } : {}),
         runners: {
             ubuntu: [],
             macos: [],
@@ -218,6 +282,10 @@ export async function updateRunnerImages(rootDir: string): Promise<boolean> {
             for (const entry of entries) {
                 const info = deriveRunnerInfo(platform, entry.name);
                 if (!info) {
+                    continue;
+                }
+                if (supported && !supported.has(info.name)) {
+                    console.log(`    Skipping ${info.name}: not a supported GitHub Actions runner`);
                     continue;
                 }
                 runners.push({
