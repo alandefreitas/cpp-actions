@@ -19,6 +19,7 @@ import * as process from 'process';
 const cacheDir = path.join(__dirname, '..', 'test-data', 'cache');
 process.env.CPP_MATRIX_CACHE_DIR = cacheDir;
 
+import * as semver from 'semver';
 import * as setup_program from 'setup-program';
 setup_program.setVersionsCacheDir(cacheDir);
 
@@ -623,17 +624,25 @@ describe('findMSVCVersions', () => {
     });
 });
 
+// Version lists the tests below expect, read from the real data files so the
+// tests hold after every data update.
+const macosData = setup_program.loadMacOSXcodeDefaults();
+const windowsData = setup_program.loadWindowsMsvcDefaults();
+const byVersion = (a: string, b: string): number => semver.compare(a, b);
+const allAppleClang = [...new Set(Object.values(macosData.runners)
+    .flatMap((r) => r.xcode_versions.map((x) => x.apple_clang)))].sort(byVersion);
+const defaultAppleClangMajors = [...new Set(Object.values(macosData.runners)
+    .flatMap((r) => r.xcode_versions.filter((x) => x.is_default).map((x) => semver.major(x.apple_clang))))].sort((a, b) => a - b);
+const availableAppleClangMajors = [...new Set(allAppleClang.map((v) => semver.major(v)))].sort((a, b) => a - b);
+
 describe('findAppleClangVersions', () => {
     it('returns unique Apple Clang versions sorted ascending by semver', () => {
-        const versions = findAppleClangVersions();
-        // macos-xcode-defaults.json has: 15.0.0 (macos-14), 16.0.0 (macos-14/15),
-        // 17.0.0 (macos-15/26), 21.0.0 (macos-26)
-        expect(versions).toStrictEqual(['15.0.0', '16.0.0', '17.0.0', '21.0.0']);
+        expect(findAppleClangVersions()).toStrictEqual(allAppleClang);
     });
 
     it('deduplicates versions across runners', () => {
         const versions = findAppleClangVersions();
-        // 16.0.0 appears on both macos-14 and macos-15 but should only appear once
+        // A version on several runners should only appear once
         const duplicates = versions.filter((v, i) => versions.indexOf(v) !== i);
         expect(duplicates).toHaveLength(0);
     });
@@ -666,11 +675,16 @@ describe('findMingwVersions', () => {
 describe('findClangClVersions', () => {
     it('returns unique LLVM versions sorted ascending by semver', () => {
         const versions = findClangClVersions();
-        // windows-msvc-defaults.json has: pre-installed 20 + installable up to 22.1.0
-        expect(versions.length).toBeGreaterThan(0);
-        expect(versions).toContain('14.0.1');
-        expect(versions).toContain('20.0.0');
-        expect(versions).toContain('22.1.0');
+        // Pre-installed LLVM majors plus every installable version
+        for (const runner of Object.values(windowsData.runners)) {
+            if (runner.llvm_version) {
+                expect(versions).toContain(`${runner.llvm_version}.0.0`);
+            }
+        }
+        for (const v of windowsData.installable_llvm ?? []) {
+            expect(versions).toContain(v);
+        }
+        expect([...versions].sort(byVersion)).toStrictEqual(versions);
     });
 
     it('deduplicates pre-installed and installable versions', () => {
@@ -683,11 +697,16 @@ describe('findClangClVersions', () => {
 describe('findMacOSGccVersions', () => {
     it('returns unique macOS GCC versions sorted ascending by semver', () => {
         const versions = findMacOSGccVersions();
-        // macos-xcode-defaults.json has: pre-installed [13,14,15] + installable 11.5.0..15.2.0
-        expect(versions.length).toBeGreaterThan(0);
-        expect(versions).toContain('11.5.0');
-        expect(versions).toContain('13.0.0');
-        expect(versions).toContain('15.2.0');
+        // Pre-installed GCC majors plus every installable version
+        for (const runner of Object.values(macosData.runners)) {
+            for (const major of runner.gcc_versions ?? []) {
+                expect(versions).toContain(`${major}.0.0`);
+            }
+        }
+        for (const v of macosData.installable_gcc ?? []) {
+            expect(versions).toContain(v.version);
+        }
+        expect([...versions].sort(byVersion)).toStrictEqual(versions);
     });
 
     it('deduplicates pre-installed and installable versions', () => {
@@ -707,11 +726,16 @@ describe('findMacOSGccVersions', () => {
 describe('findMacOSClangVersions', () => {
     it('returns unique macOS LLVM versions sorted ascending by semver', () => {
         const versions = findMacOSClangVersions();
-        // macos-xcode-defaults.json has: pre-installed 15, 18, 20 + installable up to 22.1.4
-        expect(versions.length).toBeGreaterThan(0);
-        expect(versions).toContain('15.0.0');
-        expect(versions).toContain('18.0.0');
-        expect(versions).toContain('22.1.4');
+        // Pre-installed LLVM majors plus every installable version
+        for (const runner of Object.values(macosData.runners)) {
+            if (runner.llvm_version) {
+                expect(versions).toContain(`${runner.llvm_version}.0.0`);
+            }
+        }
+        for (const v of macosData.installable_llvm ?? []) {
+            expect(versions).toContain(v.version);
+        }
+        expect([...versions].sort(byVersion)).toStrictEqual(versions);
     });
 
     it('deduplicates pre-installed and installable versions', () => {
@@ -740,8 +764,7 @@ describe('findCompilerVersions clang-cl', () => {
 describe('findCompilerVersions macos-gcc', () => {
     it('returns macos-gcc versions', async () => {
         const versions = await findCompilerVersions('macos-gcc');
-        expect(versions.length).toBeGreaterThan(0);
-        expect(versions).toContain('14.3.0');
+        expect(versions).toStrictEqual(findMacOSGccVersions());
     });
 });
 
@@ -756,10 +779,7 @@ describe('findCompilerVersions macos-clang', () => {
 describe('findCompilerVersions apple-clang', () => {
     it('returns apple-clang versions', async () => {
         const versions = await findCompilerVersions('apple-clang');
-        expect(versions.length).toBeGreaterThan(0);
-        expect(versions).toContain('15.0.0');
-        expect(versions).toContain('16.0.0');
-        expect(versions).toContain('17.0.0');
+        expect(versions).toStrictEqual(allAppleClang);
     });
 });
 
@@ -783,35 +803,31 @@ describe('splitRanges with apple-clang versions', () => {
     });
 });
 
-// Tests for MACOS_DEFAULTS_AND_LATEST subrange policy.
-// These use real macos-xcode-defaults.json data loaded via setup_program.
-// The data file has:
-//   macos-14: default Xcode 15.4 → Apple Clang 15.0.0 (default)
-//   macos-15: default Xcode 16.4 → Apple Clang 17.0.0 (default)
-//   macos-26: default Xcode 26.2 → Apple Clang 17.0.0 (default)
-// Default Apple Clang majors: [15, 17] (from is_default entries, deduplicated)
-// Available Apple Clang majors: [15, 16, 17, 21] (across all entries)
+// Tests for MACOS_DEFAULTS_AND_LATEST subrange policy, against the real
+// macos-xcode-defaults.json data: the default Apple Clang majors are those of
+// each runner's default Xcode, and the available ones those of any Xcode.
 
 describe('splitRanges MACOS_DEFAULTS_AND_LATEST', () => {
     test('includes macOS defaults plus the latest available version', () => {
-        // Defaults [15, 17] in range. Latest available in range is 17, already selected.
-        const versions = ['15.0.0', '16.0.0', '17.0.0'];
-        const result = splitRanges('>=15', versions, SubrangePolicies.MACOS_DEFAULTS_AND_LATEST, 'apple-clang');
-        expect(result).toStrictEqual(['15', '17']);
+        const latest = availableAppleClangMajors[availableAppleClangMajors.length - 1];
+        const expected = [...new Set([...defaultAppleClangMajors, latest])].sort((a, b) => a - b).map(String);
+        const result = splitRanges('*', allAppleClang, SubrangePolicies.MACOS_DEFAULTS_AND_LATEST, 'apple-clang');
+        expect(result).toStrictEqual(expected);
     });
 
     test('no duplicate when latest is already a default', () => {
-        // Range >=15 <=16: default 15 in range (17 is not). Latest available in range 16 → push 16.
-        const versions = ['15.0.0', '16.0.0'];
-        const result = splitRanges('>=15 <=16', versions, SubrangePolicies.MACOS_DEFAULTS_AND_LATEST, 'apple-clang');
-        expect(result).toStrictEqual(['15', '16']);
+        // Cap the range at the newest default, so the latest in range is that default
+        const newestDefault = defaultAppleClangMajors[defaultAppleClangMajors.length - 1];
+        const result = splitRanges(`<=${newestDefault}`, allAppleClang, SubrangePolicies.MACOS_DEFAULTS_AND_LATEST, 'apple-clang');
+        expect(result).toStrictEqual(defaultAppleClangMajors.map(String));
     });
 
     test('adds latest even when only one default matches', () => {
-        // Range >=16: defaults in range = [17] only. Latest available 17, already selected.
-        const versions = ['15.0.0', '16.0.0', '17.0.0'];
-        const result = splitRanges('>=16', versions, SubrangePolicies.MACOS_DEFAULTS_AND_LATEST, 'apple-clang');
-        expect(result).toStrictEqual(['17']);
+        // From the newest default up, that default is the only one in range
+        const newestDefault = defaultAppleClangMajors[defaultAppleClangMajors.length - 1];
+        const latest = availableAppleClangMajors[availableAppleClangMajors.length - 1];
+        const result = splitRanges(`>=${newestDefault}`, allAppleClang, SubrangePolicies.MACOS_DEFAULTS_AND_LATEST, 'apple-clang');
+        expect(result).toStrictEqual([...new Set([newestDefault, latest])].map(String));
     });
 
     test('excludes default versions outside user range', () => {

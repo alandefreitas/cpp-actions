@@ -16,7 +16,7 @@ import runnerImagesData from '../runner-images.json';
  * A single runner image entry for a platform.
  */
 export interface RunnerImageEntry {
-    /** Runner name as used in `runs-on` (e.g., `"macos-14"`, `"ubuntu-22.04"`). */
+    /** Runner name as used in `runs-on` (e.g., `"macos-15"`, `"ubuntu-24.04"`). */
     name: string;
     /** Version identifier derived from the toolset filename (e.g., `"14"`, `"22.04"`, `"2022"`). */
     version: string;
@@ -34,7 +34,12 @@ export interface RunnerImagesData {
     generated: string;
     /** Description of the data source. */
     source: string;
-    /** Runner entries keyed by platform. */
+    /**
+     * Runner labels GitHub Actions accepts in `runs-on` (e.g., `"macos-latest"`,
+     * `"windows-2025-vs2026"`). Absent when the list could not be fetched.
+     */
+    supported_labels?: string[];
+    /** Runner entries keyed by platform. Retired runners are left out. */
     runners: {
         ubuntu: RunnerImageEntry[];
         macos: RunnerImageEntry[];

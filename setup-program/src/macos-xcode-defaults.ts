@@ -55,7 +55,7 @@ export interface InstallableVersion {
 /**
  * Top-level structure for the macos-xcode-defaults.json data file.
  *
- * Keys under `runners` are macOS runner names (e.g., `"macos-14"`, `"macos-15"`).
+ * Keys under `runners` are macOS runner names (e.g., `"macos-15"`, `"macos-26"`).
  */
 export interface MacOSXcodeDefaults {
     /** ISO 8601 timestamp when this data was generated. */

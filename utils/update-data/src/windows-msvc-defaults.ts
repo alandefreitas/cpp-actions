@@ -147,6 +147,8 @@ interface WindowsMsvcDefaults {
  * Structure of runner-images.json (partial — only the fields we need).
  */
 interface RunnerImagesJson {
+    /** Runner labels GitHub Actions accepts; absent if they could not be fetched. */
+    supported_labels?: string[];
     runners: {
         windows: Array<{
             name: string;
@@ -880,8 +882,15 @@ export async function updateWindowsMsvcDefaults(rootDir: string): Promise<boolea
         }
     }
 
-    // Add multi-suffix runners from directory listing as separate entries
+    // Add multi-suffix runners from directory listing as separate entries,
+    // except those GitHub Actions no longer accepts (runner-images.json
+    // already left out retired primary runners)
+    const supported = runnerImagesData.supported_labels ? new Set(runnerImagesData.supported_labels) : null;
     for (const [dirRunnerName, dirFiles] of toolsetDir.entries()) {
+        if (supported && !supported.has(dirRunnerName)) {
+            console.log(`  Skipping ${dirRunnerName}: not a supported GitHub Actions runner`);
+            continue;
+        }
         if (!runnerToolsets.has(dirRunnerName)) {
             // This is a new runner not in runner-images.json (e.g., windows-2025-vs2026)
             runnerToolsets.set(dirRunnerName, dirFiles);

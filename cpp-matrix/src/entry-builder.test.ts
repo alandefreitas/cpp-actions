@@ -13,6 +13,17 @@ jest.mock('trace-commands', () => ({
     setTraceCommands: jest.fn()
 }));
 
+// These loaders default to the real data; tests that need data the real
+// files cannot provide override them with mockReturnValueOnce.
+jest.mock('setup-program', () => {
+    const actual = jest.requireActual('setup-program');
+    return {
+        ...actual,
+        loadRunnerImages: jest.fn(actual.loadRunnerImages),
+        loadWindowsMsvcDefaults: jest.fn(actual.loadWindowsMsvcDefaults)
+    };
+});
+
 import * as path from 'path';
 import * as process from 'process';
 
@@ -40,6 +51,7 @@ import {
     findBestWindowsRunnerForLlvm,
     findBestMacOSRunnerForGcc,
     findBestMacOSRunnerForLlvm,
+    findUbuntuHostRunner,
     setCompilerB2Toolset,
     runsOnLabels,
     inferVisualStudioGeneratorFromRunsOn,
@@ -47,6 +59,10 @@ import {
     setEntryVersionFlags,
     setEntryName
 } from './entry-builder';
+import * as setup_program from 'setup-program';
+
+/** The Ubuntu runner that hosts containers in the real runner-images data. */
+const ubuntuHost = findUbuntuHostRunner().label;
 
 function makeEntry(overrides: Partial<MatrixEntry> = {}): MatrixEntry {
     return {
@@ -454,13 +470,13 @@ describe('setCompilerContainer', () => {
         expect(entry.container).toBe('ubuntu:26.04');
     });
 
-    test('gcc 8 without containers uses ubuntu-20.04', () => {
+    test('gcc 8 without containers uses a ubuntu:20.04 container (ubuntu-20.04 runner is retired)', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs({ useContainers: false }), 'gcc', semver.parse('8.0.0')!, '8');
         // GCC 8 is available on 18.04 and 20.04 (LTS); not default on any LTS
-        // Newest available LTS = 20.04; releaseNum 20.04 < 22.04, useContainers false
-        expect(entry['runs-on']).toBe('ubuntu-20.04');
-        expect(entry.container).toBeUndefined();
+        // Newest available LTS = 20.04, older than the host, and GitHub no longer has its runner
+        expect(entry['runs-on']).toBe(ubuntuHost);
+        expect(entry.container).toBe('ubuntu:20.04');
     });
 
     test('gcc 8 with containers uses ubuntu:20.04 (no volumes, major >= 20)', () => {
@@ -471,13 +487,13 @@ describe('setCompilerContainer', () => {
         expect(entry.container).toBe('ubuntu:20.04');
     });
 
-    test('gcc 6 without containers uses ubuntu-18.04', () => {
+    test('gcc 6 without containers uses a ubuntu:18.04 container (ubuntu-18.04 runner is retired)', () => {
         const entry = makeEntry();
         setCompilerContainer(entry, makeInputs(), 'gcc', semver.parse('6.0.0')!, '6');
         // GCC 6 is available on 18.04 (LTS); not default on any LTS
-        // releaseNum 18.04 < 22.04, useContainers false → runs-on = ubuntu-18.04
-        expect(entry['runs-on']).toBe('ubuntu-18.04');
-        expect(entry.container).toBeUndefined();
+        expect(entry['runs-on']).toBe(ubuntuHost);
+        // Releases before 20.04 get a container object with node volumes
+        expect((entry.container as { image: string }).image).toBe('ubuntu:18.04');
     });
 
     test('clang 17 uses ubuntu 26.04 container (newest LTS where available)', () => {
@@ -519,11 +535,12 @@ describe('setCompilerContainer', () => {
         expect(entry.container).toBe('ubuntu:22.04');
     });
 
-    test('clang 10 without containers uses ubuntu-20.04', () => {
+    test('clang 10 without containers uses a ubuntu:20.04 container (ubuntu-20.04 runner is retired)', () => {
         const entry = makeEntry();
-        // Clang 10 is default on 20.04; releaseNum=20.04 < 22.04
+        // Clang 10 is default on 20.04, older than the host, and GitHub no longer has its runner
         setCompilerContainer(entry, makeInputs({ useContainers: false }), 'clang', semver.parse('10.0.0')!, '10');
-        expect(entry['runs-on']).toBe('ubuntu-20.04');
+        expect(entry['runs-on']).toBe(ubuntuHost);
+        expect(entry.container).toBe('ubuntu:20.04');
     });
 
     test('clang 10 with containers uses ubuntu:20.04', () => {
@@ -544,12 +561,12 @@ describe('setCompilerContainer', () => {
         expect(entry.container).toBe('ubuntu:20.04');
     });
 
-    test('clang 7 without containers uses ubuntu-20.04', () => {
+    test('clang 7 without containers uses a ubuntu:20.04 container (ubuntu-20.04 runner is retired)', () => {
         const entry = makeEntry();
         // Clang 7 is available on 20.04 (LTS); not default on any LTS
-        // useContainers:false → runs-on = ubuntu-20.04
         setCompilerContainer(entry, makeInputs({ useContainers: false }), 'clang', semver.parse('7.0.0')!, '7');
-        expect(entry['runs-on']).toBe('ubuntu-20.04');
+        expect(entry['runs-on']).toBe(ubuntuHost);
+        expect(entry.container).toBe('ubuntu:20.04');
     });
 
     test('clang 14 with containers on 22.04 sets container', () => {
@@ -621,9 +638,10 @@ describe('setCompilerContainer', () => {
 
     test('apple-clang uses data-driven runner selection', () => {
         const entry = makeEntry();
-        // Apple Clang 15 is default on macos-14
-        setCompilerContainer(entry, makeInputs(), 'apple-clang', semver.parse('15.0.0')!, '15');
-        expect(entry['runs-on']).toBe('macos-14');
+        const [runner, major] = macosDefaultAppleClang()[0];
+        setCompilerContainer(entry, makeInputs(), 'apple-clang', semver.parse(`${major}.0.0`)!, `${major}`);
+        expect(entry['runs-on']).toBe(findBestMacOSRunner(major));
+        expect(appleClangMajors(runner)).toContain(major);
     });
 
     test('mingw uses data-driven runner — prefers runner with matching mingw major', () => {
@@ -738,13 +756,20 @@ describe('runsOnLabels', () => {
 });
 
 describe('inferVisualStudioGeneratorFromRunsOn', () => {
-    test('windows-2022 returns VS 17 2022', () => {
-        const entry = makeEntry({ 'runs-on': 'windows-2022' });
-        expect(inferVisualStudioGeneratorFromRunsOn(entry)).toBe('Visual Studio 17 2022');
+    test('each runner in the data gets the generator of its default toolset, else its newest VS', () => {
+        const yearToGenerator: Record<string, string> = { '2026': 'Ninja', '2022': 'Visual Studio 17 2022', '2019': 'Visual Studio 16 2019' };
+        for (const [runner, info] of Object.entries(setup_program.loadWindowsMsvcDefaults().runners)) {
+            const year = info.msvc_versions.find((m) => m.is_default)?.vs_year
+                ?? info.msvc_versions.map((m) => m.vs_year).sort().pop()!;
+            const entry = makeEntry({ 'runs-on': runner });
+            expect(inferVisualStudioGeneratorFromRunsOn(entry)).toBe(yearToGenerator[year]);
+        }
     });
 
-    test('windows-2025 returns VS 17 2022', () => {
-        const entry = makeEntry({ 'runs-on': 'windows-2025' });
+    test('windows-2022 outside the data still returns VS 17 2022', () => {
+        const actual = jest.requireActual('setup-program').loadWindowsMsvcDefaults();
+        jest.mocked(setup_program.loadWindowsMsvcDefaults).mockReturnValueOnce({ ...actual, runners: {} });
+        const entry = makeEntry({ 'runs-on': 'windows-2022' });
         expect(inferVisualStudioGeneratorFromRunsOn(entry)).toBe('Visual Studio 17 2022');
     });
 
@@ -1077,48 +1102,81 @@ describe('findBestUbuntuRelease', () => {
 });
 
 // Tests for findBestMacOSRunner / findNewestMacOSRunner auto-select logic.
-// Uses real macos-xcode-defaults.json data:
-//   macos-14: Apple Clang 15 (default via Xcode 15.4), 16
-//   macos-15: Apple Clang 15, 16, 17 (default via Xcode 16.4)
-//   macos-26: Apple Clang 17 (default via Xcode 26.2), 21
+// Expectations come from the real macos-xcode-defaults.json data, so they
+// hold after every data update.
+
+/** Runner names in the macOS data, oldest first. */
+function macosRunners(): string[] {
+    const num = (r: string): number => parseInt(r.replace(/\D+/g, ''), 10);
+    return Object.keys(setup_program.loadMacOSXcodeDefaults().runners).sort((a, b) => num(a) - num(b));
+}
+
+/**
+ * Apple Clang majors installed on a runner.
+ *
+ * @param runner - macOS runner name
+ * @param defaultOnly - Only the major of the default Xcode
+ * @returns Apple Clang major versions
+ */
+function appleClangMajors(runner: string, defaultOnly = false): number[] {
+    return setup_program.loadMacOSXcodeDefaults().runners[runner].xcode_versions
+        .filter((x) => !defaultOnly || x.is_default)
+        .map((x) => parseInt(x.apple_clang, 10));
+}
+
+/** [runner, default Apple Clang major] for every runner, oldest runner first. */
+function macosDefaultAppleClang(): Array<[string, number]> {
+    return macosRunners().flatMap((r) => appleClangMajors(r, true).map((m): [string, number] => [r, m]));
+}
+
 describe('findBestMacOSRunner', () => {
-    test('Apple Clang 15 selects macos-14 (default Xcode)', () => {
-        // Apple Clang 15 is_default on macos-14 (Xcode 15.4)
-        expect(findBestMacOSRunner(15)).toBe('macos-14');
+    test('a default Apple Clang selects the newest runner where it is the default', () => {
+        for (const [, major] of macosDefaultAppleClang()) {
+            const withDefault = macosRunners().filter((r) => appleClangMajors(r, true).includes(major));
+            expect(findBestMacOSRunner(major)).toBe(withDefault[withDefault.length - 1]);
+        }
     });
 
-    test('Apple Clang 16 selects macos-15 (default Xcode on newest runner)', () => {
-        // Apple Clang 16 is available on macos-14 and macos-15 (not default on either)
-        // Newest runner with it is macos-15
-        expect(findBestMacOSRunner(16)).toBe('macos-15');
-    });
-
-    test('Apple Clang 17 selects macos-26 (default on newest runner with it)', () => {
-        // Apple Clang 17 is_default on both macos-15 and macos-26 → newest wins
-        expect(findBestMacOSRunner(17)).toBe('macos-26');
+    test('a non-default Apple Clang selects the newest runner that has it', () => {
+        const defaults = new Set(macosDefaultAppleClang().map(([, m]) => m));
+        const nonDefault = macosRunners().flatMap((r) => appleClangMajors(r)).filter((m) => !defaults.has(m));
+        for (const major of nonDefault) {
+            const withIt = macosRunners().filter((r) => appleClangMajors(r).includes(major));
+            expect(findBestMacOSRunner(major)).toBe(withIt[withIt.length - 1]);
+        }
     });
 
     test('unknown version falls back to newest runner', () => {
-        // Apple Clang 99 is not in any runner → newest runner = macos-26
-        expect(findBestMacOSRunner(99)).toBe('macos-26');
+        // Apple Clang 99 is not in any runner
+        expect(findBestMacOSRunner(99)).toBe(macosRunners()[macosRunners().length - 1]);
     });
 
-    test('setCompilerContainer routes apple-clang 16 to macos-15', () => {
-        const entry = makeEntry();
-        setCompilerContainer(entry, makeInputs(), 'apple-clang', semver.parse('16.0.0')!, '16');
-        expect(entry['runs-on']).toBe('macos-15');
+    test('setCompilerContainer routes each default Apple Clang to its runner', () => {
+        for (const [, major] of macosDefaultAppleClang()) {
+            const entry = makeEntry();
+            setCompilerContainer(entry, makeInputs(), 'apple-clang', semver.parse(`${major}.0.0`)!, `${major}`);
+            expect(entry['runs-on']).toBe(findBestMacOSRunner(major));
+        }
+    });
+});
+
+describe('findUbuntuHostRunner', () => {
+    test('returns the oldest Ubuntu runner in the data', () => {
+        const ubuntu = jest.requireActual('setup-program').loadRunnerImages().runners.ubuntu as Array<{ name: string; version: string }>;
+        const oldest = [...ubuntu].sort((a, b) => parseFloat(a.version) - parseFloat(b.version))[0];
+        expect(findUbuntuHostRunner()).toEqual({ label: oldest.name, release: parseFloat(oldest.version) });
     });
 
-    test('setCompilerContainer routes apple-clang 17 to macos-26', () => {
-        const entry = makeEntry();
-        setCompilerContainer(entry, makeInputs(), 'apple-clang', semver.parse('17.0.0')!, '17');
-        expect(entry['runs-on']).toBe('macos-26');
+    test('falls back to ubuntu-latest, newer than any release, without Ubuntu runner data', () => {
+        const actual = jest.requireActual('setup-program').loadRunnerImages();
+        jest.mocked(setup_program.loadRunnerImages).mockReturnValueOnce({ ...actual, runners: { ...actual.runners, ubuntu: [] } });
+        expect(findUbuntuHostRunner()).toEqual({ label: 'ubuntu-latest', release: Infinity });
     });
 });
 
 describe('findNewestMacOSRunner', () => {
     test('returns newest runner from data', () => {
-        expect(findNewestMacOSRunner()).toBe('macos-26');
+        expect(findNewestMacOSRunner()).toBe(macosRunners()[macosRunners().length - 1]);
     });
 });
 
@@ -1208,7 +1266,6 @@ describe('findBestWindowsRunnerForLlvm', () => {
 
 // Tests for findBestMacOSRunnerForGcc.
 // Uses real macos-xcode-defaults.json data:
-//   macos-14: gcc_versions ["13", "14", "15"]
 //   macos-15: gcc_versions ["13", "14", "15"]
 //   macos-26: gcc_versions ["13", "14", "15"]
 describe('findBestMacOSRunnerForGcc', () => {
@@ -1227,23 +1284,21 @@ describe('findBestMacOSRunnerForGcc', () => {
     });
 });
 
-// Tests for findBestMacOSRunnerForLlvm.
-// Uses real macos-xcode-defaults.json data:
-//   macos-14: llvm_version "15"
-//   macos-15: llvm_version "18"
-//   macos-26: llvm_version "20"
+// Tests for findBestMacOSRunnerForLlvm, against the real macos-xcode-defaults.json data.
 describe('findBestMacOSRunnerForLlvm', () => {
-    test('llvm 15 selects macos-14 (matching pre-installed version)', () => {
-        expect(findBestMacOSRunnerForLlvm(15)).toBe('macos-14');
-    });
-
-    test('llvm 18 selects macos-15 (matching pre-installed version)', () => {
-        expect(findBestMacOSRunnerForLlvm(18)).toBe('macos-15');
+    test('a pre-installed LLVM selects a runner that has it', () => {
+        const runners = setup_program.loadMacOSXcodeDefaults().runners;
+        for (const runner of macosRunners()) {
+            const llvm = runners[runner].llvm_version;
+            if (llvm) {
+                expect(runners[findBestMacOSRunnerForLlvm(parseInt(llvm, 10))].llvm_version).toBe(llvm);
+            }
+        }
     });
 
     test('unknown version falls back to newest runner', () => {
-        // llvm 12 is not pre-installed on any runner → newest = macos-26
-        expect(findBestMacOSRunnerForLlvm(12)).toBe('macos-26');
+        // llvm 12 is not pre-installed on any runner
+        expect(findBestMacOSRunnerForLlvm(12)).toBe(macosRunners()[macosRunners().length - 1]);
     });
 });
 
@@ -1263,9 +1318,15 @@ describe('setCompilerContainer for macos-clang', () => {
         expect(entry['runs-on']).toBe('macos-15');
     });
 
-    test('macos-clang with llvm 15 selects macos-14', () => {
-        const entry = makeEntry({ compiler: 'macos-clang' });
-        setCompilerContainer(entry, makeInputs(), 'macos-clang', semver.parse('15.0.0')!, '>=15.0.0');
-        expect(entry['runs-on']).toBe('macos-14');
+    test('macos-clang with each pre-installed LLVM selects its runner', () => {
+        const runners = setup_program.loadMacOSXcodeDefaults().runners;
+        for (const runner of macosRunners()) {
+            const llvm = runners[runner].llvm_version;
+            if (llvm) {
+                const entry = makeEntry({ compiler: 'macos-clang' });
+                setCompilerContainer(entry, makeInputs(), 'macos-clang', semver.parse(`${llvm}.0.0`)!, `>=${llvm}.0.0`);
+                expect(entry['runs-on']).toBe(findBestMacOSRunnerForLlvm(parseInt(llvm, 10)));
+            }
+        }
     });
 });
