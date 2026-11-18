@@ -1,5 +1,5 @@
 {
-  "generated": "2026-05-01T05:09:44.009Z",
+  "generated": "2026-11-18T17:09:57.903Z",
   "source": "archive.ubuntu.com apt metadata",
   "releases": {
     "16.04.7": {
@@ -685,7 +685,7 @@
         ]
       }
     },
-    "24.04.4": {
+    "24.04.5": {
       "codename": "noble",
       "gcc": {
         "default_version": "13",
@@ -952,7 +952,7 @@
         ]
       }
     },
-    "26.04": {
+    "26.04.1": {
       "codename": "resolute",
       "gcc": {
         "default_version": "15",

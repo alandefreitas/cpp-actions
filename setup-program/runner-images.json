@@ -1,6 +1,27 @@
 {
-  "generated": "2026-05-01T05:08:57.701Z",
-  "source": "GitHub Contents API: actions/runner-images",
+  "generated": "2026-11-18T17:07:48.505Z",
+  "source": "GitHub Contents API: actions/runner-images, github/docs",
+  "supported_labels": [
+    "macos-15",
+    "macos-15-intel",
+    "macos-26",
+    "macos-26-intel",
+    "macos-latest",
+    "ubuntu-22.04",
+    "ubuntu-22.04-arm",
+    "ubuntu-24.04",
+    "ubuntu-24.04-arm",
+    "ubuntu-26.04",
+    "ubuntu-26.04-arm",
+    "ubuntu-latest",
+    "windows-11-arm",
+    "windows-11-vs2026-arm",
+    "windows-2022",
+    "windows-2025",
+    "windows-2025-vs2026",
+    "windows-latest",
+    "xcode-27"
+  ],
   "runners": {
     "ubuntu": [
       {
@@ -12,14 +33,14 @@
         "name": "ubuntu-24.04",
         "version": "24.04",
         "toolset_url": "https://raw.githubusercontent.com/actions/runner-images/main/images/ubuntu/toolsets/toolset-2404.json"
+      },
+      {
+        "name": "ubuntu-26.04",
+        "version": "26.04",
+        "toolset_url": "https://raw.githubusercontent.com/actions/runner-images/main/images/ubuntu/toolsets/toolset-2604.json"
       }
     ],
     "macos": [
-      {
-        "name": "macos-14",
-        "version": "14",
-        "toolset_url": "https://raw.githubusercontent.com/actions/runner-images/main/images/macos/toolsets/toolset-14.json"
-      },
       {
         "name": "macos-15",
         "version": "15",
