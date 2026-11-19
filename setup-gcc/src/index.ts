@@ -27,6 +27,48 @@ export { removeGCCPrefix } from './schema';
 // Type imports and re-exports
 import { type Inputs } from './schema';
 import { type ProgramResult } from 'package-install';
+
+/** Directory where add-apt-repository writes the source file of a PPA. */
+const APT_SOURCES_DIR = '/etc/apt/sources.list.d';
+
+/**
+ * Lists the APT source files in {@link APT_SOURCES_DIR}.
+ *
+ * @returns File names, or an empty list if the directory cannot be read
+ */
+function listAptSources(): string[] {
+    try {
+        return fs.readdirSync(APT_SOURCES_DIR);
+    } catch {
+        return [];
+    }
+}
+
+/**
+ * Removes the APT source files that appeared since a previous listing.
+ *
+ * add-apt-repository can fail after it has written the PPA's source file,
+ * for example when downloading the PPA's signing key times out. The source
+ * is then unsigned, and every later `apt-get update` fails on it, so a
+ * failed add-apt-repository must not leave it behind.
+ *
+ * @param before - File names listed before add-apt-repository ran
+ */
+async function removeAptSourcesAddedSince(before: Set<string>): Promise<void> {
+    for (const file of listAptSources()) {
+        if (before.has(file)) {
+            continue;
+        }
+        // APT paths are POSIX paths, also when the tests run on Windows
+        const filePath = path.posix.join(APT_SOURCES_DIR, file);
+        core.info(`Removing ${filePath}, left by the failed add-apt-repository`);
+        if (setup_program.isSudoRequired()) {
+            await exec.exec('sudo', ['-n', 'rm', '-f', filePath], { ignoreReturnCode: true });
+        } else {
+            await exec.exec('rm', ['-f', filePath], { ignoreReturnCode: true });
+        }
+    }
+}
 export type { Inputs };
 export type { ProgramResult };
 
@@ -334,6 +376,7 @@ class SetupGccRunner {
         if (addAptRepositoryPath !== null && addAptRepositoryPath !== '') {
             const repo = `ppa:ubuntu-toolchain-r/ppa`;
             traceCommands.log(`Adding repository "${repo}"`);
+            const sourcesBefore = new Set(listAptSources());
             let exitCode: number;
             if (setup_program.isSudoRequired()) {
                 exitCode = await exec.exec('sudo', ['-n', 'add-apt-repository', '-y', repo], { ignoreReturnCode: true });
@@ -342,6 +385,7 @@ class SetupGccRunner {
             }
             if (exitCode !== 0) {
                 core.warning(`add-apt-repository failed with exit code ${exitCode}. GCC versions from the ubuntu-toolchain-r PPA may not be available.`);
+                await removeAptSourcesAddedSince(sourcesBefore);
             }
         }
 
