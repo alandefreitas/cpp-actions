@@ -307,6 +307,15 @@ describe('compareCommits', () => {
         return commit;
     }
 
+    it('should treat a commit without a date as the oldest', () => {
+        const dated = createCommit('Mon Jan 1 10:00:00 2024 +0000', 0);
+        const undated = new Commit();
+        expect(compareCommits(undated, dated, 'oldest-first')).toBeLessThan(0);
+        expect(compareCommits(dated, undated, 'oldest-first')).toBeGreaterThan(0);
+        expect(compareCommits(undated, dated, 'latest-first')).toBeGreaterThan(0);
+        expect(compareCommits(dated, undated, 'latest-first')).toBeLessThan(0);
+    });
+
     it('should sort by latest-first (newest first)', () => {
         const older = createCommit('Mon Jan 1 10:00:00 2024 +0000', 10);
         const newer = createCommit('Wed Jan 3 10:00:00 2024 +0000', 5);
