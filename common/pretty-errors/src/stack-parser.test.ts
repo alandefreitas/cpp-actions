@@ -104,3 +104,20 @@ describe('stack-parser', () => {
         });
     });
 });
+
+describe('parseStackTrace callee names ending in a dot', () => {
+    it('keeps the full callee as the short name for native, eval and file frames', () => {
+        const stack = [
+            'Error: test',
+            '    at Foo. (native)',
+            '    at Bar. (<anonymous>)',
+            '    at Baz. (/path/to/file.ts:3:4)'
+        ].join('\n');
+
+        const frames = parseStackTrace(stack);
+
+        expect(frames.map(f => f.calleeShort)).toEqual(['Foo.', 'Bar.', 'Baz.']);
+        expect(frames[0].native).toBe(true);
+        expect(frames[2].line).toBe(3);
+    });
+});

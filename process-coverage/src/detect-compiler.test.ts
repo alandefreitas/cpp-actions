@@ -336,3 +336,81 @@ describe('discoverExecutables', () => {
         expect(result).toEqual([]);
     });
 });
+
+describe('discoverExecutables magic-byte detection', () => {
+    let tmpDir: string;
+
+    beforeEach(() => {
+        tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'discover-magic-'));
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    /**
+     * Writes a file whose first bytes are the given magic followed by padding.
+     *
+     * @param name - File name inside the temp dir
+     * @param magic - Leading bytes
+     * @returns Absolute path of the written file
+     */
+    function writeMagic(name: string, magic: number[]): string {
+        const p = path.join(tmpDir, name);
+        fs.writeFileSync(p, Buffer.concat([Buffer.from(magic), Buffer.alloc(12)]));
+        return p;
+    }
+
+    it.each([
+        ['MH_MAGIC', [0xfe, 0xed, 0xfa, 0xce]],
+        ['MH_MAGIC_64', [0xfe, 0xed, 0xfa, 0xcf]],
+        ['MH_CIGAM', [0xce, 0xfa, 0xed, 0xfe]],
+        ['MH_CIGAM_64', [0xcf, 0xfa, 0xed, 0xfe]],
+        ['FAT_MAGIC', [0xca, 0xfe, 0xba, 0xbe]]
+    ])('finds Mach-O executables (%s)', async (_name, magic) => {
+        const p = writeMagic('macho_test', magic);
+        expect(await discoverExecutables([tmpDir])).toEqual([p]);
+    });
+
+    it('rejects files with unknown magic bytes', async () => {
+        writeMagic('script', [0x23, 0x21, 0x2f, 0x62]); // "#!/b"
+        writeMagic('pe.exe', [0x4d, 0x5a, 0x90, 0x00]); // Windows PE "MZ"
+        expect(await discoverExecutables([tmpDir])).toEqual([]);
+    });
+
+    it('rejects files shorter than four bytes', async () => {
+        fs.writeFileSync(path.join(tmpDir, 'tiny'), Buffer.from([0x7f, 0x45, 0x4c]));
+        fs.writeFileSync(path.join(tmpDir, 'empty'), '');
+        expect(await discoverExecutables([tmpDir])).toEqual([]);
+    });
+
+    it('treats files that cannot be opened as non-executable', async () => {
+        writeMagic('unreadable', [0x7f, 0x45, 0x4c, 0x46]);
+        const fsPromises = require('node:fs/promises');
+        jest.spyOn(fsPromises, 'open').mockRejectedValueOnce(new Error('EACCES'));
+        expect(await discoverExecutables([tmpDir])).toEqual([]);
+    });
+
+    it('searches every directory given, in order', async () => {
+        const dirA = path.join(tmpDir, 'a');
+        const dirB = path.join(tmpDir, 'b');
+        fs.mkdirSync(dirA);
+        fs.mkdirSync(dirB);
+        const elf = Buffer.concat([Buffer.from([0x7f, 0x45, 0x4c, 0x46]), Buffer.alloc(12)]);
+        fs.writeFileSync(path.join(dirA, 't1'), elf);
+        fs.writeFileSync(path.join(dirB, 't2'), elf);
+        expect(await discoverExecutables([dirB, dirA])).toEqual([
+            path.join(dirB, 't2'),
+            path.join(dirA, 't1')
+        ]);
+    });
+
+    const itPosix = process.platform === 'win32' ? it.skip : it;
+
+    itPosix('skips symbolic links instead of following them', async () => {
+        const target = writeMagic('real_test', [0x7f, 0x45, 0x4c, 0x46]);
+        fs.symlinkSync(target, path.join(tmpDir, 'link_test'));
+        expect(await discoverExecutables([tmpDir])).toEqual([target]);
+    });
+});

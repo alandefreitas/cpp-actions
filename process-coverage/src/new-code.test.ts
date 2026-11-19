@@ -453,3 +453,161 @@ describe('analyzeNewCodeCoverage', () => {
         expect(result.uncoveredFiles).toHaveLength(0);
     });
 });
+
+describe('getChangedLines fetch failures', () => {
+    const origBaseRef = process.env.GITHUB_BASE_REF;
+    const origEventPath = process.env.GITHUB_EVENT_PATH;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockGetExecOutput.mockReset();
+        delete process.env.GITHUB_BASE_REF;
+        delete process.env.GITHUB_EVENT_PATH;
+    });
+
+    afterEach(() => {
+        if (origBaseRef !== undefined) {
+            process.env.GITHUB_BASE_REF = origBaseRef;
+        } else {
+            delete process.env.GITHUB_BASE_REF;
+        }
+        if (origEventPath !== undefined) {
+            process.env.GITHUB_EVENT_PATH = origEventPath;
+        } else {
+            delete process.env.GITHUB_EVENT_PATH;
+        }
+    });
+
+    it('still diffs after git fetch --deepen throws', async () => {
+        mockGetExecOutput
+            .mockResolvedValueOnce({ exitCode: 128, stdout: '', stderr: '' })  // log -1 HEAD~2 → missing
+            .mockRejectedValueOnce(new Error('fetch refused'))                // fetch --deepen 3
+            .mockResolvedValueOnce({
+                exitCode: 0,
+                stdout: '+++ b/src/x.cpp\n@@ -1 +4,2 @@\n',
+                stderr: ''
+            });
+
+        const result = await getChangedLines('HEAD~2');
+
+        expect(mockGetExecOutput).toHaveBeenNthCalledWith(2,
+            'git', ['fetch', '--deepen', '3'], {silent: true});
+        expect(core.debug).toHaveBeenCalledWith('git fetch --deepen 3 failed: fetch refused');
+        expect(result.get('src/x.cpp')).toEqual(new Set([4, 5]));
+    });
+
+    it('stringifies non-Error deepen failures in the debug log', async () => {
+        mockGetExecOutput
+            .mockResolvedValueOnce({ exitCode: 1, stdout: '', stderr: '' })
+            .mockRejectedValueOnce('offline')
+            .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' });
+
+        await getChangedLines('HEAD~1');
+
+        expect(core.debug).toHaveBeenCalledWith('git fetch --deepen 2 failed: offline');
+    });
+
+    it('fetches a bare branch name from origin and logs when that fails', async () => {
+        mockGetExecOutput
+            .mockResolvedValueOnce({ exitCode: 1, stdout: '', stderr: '' })
+            .mockRejectedValueOnce(new Error('no such ref'))
+            .mockResolvedValueOnce({ exitCode: 1, stdout: '', stderr: 'fatal: bad revision' });
+
+        const result = await getChangedLines('develop');
+
+        expect(mockGetExecOutput).toHaveBeenNthCalledWith(2,
+            'git', ['fetch', '--depth=1', 'origin', 'develop'], {silent: true});
+        expect(core.debug).toHaveBeenCalledWith('git fetch origin develop failed');
+        expect(result.size).toBe(0);
+    });
+
+    it('falls back to HEAD~1 when the push event payload is not valid JSON', async () => {
+        const fs = require('node:fs');
+        const os = require('node:os');
+        const pathMod = require('node:path');
+        const dir = fs.mkdtempSync(pathMod.join(os.tmpdir(), 'bad-event-'));
+        const eventFile = pathMod.join(dir, 'event.json');
+        fs.writeFileSync(eventFile, '{ not json');
+        process.env.GITHUB_EVENT_PATH = eventFile;
+        mockGetExecOutput.mockResolvedValue({ exitCode: 0, stdout: '', stderr: '' });
+
+        try {
+            await getChangedLines('');
+            expect(mockGetExecOutput).toHaveBeenCalledWith(
+                'git',
+                ['diff', '--unified=0', '--diff-filter=AM', 'HEAD~1'],
+                {silent: true, ignoreReturnCode: true}
+            );
+        } finally {
+            fs.rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    it('falls back to HEAD~1 when the push event file does not exist', async () => {
+        const pathMod = require('node:path');
+        const os = require('node:os');
+        process.env.GITHUB_EVENT_PATH = pathMod.join(os.tmpdir(), 'does-not-exist-event-xyz.json');
+        mockGetExecOutput.mockResolvedValue({ exitCode: 0, stdout: '', stderr: '' });
+
+        await getChangedLines('');
+
+        expect(mockGetExecOutput).toHaveBeenCalledWith(
+            'git',
+            ['diff', '--unified=0', '--diff-filter=AM', 'HEAD~1'],
+            {silent: true, ignoreReturnCode: true}
+        );
+    });
+});
+
+describe('getChangedLines diff failures', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockGetExecOutput.mockReset();
+    });
+
+    it('returns an empty map when git diff exits non-zero without stderr', async () => {
+        mockGetExecOutput
+            .mockResolvedValueOnce({ exitCode: 0, stdout: 'abc\n', stderr: '' })  // log -1 ok
+            .mockResolvedValueOnce({ exitCode: 2, stdout: '+++ b/src/x.cpp\n@@ -1 +1 @@\n', stderr: '' });
+
+        const result = await getChangedLines('origin/main');
+
+        expect(result.size).toBe(0);
+        expect(core.info).toHaveBeenCalledWith('Could not compute git diff — skipping new-code analysis.');
+    });
+
+    it('returns an empty map when git diff rejects with a non-Error value', async () => {
+        mockGetExecOutput
+            .mockResolvedValueOnce({ exitCode: 0, stdout: 'abc\n', stderr: '' })
+            .mockRejectedValueOnce('spawn git ENOENT');
+
+        const result = await getChangedLines('origin/main');
+
+        expect(result.size).toBe(0);
+        expect(core.info).toHaveBeenCalledWith('Could not compute git diff — skipping new-code analysis.');
+    });
+});
+
+describe('analyzeNewCodeCoverage functions without FNDA records', () => {
+    it('counts a new function with no FNDA record as uncovered', () => {
+        const lcov: LcovFile = [{
+            testName: '',
+            sourceFile: '/repo/src/f.cpp',
+            functions: [{ line: 5, name: 'noData' }, { line: 9, name: 'hit' }],
+            functionData: [{ count: 2, name: 'hit' }],
+            functionsFound: 2,
+            functionsHit: 1,
+            lines: [{ line: 5, count: 0 }, { line: 9, count: 2 }],
+            linesFound: 2,
+            linesHit: 1,
+            branches: [],
+            branchesFound: 0,
+            branchesHit: 0
+        }];
+
+        const result = analyzeNewCodeCoverage(lcov, new Map([['src/f.cpp', new Set([5, 9])]]));
+
+        expect(result.totalFunctions).toBe(2);
+        expect(result.coveredFunctions).toBe(1);
+    });
+});

@@ -135,32 +135,32 @@ const utilsProjects = utilsPackages.map(pkg => ({
 //   1. Run: npm run test:coverage
 //   2. Count the uncovered lines/branches per directory in the report
 //   3. Set each value to -(current_uncovered + 2) for a small buffer
-// A value of 0 disables that check (Jest skips falsy thresholds), so use 0 only
-// where nothing is uncovered.
+// A value of 0 disables that check (Jest skips falsy thresholds), so a directory
+// with nothing uncovered gets -2 like any other, not 0.
 const coverageThreshold = {
     './b2-workflow/src/':            { statements: -5, branches: -8, functions: -5, lines: -5 },
     './boost-clone/src/':            { statements: -62, branches: -24, functions: -15, lines: -60 },
     './cmake-workflow/src/':         { statements: -52, branches: -68, functions: -21, lines: -52 },
     './common/action-schema/src/':   { statements: -5, branches: -5, functions: 0, lines: -5 },
     './common/gh-inputs/src/':       { statements: -4, branches: -5, functions: 0, lines: -4 },
-    './common/pretty-errors/src/':   { statements: -32, branches: -18, functions: -24, lines: -30 },
+    './common/pretty-errors/src/':   { statements: -2, branches: -7, functions: -2, lines: -2 },
     './common/trace-commands/src/':  { statements: 0, branches: 0, functions: 0, lines: 0 },
     './cpp-matrix/src/':             { statements: -208, branches: -183, functions: -37, lines: -199 },
     './create-changelog/src/':       { statements: -712, branches: -251, functions: -71, lines: -685 },
     './flamegraph/src/':             { statements: -52, branches: -39, functions: -12, lines: -51 },
     './package-install/src/':        { statements: -95, branches: -75, functions: -35, lines: -93 },
-    './process-coverage/src/':       { statements: -250, branches: -69, functions: -25, lines: -250 },
+    './process-coverage/src/':       { statements: -3, branches: -3, functions: -2, lines: -3 },
     './setup-clang/src/':            { statements: -28, branches: -20, functions: -8, lines: -28 },
     './setup-cmake/src/':            { statements: -10, branches: -10, functions: -6, lines: -10 },
     './setup-cpp/src/':              { statements: -14, branches: -10, functions: -5, lines: -14 },
     './setup-gcc/src/':              { statements: -12, branches: -11, functions: -8, lines: -11 },
     './setup-msvc/src/':             { statements: -8, branches: -6, functions: -8, lines: -8 },
-    './setup-program/src/':          { statements: -522, branches: -153, functions: -69, lines: -504 },
+    './setup-program/src/':          { statements: -3, branches: -4, functions: -2, lines: -3 },
     './utils/docs/src/':             { statements: 0, branches: 0, functions: 0, lines: 0 },
-    './utils/esbuild/src/':          { statements: -3, branches: 0, functions: 0, lines: -3 },
+    './utils/esbuild/src/':          { statements: -2, branches: -2, functions: -2, lines: -2 },
     './utils/jsdoc-linter/src/':     { statements: -3, branches: -3, functions: 0, lines: 0 },
-    './utils/release/src/':          { statements: -265, branches: -110, functions: -22, lines: -264 },
-    './utils/update-data/src/':      { statements: -361, branches: -119, functions: -37, lines: -356 }
+    './utils/release/src/':          { statements: -4, branches: -3, functions: -2, lines: -4 },
+    './utils/update-data/src/':      { statements: -13, branches: -13, functions: -2, lines: -13 }
 };
 
 module.exports = {

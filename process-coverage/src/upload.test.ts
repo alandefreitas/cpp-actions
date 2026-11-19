@@ -259,3 +259,14 @@ describe('runUploads', () => {
         ).resolves.toBeUndefined();
     });
 });
+
+describe('runUploads Coveralls failures', () => {
+    it('collects non-Error Coveralls failures and throws when failOnUploadError is set', async () => {
+        mockUploadToCoveralls.mockRejectedValue('reporter crashed');
+
+        await expect(
+            runUploads(makeOptions({ coverallsToken: 'cv', failOnUploadError: true }))
+        ).rejects.toThrow('Coverage upload failed:\n  - reporter crashed');
+        expect(mockWarning).toHaveBeenCalledWith('reporter crashed');
+    });
+});

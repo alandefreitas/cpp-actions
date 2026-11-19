@@ -167,3 +167,26 @@ describe('findGenhtml', () => {
         );
     });
 });
+
+describe('findGcov without a major version', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('goes straight to unversioned gcov without a warning', async () => {
+        mockWhich.mockResolvedValueOnce('/usr/bin/gcov');
+
+        const result = await findGcov('');
+
+        expect(result).toBe('/usr/bin/gcov');
+        expect(mockWhich).toHaveBeenCalledTimes(1);
+        expect(mockWhich).toHaveBeenCalledWith('gcov', true);
+        expect(core.warning).not.toHaveBeenCalled();
+    });
+
+    it('throws a generic message when unversioned gcov is missing', async () => {
+        mockWhich.mockRejectedValueOnce(new Error('not found'));
+
+        await expect(findGcov('')).rejects.toThrow('No gcov binary found on PATH. Ensure gcov is available on PATH.');
+    });
+});

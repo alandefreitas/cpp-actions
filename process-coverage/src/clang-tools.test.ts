@@ -282,3 +282,18 @@ describe('installLlvmTools', () => {
         expect(mockExecWithSudo).toHaveBeenCalledWith('apt-get', ['install', '-y', 'llvm-15-tools']);
     });
 });
+
+describe('findLlvmCov fallback failures', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('finds unversioned llvm-cov without a warning when the version is unknown', async () => {
+        mockWhich.mockResolvedValueOnce('/usr/bin/llvm-cov');
+
+        const result = await findLlvmCov('');
+
+        expect(result).toBe('/usr/bin/llvm-cov');
+        expect(core.warning).not.toHaveBeenCalled();
+    });
+});

@@ -641,3 +641,345 @@ describe('updateWindowsMsvcDefaults', () => {
         expect(data.installable_llvm).toEqual(['18.1.8', '20.1.8']);
     });
 });
+
+// ── Branch coverage: routing helper ─────────────────────────────────────────
+
+/** A mocked reply: JSON (status 200 unless given), raw text, or a network error. */
+interface Reply {
+    status?: number;
+    json?: unknown;
+    text?: string;
+    location?: string;
+    error?: string;
+}
+
+/** Request seen by the routing mock: the URL and the headers it was sent with. */
+interface SeenRequest {
+    url: string;
+    headers: Record<string, string>;
+}
+
+/**
+ * Routes `https.get` by exact URL (string or request options). Unknown URLs answer 404.
+ *
+ * @param routes - Map from URL to reply
+ * @returns The list of requests seen, filled as requests arrive
+ */
+function route(routes: Record<string, Reply>): SeenRequest[] {
+    const seen: SeenRequest[] = [];
+    mockedGet.mockImplementation(((target: string | { hostname: string; path: string; headers?: Record<string, string> },
+        callback: (res: PassThrough) => void) => {
+        const url = typeof target === 'string' ? target : `https://${target.hostname}${target.path}`;
+        seen.push({ url, headers: typeof target === 'string' ? {} : target.headers ?? {} });
+        const reply: Reply = routes[url] ?? { status: 404 };
+        const req = new PassThrough();
+        process.nextTick(() => {
+            if (reply.error) {
+                req.emit('error', new Error(reply.error));
+                return;
+            }
+            const res = new PassThrough();
+            Object.assign(res, {
+                statusCode: reply.status ?? 200,
+                headers: reply.location !== undefined ? { location: reply.location } : {}
+            });
+            callback(res);
+            if (reply.text !== undefined) {
+                res.write(reply.text);
+            } else if (reply.json !== undefined) {
+                res.write(JSON.stringify(reply.json));
+            }
+            res.end();
+        });
+        return req;
+    }) as unknown as typeof https.get);
+    return seen;
+}
+
+const TOOLSETS_API = 'https://api.github.com/repos/actions/runner-images/contents/images/windows/toolsets';
+const CDN = 'https://download.visualstudio.microsoft.com/channel.json';
+
+/**
+ * Builds the aka.ms channel URL for a VS major version.
+ *
+ * @param vs - VS IDE major version
+ * @returns Channel manifest URL
+ */
+const akaMs = (vs: string): string => `https://aka.ms/vs/${vs}/release/channel`;
+
+/**
+ * Builds a channel manifest reply with the given display version.
+ *
+ * @param display - productDisplayVersion value
+ * @returns JSON reply
+ */
+const manifest = (display: string): Reply => ({ json: { info: { productDisplayVersion: display } } });
+
+/**
+ * Builds a minimal Windows toolset JSON.
+ *
+ * @param subversion - VS IDE major version
+ * @param workloads - Workload component IDs
+ * @returns Toolset object
+ */
+function toolset(subversion: string, workloads: string[]): { visualStudio: { version: string; subversion: string; edition: string; channel: string; workloads: string[] } } {
+    return { visualStudio: { version: '2022', subversion, edition: 'Enterprise', channel: 'release', workloads } };
+}
+
+/**
+ * Builds a component ID that pins an explicit MSVC version.
+ *
+ * @param msvc - MSVC version (e.g. "14.44")
+ * @returns Component ID
+ */
+const pin = (msvc: string): string => `Microsoft.VisualStudio.Component.VC.${msvc}.17.14.x86.x64`;
+
+/**
+ * Builds a component group ID for an MSVC generation.
+ *
+ * @param gen - Generation (e.g. "142")
+ * @returns Component group ID
+ */
+const group = (gen: string): string => `Microsoft.VisualStudio.ComponentGroup.VC.Tools.${gen}.x86.x64`;
+
+describe('deriveMsvcFromChannelManifest edge cases', () => {
+    beforeEach(() => mockedGet.mockReset());
+
+    it('reads a manifest served directly without a redirect', async () => {
+        route({ [akaMs('18')]: manifest('18.0.1 (November 2025)') });
+        await expect(deriveMsvcFromChannelManifest('18')).resolves.toBe('14.50');
+    });
+
+    it.each<[string, Record<string, Reply>]>([
+        ['a redirect without Location', { [akaMs('17')]: { status: 302, location: '' } }],
+        ['an unparseable redirect Location', { [akaMs('17')]: { status: 301, location: 'not a url' } }],
+        ['a redirect target that answers 404', { [akaMs('17')]: { status: 301, location: CDN }, [CDN]: { status: 404 } }],
+        ['a redirect target that is not JSON', { [akaMs('17')]: { status: 301, location: CDN }, [CDN]: { text: '<html>' } }],
+        ['a redirect target that fails at the network level', { [akaMs('17')]: { status: 301, location: CDN }, [CDN]: { error: 'ECONNRESET' } }],
+        ['a direct 500 response', { [akaMs('17')]: { status: 500 } }],
+        ['a direct non-JSON response', { [akaMs('17')]: { text: 'oops' } }],
+        ['a non-numeric productDisplayVersion', { [akaMs('17')]: manifest('Preview 3') }],
+        ['a VS major without a known MSVC offset', { [akaMs('17')]: manifest('15.9.60') }]
+    ])('returns null for %s', async (_label, routes) => {
+        route(routes);
+        await expect(deriveMsvcFromChannelManifest('17')).resolves.toBeNull();
+    });
+});
+
+describe('discoverMsvcVersions default selection', () => {
+    beforeEach(() => mockedGet.mockReset());
+
+    it('falls back to the highest explicit pin of the same VS generation when the manifest is unavailable', async () => {
+        route({ [akaMs('17')]: { error: 'ENOTFOUND' } });
+        const versions = await discoverMsvcVersions(
+            toolset('17', [pin('14.29'), pin('14.38'), pin('14.44'), pin('14.50')]),
+            true
+        );
+        expect(versions.filter(v => v.is_default).map(v => v.version)).toEqual(['14.44']);
+        expect(versions.map(v => v.version)).toEqual(['14.29', '14.38', '14.44', '14.50']);
+    });
+
+    it('treats the newest VS generation as unbounded above', async () => {
+        route({});
+        const versions = await discoverMsvcVersions(toolset('18', [pin('14.50'), pin('14.51')]), true);
+        expect(versions.find(v => v.is_default)?.version).toBe('14.51');
+    });
+
+    it('leaves no default when no pin belongs to the generation', async () => {
+        route({});
+        const versions = await discoverMsvcVersions(toolset('17', [pin('14.29')]), true);
+        expect(versions).toEqual([{ version: '14.29', vs_year: '2022', is_default: false }]);
+    });
+
+    it('leaves no default for a VS major without a known offset', async () => {
+        route({});
+        const versions = await discoverMsvcVersions(toolset('15', [pin('14.16')]), true);
+        expect(versions.some(v => v.is_default)).toBe(false);
+    });
+
+    it('adds the manifest version as default when no pin matches it', async () => {
+        route({ [akaMs('17')]: manifest('17.14.29 (March 2026)') });
+        const versions = await discoverMsvcVersions(toolset('17', [pin('14.38'), group('142'), group('143')]), true);
+        expect(versions).toEqual([
+            { version: '14.38', vs_year: '2022', is_default: false },
+            { version: '14.44', vs_year: '2022', is_default: true },
+            { version: '14.29', vs_year: '2019', is_default: false }
+        ]);
+    });
+});
+
+describe('fetchToolsetDirectory edge cases', () => {
+    beforeEach(() => mockedGet.mockReset());
+
+    it('sends the token as an Authorization header and skips unrelated entries', async () => {
+        const seen = route({
+            [TOOLSETS_API]: {
+                json: [
+                    { name: 'toolset-2025.json', download_url: 'https://example.com/2025.json' },
+                    { name: 'toolset-2025-vs2026.json', download_url: 'https://example.com/2025-vs2026.json' },
+                    { name: 'toolset-2019.json', download_url: null },
+                    { name: 'README.md', download_url: 'https://example.com/README.md' }
+                ]
+            }
+        });
+
+        const dir = await fetchToolsetDirectory('secret-token');
+
+        expect(seen[0].headers['Authorization']).toBe('token secret-token');
+        expect([...dir.keys()]).toEqual(['windows-2025', 'windows-2025-vs2026']);
+        expect(dir.get('windows-2025-vs2026')).toEqual([{
+            runnerVersion: '2025',
+            runnerName: 'windows-2025-vs2026',
+            isPrimary: false,
+            downloadUrl: 'https://example.com/2025-vs2026.json'
+        }]);
+    });
+
+    it('rejects on a non-200 response', async () => {
+        route({ [TOOLSETS_API]: { status: 403 } });
+        await expect(fetchToolsetDirectory()).rejects.toThrow('HTTP 403');
+    });
+
+    it('rejects on a non-JSON body', async () => {
+        route({ [TOOLSETS_API]: { text: 'rate limit exceeded' } });
+        await expect(fetchToolsetDirectory()).rejects.toThrow('JSON parse error');
+    });
+});
+
+describe('fetchChocolateyVersions edge cases', () => {
+    beforeEach(() => {
+        mockedGet.mockReset();
+        jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('returns an empty list on a non-200 response', async () => {
+        route({ "https://community.chocolatey.org/api/v2/FindPackagesById()?id='mingw'": { status: 406 } });
+        await expect(fetchChocolateyVersions('mingw')).resolves.toEqual([]);
+        expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('HTTP 406'));
+    });
+});
+
+describe('updateWindowsMsvcDefaults edge cases', () => {
+    let tmpDir: string;
+    let savedToken: string | undefined;
+
+    /**
+     * Writes setup-program/runner-images.json.
+     *
+     * @param windows - Windows runner entries, or undefined to omit the list
+     * @param supportedLabels - Optional supported_labels list
+     */
+    function writeRunners(windows?: Array<{ name: string; version: string; toolset_url: string | null }>, supportedLabels?: string[]): void {
+        fs.writeFileSync(path.join(tmpDir, 'setup-program', 'runner-images.json'), JSON.stringify({
+            ...(supportedLabels ? { supported_labels: supportedLabels } : {}),
+            runners: { ubuntu: [], macos: [], ...(windows ? { windows } : {}) }
+        }));
+    }
+
+    const outputPath = (): string => path.join(tmpDir, 'setup-program', 'windows-msvc-defaults.json');
+
+    beforeEach(() => {
+        tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'msvc-edge-'));
+        fs.mkdirSync(path.join(tmpDir, 'setup-program'));
+        mockedGet.mockReset();
+        savedToken = process.env.GITHUB_TOKEN;
+        delete process.env.GITHUB_TOKEN;
+        jest.spyOn(console, 'log').mockImplementation(() => undefined);
+        jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+        jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    });
+
+    afterEach(() => {
+        if (savedToken === undefined) {
+            delete process.env.GITHUB_TOKEN;
+        } else {
+            process.env.GITHUB_TOKEN = savedToken;
+        }
+        jest.restoreAllMocks();
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    it('returns false when runner-images.json has no windows list', async () => {
+        writeRunners();
+        await expect(updateWindowsMsvcDefaults(tmpDir)).resolves.toBe(false);
+    });
+
+    it('adds suffixed runners from the directory listing when there is no supported-label list', async () => {
+        process.env.GITHUB_TOKEN = 'env-token';
+        writeRunners([{ name: 'windows-2025', version: '2025', toolset_url: 'https://example.com/2025.json' }]);
+        const seen = route({
+            [TOOLSETS_API]: {
+                json: [
+                    { name: 'toolset-2025.json', download_url: 'https://example.com/2025.json' },
+                    { name: 'toolset-2025-vs2026.json', download_url: 'https://example.com/2025-vs2026.json' }
+                ]
+            },
+            'https://example.com/2025.json': { json: toolset('17', [pin('14.44'), group('142')]) },
+            'https://example.com/2025-vs2026.json': { json: toolset('18', [pin('14.50'), pin('14.44')]) },
+            [akaMs('17')]: manifest('17.14.29 (March 2026)')
+        });
+
+        await expect(updateWindowsMsvcDefaults(tmpDir)).resolves.toBe(true);
+
+        expect(seen.find(r => r.url === TOOLSETS_API)?.headers['Authorization']).toBe('token env-token');
+        const data = JSON.parse(fs.readFileSync(outputPath(), 'utf-8'));
+        expect(data.runners).toEqual({
+            'windows-2025': {
+                msvc_versions: [
+                    { version: '14.44', vs_year: '2022', is_default: true },
+                    { version: '14.29', vs_year: '2019', is_default: false }
+                ]
+            },
+            'windows-2025-vs2026': {
+                msvc_versions: [
+                    { version: '14.50', vs_year: '2022', is_default: false },
+                    { version: '14.44', vs_year: '2022', is_default: false }
+                ]
+            }
+        });
+        expect(data.installable_mingw).toEqual([]);
+        expect(data.installable_llvm).toEqual([]);
+    });
+
+    it('takes the toolset of a runner without toolset_url from the directory listing', async () => {
+        writeRunners([{ name: 'windows-2025', version: '2025', toolset_url: null }]);
+        route({
+            [TOOLSETS_API]: {
+                json: [
+                    { name: 'toolset-2025-vs2026.json', download_url: 'https://example.com/a.json' },
+                    { name: 'toolset-2025.json', download_url: 'https://example.com/b.json' }
+                ]
+            },
+            'https://example.com/a.json': { json: toolset('18', [pin('14.44')]) },
+            'https://example.com/b.json': { json: toolset('17', [pin('14.44')]) }
+        });
+
+        await expect(updateWindowsMsvcDefaults(tmpDir)).resolves.toBe(true);
+
+        const data = JSON.parse(fs.readFileSync(outputPath(), 'utf-8'));
+        expect(data.runners).toEqual({
+            'windows-2025': { msvc_versions: [{ version: '14.44', vs_year: '2022', is_default: true }] },
+            'windows-2025-vs2026': { msvc_versions: [{ version: '14.44', vs_year: '2022', is_default: false }] }
+        });
+    });
+
+    it('falls back to runner-images.json when the directory listing fails, and returns false if no toolset loads', async () => {
+        writeRunners([
+            { name: 'windows-2022', version: '2022', toolset_url: 'https://example.com/2022.json' },
+            { name: 'windows-2019', version: '2019', toolset_url: null }
+        ]);
+        route({
+            [TOOLSETS_API]: { error: 'ENOTFOUND' },
+            'https://example.com/2022.json': { status: 500 }
+        });
+
+        await expect(updateWindowsMsvcDefaults(tmpDir)).resolves.toBe(false);
+
+        expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('failed to fetch toolset directory'));
+        expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('failed to process https://example.com/2022.json'));
+        expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('no MSVC versions discovered for windows-2022'));
+        expect(fs.existsSync(outputPath())).toBe(false);
+    });
+});

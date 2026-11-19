@@ -361,3 +361,28 @@ describe('exportClangCoverage', () => {
         );
     });
 });
+
+describe('exportClangCoverage with a failing binary', () => {
+    it('skips a binary whose llvm-cov export throws and keeps the others', async () => {
+        jest.clearAllMocks();
+        mockGlobCreate.mockResolvedValueOnce(mockGlobber(['/b/bad', '/b/good']) as never);
+        mockGetExecOutput
+            .mockRejectedValueOnce(new Error('spawn failed'))
+            .mockResolvedValueOnce({ exitCode: 0, stdout: 'SF:/s.cpp\nend_of_record\n', stderr: '' });
+
+        const result = await exportClangCoverage({
+            llvmCovPath: '/usr/bin/llvm-cov',
+            profdataPath: '/tmp/m.profdata',
+            binaries: ['/b/bad', '/b/good'],
+            outputDir: '/tmp/out'
+        });
+
+        expect(result).toBe(path.join('/tmp/out', 'clang-coverage.info'));
+        expect(mockGetExecOutput).toHaveBeenCalledTimes(2);
+        expect(mockWriteFile).toHaveBeenCalledWith(
+            path.join('/tmp/out', 'clang-coverage.info'),
+            'SF:/s.cpp\nend_of_record\n',
+            'utf-8'
+        );
+    });
+});

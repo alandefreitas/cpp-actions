@@ -201,3 +201,33 @@ describe('uploadHtmlArtifact', () => {
         );
     });
 });
+
+describe('uploadHtmlArtifact with entries that vanish or are directories', () => {
+    it('uploads only entries that lstat reports as regular files', async () => {
+        jest.clearAllMocks();
+        const {lstatSync} = require('node:fs') as {lstatSync: jest.Mock};
+        lstatSync.mockImplementation((p: string) => {
+            if (p.endsWith('gone.html')) {
+                throw new Error('ENOENT');
+            }
+            return {isFile: () => !p.endsWith('subdir')};
+        });
+        mockGlob.mockResolvedValue([
+            '/tmp/report/index.html',
+            '/tmp/report/gone.html',
+            '/tmp/report/subdir'
+        ]);
+        mockUploadArtifact.mockResolvedValue({id: 1, size: 1});
+
+        try {
+            await uploadHtmlArtifact('/tmp/report', 'r', 1);
+        } finally {
+            lstatSync.mockReset();
+            lstatSync.mockReturnValue({isFile: () => true});
+        }
+
+        expect(mockUploadArtifact).toHaveBeenCalledWith(
+            'r', ['/tmp/report/index.html'], '/tmp/report', {retentionDays: 1}
+        );
+    });
+});
