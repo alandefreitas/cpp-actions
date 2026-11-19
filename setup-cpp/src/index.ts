@@ -250,6 +250,10 @@ class SetupCppRunner {
                     'Unsupported Platform'
                 );
             }
+            // clang-cl compiles and links with MSVC's headers, libraries and
+            // tools (the Windows SDK's mt.exe, rc.exe), which only the MSVC
+            // developer environment puts in INCLUDE, LIB and PATH
+            await this.runSetupMsvc('*');
             await this.setupDelegatedCompiler('clang');
         } else if (this.compiler === 'macos-gcc') {
             if (process.platform !== 'darwin') {
@@ -343,12 +347,26 @@ class SetupCppRunner {
      * @throws {ExpectedError} If MSVC setup fails
      */
     private async setupMsvc(): Promise<boolean> {
+        const msvcOutputs = await this.runSetupMsvc(this.version);
+        this.applySetupResult(msvcOutputs);
+        this.outputPath = msvcOutputs.cc;
+        return true;
+    }
+
+    /**
+     * Activates the MSVC developer environment (vcvarsall) through setup-msvc.
+     *
+     * @param version - MSVC toolset version range (`*` for any)
+     * @returns The setup-msvc outputs, which describe cl.exe
+     * @throws {ExpectedError} If MSVC setup fails
+     */
+    private async runSetupMsvc(version: string): Promise<SetupResult> {
         traceCommands.log(`compiler: ${this.compiler}... forwarding to setup-msvc.`);
         const arch = resolveMSVCArch(this.normalizedArch, process.env['PROCESSOR_ARCHITECTURE']);
         let msvcOutputs: SetupResult;
         try {
             msvcOutputs = await setup_msvc.main({
-                version: this.version,
+                version,
                 arch,
                 sdk: '',
                 toolset: '',
@@ -365,9 +383,7 @@ class SetupCppRunner {
             traceCommands.log(`${key}: ${value}`);
         }
         core.endGroup();
-        this.applySetupResult(msvcOutputs);
-        this.outputPath = msvcOutputs.cc;
-        return true;
+        return msvcOutputs;
     }
 
     /**
