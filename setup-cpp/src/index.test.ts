@@ -393,8 +393,17 @@ describe('main (SetupCppRunner)', () => {
                 symbolizerPath: null
             });
 
+            mockMsvcMain.mockResolvedValue({
+                cc: 'C:\\VS\\VC\\Tools\\MSVC\\14.44\\bin\\Hostx64\\x64\\cl.exe',
+                cxx: 'C:\\VS\\VC\\Tools\\MSVC\\14.44\\bin\\Hostx64\\x64\\cl.exe',
+                version: '14.44.0'
+            } as Awaited<ReturnType<typeof setup_msvc.main>>);
+
             const result = await main(makeInputs({ compiler: 'clang', version: '*' }));
 
+            // clang-cl links with MSVC's tools, so the MSVC environment is activated
+            // for any toolset, but the outputs still describe clang-cl
+            expect(mockMsvcMain).toHaveBeenCalledWith(expect.objectContaining({ version: '*' }));
             expect(mockClangMain).toHaveBeenCalled();
             expect(result).toEqual(expect.objectContaining({
                 cc: 'C:\\LLVM\\bin\\clang-cl.exe',
