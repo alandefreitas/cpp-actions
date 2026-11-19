@@ -49,7 +49,8 @@ jest.mock('package-install', () => ({
 }));
 
 jest.mock('fs', () => ({
-    existsSync: jest.fn()
+    existsSync: jest.fn(),
+    readdirSync: jest.fn(() => [])
 }));
 
 import * as core from '@actions/core';
@@ -256,6 +257,47 @@ describe('setup-gcc main', () => {
         );
         // Should still continue and find GCC via APT
         expect(result.outputPath).toBe('/usr/bin/g++-11');
+    });
+
+    it.each([
+        { sudo: true, command: 'sudo', prefix: ['-n'] },
+        { sudo: false, command: 'rm', prefix: [] as string[] }
+    ])('removes the PPA source a failed add-apt-repository left behind (sudo: $sudo)', async ({ sudo, command, prefix }) => {
+        mockIsSudoRequired.mockReturnValue(sudo);
+        mockWhich.mockResolvedValue('/usr/bin/add-apt-repository');
+        mockExec.mockResolvedValue(1);
+        // The signing key download timed out after the source file was written
+        jest.mocked(fs.readdirSync)
+            .mockReturnValueOnce(['existing.list'] as unknown as ReturnType<typeof fs.readdirSync>)
+            .mockReturnValueOnce(['existing.list', 'ubuntu-toolchain-r-ubuntu-ppa-focal.list'] as unknown as ReturnType<typeof fs.readdirSync>);
+        mockFindProgramWithApt.mockResolvedValueOnce(nullResult);
+        mockFindProgramWithApt.mockResolvedValueOnce({ outputVersion: '9.4.0', outputPath: '/usr/bin/g++-9' });
+        mockExistsSync.mockReturnValue(true);
+
+        await main(makeInputs());
+
+        const rmArgs = sudo ? [...prefix, 'rm', '-f'] : ['-f'];
+        expect(mockExec).toHaveBeenCalledWith(
+            command, [...rmArgs, '/etc/apt/sources.list.d/ubuntu-toolchain-r-ubuntu-ppa-focal.list'], { ignoreReturnCode: true }
+        );
+        expect(mockExec).not.toHaveBeenCalledWith(
+            command, expect.arrayContaining(['/etc/apt/sources.list.d/existing.list']), expect.anything()
+        );
+    });
+
+    it('lists no sources when the sources directory cannot be read', async () => {
+        mockIsSudoRequired.mockReturnValue(false);
+        mockWhich.mockResolvedValue('/usr/bin/add-apt-repository');
+        mockExec.mockResolvedValue(1);
+        jest.mocked(fs.readdirSync).mockImplementation(() => { throw new Error('EACCES'); });
+        mockFindProgramWithApt.mockResolvedValueOnce(nullResult);
+        mockFindProgramWithApt.mockResolvedValueOnce({ outputVersion: '9.4.0', outputPath: '/usr/bin/g++-9' });
+        mockExistsSync.mockReturnValue(true);
+
+        await main(makeInputs());
+
+        expect(mockExec).not.toHaveBeenCalledWith('rm', expect.anything(), expect.anything());
+        jest.mocked(fs.readdirSync).mockReset().mockReturnValue([] as unknown as ReturnType<typeof fs.readdirSync>);
     });
 
     it('does not warn when add-apt-repository succeeds', async () => {
