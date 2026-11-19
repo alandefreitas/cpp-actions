@@ -84,7 +84,7 @@ describe('findProgramWithChoco', () => {
             path: expectedPath,
             version: '14.2.0'
         });
-        expect(mockGetExecOutput).toHaveBeenCalledWith(expectedPath, ['--version'], { silent: true });
+        expect(mockGetExecOutput).toHaveBeenCalledWith(`"${expectedPath}"`, ['--version'], { silent: true });
     });
 
     it('finds clang-cl.exe in LLVM path', async () => {
@@ -102,6 +102,8 @@ describe('findProgramWithChoco', () => {
             path: expectedPath,
             version: '20.1.8'
         });
+        // @actions/exec splits an unquoted command at spaces and would run "C:\Program"
+        expect(mockGetExecOutput).toHaveBeenCalledWith(`"${expectedPath}"`, ['--version'], { silent: true });
     });
 
     it('searches second path when first does not have binary', async () => {
