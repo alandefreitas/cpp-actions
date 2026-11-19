@@ -221,7 +221,7 @@ describe('setup-gcc main', () => {
 
         expect(mockExec).toHaveBeenCalledWith(
             'sudo',
-            ['-n', 'add-apt-repository', '-y', 'ppa:ubuntu-toolchain-r/ppa'],
+            ['-n', 'add-apt-repository', '-y', 'ppa:ubuntu-toolchain-r/test'],
             expect.objectContaining({ ignoreReturnCode: true })
         );
         expect(result.outputPath).toBe('/usr/bin/g++-11');
@@ -237,7 +237,7 @@ describe('setup-gcc main', () => {
 
         expect(mockExec).toHaveBeenCalledWith(
             'add-apt-repository',
-            ['-y', 'ppa:ubuntu-toolchain-r/ppa'],
+            ['-y', 'ppa:ubuntu-toolchain-r/test'],
             expect.objectContaining({ ignoreReturnCode: true })
         );
         expect(result.outputPath).toBe('/usr/bin/g++-11');
@@ -269,7 +269,7 @@ describe('setup-gcc main', () => {
         // The signing key download timed out after the source file was written
         jest.mocked(fs.readdirSync)
             .mockReturnValueOnce(['existing.list'] as unknown as ReturnType<typeof fs.readdirSync>)
-            .mockReturnValueOnce(['existing.list', 'ubuntu-toolchain-r-ubuntu-ppa-focal.list'] as unknown as ReturnType<typeof fs.readdirSync>);
+            .mockReturnValueOnce(['existing.list', 'ubuntu-toolchain-r-ubuntu-test-focal.list'] as unknown as ReturnType<typeof fs.readdirSync>);
         mockFindProgramWithApt.mockResolvedValueOnce(nullResult);
         mockFindProgramWithApt.mockResolvedValueOnce({ outputVersion: '9.4.0', outputPath: '/usr/bin/g++-9' });
         mockExistsSync.mockReturnValue(true);
@@ -278,7 +278,7 @@ describe('setup-gcc main', () => {
 
         const rmArgs = sudo ? [...prefix, 'rm', '-f'] : ['-f'];
         expect(mockExec).toHaveBeenCalledWith(
-            command, [...rmArgs, '/etc/apt/sources.list.d/ubuntu-toolchain-r-ubuntu-ppa-focal.list'], { ignoreReturnCode: true }
+            command, [...rmArgs, '/etc/apt/sources.list.d/ubuntu-toolchain-r-ubuntu-test-focal.list'], { ignoreReturnCode: true }
         );
         expect(mockExec).not.toHaveBeenCalledWith(
             command, expect.arrayContaining(['/etc/apt/sources.list.d/existing.list']), expect.anything()

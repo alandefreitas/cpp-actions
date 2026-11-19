@@ -28,6 +28,9 @@ export { removeGCCPrefix } from './schema';
 import { type Inputs } from './schema';
 import { type ProgramResult } from 'package-install';
 
+/** PPA that publishes GCC versions newer than the Ubuntu archive. */
+const TOOLCHAIN_PPA = 'ppa:ubuntu-toolchain-r/test';
+
 /** Directory where add-apt-repository writes the source file of a PPA. */
 const APT_SOURCES_DIR = '/etc/apt/sources.list.d';
 
@@ -346,7 +349,7 @@ class SetupGccRunner {
 
     /**
      * Searches for GCC via APT package manager on Linux.
-     * Adds the ubuntu-toolchain-r PPA if available.
+     * Adds the ubuntu-toolchain-r test PPA if available.
      * Skipped if a binary was already found or if not on Linux.
      */
     private async searchApt(): Promise<void> {
@@ -374,7 +377,11 @@ class SetupGccRunner {
             addAptRepositoryPath = null;
         }
         if (addAptRepositoryPath !== null && addAptRepositoryPath !== '') {
-            const repo = `ppa:ubuntu-toolchain-r/ppa`;
+            // The test PPA, not ubuntu-toolchain-r/ppa: that one publishes nothing
+            // for focal and nothing newer than GCC 14 for later releases, while the
+            // test PPA has every GCC newer than the release's own archive (GCC 11
+            // to 16 for focal).
+            const repo = TOOLCHAIN_PPA;
             traceCommands.log(`Adding repository "${repo}"`);
             const sourcesBefore = new Set(listAptSources());
             let exitCode: number;
