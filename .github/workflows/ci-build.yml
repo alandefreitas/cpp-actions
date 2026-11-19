@@ -96,6 +96,7 @@ jobs:
           trace-commands: true
 
       - name: Clone Boost.Variant2
+        if: ${{ !matrix.no-deps }}
         uses: ./boost-clone
         id: boost-clone
         with:
@@ -106,7 +107,7 @@ jobs:
           trace-commands: true
 
       - name: B2 Workflow
-        if: ${{ !matrix.has-factors && runner.os != 'Windows' }}
+        if: ${{ !matrix.has-factors && !matrix.no-deps && runner.os != 'Windows' }}
         uses: ./b2-workflow
         with:
           source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
