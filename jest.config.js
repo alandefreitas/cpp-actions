@@ -146,7 +146,7 @@ const coverageThreshold = {
     './common/pretty-errors/src/':   { statements: -2, branches: -7, functions: -2, lines: -2 },
     './common/trace-commands/src/':  { statements: 0, branches: 0, functions: 0, lines: 0 },
     './cpp-matrix/src/':             { statements: -208, branches: -183, functions: -37, lines: -199 },
-    './create-changelog/src/':       { statements: -712, branches: -251, functions: -71, lines: -685 },
+    './create-changelog/src/':       { statements: -3, branches: -6, functions: -2, lines: -3 },
     './flamegraph/src/':             { statements: -52, branches: -39, functions: -12, lines: -51 },
     './package-install/src/':        { statements: -95, branches: -75, functions: -35, lines: -93 },
     './process-coverage/src/':       { statements: -3, branches: -3, functions: -2, lines: -3 },
