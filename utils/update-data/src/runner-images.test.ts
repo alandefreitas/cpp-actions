@@ -269,3 +269,57 @@ describe('updateRunnerImages', () => {
         expect(result).toBe(true);
     });
 });
+
+describe('updateRunnerImages with a token and a fresh root', () => {
+    let tmpDir: string;
+    let savedToken: string | undefined;
+
+    beforeEach(() => {
+        tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'runner-images-fresh-'));
+        savedToken = process.env.GITHUB_TOKEN;
+        process.env.GITHUB_TOKEN = 'test-token';
+        mockedGet.mockReset();
+        jest.spyOn(console, 'log').mockImplementation(() => undefined);
+        jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+        jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    });
+
+    afterEach(() => {
+        if (savedToken === undefined) {
+            delete process.env.GITHUB_TOKEN;
+        } else {
+            process.env.GITHUB_TOKEN = savedToken;
+        }
+        jest.restoreAllMocks();
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    it('authenticates, tolerates a non-JSON listing and creates setup-program/', async () => {
+        const headersSeen: Array<Record<string, string>> = [];
+        mockedGet.mockImplementation(((opts: { path: string; headers: Record<string, string> }, callback: (res: PassThrough) => void) => {
+            headersSeen.push(opts.headers);
+            const res = new PassThrough();
+            Object.assign(res, { statusCode: 200, headers: {} });
+            process.nextTick(() => {
+                callback(res);
+                if (opts.path.includes('macos/toolsets')) {
+                    res.write(JSON.stringify([{ name: 'toolset-14.json', download_url: 'm14' }]));
+                } else if (opts.path.includes('ubuntu/toolsets')) {
+                    res.write('<html>secondary rate limit</html>');
+                } else {
+                    res.write('[]');
+                }
+                res.end();
+            });
+            return new PassThrough();
+        }) as unknown as typeof https.get);
+
+        await expect(updateRunnerImages(tmpDir)).resolves.toBe(true);
+
+        expect(headersSeen.length).toBeGreaterThan(0);
+        expect(headersSeen.every(h => h['Authorization'] === 'token test-token')).toBe(true);
+        const data = JSON.parse(fs.readFileSync(path.join(tmpDir, 'setup-program', 'runner-images.json'), 'utf-8'));
+        expect(data.runners.macos.map((r: { name: string }) => r.name)).toEqual(['macos-14']);
+        expect(data.runners.ubuntu).toEqual([]);
+    });
+});

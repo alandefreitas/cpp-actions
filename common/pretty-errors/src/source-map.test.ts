@@ -716,6 +716,38 @@ describe('source-map', () => {
             });
         });
 
+        it('skips chaining when the inline map is valid base64 but not JSON', async () => {
+            const notJson = Buffer.from('this is not json').toString('base64');
+            const libContent = `code\n//# sourceMappingURL=data:application/json;base64,${notJson}`;
+
+            const outerConsumer = createMockConsumer({
+                originalPositionFor: jest.fn().mockReturnValue({
+                    source: 'lib/bad.js',
+                    line: 7,
+                    column: 2,
+                    name: 'outerOnly'
+                }),
+                sourceContentFor: jest.fn().mockReturnValue(libContent)
+            });
+
+            mockFileSystem({
+                '/resolve/badjson1/file.js': 'code\n//# sourceMappingURL=file.js.map',
+                '/resolve/badjson1/file.js.map': JSON.stringify({ version: 3, sources: ['lib/bad.js'], mappings: 'AAAA' })
+            });
+            MockedConsumer.mockReturnValueOnce(Promise.resolve(outerConsumer));
+
+            const result = await resolveSourceMapLocation('/resolve/badjson1/file.js', 1, 0);
+
+            expect(MockedConsumer).toHaveBeenCalledTimes(1);
+            expect(result).toEqual({
+                file: 'lib/bad.js',
+                line: 7,
+                column: 2,
+                name: 'outerOnly',
+                sourceContent: libContent
+            });
+        });
+
         it('skips chaining when inline consumer construction fails', async () => {
             const innerMap = { version: 3, sources: ['src/file.ts'], mappings: 'AAAA' };
             const base64InnerMap = Buffer.from(JSON.stringify(innerMap)).toString('base64');

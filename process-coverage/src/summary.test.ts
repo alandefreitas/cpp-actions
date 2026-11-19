@@ -414,3 +414,87 @@ describe('formatLineRanges', () => {
         expect(formatLineRanges([10, 11])).toBe('10-11');
     });
 });
+
+describe('writeSummary path shortening', () => {
+    const origWorkspace = process.env.GITHUB_WORKSPACE;
+
+    afterEach(() => {
+        if (origWorkspace !== undefined) process.env.GITHUB_WORKSPACE = origWorkspace;
+        else delete process.env.GITHUB_WORKSPACE;
+        mockSummary.addRaw.mockClear();
+    });
+
+    it('strips the GITHUB_WORKSPACE prefix from per-file paths', async () => {
+        process.env.GITHUB_WORKSPACE = '/ws/project';
+        const lcovData = [{
+            testName: '',
+            sourceFile: '/ws/project/lib/util.cpp',
+            functions: [],
+            functionData: [],
+            functionsFound: 0,
+            functionsHit: 0,
+            lines: [{line: 1, count: 0}],
+            linesFound: 1,
+            linesHit: 0,
+            branches: [],
+            branchesFound: 0,
+            branchesHit: 0
+        }];
+
+        await writeSummary({
+            linesCovered: 0, linesTotal: 1,
+            functionsCovered: 0, functionsTotal: 0,
+            branchesCovered: 0, branchesTotal: 0
+        }, undefined, { lcovData });
+
+        const allRaw = (mockSummary.addRaw.mock.calls.map((c: unknown[]) => c[0]) as string[]).join('');
+        expect(allRaw).toContain('lib/util.cpp');
+        expect(allRaw).not.toContain('/ws/project/');
+    });
+});
+
+describe('writeSummary Codecov section environment', () => {
+    const keys = ['GITHUB_REPOSITORY', 'GITHUB_SHA', 'GITHUB_REF_NAME'] as const;
+    const saved: Record<string, string | undefined> = {};
+    const metrics = {
+        linesCovered: 1, linesTotal: 1,
+        functionsCovered: 0, functionsTotal: 0,
+        branchesCovered: 0, branchesTotal: 0
+    };
+
+    beforeEach(() => {
+        for (const k of keys) {
+            saved[k] = process.env[k];
+            delete process.env[k];
+        }
+        mockSummary.addHeading.mockClear();
+        mockSummary.addRaw.mockClear();
+    });
+
+    afterEach(() => {
+        for (const k of keys) {
+            if (saved[k] !== undefined) process.env[k] = saved[k];
+            else delete process.env[k];
+        }
+    });
+
+    it('omits the Codecov section when repository and SHA are unknown', async () => {
+        await writeSummary(metrics, undefined, { codecov: true });
+
+        expect(mockSummary.addHeading).not.toHaveBeenCalledWith('Codecov', 3);
+        const allRaw = (mockSummary.addRaw.mock.calls.map((c: unknown[]) => c[0]) as string[]).join('');
+        expect(allRaw).not.toContain('codecov.io');
+    });
+
+    it('adds a branch badge when GITHUB_REF_NAME is set', async () => {
+        process.env.GITHUB_REPOSITORY = 'o/r';
+        process.env.GITHUB_SHA = 'deadbeef';
+        process.env.GITHUB_REF_NAME = 'develop';
+
+        await writeSummary(metrics, undefined, { codecov: true });
+
+        expect(mockSummary.addHeading).toHaveBeenCalledWith('Codecov', 3);
+        const allRaw = (mockSummary.addRaw.mock.calls.map((c: unknown[]) => c[0]) as string[]).join('');
+        expect(allRaw).toContain('https://codecov.io/github/o/r/branch/develop/graph/badge.svg');
+    });
+});

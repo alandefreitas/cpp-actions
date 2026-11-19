@@ -64,6 +64,13 @@ describe('pretty-errors helper', () => {
             expect(errArg).not.toContain('Tip: enable trace-commands');
         });
 
+        it('uses the default title when none is given', async () => {
+            await reportAndSetFailed(new Error('untitled'));
+
+            const errArg = mockedCore.error.mock.calls[0][0] as string;
+            expect(errArg.startsWith('Action failed: untitled')).toBe(true);
+        });
+
         it('setFailed uses simple message without stack', async () => {
             const err = new Error('stack error');
 
@@ -75,6 +82,34 @@ describe('pretty-errors helper', () => {
             expect(errArg).toContain('stack error');
         });
 
+    });
+
+    describe('outside of Jest workers', () => {
+        const origWorker = process.env.JEST_WORKER_ID;
+
+        beforeEach(() => {
+            delete process.env.JEST_WORKER_ID;
+        });
+
+        afterEach(() => {
+            process.env.JEST_WORKER_ID = origWorker;
+        });
+
+        it('marks the action failed via setFailed for a regular Error', async () => {
+            await reportAndSetFailed(new Error('real failure'), { title: 'Real', hint: null });
+
+            expect(mockedCore.error).not.toHaveBeenCalled();
+            expect(mockedCore.setFailed).toHaveBeenCalledTimes(1);
+            const msg = mockedCore.setFailed.mock.calls[0][0] as string;
+            expect(msg.startsWith('Real: real failure')).toBe(true);
+        });
+
+        it('marks the action failed via setFailed with a clean ExpectedError message', async () => {
+            await reportAndSetFailed(new ExpectedError('bad input', 'Validation'));
+
+            expect(mockedCore.error).not.toHaveBeenCalled();
+            expect(mockedCore.setFailed).toHaveBeenCalledWith('Validation: bad input');
+        });
     });
 
     describe('reportAndSetFailed with ExpectedError', () => {
@@ -204,5 +239,29 @@ describe('pretty-errors helper', () => {
             expect(errArg).toContain('Wrapped');
             expect(errArg).toContain('wrapped error');
         });
+    });
+});
+
+describe('public re-exports', () => {
+    it('exposes the source-map, stack-parser and render helpers', async () => {
+        const index = await import('./index');
+        const sourceMap = await import('./source-map');
+        const stackParser = await import('./stack-parser');
+        const render = await import('./render');
+
+        expect(index.resolveFilePath).toBe(sourceMap.resolveFilePath);
+        expect(index.readFileSync).toBe(sourceMap.readFileSync);
+        expect(index.resolveSourceMapLocation).toBe(sourceMap.resolveSourceMapLocation);
+        expect(index.parseStackTrace).toBe(stackParser.parseStackTrace);
+        expect(index.colors).toBe(render.colors);
+        expect(index.isTraceCommandsEnabled).toBe(render.isTraceCommandsEnabled);
+        expect(index.extractContextFromContent).toBe(render.extractContextFromContent);
+        expect(index.readContextFromFile).toBe(render.readContextFromFile);
+        expect(index.getRelativePath).toBe(render.getRelativePath);
+        expect(index.renderSourceContext).toBe(render.renderSourceContext);
+        expect(index.hasValidContext).toBe(render.hasValidContext);
+        expect(index.buildErrorPayload).toBe(render.buildErrorPayload);
+        expect(index.renderErrorPayload).toBe(render.renderErrorPayload);
+        expect(index.renderTerminal).toBe(render.renderTerminal);
     });
 });

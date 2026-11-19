@@ -66,6 +66,20 @@ describe('render', () => {
             expect(await isTraceCommandsEnabled()).toBe(false);
         });
 
+        it('returns true when the trace-commands helper reports tracing', async () => {
+            mockedCore.getInput.mockReturnValue('');
+            mockIsTraceEnabled.mockReturnValueOnce(true);
+            expect(await isTraceCommandsEnabled()).toBe(true);
+        });
+
+        it('returns false when the trace-commands helper throws', async () => {
+            mockedCore.getInput.mockReturnValue('');
+            mockIsTraceEnabled.mockImplementationOnce(() => {
+                throw new Error('helper broken');
+            });
+            expect(await isTraceCommandsEnabled()).toBe(false);
+        });
+
         // Note: trace-commands dynamic import path is not testable
         // because jest.mock with { virtual: true } does not reliably intercept
         // dynamic import().
@@ -79,6 +93,13 @@ describe('render', () => {
             expect(ctx.pre).toEqual(['line3', 'line4']);
             expect(ctx.line).toBe('line5');
             expect(ctx.post).toEqual(['line6', 'line7']);
+        });
+
+        it('returns an empty line when the line number is past the end', () => {
+            const ctx = extractContextFromContent(content, 12, { pre: 2, post: 2 });
+            expect(ctx.line).toBe('');
+            expect(ctx.pre).toEqual(['line10']);
+            expect(ctx.post).toEqual([]);
         });
 
         it('uses defaults of 5 pre/post', () => {

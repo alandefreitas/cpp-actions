@@ -188,3 +188,22 @@ describe('uploadToCoveralls', () => {
         );
     });
 });
+
+describe('uploadToCoveralls on an unsupported platform', () => {
+    const origPlatform = process.platform;
+
+    afterEach(() => {
+        Object.defineProperty(process, 'platform', { value: origPlatform });
+    });
+
+    it('fails without downloading anything', async () => {
+        jest.clearAllMocks();
+        Object.defineProperty(process, 'platform', { value: 'aix' });
+
+        await expect(uploadToCoveralls(makeOptions({ failOnError: true }))).rejects.toThrow(
+            "Coveralls upload failed: Unsupported platform 'aix' for Coveralls CLI download. Supported: linux, darwin, win32."
+        );
+        expect(mockDownloadTool).not.toHaveBeenCalled();
+        expect(mockGetExecOutput).not.toHaveBeenCalled();
+    });
+});

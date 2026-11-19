@@ -119,6 +119,14 @@ describe('execWithSudo', () => {
         await execWithSudo('apt-get', ['update']);
         expect(mockExec).toHaveBeenCalledWith('apt-get', ['update'], {});
     });
+
+    it('defaults to no arguments and no options', async () => {
+        Object.defineProperty(process, 'platform', { value: 'darwin' });
+        mockExec.mockResolvedValue(0);
+
+        await execWithSudo('true');
+        expect(mockExec).toHaveBeenCalledWith('true', [], {});
+    });
 });
 
 describe('getExecOutputWithSudo', () => {
@@ -146,6 +154,14 @@ describe('getExecOutputWithSudo', () => {
 
         await getExecOutputWithSudo('dpkg', ['-l']);
         expect(mockGetExecOutput).toHaveBeenCalledWith('dpkg', ['-l'], {});
+    });
+
+    it('defaults to no arguments and no options', async () => {
+        Object.defineProperty(process, 'platform', { value: 'darwin' });
+        mockGetExecOutput.mockResolvedValue({ exitCode: 0, stdout: '', stderr: '' });
+
+        await getExecOutputWithSudo('uname');
+        expect(mockGetExecOutput).toHaveBeenCalledWith('uname', [], {});
     });
 });
 
@@ -335,5 +351,93 @@ describe('moveWithPermissions', () => {
         expect(result).toBe(true);
 
         Object.defineProperty(process, 'platform', { value: originalPlatform });
+    });
+
+    describe('sudo fallback details', () => {
+        const originalPlatform = process.platform;
+
+        afterEach(() => {
+            Object.defineProperty(process, 'platform', { value: originalPlatform });
+            mockMv.mockReset();
+            mockGetExecOutput.mockReset();
+            mockCopySymlink.mockReset();
+        });
+
+        it('recreates symlinks with sudo ln when copying the symlink is denied', async () => {
+            Object.defineProperty(process, 'platform', { value: 'linux' });
+            const target = path.join(tmpDir, 'target');
+            fs.writeFileSync(target, 'content');
+            fs.symlinkSync(target, path.join(srcDir, 'link'));
+            mockIsSymlink.mockReturnValue(true);
+            const err = new Error('EACCES') as NodeJS.ErrnoException;
+            err.code = 'EACCES';
+            mockCopySymlink.mockImplementationOnce(() => {
+                throw err;
+            });
+            mockWhich.mockResolvedValue('/usr/bin/sudo');
+            mockGetExecOutput.mockResolvedValue({ exitCode: 0, stdout: '', stderr: '' });
+
+            const result = await moveWithPermissions(srcDir, destDir);
+
+            expect(result).toBe(true);
+            expect(mockGetExecOutput).toHaveBeenCalledWith(`sudo ln -sf "${target}" "${path.join(destDir, 'link')}"`);
+        });
+
+        it('merges existing directories with sudo and fails when a nested sudo mv fails', async () => {
+            Object.defineProperty(process, 'platform', { value: 'linux' });
+            fs.writeFileSync(path.join(srcDir, 'file.txt'), 'content');
+            fs.mkdirSync(path.join(srcDir, 'sub'));
+            fs.writeFileSync(path.join(srcDir, 'sub', 'inner.txt'), 'content');
+            fs.mkdirSync(path.join(destDir, 'sub'));
+            const err = new Error('EACCES') as NodeJS.ErrnoException;
+            err.code = 'EACCES';
+            mockMv.mockRejectedValue(err);
+            mockWhich.mockResolvedValue('/usr/bin/sudo');
+            mockGetExecOutput.mockImplementation(async (command: string) => ({
+                exitCode: command.includes('inner.txt') ? 1 : 0,
+                stdout: 'permission denied',
+                stderr: ''
+            }));
+
+            const result = await moveWithPermissions(srcDir, destDir);
+
+            expect(result).toBe(false);
+            const innerSource = path.join(srcDir, 'sub', 'inner.txt');
+            expect(mockGetExecOutput).toHaveBeenCalledWith(`sudo mv "${innerSource}" "${path.join(destDir, 'sub')}"`);
+        });
+
+        it('uses sudo cp when a cross-device copy is then denied', async () => {
+            Object.defineProperty(process, 'platform', { value: 'linux' });
+            const file = path.join(srcDir, 'file.txt');
+            fs.writeFileSync(file, 'content');
+            const exdev = new Error('EXDEV') as NodeJS.ErrnoException;
+            exdev.code = 'EXDEV';
+            const eacces = new Error('EACCES') as NodeJS.ErrnoException;
+            eacces.code = 'EACCES';
+            mockMv.mockRejectedValueOnce(exdev);
+            mockCp.mockRejectedValueOnce(eacces);
+            mockWhich.mockResolvedValue('/usr/bin/sudo');
+            mockGetExecOutput.mockResolvedValue({ exitCode: 0, stdout: '', stderr: '' });
+
+            const result = await moveWithPermissions(srcDir, destDir);
+
+            expect(result).toBe(true);
+            expect(mockGetExecOutput).toHaveBeenCalledWith(`sudo cp -r "${file}" "${destDir}"`);
+        });
+
+        it('returns false when merging a nested directory fails outside Linux', async () => {
+            Object.defineProperty(process, 'platform', { value: 'darwin' });
+            fs.mkdirSync(path.join(srcDir, 'sub'));
+            fs.writeFileSync(path.join(srcDir, 'sub', 'inner.txt'), 'content');
+            fs.mkdirSync(path.join(destDir, 'sub'));
+            const err = new Error('EPERM') as NodeJS.ErrnoException;
+            err.code = 'EPERM';
+            mockMv.mockRejectedValue(err);
+
+            const result = await moveWithPermissions(srcDir, destDir);
+
+            expect(result).toBe(false);
+            expect(mockGetExecOutput).not.toHaveBeenCalled();
+        });
     });
 });

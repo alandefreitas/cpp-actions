@@ -274,3 +274,47 @@ describe('extractMetrics', () => {
         expect(metrics.branchesTotal).toBe(0);
     });
 });
+
+describe('parseLcov edge cases', () => {
+    it('ignores lines without a colon', () => {
+        const lcov = 'SF:/src/a.cpp\ngarbage line\nDA:1,2\nend_of_record\n';
+        const result = parseLcov(lcov);
+        expect(result).toHaveLength(1);
+        expect(result[0].lines).toEqual([{ line: 1, count: 2 }]);
+    });
+
+    it('ignores records that appear before any TN or SF', () => {
+        const lcov = 'DA:99,1\nFNF:3\nSF:/src/a.cpp\nDA:1,1\nend_of_record\n';
+        const result = parseLcov(lcov);
+        expect(result).toHaveLength(1);
+        expect(result[0].lines).toEqual([{ line: 1, count: 1 }]);
+        expect(result[0].functionsFound).toBe(0);
+    });
+
+    it('ignores records between end_of_record and the next section', () => {
+        const lcov = 'SF:/src/a.cpp\nDA:1,1\nend_of_record\nDA:7,7\nSF:/src/b.cpp\nDA:2,0\nend_of_record\n';
+        const result = parseLcov(lcov);
+        expect(result.map(s => s.lines)).toEqual([
+            [{ line: 1, count: 1 }],
+            [{ line: 2, count: 0 }]
+        ]);
+    });
+
+    it('flushes a trailing section that lacks end_of_record', () => {
+        const lcov = 'SF:/src/a.cpp\nDA:1,1\nend_of_record\nTN:t\nSF:/src/b.cpp\nDA:3,4\nLF:1\nLH:1';
+        const result = parseLcov(lcov);
+        expect(result).toHaveLength(2);
+        expect(result[1].testName).toBe('t');
+        expect(result[1].sourceFile).toBe('/src/b.cpp');
+        expect(result[1].lines).toEqual([{ line: 3, count: 4 }]);
+        expect(result[1].linesHit).toBe(1);
+    });
+
+    it('handles CRLF line endings', () => {
+        const lcov = 'SF:/src/a.cpp\r\nDA:1,5\r\nend_of_record\r\n';
+        const result = parseLcov(lcov);
+        expect(result).toHaveLength(1);
+        expect(result[0].sourceFile).toBe('/src/a.cpp');
+        expect(result[0].lines).toEqual([{ line: 1, count: 5 }]);
+    });
+});
