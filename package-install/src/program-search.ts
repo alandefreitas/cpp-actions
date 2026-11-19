@@ -201,10 +201,13 @@ export async function findProgramInPaths(paths: string[], names: string[], versi
             core.info(`Found ${execPath}`);
             const thisOutputVersion = await programSatisfies(execPath, version);
             if (thisOutputVersion === null) {
+                // Not a candidate: returning it would make callers that check
+                // only the path (Homebrew, Chocolatey steps) skip installing
+                // the requested version
                 core.info(`${execPath} does not satisfy requirement ${version}`);
-            } else {
-                core.info(`Executable version: ${thisOutputVersion} satisfies requirement ${version}`);
+                continue;
             }
+            core.info(`Executable version: ${thisOutputVersion} satisfies requirement ${version}`);
             if (outputVersion === null ||
                 (checkLatest && typeof (thisOutputVersion) === 'string' && semver.gt(thisOutputVersion, outputVersion)) ||
                 (!checkLatest && typeof (thisOutputVersion) === 'string' && semver.lt(thisOutputVersion, outputVersion))) {

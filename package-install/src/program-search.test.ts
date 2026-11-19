@@ -57,3 +57,21 @@ describe('findProgramInSystemPaths', () => {
         }
     }, 30000);
 });
+
+describe('findProgramInSystemPaths with a version the program does not satisfy', () => {
+    // The running node binary stands in for a pre-installed compiler of the
+    // wrong version, as when clang-cl 23 is requested and the runner image
+    // only has clang 20.
+    const nodeDir = require('path').dirname(process.execPath);
+
+    it('does not return the program', async () => {
+        const result = await findProgramInSystemPaths([nodeDir], ['node'], '>=999', true);
+        expect(result).toEqual({ outputPath: null, outputVersion: null });
+    }, 30000);
+
+    it('returns the program for a version it satisfies', async () => {
+        const result = await findProgramInSystemPaths([nodeDir], ['node'], '>=1', true);
+        expect(result.outputPath).not.toBeNull();
+        expect(semver.satisfies(result.outputVersion!, '>=1')).toBe(true);
+    }, 30000);
+});
