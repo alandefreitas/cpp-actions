@@ -13,6 +13,7 @@ import * as core from '@actions/core';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as traceCommands from 'trace-commands';
+import { escapePath } from './utils';
 
 /**
  * Output from executing a command via exec.getExecOutput.
@@ -86,7 +87,7 @@ export async function findProgramWithChoco(
         }
 
         try {
-            const output: ExecOutput = await exec.getExecOutput(binaryPath, ['--version'], { silent: true });
+            const output: ExecOutput = await exec.getExecOutput(escapePath(binaryPath), ['--version'], { silent: true });
             if (output.exitCode !== 0) {
                 fnlog(`${binaryPath} --version failed with exit code ${output.exitCode}`);
                 continue;
@@ -102,8 +103,8 @@ export async function findProgramWithChoco(
 
             fnlog(`Found ${binaryName} at ${binaryPath} with version ${version}`);
             return { path: binaryPath, version };
-        } catch {
-            fnlog(`Binary ${binaryPath} not executable or errored`);
+        } catch (err) {
+            fnlog(`Binary ${binaryPath} not executable or errored: ${err}`);
             continue;
         }
     }

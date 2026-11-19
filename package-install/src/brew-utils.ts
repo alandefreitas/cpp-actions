@@ -11,6 +11,7 @@ import * as io from '@actions/io';
 import * as exec from '@actions/exec';
 import * as core from '@actions/core';
 import * as traceCommands from 'trace-commands';
+import { escapePath } from './utils';
 
 /**
  * Output from executing a command via exec.getExecOutput.
@@ -107,7 +108,7 @@ export async function findProgramWithBrew(formula: string, binaryName: string): 
     fnlog(`Checking for binary at ${binaryPath}`);
 
     try {
-        const output: ExecOutput = await exec.getExecOutput(binaryPath, ['--version'], { silent: true });
+        const output: ExecOutput = await exec.getExecOutput(escapePath(binaryPath), ['--version'], { silent: true });
         if (output.exitCode !== 0) {
             fnlog(`${binaryPath} --version failed with exit code ${output.exitCode}`);
             return null;
