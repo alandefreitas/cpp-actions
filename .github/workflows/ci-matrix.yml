@@ -41,12 +41,8 @@ jobs:
             msvc Shared x86
             clang Time-Trace ASan+UBSan IntSan BoundSan LSan CFI
             mingw Shared
-          # macos-clang >=23: Boost.Move's BOOST_MOVE_STD_NS_BEG triggers
-          # -Wpragma-clang-attribute with libc++ 23, an error in Boost.Variant2's
-          # tests. Remove when https://github.com/boostorg/move/issues/67 is fixed.
           force-factors: |
             mingw: No-Deps
-            macos-clang >=23: No-Deps
           trace-commands: true
           extra-values: |
             vcpkg-packages: {{#if (not fetch-content)}}fmt{{/if}}
