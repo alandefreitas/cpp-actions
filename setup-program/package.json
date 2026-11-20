@@ -18,12 +18,12 @@
     "@actions/io": "^3.0.2",
     "@actions/tool-cache": "^4.0.0",
     "action-schema": "*",
-    "semver": "^7.8.4",
+    "semver": "^7.8.6",
     "trace-commands": "*",
     "pretty-errors": "*",
     "package-install": "*"
   },
   "devDependencies": {
-    "@types/semver": "^7.7.1"
+    "@types/semver": "^7.8.0"
   }
 }

@@ -16,7 +16,7 @@
     "@actions/exec": "^3.0.0",
     "@actions/io": "^3.0.2",
     "action-schema": "*",
-    "semver": "^7.8.4",
+    "semver": "^7.8.6",
     "setup-gcc": "*",
     "setup-clang": "*",
     "setup-msvc": "*",
@@ -25,6 +25,6 @@
     "pretty-errors": "*"
   },
   "devDependencies": {
-    "@types/semver": "^7.7.1"
+    "@types/semver": "^7.8.0"
   }
 }

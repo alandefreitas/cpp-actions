@@ -19,7 +19,7 @@
     "@actions/core": "^3.0.1",
     "@actions/exec": "^3.0.0",
     "action-schema": "*",
-    "axios": "^1.17.0",
+    "axios": "^1.21.1",
     "pretty-errors": "*",
     "trace-commands": "*"
   }
