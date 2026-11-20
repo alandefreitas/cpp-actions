@@ -617,12 +617,15 @@ async function getGithubCommits(repoUrl: string | undefined, branch: string | un
                     for (const pageCommit of pageCommits) {
                         let commit = new Commit();
                         commit.hash = pageCommit.sha;
-                        commit.author = `${pageCommit.commit.committer.name} <${pageCommit.commit.committer.email}>`;
-                        commit.authorName = pageCommit.commit.committer.name;
-                        commit.authorEmail = pageCommit.commit.committer.email;
-                        if (pageCommit.committer?.login) {
-                            commit.ghName = await getGithubProfileName(pageCommit.committer.login, accessToken);
-                            commit.ghUsername = pageCommit.committer.login;
+                        // Credit the author: the committer of a commit merged on GitHub
+                        // is web-flow, and of a rebased or cherry-picked one is whoever
+                        // applied it, not whoever wrote it.
+                        commit.author = `${pageCommit.commit.author.name} <${pageCommit.commit.author.email}>`;
+                        commit.authorName = pageCommit.commit.author.name;
+                        commit.authorEmail = pageCommit.commit.author.email;
+                        if (pageCommit.author?.login) {
+                            commit.ghName = await getGithubProfileName(pageCommit.author.login, accessToken);
+                            commit.ghUsername = pageCommit.author.login;
                         }
                         commit.date = pageCommit.commit.committer.date;
                         commit.message = pageCommit.commit.message;

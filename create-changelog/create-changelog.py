@@ -385,12 +385,17 @@ def get_github_commits(repo_url, branch, version_pattern, tags, access_token):
                 for page_commit in page_commits:
                     commit = Commit()
                     commit.hash = page_commit['sha']
-                    commit.author = f"{page_commit['commit']['committer']['name']} <{page_commit['commit']['committer']['email']}>"
-                    commit.author_name = page_commit['commit']['committer']['name']
-                    commit.author_email = page_commit['commit']['committer']['email']
-                    if 'login' in page_commit['commit']['committer']:
-                        commit.gh_name = get_github_profile_name(page_commit['committer']['login'], access_token)
-                        commit.gh_username = page_commit['committer']['login']
+                    # Credit the author: the committer of a commit merged on GitHub
+                    # is web-flow, and of a rebased or cherry-picked one is whoever
+                    # applied it, not whoever wrote it.
+                    git_author = page_commit['commit']['author']
+                    commit.author = f"{git_author['name']} <{git_author['email']}>"
+                    commit.author_name = git_author['name']
+                    commit.author_email = git_author['email']
+                    gh_author = page_commit.get('author') or {}
+                    if gh_author.get('login'):
+                        commit.gh_name = get_github_profile_name(gh_author['login'], access_token)
+                        commit.gh_username = gh_author['login']
                     commit.date = page_commit['commit']['committer']['date']
                     commit.message = page_commit['commit']['message']
                     commit = populate_conventional(commit, repo_url, version_pattern, tags)

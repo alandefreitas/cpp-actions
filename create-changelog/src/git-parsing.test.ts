@@ -133,14 +133,19 @@ function gitLog(entries: LogEntry[]): string {
  *
  * @param sha - Commit hash
  * @param message - Commit message
- * @param login - GitHub login of the committer, if any
- * @returns The API commit object
+ * @param login - GitHub login of the author, if any
+ * @returns The API commit object, committed by GitHub's web-flow as when a PR is merged on GitHub
  */
 function apiCommit(sha: string, message: string, login?: string): object {
     return {
         sha,
-        commit: { message, committer: { name: 'Xavier', email: 'x@example.com', date: '2024-01-01T00:00:00Z' } },
-        committer: login ? { login } : null
+        commit: {
+            message,
+            author: { name: 'Xavier', email: 'x@example.com', date: '2023-12-31T00:00:00Z' },
+            committer: { name: 'GitHub', email: 'noreply@github.com', date: '2024-01-01T00:00:00Z' }
+        },
+        author: login ? { login } : null,
+        committer: { login: 'web-flow' }
     };
 }
 
@@ -486,7 +491,7 @@ describe('processCommits', () => {
         expect(mockGet).not.toHaveBeenCalled();
     });
 
-    it('completes the history from the GitHub API when no local release is found', async () => {
+    it('completes the history from the GitHub API, crediting authors, when no local release is found', async () => {
         fakeGit(() => gitLog([
             { hash: 'a1', message: 'feat: local' },
             { hash: 'b2', message: 'fix: local too' }
