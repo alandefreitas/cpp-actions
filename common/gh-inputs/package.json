@@ -1,6 +1,6 @@
 {
   "name": "gh-inputs",
-  "version": "1.9.5",
+  "version": "1.9.6",
   "description": "Enhanced GitHub Actions input handling utilities",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
