@@ -443,6 +443,39 @@ describe('processCommits', () => {
         expect(commits.map(c => [c.hash, c.isParentRelease])).toEqual([['a1', false], ['b2', false], ['c3', true]]);
     });
 
+    it('keeps the last commit of a log that has no release', async () => {
+        fakeGit(() => gitLog([{ hash: 'a1', message: 'feat: a' }]));
+        const one = await processCommits('/repo', undefined, versionPattern, [], undefined, '', 'false');
+        expect(one.map(c => [c.hash, c.subject])).toEqual([['a1', 'feat: a']]);
+
+        fakeGit(() => gitLog([
+            { hash: 'a1', message: 'feat: a' },
+            { hash: 'b2', message: 'fix: b' },
+            { hash: 'c3', message: 'feat: oldest' }
+        ]));
+        const three = await processCommits('/repo', undefined, versionPattern, [], undefined, '', 'false');
+        expect(three.map(c => c.hash)).toEqual(['a1', 'b2', 'c3']);
+    });
+
+    it('keeps the last commit of the log when it is the release', async () => {
+        fakeGit(() => gitLog([
+            { hash: 'a1', message: 'fix: y' },
+            { hash: 'b2', message: 'chore: Set version 1.0.0' }
+        ]));
+        const commits = await processCommits('/repo', 'https://github.com/o/r', versionPattern, [], 'main', '', 'false');
+        expect(commits.map(c => [c.hash, c.isParentRelease])).toEqual([['a1', false], ['b2', true]]);
+        expect(mockGet).not.toHaveBeenCalled();
+    });
+
+    it('skips a detail commit at the end of the log', async () => {
+        fakeGit(() => gitLog([
+            { hash: 'a1', message: 'fix: y' },
+            { hash: 'b2', message: '[ci] details only' }
+        ]));
+        const commits = await processCommits('/repo', undefined, versionPattern, [], undefined, '', 'false');
+        expect(commits.map(c => c.hash)).toEqual(['a1']);
+    });
+
     it('keeps an author line without an email as the author', async () => {
         fakeGit(() => gitLog([
             { hash: 'a1', message: 'fix: x', author: 'nobody' },
@@ -503,7 +536,7 @@ describe('processCommits', () => {
             expect(url).toBe('https://api.github.com/repos/o/r/commits');
             expect(config?.headers).toMatchObject({ sha: 'main', Authorization: 'Bearer tok' });
             if (config?.params?.page === 1) {
-                return { status: 200, data: [apiCommit('a1', 'feat: local'), apiCommit('x1', 'fix: remote', 'xavier')] };
+                return { status: 200, data: [apiCommit('a1', 'feat: local'), apiCommit('b2', 'fix: local too'), apiCommit('x1', 'fix: remote', 'xavier')] };
             }
             return {
                 status: 200, data: [
@@ -514,8 +547,8 @@ describe('processCommits', () => {
             };
         });
         const commits = await processCommits('/repo', 'https://github.com/o/r', versionPattern, [], 'main', 'tok', 'false');
-        expect(commits.map(c => c.hash)).toEqual(['a1', 'x1', 'z3']);
-        expect(commits[1]).toMatchObject({
+        expect(commits.map(c => c.hash)).toEqual(['a1', 'b2', 'x1', 'z3']);
+        expect(commits[2]).toMatchObject({
             author: 'Xavier <x@example.com>',
             authorName: 'Xavier',
             authorEmail: 'x@example.com',
@@ -524,7 +557,7 @@ describe('processCommits', () => {
             date: '2024-01-01T00:00:00Z',
             type: 'fix'
         });
-        expect(commits[2].isParentRelease).toBe(true);
+        expect(commits[3].isParentRelease).toBe(true);
         expect(mockGet.mock.calls.filter(c => c[0].endsWith('/commits'))).toHaveLength(2);
     });
 

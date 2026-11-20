@@ -418,20 +418,34 @@ async function getLocalCommits(projectPath: string, repoUrl: string | undefined,
     const commitLogLines = commitLogOutput.split('\n');
     let commit = new Commit();
 
+    /**
+     * Parses the commit read so far and adds it to the list.
+     *
+     * @returns True when the commit is the parent release, where reading stops
+     */
+    const finishCommit = async (): Promise<boolean> => {
+        commit = await populateConventional(commit, repoUrl, versionPattern, tags);
+        const isDetail = commit.subject?.startsWith('[') && commit.subject?.includes(']');
+        if (isDetail) {
+            return false;
+        }
+        commits.push(commit);
+        if (commits.length === 1) {
+            commits[0].isParentRelease = false;
+            return false;
+        }
+        return commit.isParentRelease;
+    };
+
+    let reachedParentRelease = false;
     for (const line of commitLogLines) {
         if (line === '') continue;
 
         if (line.startsWith('commit ') && !line.slice(7).includes(' ')) {
             if (commit.hash) {
-                commit = await populateConventional(commit, repoUrl, versionPattern, tags);
-                const isDetail = commit.subject?.startsWith('[') && commit.subject?.includes(']');
-                if (!isDetail) {
-                    commits.push(commit);
-                    if (commits.length === 1) {
-                        commits[0].isParentRelease = false;
-                    } else if (commits[commits.length - 1].isParentRelease) {
-                        break;
-                    }
+                if (await finishCommit()) {
+                    reachedParentRelease = true;
+                    break;
                 }
                 commit = new Commit();
             }
@@ -452,6 +466,11 @@ async function getLocalCommits(projectPath: string, repoUrl: string | undefined,
                 commit.message += line.slice(4);
             }
         }
+    }
+
+    // The last commit of the log has no "commit" line after it to finish it
+    if (!reachedParentRelease && commit.hash) {
+        await finishCommit();
     }
 
     return commits;

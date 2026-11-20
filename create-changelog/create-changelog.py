@@ -275,6 +275,16 @@ def get_local_commits(project_path, repo_url, version_pattern, tags):
                 commit.message += '\n' + line[4:]
             else:
                 commit.message += line[4:]
+    else:
+        # No parent release stopped the loop, so the last commit of the log
+        # has no "commit" line after it to finish it
+        if commit.hash:
+            commit = populate_conventional(commit, repo_url, version_pattern, tags)
+            is_detail = commit.subject.startswith('[') and commit.subject.find(']') != -1
+            if not is_detail:
+                commits.append(commit)
+                if len(commits) == 1:
+                    commits[-1].is_parent_release = False
 
     return commits
 
