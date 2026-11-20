@@ -261,6 +261,9 @@
           <a href="../../develop/index.html">develop</a>
         </li>
         <li class="version">
+          <a href="../../v1.9.6/index.html">v1.9.6</a>
+        </li>
+        <li class="version">
           <a href="../../v1.9.5/index.html">v1.9.5</a>
         </li>
         <li class="version">
@@ -382,6 +385,7 @@
   <div class="version-menu">
     <a class="version" href="../../actions/cmake-workflow.html">master</a>
     <a class="version" href="../../develop/actions/cmake-workflow.html">develop</a>
+    <a class="version" href="../../v1.9.6/actions/cmake-workflow.html">v1.9.6</a>
     <a class="version" href="../../v1.9.5/actions/cmake-workflow.html">v1.9.5</a>
     <a class="version" href="../../v1.9.4/actions/cmake-workflow.html">v1.9.4</a>
     <a class="version" href="../../v1.9.3/actions/cmake-workflow.html">v1.9.3</a>
@@ -815,8 +819,7 @@ system.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>run-tests</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Whether we should run tests.</p>
 <p class="tableblock">If the input is not specified, the action will use the value defined by the environment variable <code>CMAKE_RUN_TESTS</code>.</p>
-<p class="tableblock">If the environment variable is also not specified, the action will attempt to run tests but will not fail if
-there are no tests.</p>
+<p class="tableblock">If the environment variable is also not specified, the action will run tests if there are any.</p>
 <p class="tableblock">When the value is <code>true</code> or <code>false</code>, the action will also set the <code>configure-tests-flag</code> to <code>ON</code> or <code>OFF</code>.
 When the value is undefined, the <code>configure-tests-flag</code> is ignored.</p></td>
 <td class="tableblock halign-left valign-top"></td>
